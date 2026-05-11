@@ -17,7 +17,7 @@
 ## Non-goals
 
 * Backward compatibility with any prior PHP Telegram libraries.
-* Synchronous-only API surface as the primary entry point. (A PSR-18 sync session is available as an opt-in.)
+* Synchronous-only API surface as the primary entry point. If a PSR-18 sync session is needed for FPM-style deployments we will ship it later as a separate optional package (`gruven/phpbotgram-psr18-session`).
 * Drop-in compatibility with Symfony/Laravel-specific subsystems (HttpKernel, Eloquent storage). These can be added later as separate plug-in packages.
 * Generating PHP code that is identical line-by-line to aiogram's Python output — only the abstractions and public API surface mirror.
 
@@ -37,17 +37,16 @@ Choice: `A`.
 | Concern | Choice | Notes |
 |---|---|---|
 | PHP version | `^8.5` (64-bit) | Readonly classes/properties, asymmetric visibility, property hooks (8.4), `|>` pipe operator (8.5), backed enums, intersection/union types |
-| HTTP client | `amphp/http-client` ^5 | Fiber-aware HTTP/1.1+2 transport, native streaming for `multipart/form-data`. The default async session uses it directly |
-| HTTP factories | `php-http/discovery` ^1.20 + `psr/http-factory-implementation` | Used to discover PSR-17 (request/response/uri/stream) factories for the webhook layer and the opt-in `Psr18Session` (sync fallback). Note: aiogram-style async-first transport is `amphp/http-client`; the user-requested `php-http/discovery` is preserved as the discovery layer for PSR-7/17/18 abstractions rather than as the primary outbound transport |
+| HTTP client | `amphp/http-client` ^5 | Sole outbound transport: Fiber-aware HTTP/1.1+2, native streaming for `multipart/form-data` (chosen value v5.3.4) |
 | Async runtime | `amphp/amp` ^3 + `revolt/event-loop` ^1 | `Future` API, signals, sync primitives (`Semaphore`, `LocalKeyedMutex`) |
+| Byte streaming | `amphp/byte-stream` ^2 | Pulled by `amphp/http-client`; used directly for `InputFile` streaming |
 | JSON | Native `json_encode/json_decode` with `JSON_THROW_ON_ERROR` | No external dep |
-| Codegen | PHP CLI in `tools/generator/` + `twig/twig` | Generator reads `.butcher/schema/schema.json` + alias/replace/default patches |
-| FSM storages (core) | Memory; Redis via `amphp/redis` ^2; Mongo via `mongodb/mongodb` ^2 | All three live in the core package per upstream parity |
-| Webhook | PSR-7/PSR-15 abstractions + ready-to-use `amphp/http-server` adapter | Framework-agnostic via PSR; Symfony/Slim/Laravel plug in via PSR-15 |
-| Tests | `phpunit/phpunit` ^13.1 + `amphp/phpunit-util` | Fiber-aware async test helpers |
-| Static analysis | `phpstan/phpstan` ^2 level 9 with generics via docblocks | `TelegramMethod<TReturn>` carried in `@template`/`@extends` |
+| Codegen | PHP CLI in `tools/generator/` + `twig/twig` (dev-only) | Generator reads `.butcher/schema/schema.json` + alias/replace/default patches; pure CLI, no runtime dependency |
+| FSM storages (core) | Memory; Redis via `amphp/redis` ^2; Mongo via `mongodb/mongodb` ^2 | All three live in the core package per upstream parity; the driver packages are listed in `require-dev` and surfaced through `suggest` so library users only pull the ones they actually use |
+| Webhook | `amphp/http-server` ^3 native adapter | Default and only built-in adapter is amphp-native; a PSR-7/PSR-15 bridge is intentionally deferred to a separate optional package (`gruven/phpbotgram-psr-webhook`, future) |
+| Tests | `phpunit/phpunit` ^13.1 + in-house Fiber helper | `amphp/phpunit-util` is pinned to PHPUnit 9 and is incompatible with our PHPUnit 13 baseline; we ship a tiny `RunAsync` test helper (≈40 LOC) that drives Revolt's event loop inside test methods |
+| Static analysis | `phpstan/phpstan` ^2.1 level 9 with generics via docblocks | `TelegramMethod<TReturn>` carried in `@template`/`@extends` |
 | Style | `friendsofphp/php-cs-fixer` (already configured) | Existing `.php-cs-fixer.dist.php` retained |
-| Optional sync session | `psr/http-client-implementation` (PSR-18) | Discovered via `php-http/discovery`; opt-in for environments without Fibers |
 
 ## Namespace layout
 
@@ -57,7 +56,6 @@ Gruven\PhpBotGram\
 ├── Client\
 │   ├── Session\BaseSession          # client/session/base.py — abstract
 │   ├── Session\AmphpSession         # client/session/aiohttp.py — production async
-│   ├── Session\Psr18Session         # optional sync session backed by php-http/discovery
 │   ├── Session\Middleware\RequestMiddlewareManager
 │   ├── Session\Middleware\BaseRequestMiddleware
 │   ├── TelegramApiServer            # client/telegram.py (PRODUCTION, TEST, from_base)
@@ -142,11 +140,7 @@ The framework is async-first using amphp v3 / Revolt. All session methods are Fi
 * Connection pool tuned with `limit` and TTL DNS cache analogous to aiohttp connector workaround in upstream.
 * Optional `proxy` parameter forwarded to amphp's HTTP client middleware.
 
-`Psr18Session` (optional, opt-in):
-
-* Sync transport using a PSR-18 client discovered via `Http\Discovery\Psr18ClientDiscovery`.
-* Useful for environments where Fibers are constrained (e.g. some FPM stacks without async polling loop).
-* Same `prepareValue`/`checkResponse` semantics.
+A PSR-18 sync session is intentionally not in scope for the initial release. If a future user explicitly needs sync transport (e.g. FPM-only deployment that can't host a polling loop) we will ship it as a separate optional package (`gruven/phpbotgram-psr18-session`) so the core stays single-purpose around amphp.
 
 `Default` sentinel and `Unset` marker:
 
@@ -490,8 +484,8 @@ Behaves identically to upstream: enters the isolation lock, materializes `FSMCon
 
 `BaseRequestHandler`:
 
-* Abstract methods: `resolveBot(ServerRequestInterface $req): Bot`, `verifySecret(string $telegramSecret, Bot $bot): bool`, `close(): void`.
-* `handle(ServerRequestInterface $req): ResponseInterface` runs the dispatcher and either responds synchronously with a Telegram method as the reply body (`multipart/form-data`) or returns an empty JSON `{}` and schedules background processing.
+* Abstract methods: `resolveBot(Request $req): Bot`, `verifySecret(string $telegramSecret, Bot $bot): bool`, `close(): void` — where `Request` is `Amp\Http\Server\Request` from `amphp/http-server`.
+* `handle(Request $req): Response` runs the dispatcher and either responds synchronously with a Telegram method as the reply body (`multipart/form-data`) or returns an empty JSON `{}` and schedules background processing.
 
 `SimpleRequestHandler` (single Bot, optional `?string $secretToken`).
 
@@ -500,6 +494,8 @@ Behaves identically to upstream: enters the isolation lock, materializes `FSMCon
 `Security\IpFilter` matches upstream — built-in Telegram subnets `149.154.160.0/20` and `91.108.4.0/22`.
 
 `Webhook\Server\AmphpServer::run(BaseRequestHandler $handler, string $path, string $host = '0.0.0.0', int $port = 8443, ?array $tlsOptions = null): void` boots an `amphp/http-server` instance routing POST `$path` to the handler.
+
+A PSR-7/PSR-15 webhook bridge — for users running on top of Symfony HttpKernel, Slim, or Laravel — is intentionally deferred to a separate optional package (`gruven/phpbotgram-psr-webhook`, future). Keeping PSR adapters out of core lets us avoid the entire PSR-7/17/18 dependency stack while still allowing integration to grow on demand.
 
 ## Utilities
 
@@ -549,7 +545,7 @@ tests/
 * `MockedSession` ports upstream behavior: an in-memory deque of canned responses + a deque of recorded outgoing methods.
 * `MockedBot extends Bot` injects `MockedSession`, exposes `addResultFor(method, ok, result, …)` and `getRequest(): TelegramMethod`.
 * `tests/bootstrap.php` configures Revolt's `EventLoop::queue` for predictable test scheduling.
-* Async tests use `\Amp\async(...)->await()` to drive Fibers; helper `runAsync(\Closure $body): mixed` (from `amphp/phpunit-util` or our own thin wrapper) reduces boilerplate.
+* Async tests use `\Amp\async(...)->await()` to drive Fibers; helper `runAsync(\Closure $body): mixed` (in-house, ~40 LOC under `tests/Support/RunAsync.php`) drives Revolt's event loop inside a test method. `amphp/phpunit-util` is incompatible with our PHPUnit 13 baseline, so we don't depend on it.
 * Parameterized cases use PHPUnit data providers.
 
 ### External services
@@ -596,7 +592,7 @@ Documentation: a `docs/` directory with English Markdown sources, structured to 
 | Phase | Deliverables | Verification |
 |---|---|---|
 | **0. Bootstrap** | Composer deps locked, namespace skeleton, CI scaffolding, MockedBot/MockedSession harness, base `TelegramObject`, `TelegramMethod<T>`, `Default`, `Unset`, `BotContextController`, `TelegramApiServer`, exception tree | `phpunit` runs on empty suite; CI green |
-| **1. Foundation** | `Bot` (skeleton, no API methods yet), `BaseSession`, `AmphpSession`, `Psr18Session`, `InputFile` (Buffered/Fs/Url), `Serializer` (dump/load), `RequestMiddlewareManager` | Manual roundtrip test: `sendMessage` hand-coded against a test bot |
+| **1. Foundation** | `Bot` (skeleton, no API methods yet), `BaseSession`, `AmphpSession`, `InputFile` (Buffered/Fs/Url), `Serializer` (dump/load), `RequestMiddlewareManager` | Manual roundtrip test: `sendMessage` hand-coded against a test bot |
 | **2. Codegen** | Copy `.butcher` schema, build `tools/generator/`, regenerate all Enums, Types, Methods, plus the Bot facade | Generator emits valid PHP; `phpstan` passes; `phpunit` smoke test instantiates 50 random types |
 | **3. Dispatcher** | `Router`, `Dispatcher`, `TelegramEventObserver`, `EventObserver`, `HandlerObject`, `FilterObject`, `CallableObject`, `Flags`, polling loop, signal handling, `ErrorsMiddleware`, `UserContextMiddleware` | Echo bot example runs against a mock session |
 | **4. Filters** | `Filter` base, `Command`/`CommandStart`/`CommandObject`, `CallbackData`, `StateFilter`, `Logic` combinators, `ChatMemberUpdatedFilter`, `ExceptionTypeFilter`, F-DSL codegen | Port `tests/test_filters/*` |
