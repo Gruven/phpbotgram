@@ -55,7 +55,7 @@ Choice: `A`.
 
 ```
 Gruven\PhpBotGram\
-├── Bot                              # client/bot.py — facade with all 178 API methods
+├── Bot                              # client/bot.py — facade with all 176 API methods (at Bot API 10.0)
 ├── Client\
 │   ├── Session\BaseSession          # client/session/base.py — abstract
 │   ├── Session\AmphpSession         # client/session/aiohttp.py — production async
@@ -63,7 +63,7 @@ Gruven\PhpBotGram\
 │   ├── Session\Middleware\BaseRequestMiddleware
 │   ├── TelegramApiServer            # client/telegram.py — final readonly class with `static fn production(): self` / `static fn test(): self` factories + `static fn fromBase(string $base): self`. No `PRODUCTION`/`TEST` constants because the parent type carries URL pattern fields (a backed enum is precluded).
 │   ├── DefaultBotProperties         # client/default.py
-│   ├── Default                      # client/default.py — Default sentinel
+│   ├── BotDefault                   # client/default.py — Default sentinel (renamed: PHP reserves `default` keyword, `class Default` won't parse)
 │   └── BotContextController         # client/context_controller.py
 ├── Types\*                          # 341 readonly DTO (codegen)
 ├── Methods\*                        # 178 readonly method classes (codegen)
@@ -160,7 +160,7 @@ Concrete sessions (`AmphpSession`) forward via `parent::__construct(...)`.
 * `abstract public function makeRequest(Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed;`
 * `abstract public function close(): void;`
 * `abstract public function streamContent(string $url, array $headers = [], int $timeout = 30, int $chunkSize = 65536, bool $raiseForStatus = true): ReadableStream;` — returns an `Amp\ByteStream\ReadableStream`. `Bot::downloadFile` (see Bot facade hand-authored methods below) consumes it via the `read(): ?string` chunk-loop pattern from amphp/byte-stream v2.
-* `public function prepareValue(mixed $value, Bot $bot, array &$files, bool $dumpsJson = true): mixed;` — port of `BaseSession.prepare_value` covering `Default` sentinel, `InputFile`, `DateTimeInterface`, enums, lists, dicts, and nested `TelegramObject`. The `&$files` parameter is typed `@param array<string, InputFile> &$files` in PHPDoc; the random-token keys (`secrets.token_urlsafe(10)` upstream → `random_bytes(10)` base64url-encoded in PHP) are used by the multipart writer to wire `attach://<token>` references to file streams. **Recursion contract**: the top-level invocation uses `$dumpsJson = true`, which causes nested list/dict values to be `json_encode()`'d into a single string suitable for the multipart form field. All recursive calls into list/dict elements pass `$dumpsJson = false` so nested objects stay as PHP arrays until the top-level wrap. Mirrors upstream `session/base.py:200-233` where `_dumps_json=False` is threaded through the recursive walk. **Null-filtering rule**: when recursing into lists and dicts, entries whose recursive `prepareValue` call returns `null` are **dropped** from the result. This is the mechanism that elides `Default('parse_mode')` resolved to `null` (no default set on the bot) from outbound payloads — without it, the wire would carry `"parse_mode": null` literals where upstream omits the key entirely.
+* `public function prepareValue(mixed $value, Bot $bot, array &$files, bool $dumpsJson = true): mixed;` — port of `BaseSession.prepare_value` covering `BotDefault` sentinel, `InputFile`, `DateTimeInterface`, enums, lists, dicts, and nested `TelegramObject`. The `&$files` parameter is typed `@param array<string, InputFile> &$files` in PHPDoc; the random-token keys (`secrets.token_urlsafe(10)` upstream → `random_bytes(10)` base64url-encoded in PHP) are used by the multipart writer to wire `attach://<token>` references to file streams. **Recursion contract**: the top-level invocation uses `$dumpsJson = true`, which causes nested list/dict values to be `json_encode()`'d into a single string suitable for the multipart form field. All recursive calls into list/dict elements pass `$dumpsJson = false` so nested objects stay as PHP arrays until the top-level wrap. Mirrors upstream `session/base.py:200-233` where `_dumps_json=False` is threaded through the recursive walk. **Null-filtering rule**: when recursing into lists and dicts, entries whose recursive `prepareValue` call returns `null` are **dropped** from the result. This is the mechanism that elides `BotDefault('parse_mode')` resolved to `null` (no default set on the bot) from outbound payloads — without it, the wire would carry `"parse_mode": null` literals where upstream omits the key entirely.
 * `public function checkResponse(Bot $bot, TelegramMethod $method, int $statusCode, string $content): Response;` — port of `BaseSession.check_response` mapping HTTP status + Telegram error codes to typed exceptions.
 * `public private(set) RequestMiddlewareManager $middleware;` — public read with private-set asymmetric visibility (PHP 8.4); chained around `makeRequest`. The session's constructor instantiates the manager once; consumers add/remove middlewares via `$session->middleware->register(...)`.
 
@@ -173,12 +173,14 @@ Concrete sessions (`AmphpSession`) forward via `parent::__construct(...)`.
 
 A PSR-18 sync session is intentionally not in scope for the initial release. If a future user explicitly needs sync transport (e.g. FPM-only deployment that can't host a polling loop) we will ship it as a separate optional package (`gruven/phpbotgram-psr18-session`) so the core stays single-purpose around amphp.
 
-`Default` sentinel and `Unset` marker:
+`BotDefault` sentinel and `Unspecified` marker:
 
-* `Default` is a final readonly class with a `string $name` property — exactly aiogram's behavior (`aiogram/client/default.py:13-37`). Its `JsonSerializable::jsonSerialize()` **throws** `\LogicException("Default sentinel reached json_encode without being resolved: {$this->name}")`. This is intentional fail-loud behavior: the serializer (`Serializer::dump()`) is the only allowed encoder for `TelegramMethod` payloads and it always resolves `Default` instances against `$bot->getDefaultProperties()` before encoding. If a `Default` somehow escapes to native `json_encode()`, the loud failure prevents silent emission of `parse_mode: null` (or similar) where the configured default should have been substituted. The resolved value is recursively re-processed by `prepareValue()` so a default of e.g. `LinkPreviewOptions(...)` flows through normally. **Equality**: PHP `===` is identity for objects; upstream's `__eq__` compares by `$name`. The PHP port exposes a `Default::equals(Default $other): bool` helper (and overrides `JsonSerializable` only) so user code comparing sentinels uses `$a->equals($b)` rather than `===`. Documented in the class docblock.
+Note on naming: PHP reserves `default` and `unset` as language keywords (case-insensitive), so `class Default` and `class Unset` both fail to parse even when fully namespaced. The upstream `Default` and `UNSET` symbols are therefore renamed to `BotDefault` and `Unspecified` in the PHP port. The semantics are unchanged.
+
+* `BotDefault` is a final readonly class with a `string $name` property — exactly aiogram's `Default` behavior (`aiogram/client/default.py:13-37`). Its `JsonSerializable::jsonSerialize()` **throws** `\LogicException("BotDefault sentinel reached json_encode without being resolved: {$this->name}")`. This is intentional fail-loud behavior: the serializer (`Serializer::dump()`) is the only allowed encoder for `TelegramMethod` payloads and it always resolves `BotDefault` instances against `$bot->getDefaultProperties()` before encoding. If a `BotDefault` somehow escapes to native `json_encode()`, the loud failure prevents silent emission of `parse_mode: null` (or similar) where the configured default should have been substituted. The resolved value is recursively re-processed by `prepareValue()` so a default of e.g. `LinkPreviewOptions(...)` flows through normally. **Equality**: PHP `===` is identity for objects; upstream's `__eq__` compares by `$name`. The PHP port exposes a `BotDefault::equals(BotDefault $other): bool` helper (and overrides `JsonSerializable` only) so user code comparing sentinels uses `$a->equals($b)` rather than `===`. Documented in the class docblock.
 * `DefaultBotProperties` implements `ArrayAccess` and exposes a typed `get(string $name): mixed` method so `$bot->default->get('parse_mode')` and `$bot->default['parse_mode']` both work. This mirrors upstream's `__getitem__` (`client/default.py:87-88`). The constructor runs an aggregation step (port of upstream `__post_init__` at `client/default.py:67-85`): when any of `linkPreviewIsDisabled`/`linkPreviewPreferSmallMedia`/`linkPreviewPreferLargeMedia`/`linkPreviewShowAboveText` is set and the top-level `linkPreview` is null, a `LinkPreviewOptions` instance is materialized from those individual flags and assigned to `$this->linkPreview`. The aggregation runs once during construction.
-* `Unset` is a readonly singleton (`Unset::instance()`) used as the sentinel for "argument not provided" cases. The serializer strips fields whose value is `Unset::instance()` before validation/encoding.
-* For grep-translating external libraries that imported aiogram's `UNSET_PARSE_MODE`, `UNSET_DISABLE_WEB_PAGE_PREVIEW`, `UNSET_PROTECT_CONTENT` back-compat constants (`aiogram/types/base.py:50-52`), the same names are re-exported from `Gruven\PhpBotGram\Types` as singleton `Default` instances.
+* `Unspecified` is a readonly singleton (`Unspecified::instance()`) used as the sentinel for "argument not provided" cases — port of upstream `UNSET`. The serializer strips fields whose value is `Unspecified::instance()` before validation/encoding.
+* For grep-translating external libraries that imported aiogram's `UNSET_PARSE_MODE`, `UNSET_DISABLE_WEB_PAGE_PREVIEW`, `UNSET_PROTECT_CONTENT` back-compat constants (`aiogram/types/base.py:50-52`), the same names are re-exported from `Gruven\PhpBotGram\Types` as singleton `BotDefault` instances.
 
 `BotContextController` & bot binding:
 
@@ -221,7 +223,7 @@ Polling loop (mirrors upstream `dispatcher/dispatcher.py` `_listen_updates` / `_
   public function startPolling(PollingOptions $options, Bot ...$bots): void;
   public function runPolling(PollingOptions $options, Bot ...$bots): void;
   ```
-  where `PollingOptions` is a readonly DTO with `pollingTimeout: int = 10`, `handleAsTasks: bool = true`, `backoffConfig: BackoffConfig = new BackoffConfig(minDelay: 1.0, maxDelay: 5.0, factor: 1.3, jitter: 0.1)` (matches upstream `DEFAULT_BACKOFF_CONFIG` at `dispatcher.py:35`), `allowedUpdates: array|Unset|null = Unset::instance()`, `handleSignals: bool = true`, `closeBotSession: bool = true`, `tasksConcurrencyLimit: ?int = null`, and an associative `array<string, mixed> $workflowData = []` for the named-kwargs equivalent. A static `PollingOptions::default()` returns these defaults so callers can write `$dp->runPolling(PollingOptions::default(), $bot1, $bot2)`. `$allowedUpdates` has three states: `Unset::instance()` (default — call `resolveUsedUpdateTypes()` to auto-detect, parity with upstream `UNSET`); `null` (send no `allowed_updates` to `getUpdates`); `array<string>` (the explicit list passed verbatim).
+  where `PollingOptions` is a readonly DTO with `pollingTimeout: int = 10`, `handleAsTasks: bool = true`, `backoffConfig: BackoffConfig = new BackoffConfig(minDelay: 1.0, maxDelay: 5.0, factor: 1.3, jitter: 0.1)` (matches upstream `DEFAULT_BACKOFF_CONFIG` at `dispatcher.py:35`), `allowedUpdates: array|Unspecified|null = Unspecified::instance()`, `handleSignals: bool = true`, `closeBotSession: bool = true`, `tasksConcurrencyLimit: ?int = null`, and an associative `array<string, mixed> $workflowData = []` for the named-kwargs equivalent. A static `PollingOptions::default()` returns these defaults so callers can write `$dp->runPolling(PollingOptions::default(), $bot1, $bot2)`. `$allowedUpdates` has three states: `Unspecified::instance()` (default — call `resolveUsedUpdateTypes()` to auto-detect, parity with upstream `UNSET`); `null` (send no `allowed_updates` to `getUpdates`); `array<string>` (the explicit list passed verbatim).
 * `BackoffConfig` defaults match upstream `DEFAULT_BACKOFF_CONFIG = BackoffConfig(min_delay=1.0, max_delay=5.0, factor=1.3, jitter=0.1)` (`dispatcher.py:34`).
 * The kwargs `bot` key is reserved and a `\InvalidArgumentException` is thrown if the caller passes it (mirroring upstream `dispatcher.py:551-555`).
 * For each bot the dispatcher first calls `$bot->me()` (cached `User`) and logs `"Run polling for bot @<username> id=<id>"`, then spawns a per-bot polling task via `Amp\async()`.
@@ -313,7 +315,7 @@ PHP CLI built with plain `getopt()` (kept dep-free; switch to `symfony/console` 
   5. `UnionDetector` identifies sealed unions (e.g. `BackgroundFill`) and emits:
      * abstract base class `BackgroundFill` with discriminator field `type`,
      * concrete subclasses (`BackgroundFillSolid`, …),
-     * a `BackgroundFillUnion` final class that exposes `public const list<string> Members = [BackgroundFillSolid::class, BackgroundFillGradient::class, …]` plus a static `resolve(array $payload): TelegramObject` dispatcher used by the serializer.
+     * a `BackgroundFillUnion` final class that exposes `public const array Members = [BackgroundFillSolid::class, BackgroundFillGradient::class, …]` (typed `@var list<class-string<BackgroundFill>>` in PHPDoc; PHP class-constant native types accept `array` only, not generic shapes) plus a static `resolve(array $payload): TelegramObject` dispatcher used by the serializer.
      * For PHPStan: every method/type field whose schema type is the union emits a plain PHP union signature (`BackgroundFillSolid|BackgroundFillGradient|BackgroundFillFreeformGradient`) — no `@phpstan-type` aliases (which would need `@phpstan-import-type` in every consumer file). The verbosity is acceptable since it's generated code.
   6. `ShortcutDetector` reads `aliases.yml` per type — this file **is** codegen input, not a hand-authored trait. The generator emits each alias as a public instance method directly on the type class. The `aliases.yml` DSL covers:
      * **YAML anchors and aliases** (`&assert-chat`, `*assert-chat`, `<<: *fill-answer`) — handled by the YAML parser. The loader (e.g. `symfony/yaml`) expands anchors before any codegen sees them. `<<:` map-merge keys propagate fill defaults across aliased methods (e.g. `reply` inherits `answer`'s fill block and adds `reply_parameters`).
@@ -344,7 +346,7 @@ PHP CLI built with plain `getopt()` (kept dep-free; switch to `symfony/console` 
      ```php
      public function answer(
          string $text,
-         string|Default|null $parseMode = new Default('parse_mode'),
+         string|BotDefault|null $parseMode = new BotDefault('parse_mode'),
          // ... all sendMessage params except chat_id, message_thread_id,
          //     business_connection_id (fill-keys). reply_to_message_id IS still
          //     accepted on Message::answer (the deprecated parameter; only reply()
@@ -379,7 +381,7 @@ PHP CLI built with plain `getopt()` (kept dep-free; switch to `symfony/console` 
      ```php
      public function reply(
          string $text,
-         string|Default|null $parseMode = new Default('parse_mode'),
+         string|BotDefault|null $parseMode = new BotDefault('parse_mode'),
          // ... sendMessage params except chat_id, message_thread_id,
          //     business_connection_id, reply_parameters (fill-keys)
          //     AND except reply_to_message_id (dropped by ignore:)
@@ -406,7 +408,7 @@ PHP CLI built with plain `getopt()` (kept dep-free; switch to `symfony/console` 
      protect_content: protect_content
      link_preview_options: link_preview
      ```
-     The renderer threads each entry into the corresponding constructor-parameter default expression on the generated method class. For `parseMode`, the default becomes `new Default('parse_mode')` — a runtime sentinel that the serializer's `prepareValue()` resolves against `$bot->default->get('parse_mode')` before encoding. For parameters absent from `default.yml`, the constructor default is `null`. This stage runs after `ShortcutDetector` and before `HandAuthoredShortcuts`.
+     The renderer threads each entry into the corresponding constructor-parameter default expression on the generated method class. For `parseMode`, the default becomes `new BotDefault('parse_mode')` — a runtime sentinel that the serializer's `prepareValue()` resolves against `$bot->default->get('parse_mode')` before encoding. For parameters absent from `default.yml`, the constructor default is `null`. This stage runs after `ShortcutDetector` and before `HandAuthoredShortcuts`.
   8. `HandAuthoredShortcuts` directory `src/Types/Shortcuts/<TypeName>Shortcuts.php` holds *additional* hand-authored helpers that aren't expressible as `aliases.yml` directives — e.g. `Message::contentType()` (computed field), `Message::htmlText()` / `Message::mdText()` (text re-rendering via `TextDecoration`), `Message::asReplyParameters()`, `CallbackQuery::answer()` (which conventionally doesn't read from `aliases.yml`). The generator emits a `use <TypeName>Shortcuts;` trait import inside the generated class only when the corresponding `Shortcuts` trait file exists.
   9. `Renderer` emits PHP files into the target directories, formatted to match php-cs-fixer rules.
 
@@ -479,7 +481,7 @@ final class Message extends MaybeInaccessibleMessage
 
 Notes:
 
-* All types inherit from `TelegramObject` (which extends `BotContextController`). The base class holds the optional `?Bot $bot` instance injected during deserialization for shortcuts.
+* All types inherit from `TelegramObject` (which extends `BotContextController`). The base class holds the optional `?Bot $bot` instance injected during deserialization for shortcuts. **`TelegramObject` itself is *not* declared `readonly class`** — only its properties are readonly. This is deliberate: a `readonly` class cannot be extended by a non-`readonly` class, so making `TelegramObject` a readonly class would break `MutableTelegramObject extends TelegramObject`. Property-level readonly enforcement covers the immutability requirement for the 95% of schema types that are immutable, while leaving the door open for the small mutable family.
 * Final-by-default. Subclassing is allowed only where the schema models a hierarchy (e.g. `MaybeInaccessibleMessage` parent of `Message` and `InaccessibleMessage`).
 * `readonly` properties enforce immutability (aiogram models are `frozen=True`). Mutation goes through `withX($value)` clone helpers when needed.
 * PHP doesn't allow `from` as a property identifier? It does (`from` is not a reserved keyword in PHP context), but it conflicts with the `from` PHP language construct in some positions. The generator renames `from` → `fromUser` to match aiogram (`from_user`).
@@ -489,7 +491,7 @@ Notes:
 ```php
 namespace Gruven\PhpBotGram\Methods;
 
-use Gruven\PhpBotGram\Client\Default;
+use Gruven\PhpBotGram\Client\BotDefault;
 use Gruven\PhpBotGram\Types\{ChatIdUnion, LinkPreviewOptions, Message, MessageEntity, ReplyMarkupUnion, ReplyParameters, SuggestedPostParameters};
 
 /**
@@ -506,11 +508,11 @@ final class SendMessage extends TelegramMethod
         public readonly ?string $businessConnectionId = null,
         public readonly ?int $messageThreadId = null,
         public readonly ?int $directMessagesTopicId = null,
-        public readonly string|Default|null $parseMode = new Default('parse_mode'),
+        public readonly string|BotDefault|null $parseMode = new BotDefault('parse_mode'),
         public readonly ?array $entities = null,        // list<MessageEntity>
-        public readonly LinkPreviewOptions|Default|null $linkPreviewOptions = new Default('link_preview'),
+        public readonly LinkPreviewOptions|BotDefault|null $linkPreviewOptions = new BotDefault('link_preview'),
         public readonly ?bool $disableNotification = null,
-        public readonly bool|Default|null $protectContent = new Default('protect_content'),
+        public readonly bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
         public readonly ?bool $allowPaidBroadcast = null,
         public readonly ?string $messageEffectId = null,
         public readonly ?SuggestedPostParameters $suggestedPostParameters = null,
@@ -580,8 +582,8 @@ The `id` property is lazily extracted from the token via `Token::extractBotId()`
 `Gruven\PhpBotGram\Client\Serializer`:
 
 * `dump(TelegramObject|TelegramMethod $object, Bot $bot, array &$files = []): array` — depth-first walk:
-  * Skips `Unset::instance()` values.
-  * Resolves `Default` sentinels against `$bot->getDefaultProperties()`.
+  * Skips `Unspecified::instance()` values (the sentinel singleton).
+  * Resolves `BotDefault` sentinels against `$bot->getDefaultProperties()`.
   * Streams `InputFile` instances into the `$files` collection, replacing the value with `attach://<random>`.
   * Encodes nested `TelegramObject` recursively.
   * Converts `BackedEnum` to its scalar value.
@@ -616,11 +618,11 @@ The `id` property is lazily extracted from the token via `Token::extractBotId()`
 
 * PHP forbids parameters after a variadic, so the observer's registration API is:
   ```php
-  public function register(callable $handler, ?array $flags, Filter|callable ...$filters): callable;
+  public function register(callable $handler, ?array $flags = null, Filter|callable ...$filters): callable;
   public function filter(Filter|callable ...$filters): void;
-  public function __invoke(?array $flags, Filter|callable ...$filters): callable;   // decorator factory
+  public function __invoke(?array $flags = null, Filter|callable ...$filters): callable;   // decorator factory
   ```
-  Callers use named-args for `$flags` when convenient: `$router->message->register($handler, flags: ['priority' => 1], $f1, $f2)`. The `?array $flags` argument provides per-handler flags; filters can additionally contribute flags via `Filter::updateHandlerFlags(array &$flags): void` (used by `Command`, see "Filters in detail").
+  PHP forbids positional arguments after a named argument, so the call site is **all-positional**: `$router->message->register($handler, ['priority' => 1], $f1, $f2)` — pass `null` for flags when only filters are needed: `$router->message->register($handler, null, $f1, $f2)`. The `?array $flags` argument provides per-handler flags; filters can additionally contribute flags via `Filter::updateHandlerFlags(array &$flags): void` (used by `Command`, see "Filters in detail").
 * `filter(...)` registers **global** filters that apply to every handler in this observer. Internally stored on a "dummy handler" object whose `check()` is invoked by `Router::propagateEvent` via `checkRootFilters($event, ...$kwargs)`. Used heavily by scenes (`scene.py:405` registers a `StateFilter` on every observer to scope scene-handlers to the active scene state).
 * `__invoke(?array $flags, Filter|callable ...$filters): callable` — decorator-style factory matching aiogram's `@router.message(...)`. Returns a closure: `$register = $router->message(null, MessageF::text()->equals('start')); $register(fn (Message $m) => …);`. Attribute-based registration (`#[OnMessage(filters: [...], flags: [...])]`) is offered as an optional convenience layer on top of `register()`.
 * `outerMiddleware` and `middleware` collections matching upstream `MiddlewareManager`.
@@ -659,7 +661,7 @@ The `id` property is lazily extracted from the token via `Token::extractBotId()`
   }
   ```
   Note: `Filter::__invoke` is intentionally **not** declared with a rigid abstract signature. The reflection adapter that dispatches both filters and handlers binds named kwargs by parameter name, so concrete filter classes are free to declare whichever named parameters they consume. The abstract surface is implicit: every filter is callable, and every call returns `bool|array<string, mixed>`. The contract is enforced by `CallableObject::__construct`'s `ReflectionFunction::getReturnType()` check + the `HandlerObject::check` consumer.
-* Static helpers: `Filter::all(Filter ...$filters): AndFilter`, `Filter::any(Filter ...$filters): OrFilter`, `Filter::not(Filter $f): InvertFilter`.
+* Static helpers: `Filter::all(Filter ...$filters): AndFilter`, `Filter::any(Filter ...$filters): OrFilter`, `Filter::invertOf(Filter $f): InvertFilter`. The static negation helper is named `invertOf` rather than `not` because PHP cannot declare both a static method `Filter::not(Filter)` and an instance method `$filter->not()` with the same name in one class.
 * **Flags attachment mechanism** (port of `aiogram/dispatcher/flags.py`):
 
 Upstream attaches flags by mutating the callback function: `value.aiogram_flag = {...}` (`dispatcher/flags.py:53-57`). PHP closures and `Closure` instances do not support arbitrary attribute assignment; the framework instead uses a hybrid of PHP attributes + a `\WeakMap<callable, Flag[]>`:
@@ -770,7 +772,7 @@ Full PHP port of `magic_filter` plus aiogram's `.as_()` extension. ~800 LOC.
   * `.as_(name)` via `AsFilterResultOperation` (port of `aiogram/utils/magic_filter.py:9-18`) rejects only when value is `null` or `(Iterable && empty)`; otherwise wraps the value as `{$name => $value}`. So `F->text->startswith('hi')->as_('matched')` against `text='no'` resolves to `['matched' => false]` (accepted with the boolean payload) — matching upstream `magic_filter` semantics exactly.
 * `MagicFilter::asFilter(): Filter` wraps the chain in a `Filter` instance whose `__invoke($event)` calls `$this->resolve($event)`. Used implicitly when a `MagicFilter` is passed where a `Filter` is expected (via a `Filter::fromMagic()` shim).
 * `.as_(string $name): MagicFilter` appends an `AsFilterResultOperation`, which makes the terminal value either `null` (rejected) or `[$name => $value]` (a kwarg dict that the dispatcher merges into handler args). 1-for-1 port of `aiogram/utils/magic_filter.py:9-18`.
-* Convenience global: `Gruven\PhpBotGram\F` is a re-export of `MagicFilter::root()` (a class-level singleton) so users write `use Gruven\PhpBotGram\F;` then `F->text->equals('hi')`.
+* Convenience global: `Gruven\PhpBotGram\F` is a top-level **constant** (`const F = new MagicFilter();` — PHP 8.5 added `new` in `const` initializers at the top level). Users import it as `use const Gruven\PhpBotGram\F;` then write `F->text->equals('hi')`. (A plain `use Gruven\PhpBotGram\F;` would import a class symbol, and `F->...` would not be valid PHP — the syntax requires a constant or variable.)
 
 ### Layer 2 — `Filters\MagicData`
 
@@ -779,8 +781,12 @@ final class MagicData extends Filter
 {
     public function __construct(private readonly MagicFilter $rule) {}
 
-    public function __invoke(TelegramObject $event, array $data): bool|array
+    public function __invoke(TelegramObject $event, mixed ...$kwargs): bool|array
     {
+        // The reflection adapter that dispatches filters binds named kwargs by parameter name.
+        // MagicData wants the full middleware data dict, so it accepts variadic-named kwargs and
+        // reassembles them into a single map (event included for completeness) before resolution.
+        $data = ['event' => $event] + $kwargs;
         return $this->rule->resolve($data) ? true : false;
     }
 }
@@ -969,7 +975,7 @@ abstract class BaseStorage
 
 `getValue` and `updateData` are concrete on the base (compose over `getData`/`setData`); subclasses override only when a native single-key/atomic-merge operation is available (Redis HGET, Mongo $set, etc.).
 
-`BaseEventIsolation` abstract: `lock(StorageKey $key): AsyncContextManager` + `close(): void` — yields a context that holds the per-key lock for the duration of the `with` block (PHP equivalent: a closure-block style helper, `lock(...): Lock` returning a `Lock` object whose `release()` is called by the framework on event completion).
+`BaseEventIsolation` abstract: `lock(StorageKey $key): Lock` + `close(): void` — returns a `Lock` object whose `release()` is called by the framework on event completion (closure-block style helper). Upstream uses an `@asynccontextmanager` decorator on `lock()` to make it `async with` compatible; PHP has no equivalent so the port exposes the lock as a plain object with explicit `release()`. The framework wraps handler dispatch in a `try { ... } finally { $lock->release(); }`.
 
 * `MemoryStorage` — in-process map (per Bot instance unless `withBotId(true)` is set on the key builder), used in tests and for single-process bots.
 * `RedisStorage::fromUrl(string $url, ?KeyBuilder $keyBuilder = null, int $stateTtl = 0, int $dataTtl = 0)` — built on `amphp/redis`.
@@ -983,7 +989,7 @@ Behaves identically to upstream: enters the isolation lock, materializes `FSMCon
 
 ### Scenes
 
-* `Scene` abstract class extended by user. The class-level `#[SceneState(state: 'order', resetDataOnEnter: false, resetHistoryOnEnter: false, callbackQueryWithoutState: false)]` attribute mirrors upstream's full set of `class OrderScene(Scene, state='order', reset_data_on_enter=..., reset_history_on_enter=..., callback_query_without_state=...)` class kwargs (`aiogram/fsm/scene.py:321-377`). Omitting the attribute yields a `state: null` scene (matches upstream's default — only one such scene may exist per `SceneRegistry`). The `callbackQueryWithoutState` flag drives the same behavior as upstream `scene.py:403`: when `true`, the `StateFilter` is **not** installed on the `callback_query` observer, allowing the scene to intercept CB queries before any state is set.
+* `Scene` abstract class extended by user. The class-level `#[SceneState(state: 'order', resetDataOnEnter: false, resetHistoryOnEnter: false, callbackQueryWithoutState: false, attrsResolver: null)]` attribute mirrors upstream's full set of `class OrderScene(Scene, state='order', reset_data_on_enter=..., reset_history_on_enter=..., callback_query_without_state=..., attrs_resolver=...)` class kwargs (`aiogram/fsm/scene.py:321-377`). Omitting the attribute yields a `state: null` scene (matches upstream's default — only one such scene may exist per `SceneRegistry`). The `callbackQueryWithoutState` flag drives the same behavior as upstream: when `true`, the `StateFilter` is **not** installed on the `callback_query` observer, allowing the scene to intercept CB queries before any state is set. The `attrsResolver` accepts an optional callable that customizes attribute resolution on the scene class (port of upstream's `ClassAttrsResolver`); defaults to `null` which uses the default sorted-MRO walker.
 * Handlers are declared via per-event marker attributes plus optional `After::*` transitions:
   ```php
   #[SceneState('order')]
@@ -1032,7 +1038,7 @@ Behaves identically to upstream: enters the isolation lock, materializes `FSMCon
 
 `Webhook\Server\AmphpServer::run(BaseRequestHandler $handler, string $path, string $host = '0.0.0.0', int $port = 8443, ?array $tlsOptions = null): void` boots an `amphp/http-server` instance routing POST `$path` to the handler.
 
-**`Webhook\Setup::register(HttpServer $server, Dispatcher $dispatcher, BaseRequestHandler $handler, string $path, mixed ...$workflowData): void`** wires phpbotgram into an existing `amphp/http-server` application. It adds the POST `$path` route to the server, then registers `Dispatcher::emitStartup($bots[-1], ...$workflowData)` against the server's `onStart` callback and `Dispatcher::emitShutdown($bots[-1], ...$workflowData)` against `onStop`. Port of upstream `aiogram/webhook/aiohttp_server.py:22-46 setup_application`. Without this helper, users embedding the framework into an existing amphp/http-server app would have to wire startup/shutdown observers manually — a common foot-gun in upstream `aiogram` setup code.
+**`Webhook\Setup::register(HttpServer $server, Dispatcher $dispatcher, BaseRequestHandler $handler, string $path, mixed ...$workflowData): void`** wires phpbotgram into an existing `amphp/http-server` application. It adds the POST `$path` route to the server, then registers `Dispatcher::emitStartup(bot: last(bots in workflow), ...$workflowData)` against the server's `onStart` callback and `Dispatcher::emitShutdown(...)` against `onStop` (the "last bot in workflow" is computed via `array_key_last(...)`; PHP arrays don't support upstream's Python `bots[-1]` negative-index syntax). Port of upstream `aiogram/webhook/aiohttp_server.py:22-46 setup_application`. Without this helper, users embedding the framework into an existing amphp/http-server app would have to wire startup/shutdown observers manually — a common foot-gun in upstream `aiogram` setup code.
 
 A PSR-7/PSR-15 webhook bridge — for users running on top of Symfony HttpKernel, Slim, or Laravel — is intentionally deferred to a separate optional package (`gruven/phpbotgram-psr-webhook`, future). Keeping PSR adapters out of core lets us avoid the entire PSR-7/17/18 dependency stack while still allowing integration to grow on demand.
 
@@ -1108,7 +1114,7 @@ tests/
 
 ### Test infrastructure
 
-* `MockedSession` ports upstream behavior: an in-memory deque of canned responses + a deque of recorded outgoing methods. Exposes `addResult(Response $r): Response` and `getRequest(): TelegramMethod`. **Intentional deviation from upstream**: upstream's `MockedSession.make_request` declares `timeout: int | None = UNSET_PARSE_MODE` (`tests/mocked_bot.py:33`) — a bug where the default value is a `Default('parse_mode')` sentinel mistakenly used as an int. The PHP port uses the type-correct `?int $timeout = null` instead.
+* `MockedSession` ports upstream behavior: an in-memory deque of canned responses + a deque of recorded outgoing methods. Exposes `addResult(Response $r): Response` and `getRequest(): TelegramMethod`. **Intentional deviation from upstream**: upstream's `MockedSession.make_request` declares `timeout: int | None = UNSET_PARSE_MODE` (`tests/mocked_bot.py:33`) — a bug where the default value is a `Default('parse_mode')` sentinel mistakenly used as an int. The PHP port uses the type-correct `?int $timeout = null` instead. (The PHP port's renames `Default`→`BotDefault` and `UNSET`→`Unspecified` would have made the bug a hard type error anyway.)
 * `MockedBot extends Bot` injects `MockedSession`, exposes `addResultFor(string $methodClass, bool $ok, mixed $result = null, ?string $description = null, int $errorCode = 200, ...): Response` and `getRequest(): TelegramMethod`. Pre-stubs `$bot->me()` to return a fixed `User` (id derived from the test token `42:TEST` so `bot.id === 42`, `username = 'tbot'`, etc.) — matches `tests/mocked_bot.py:63-70`. Without that stub, `Dispatcher::_polling` (which calls `$bot->me()` before entering the loop) cannot run against `MockedBot`.
 * `tests/bootstrap.php` configures Revolt's `EventLoop` driver explicitly so async tests use a deterministic loop. Per-test isolation is achieved by **resetting the driver** in `tearDown`: `Revolt\EventLoop::setDriver(new \Revolt\EventLoop\Driver\StreamSelectDriver())`. This is the destructive but reliable approach — Revolt v1 does not expose a public callback-enumeration API, so attempting to "snapshot and cancel" individual callbacks is fragile. A fresh driver per test guarantees no cross-test leakage. Any test that holds a closure over an `EventLoop` callback ID across cases is unsupported (none of our planned tests do this).
 * Async tests use `\Amp\async(...)->await()` to drive Fibers; helper `runAsync(\Closure $body): mixed` (in-house, ~40 LOC under `tests/Support/RunAsync.php`) drives Revolt's event loop inside a test method via `Future::await()`. The helper is implemented as a PHPUnit trait `RunAsyncTrait` that hooks into `setUp`/`tearDown` for the driver reset. `amphp/phpunit-util` is incompatible with our PHPUnit 13 baseline, so we don't depend on it.
@@ -1171,7 +1177,7 @@ Documentation: a `docs/` directory with English Markdown sources, structured to 
 
 | Phase | Deliverables | Verification |
 |---|---|---|
-| **0. Bootstrap** | Composer deps locked (amphp/amp ^3, amphp/http-client ^5, revolt/event-loop ^1, amphp/byte-stream ^2 + ext-mbstring; require-dev: amphp/redis ^2, amphp/http-server ^3, mongodb/mongodb ^2, phpstan ^2.1, twig/twig ^3.10), namespace skeleton, CI scaffolding (GitHub Actions PHP 8.5 + Redis/Mongo services), MockedBot/MockedSession harness with `me()` pre-stub, base `TelegramObject`, `TelegramMethod<T>`, `Default`, `Unset`, `BotContextController` (incl. `withBot()` deep-clone), `TelegramApiServer`, exception tree | `phpunit` runs on empty suite; CI green |
+| **0. Bootstrap** | Composer deps locked (amphp/amp ^3, amphp/http-client ^5, revolt/event-loop ^1, amphp/byte-stream ^2 + ext-mbstring; require-dev: amphp/redis ^2, amphp/http-server ^3, mongodb/mongodb ^2, phpstan ^2.1, twig/twig ^3.10), namespace skeleton, CI scaffolding (GitHub Actions PHP 8.5 + Redis/Mongo services), MockedBot/MockedSession harness with `me()` pre-stub, base `TelegramObject`, `TelegramMethod<T>`, `BotDefault`, `Unspecified`, `BotContextController` (incl. `withBot()` deep-clone), `TelegramApiServer`, exception tree | `phpunit` runs on empty suite; CI green |
 | **1. Foundation** | `Bot` (skeleton, no API methods yet), `BaseSession`, `AmphpSession`, `InputFile` (Buffered/Fs/Url), `Serializer` (dump/load with recursive bot binding), `RequestMiddlewareManager`. Phase 1 hand-writes a minimum `SendMessage` + `Message` + `Bot::sendMessage()` for the Phase 1 smoke test; these are deleted and regenerated in Phase 2. | Manual roundtrip test: `sendMessage` hand-coded against a test bot |
 | **2. Codegen** | Copy `.butcher` schema, build `tools/generator/` (incl. all six pipeline stages + the F-DSL templates emitting `Filters/F/*` builders), regenerate all Enums, Types (with `aliases.yml`-derived shortcut methods baked into class bodies), Methods, the Bot facade, the F-DSL builder catalog | Generator emits valid PHP; `phpstan` level 9 passes on `src/`; `phpunit` smoke test instantiates 50 random types end-to-end (serialize → deserialize); generator round-trips with no `git diff` |
 | **3. Dispatcher** | `Router`, `Dispatcher`, `TelegramEventObserver` (incl. `filter(...)` global filter), `EventObserver`, `HandlerObject`, `FilterObject`, `CallableObject` (reflection-driven kwarg binding), `Flags`, polling loop (per-bot semaphore, signal handling, startup/shutdown bot injection), webhook response contract (`silentCallRequest`, 55s deferred), `ErrorsMiddleware`, `UserContextMiddleware` | Echo bot example runs against a mock session; `tests/Dispatcher/*` port complete |
