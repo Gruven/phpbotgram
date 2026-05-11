@@ -106,8 +106,9 @@ Gruven\PhpBotGram\
 │   └── Server\AmphpServer
 ├── Handlers\                        # aiogram/handlers/ — class-based handler base classes
 │   ├── BaseHandler                  # abstract __invoke()-driven handler with $this->event
-│   ├── MessageHandler, CallbackQueryHandler, InlineQueryHandler,
-│   │   ChosenInlineResultHandler, PollHandler, ChatMemberHandler,
+│   ├── MessageHandler, MessageHandlerCommandMixin (trait — adds command(): ?CommandObject helper, port of aiogram/handlers/message.py:23-29)
+│   ├── CallbackQueryHandler, InlineQueryHandler,
+│   │   ChosenInlineResultHandler, PollHandler, ChatMemberHandler (covers both `my_chat_member` and `chat_member` events; both wrap `ChatMemberUpdated`),
 │   │   ShippingQueryHandler, PreCheckoutQueryHandler, ErrorHandler
 ├── Utils\
 │   ├── TextDecoration\TextDecoration, HtmlDecoration, MarkdownDecoration
@@ -156,7 +157,7 @@ Concrete sessions (`AmphpSession`) forward via `parent::__construct(...)`.
 * `abstract public function makeRequest(Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed;`
 * `abstract public function close(): void;`
 * `abstract public function streamContent(string $url, array $headers = [], int $timeout = 30, int $chunkSize = 65536, bool $raiseForStatus = true): ReadableStream;` — returns an `Amp\ByteStream\ReadableStream`. `Bot::downloadFile` (see Bot facade hand-authored methods below) consumes it via the `read(): ?string` chunk-loop pattern from amphp/byte-stream v2.
-* `public function prepareValue(mixed $value, Bot $bot, array &$files, bool $dumpsJson = true): mixed;` — port of `BaseSession.prepare_value` covering `Default` sentinel, `InputFile`, `DateTimeInterface`, enums, lists, dicts, and nested `TelegramObject`. The `&$files` parameter is typed `@param array<string, InputFile> &$files` in PHPDoc; the random-token keys (`secrets.token_urlsafe(10)` upstream → `random_bytes(10)` base64url-encoded in PHP) are used by the multipart writer to wire `attach://<token>` references to file streams. **Null-filtering rule**: when recursing into lists and dicts, entries whose recursive `prepareValue` call returns `null` are **dropped** from the result (parity with `aiogram/client/session/base.py:200-233`). This is the mechanism that elides `Default('parse_mode')` resolved to `null` (no default set on the bot) from outbound payloads — without it, the wire would carry `"parse_mode": null` literals where upstream omits the key entirely.
+* `public function prepareValue(mixed $value, Bot $bot, array &$files, bool $dumpsJson = true): mixed;` — port of `BaseSession.prepare_value` covering `Default` sentinel, `InputFile`, `DateTimeInterface`, enums, lists, dicts, and nested `TelegramObject`. The `&$files` parameter is typed `@param array<string, InputFile> &$files` in PHPDoc; the random-token keys (`secrets.token_urlsafe(10)` upstream → `random_bytes(10)` base64url-encoded in PHP) are used by the multipart writer to wire `attach://<token>` references to file streams. **Recursion contract**: the top-level invocation uses `$dumpsJson = true`, which causes nested list/dict values to be `json_encode()`'d into a single string suitable for the multipart form field. All recursive calls into list/dict elements pass `$dumpsJson = false` so nested objects stay as PHP arrays until the top-level wrap. Mirrors upstream `session/base.py:200-233` where `_dumps_json=False` is threaded through the recursive walk. **Null-filtering rule**: when recursing into lists and dicts, entries whose recursive `prepareValue` call returns `null` are **dropped** from the result. This is the mechanism that elides `Default('parse_mode')` resolved to `null` (no default set on the bot) from outbound payloads — without it, the wire would carry `"parse_mode": null` literals where upstream omits the key entirely.
 * `public function checkResponse(Bot $bot, TelegramMethod $method, int $statusCode, string $content): Response;` — port of `BaseSession.check_response` mapping HTTP status + Telegram error codes to typed exceptions.
 * `public RequestMiddlewareManager $middleware { get; }` — chained around `makeRequest`.
 
@@ -172,7 +173,7 @@ A PSR-18 sync session is intentionally not in scope for the initial release. If 
 `Default` sentinel and `Unset` marker:
 
 * `Default` is a final readonly class with a `string $name` property — exactly aiogram's behavior. Its `JsonSerializable::jsonSerialize()` **throws** `\LogicException("Default sentinel reached json_encode without being resolved: {$this->name}")`. This is intentional fail-loud behavior: the serializer (`Serializer::dump()`) is the only allowed encoder for `TelegramMethod` payloads and it always resolves `Default` instances against `$bot->getDefaultProperties()` before encoding. If a `Default` somehow escapes to native `json_encode()`, the loud failure prevents silent emission of `parse_mode: null` (or similar) where the configured default should have been substituted. The resolved value is recursively re-processed by `prepareValue()` so a default of e.g. `LinkPreviewOptions(...)` flows through normally.
-* `DefaultBotProperties` implements `ArrayAccess` and exposes a typed `get(string $name): mixed` method so `$bot->default->get('parse_mode')` and `$bot->default['parse_mode']` both work. This mirrors upstream's `__getitem__` (`client/default.py:87-88`).
+* `DefaultBotProperties` implements `ArrayAccess` and exposes a typed `get(string $name): mixed` method so `$bot->default->get('parse_mode')` and `$bot->default['parse_mode']` both work. This mirrors upstream's `__getitem__` (`client/default.py:87-88`). The constructor runs an aggregation step (port of upstream `__post_init__` at `client/default.py:67-85`): when any of `linkPreviewIsDisabled`/`linkPreviewPreferSmallMedia`/`linkPreviewPreferLargeMedia`/`linkPreviewShowAboveText` is set and the top-level `linkPreview` is null, a `LinkPreviewOptions` instance is materialized from those individual flags and assigned to `$this->linkPreview`. The aggregation runs once during construction.
 * `Unset` is a readonly singleton (`Unset::instance()`) used as the sentinel for "argument not provided" cases. The serializer strips fields whose value is `Unset::instance()` before validation/encoding.
 * For grep-translating external libraries that imported aiogram's `UNSET_PARSE_MODE`, `UNSET_DISABLE_WEB_PAGE_PREVIEW`, `UNSET_PROTECT_CONTENT` back-compat constants (`aiogram/types/base.py:50-52`), the same names are re-exported from `Gruven\PhpBotGram\Types` as singleton `Default` instances.
 
@@ -203,7 +204,12 @@ Upstream uses Pydantic's `model_validate(..., context={"bot": bot})` to inject t
 
 ### Mutable type variant
 
-`Gruven\PhpBotGram\Types\MutableTelegramObject` is a `TelegramObject` subclass without the `readonly` modifier on its properties (port of `aiogram/types/base.py:38-41 MutableTelegramObject`). Used as the base for builder runtime objects (keyboards, media groups) where field mutation by helper methods is the point. The codegen does not emit `MutableTelegramObject` subclasses from the schema — schema types are all readonly. Mutability is opt-in via hand-authored builder classes in `Utils/Keyboard/`, `Utils/MediaGroup/`.
+`Gruven\PhpBotGram\Types\MutableTelegramObject` is a `TelegramObject` subclass without the `readonly` class modifier (port of `aiogram/types/base.py:38-41 MutableTelegramObject`). Used in two places:
+
+1. **Schema-driven emission**: types whose `replace.yml` declares `bases: [MutableTelegramObject]` are emitted as `MutableTelegramObject` subclasses by the codegen. This applies to the `InputMedia*` family (the upstream schema currently has ~5-10 such patches) where the wire-level type needs to be mutable so user code can patch fields after construction.
+2. **Hand-authored runtime builders**: keyboard builders, media-group builders (`Utils/Keyboard/`, `Utils/MediaGroup/`) extend `MutableTelegramObject` directly for the same reason.
+
+Generated schema types that don't ship a `bases:` patch remain `final readonly` and extend the default `TelegramObject`.
 
 Polling loop (mirrors upstream `dispatcher/dispatcher.py` `_listen_updates` / `_polling` / `start_polling` / `run_polling`):
 
@@ -266,20 +272,31 @@ PHP CLI built with plain `getopt()` (kept dep-free; switch to `symfony/console` 
      * Date/time-ish strings handled by a custom `DateTime` subclass of `\DateTimeImmutable` on the `Message.date`-style fields (per aiogram custom `DateTime` field in `aiogram/types/custom.py`); the serializer converts Unix-timestamps both ways
      * Deprecated parameters (those bearing `deprecated:` in `entity.json`) are **emitted** on the constructor with a `#[Deprecated]` attribute and a PHPDoc `@deprecated` tag — matches aiogram's behavior of preserving the constructor signature for backward compatibility. Users migrating an aiogram bot keep working without compile errors; the deprecation surface is purely documentation.
   3. `NameMapper` converts snake_case → camelCase, escapes PHP reserved words via a fail-closed lookup table. The complete table (PHP 8.5 keywords from <https://www.php.net/manual/en/reserved.keywords.php>) is checked against every emitted identifier; collisions are renamed with a documented convention. Known renames from the current schema: `from` → `fromUser`, `class` → `className`, `list` → `items`, `function` → `fn`. Encountering an unknown collision aborts the generator with an explicit error rather than silently emitting invalid PHP. Wire-level event/property names remain snake_case (see "Event name conventions" below) so JSON serialization stays byte-compatible with the Telegram API.
-  4. `UnionDetector` identifies sealed unions (e.g. `BackgroundFill`) and emits:
+  4. `TypeOverrideApplier` consumes `replace.yml` per entity. The patches cover three operation classes, applied **after** primitive type resolution and **before** the union detector:
+
+     a. `annotations.<field>.parsed_type` — override a single field's resolved type:
+        ```yaml
+        annotations:
+          date:
+            parsed_type:
+              type: std
+              name: DateTime
+        ```
+        `parsed_type.type` is one of:
+          * `std` — a plain class/scalar name (`DateTime`, `datetime.datetime`, `datetime.timedelta`, `str`, …). The mapper translates Python builtins to PHP equivalents (`datetime.datetime` → `\DateTimeImmutable`, `datetime.timedelta` → `\DateInterval`, `str` → `string`, `int` → `int`, etc.).
+          * `entity` — a reference to another schema entity: `references: { category: types|methods|enums, name: <EntityName> }`. The generated PHP type is the corresponding class FQN.
+          * `union` — a composite union of `items: [{type: std|entity|union, ...}, ...]`. Used by `InputMediaAnimation::media`, `InputMediaAudio::media`, etc. to express `InputFile | str`. The emitted PHP union spans every resolved member type.
+
+     b. `annotations.<field>.required` — flip the required/optional flag for a field (rare; used to mark schema fields as required in the framework even when the wire makes them optional).
+
+     c. **`bases:` (top-level)** — overrides the parent class of the emitted type. Used to lift the emitted type into the mutable variant (e.g. `bases: [MutableTelegramObject]` on `InputMediaAnimation`, `InputMediaAudio`, etc.). When `bases` is present, the emitted class extends `MutableTelegramObject` (the non-readonly variant) instead of the default `TelegramObject`. This reconciles the otherwise-incorrect claim that codegen "does not emit MutableTelegramObject subclasses": for the small set of types that ship `bases:` patches (around 5-10 in the current schema, primarily the `InputMedia*` family), the generator emits mutable subclasses; for all others, the readonly default applies.
+
+     Without this step, fields whose schema declares `Integer` for unix-timestamp dates would emit as raw integers, `InputMedia*::media` fields would lose their `InputFile|string` union, and the keyboard-builder runtime would not have a mutable base to extend.
+  5. `UnionDetector` identifies sealed unions (e.g. `BackgroundFill`) and emits:
      * abstract base class `BackgroundFill` with discriminator field `type`,
      * concrete subclasses (`BackgroundFillSolid`, …),
      * a `BackgroundFillUnion` final class that exposes `public const list<string> Members = [BackgroundFillSolid::class, BackgroundFillGradient::class, …]` plus a static `resolve(array $payload): TelegramObject` dispatcher used by the serializer.
      * For PHPStan: every method/type field whose schema type is the union emits a plain PHP union signature (`BackgroundFillSolid|BackgroundFillGradient|BackgroundFillFreeformGradient`) — no `@phpstan-type` aliases (which would need `@phpstan-import-type` in every consumer file). The verbosity is acceptable since it's generated code.
-  5. `TypeOverrideApplier` consumes `replace.yml` per entity. The `replace.yml` files (e.g. `.butcher/types/Message/replace.yml`) override the resolved type for specific fields:
-     ```yaml
-     annotations:
-       date:
-         parsed_type:
-           type: std
-           name: DateTime
-     ```
-     The applier runs **after** primitive type resolution and **before** the union detector, so `Message::date` ends up as `\DateTimeImmutable` (via the framework's `DateTime` subclass) instead of `int`. Without this step, fields whose schema declares `Integer` for unix-timestamp dates would emit as raw integers.
   6. `ShortcutDetector` reads `aliases.yml` per type — this file **is** codegen input, not a hand-authored trait. The generator emits each alias as a public instance method directly on the type class. The `aliases.yml` DSL covers:
      * **YAML anchors and aliases** (`&assert-chat`, `*assert-chat`, `<<: *fill-answer`) — handled by the YAML parser. The loader (e.g. `symfony/yaml`) expands anchors before any codegen sees them. `<<:` map-merge keys propagate fill defaults across aliased methods (e.g. `reply` inherits `answer`'s fill block and adds `reply_parameters`).
      * **`ignore:` directives** (`ignore: &ignore-reply [reply_to_message_id]`) — the listed parameter names are **dropped from the alias method's signature**; they remain on the underlying method class but are not exposed on the shortcut.
@@ -329,14 +346,14 @@ PHP CLI built with plain `getopt()` (kept dep-free; switch to `symfony/console` 
      }
      ```
      The schema currently ships `aliases.yml` for exactly these 11 types: Message, InaccessibleMessage, User, Chat, CallbackQuery, ChatJoinRequest, InlineQuery, PreCheckoutQuery, ShippingQuery, ChatMemberUpdated, Sticker. (Note: `Update` does **not** have `aliases.yml` despite intuition — events route through dispatcher observers rather than type shortcuts.) The generator iterates `.butcher/types/*/aliases.yml`.
-  6. `HandAuthoredShortcuts` directory `src/Types/Shortcuts/<TypeName>Shortcuts.php` holds *additional* hand-authored helpers that aren't expressible as `aliases.yml` directives — e.g. `Message::contentType()` (computed field), `Message::htmlText()` / `Message::mdText()` (text re-rendering via `TextDecoration`), `Message::asReplyParameters()`, `CallbackQuery::answer()` (which conventionally doesn't read from `aliases.yml`). The generator emits a `use <TypeName>Shortcuts;` trait import inside the generated class only when the corresponding `Shortcuts` trait file exists.
-  7. `Renderer` emits PHP files into the target directories, formatted to match php-cs-fixer rules.
+  7. `HandAuthoredShortcuts` directory `src/Types/Shortcuts/<TypeName>Shortcuts.php` holds *additional* hand-authored helpers that aren't expressible as `aliases.yml` directives — e.g. `Message::contentType()` (computed field), `Message::htmlText()` / `Message::mdText()` (text re-rendering via `TextDecoration`), `Message::asReplyParameters()`, `CallbackQuery::answer()` (which conventionally doesn't read from `aliases.yml`). The generator emits a `use <TypeName>Shortcuts;` trait import inside the generated class only when the corresponding `Shortcuts` trait file exists.
+  8. `Renderer` emits PHP files into the target directories, formatted to match php-cs-fixer rules.
 
 ### Event name conventions
 
 Telegram update keys (`message`, `edited_message`, `business_connection`, `purchased_paid_media`, …) are snake_case wire-level strings. PHP property names on `Router` and `TelegramEventObserver` are camelCase (`$router->editedMessage`, `$router->businessConnection`). The mapping is two-way:
 
-* `Update::eventType(): string` returns the snake_case key from the payload (`'edited_message'`).
+* `Update::eventType(): string` returns the snake_case key from the payload (`'edited_message'`). The implementation is **hand-authored, not generated** — it copies the exact upstream `if … elif …` chain from `types/update.py:163-223` so the priority order matches: `message`, `edited_message`, `channel_post`, `edited_channel_post`, `inline_query`, `chosen_inline_result`, `callback_query`, `shipping_query`, `pre_checkout_query`, `poll`, `poll_answer`, `my_chat_member`, `chat_member`, `chat_join_request`, `message_reaction`, `message_reaction_count`, `chat_boost`, `removed_chat_boost`, `deleted_business_messages`, `business_connection`, `edited_business_message`, `business_message`, `purchased_paid_media`, `guest_message`, `managed_bot`. This order is observable (a payload carrying both `message` and `edited_message` would dispatch to `message` first), and the spec freezes it.
 * `Router::$observers` is a `array<string, TelegramEventObserver>` keyed by the snake_case string; the camelCase properties are aliases backed by the same instance: `$this->editedMessage = $this->observers['edited_message'] = new TelegramEventObserver(...)`.
 
 ### PHPStan generics layout
@@ -369,7 +386,7 @@ Telegram update keys (`message`, `edited_message`, `business_connection`, `purch
   public function sendMessage(/* args */): Message { /* return $this(new SendMessage(...)) */ }
   ```
 * The generated facade `Bot::sendMessage(...)` declares its concrete return type (`Message`) directly — generics flow only through `Bot::__invoke()` for the polymorphic path; method-specific wrappers use plain return types.
-* Runtime: the `public const string ReturnsType = Message::class;` on each method class lives alongside the PHPDoc and is what the serializer actually consults to deserialize the response payload.
+* Runtime: each method class declares `public const string ReturnsType = Message::class;`. For PHPStan level 9 the const is annotated `@var class-string<Message>` so the analyzer can tie `ReturnsType` to the `@template TReturn` chain on `TelegramMethod`. The serializer consults this const at runtime to deserialize the response payload.
 
 ### Generated type class shape
 
@@ -466,20 +483,26 @@ public function sendMessage(
 
 `Bot::__invoke(TelegramMethod $method, ?int $timeout = null): mixed` is the polymorphic entry point used by method `__await__` emulation. Awaitable-style call site becomes `$bot($method)` or `$method->emit($bot)` in PHP, which matches aiogram's `await method.emit(bot)` semantics.
 
+`TelegramMethod::emit(?Bot $bot = null): mixed` — when `$bot` is null, the method falls back to the bot bound during alias-method construction (`bindBot()`). If both are null, throws `\LogicException("This method is not mounted to any bot instance, please call it explicitly with bot instance \`\$bot(\$method)\` or mount method to a bot instance \`\$method->bindBot(\$bot)\` and then call it \`\$method->emit()\`.")`. Matches upstream `__await__` behavior at `methods/base.py:84-93`.
+
 **Hand-authored Bot methods** (kept in `src/Client/BotShortcuts.php` trait, `use`d by the generated `Bot` class — mirrors upstream `aiogram/client/bot.py:344-490` non-codegen surface):
 
 ```php
 trait BotShortcuts
 {
     public function id(): int;                              // extracted from token
-    public function context(?Bot $self = null): static;      // ContextVar-equivalent (Fiber-local)
+    /** Returns a closure-based "with"-block: runs the body, then closes the bot session on exit. Mirrors upstream Bot.context(auto_close=True) at client/bot.py:357-369. */
+    public function context(bool $autoClose = true): callable;
+    /** Fiber-local "current bot" accessor; ported from aiogram/utils/mixins.py ContextInstanceMixin. */
+    public static function current(): ?Bot;
+    public static function setCurrent(?Bot $bot): void;
     public function me(): User;                              // cached getMe() result
     public function downloadFile(File|string $fileOrPath, mixed $destination = null, int $chunkSize = 65536): ?string;  // mixed dest: stream | path | null
     public function download(Downloadable $object, mixed $destination = null, int $chunkSize = 65536): ?string;          // resolve File then downloadFile
 }
 ```
 
-The `id` property is lazily extracted from the token via `Token::extractBotId()`. `context()` uses `Revolt\EventLoop\FiberLocal` to store a per-Fiber current bot (replacement for Python's `contextvars.ContextVar`). `me()` is cached on first call (matches upstream behavior). `downloadFile`/`download` consume `BaseSession::streamContent` and either write to the supplied stream/path or buffer and return the body string.
+The `id` property is lazily extracted from the token via `Token::extractBotId()`. `context()` returns a callable that the caller invokes as `($bot->context())(function () use ($bot) { … });` — analogous to `async with bot.context()` upstream. The body runs, then the bot's session is closed via `await $bot->session()->close()`. `current()`/`setCurrent()` use `Revolt\EventLoop\FiberLocal` to expose a per-Fiber "current bot" — a separate convenience layer ported from `aiogram/utils/mixins.py:ContextInstanceMixin`, unrelated to the session-cleanup helper. `me()` is cached on first call (matches upstream behavior). `downloadFile`/`download` consume `BaseSession::streamContent` and either write to the supplied stream/path or buffer and return the body string.
 
 ### Serializer
 
@@ -532,14 +555,25 @@ The `id` property is lazily extracted from the token via `Token::extractBotId()`
   abstract class Filter
   {
       /**
-       * Accepts the event plus dispatcher kwargs (`event_update`, `event_router`, plus user-supplied workflow data and any earlier filter results).
+       * Concrete filters declare named parameters; the dispatcher's CallableObject adapter
+       * introspects the signature via ReflectionMethod and binds only the kwargs the filter
+       * actually declares (mirroring HandlerObject.check's signature filtering at
+       * dispatcher/event/handler.py:62-66). Example concrete signatures:
+       *
+       *   Command::__invoke(Message $message, Bot $bot): bool|array
+       *   StateFilter::__invoke(TelegramObject $event, ?string $raw_state = null): bool
+       *   ChatMemberUpdatedFilter::__invoke(ChatMemberUpdated $update): bool
        *
        * Return values:
        *   - `false` — reject this handler
        *   - `true` — accept, contribute nothing to handler kwargs
-       *   - `array<string, mixed>` — accept, **merge into handler kwargs** (the dict keys become named arguments to the handler — exactly as upstream's `dispatcher/event/handler.py:118-123` merges check results into `kwargs`)
+       *   - `array<string, mixed>` — accept, **merge into handler kwargs** (the dict keys become
+       *     named arguments to the handler — exactly as upstream's
+       *     dispatcher/event/handler.py:118-123 merges check results into kwargs)
        */
-      abstract public function __invoke(mixed ...$args): bool|array;
+      // Subclasses declare a typed signature; the base does not constrain it.
+      // The dispatcher invokes filters via CallableObject::call($event, ...$kwargsAsNamed)
+      // which uses Reflection to bind only the named parameters the subclass declares.
 
       public function updateHandlerFlags(array &$flags): void {}
       public function not(): Filter { /* returns InvertFilter */ }
@@ -547,8 +581,30 @@ The `id` property is lazily extracted from the token via `Token::extractBotId()`
       public function or(Filter $other): Filter { /* returns OrFilter */ }
   }
   ```
+  Note: `Filter::__invoke` is intentionally **not** declared with a rigid abstract signature. The reflection adapter that dispatches both filters and handlers binds named kwargs by parameter name, so concrete filter classes are free to declare whichever named parameters they consume. The abstract surface is implicit: every filter is callable, and every call returns `bool|array<string, mixed>`. The contract is enforced by `CallableObject::__construct`'s `ReflectionFunction::getReturnType()` check + the `HandlerObject::check` consumer.
 * Static helpers: `Filter::all(Filter ...$filters): AndFilter`, `Filter::any(Filter ...$filters): OrFilter`, `Filter::not(Filter $f): InvertFilter`.
-* `HandlerObject` (port of `dispatcher/event/handler.py:HandlerObject`) wraps each registered handler with a `CallableObject` that introspects the handler's signature via `ReflectionFunction`/`ReflectionMethod` and binds only the kwargs the handler actually declares. Without that selectivity, the kwarg-injection model (where filters add `command`, `callback_data`, `match`, etc. to the kwargs dict) would force every handler to accept `mixed ...$kwargs`. The reflection step caches a descriptor `{params: array<string, true>, varKw: bool}` per callable. When `varKw === true` (handler declares `mixed ...$kwargs`), **all** kwargs are forwarded unfiltered, mirroring upstream `CallableObject._prepare_kwargs` (`dispatcher/event/handler.py:62-66`).
+* **Flags attachment mechanism** (port of `aiogram/dispatcher/flags.py`):
+
+Upstream attaches flags by mutating the callback function: `value.aiogram_flag = {...}` (`dispatcher/flags.py:53-57`). PHP closures and `Closure` instances do not support arbitrary attribute assignment; the framework instead uses a hybrid of PHP attributes + a `\WeakMap<callable, Flag[]>`:
+
+* Method/function handlers declared in a class can wear PHP attributes: `#[Flag(name: 'chat_action', value: 'typing')]` on the handler method. `FlagDecorator::register(callable, Flag)` is the imperative entry point used when there's no class to attach an attribute to (anonymous closures registered programmatically).
+* The framework's `extractFlagsFromObject(callable $h): array<string, mixed>` first scans for `#[Flag]` attributes via `ReflectionFunction`/`ReflectionMethod`, then consults the `\WeakMap` for any programmatically-attached flags, and merges them into the handler's flags array (mirroring `dispatcher/flags.py:extract_flags_from_object`).
+* `flags = new FlagGenerator()` is the PHP top-level singleton matching upstream `from aiogram import flags`. Usage like `$flags->chatAction('typing')` returns a `FlagDecorator` instance that, when applied to a handler via `FlagDecorator::__invoke(callable): callable`, stores the flag in the `\WeakMap`. PHP equivalent of the upstream `@flags.chat_action("typing")` decorator:
+  ```php
+  $router->message->register(
+      $flags->chatAction('typing')(
+          fn (Message $message) => $message->answer('processing...'),
+      ),
+  );
+  ```
+  Or via attribute on a method:
+  ```php
+  #[Flag(name: 'chat_action', value: 'typing')]
+  public function onMessage(Message $message): void { /* … */ }
+  ```
+* Helpers: `getFlag(HandlerObject $h, string $name, mixed $default = null): mixed` and `checkFlags(HandlerObject $h, MagicFilter $rule): bool` — direct ports.
+
+`HandlerObject` (port of `dispatcher/event/handler.py:HandlerObject`) wraps each registered handler with a `CallableObject` that introspects the handler's signature via `ReflectionFunction`/`ReflectionMethod` and binds only the kwargs the handler actually declares. Without that selectivity, the kwarg-injection model (where filters add `command`, `callback_data`, `match`, etc. to the kwargs dict) would force every handler to accept `mixed ...$kwargs`. The reflection step caches a descriptor `{params: array<string, true>, varKw: bool}` per callable. When `varKw === true` (handler declares `mixed ...$kwargs`), **all** kwargs are forwarded unfiltered, mirroring upstream `CallableObject._prepare_kwargs` (`dispatcher/event/handler.py:62-66`).
 
 ### Injected dispatcher kwargs (reference table)
 
@@ -585,6 +641,28 @@ abstract class BaseMiddleware
 }
 ```
 
+`MiddlewareManager` (port of `aiogram/dispatcher/middlewares/manager.py`):
+
+```php
+final class MiddlewareManager implements \Countable, \IteratorAggregate, \ArrayAccess
+{
+    public function register(BaseMiddleware $middleware): BaseMiddleware { /* appends */ }
+    public function unregister(BaseMiddleware $middleware): void;
+    /**
+     * Callable as both an instance-accepting registrar AND a decorator factory:
+     *   $router->message->outerMiddleware(new MyMiddleware());      // instance form
+     *   $register = $router->message->outerMiddleware();             // decorator-factory form
+     *   $register(new MyMiddleware());
+     */
+    public function __invoke(?BaseMiddleware $middleware = null): BaseMiddleware|callable;
+    public function offsetGet(int $i): BaseMiddleware;
+    public function count(): int;
+    public function getIterator(): \Iterator;
+    /** Wraps a chain of middlewares around the terminal handler — used internally by TelegramEventObserver::trigger. */
+    public static function wrapMiddlewares(iterable $middlewares, callable $handler): callable;
+}
+```
+
 ## Magic-filter runtime + F-DSL (typed builders)
 
 aiogram's magic-filter surface has two layers:
@@ -604,10 +682,15 @@ Full PHP port of `magic_filter` plus aiogram's `.as_()` extension. ~800 LOC.
   * `F.text != 'hi'` → `F->text->notEquals('hi')` (alias `ne`)
   * `F.text & F.from_user.id == 123` → `F->text->and(F->fromUser->id->eq(123))`
   * `F.text | F.caption` → `F->text->or(F->caption)`
-  * `~F.message.via_bot` → `F->message->viaBot->not()`
-  * `F.text.casefold()`, `lower()`, `upper()`, `startswith()`, `endswith()`, `contains()`, `regexp(pattern)`, `len()`, `F.cast(int)`, `F.func(callable)` — all map to `__call` operations.
+  * `~F.text` → `F->text->not()`
+  * `F.text.casefold()`, `lower()`, `upper()`, `startswith()`, `endswith()`, `contains()`, `regexp(pattern)`, `len()`, `F.func(callable)` — all map to `__call` operations.
+  * `F.cast(int)` (which upstream exposes as a `MagicFilter` instance method, not a field accessor) → `F->cast(intval(...))` via a public `MagicFilter::cast(callable $fn): MagicFilter` method (port of `magic_filter`'s `cast` operation, plus a `\Closure::fromCallable('intval')` shim for primitive callables).
   * `F.text.in_({'a','b'})` → `F->text->in(['a','b'])`
-* Terminal evaluation: `MagicFilter::resolve(mixed $value): mixed` walks the chain. If any operation returns null/empty/false, the overall result is null (rejection). The result of the last operation is returned otherwise.
+* Terminal evaluation: `MagicFilter::resolve(mixed $value): mixed` walks the chain operation-by-operation. Per-operation rules:
+  * **Attribute / method-call operations** propagate the value as-is (including `false`, `0`, empty strings — these are valid values mid-chain).
+  * **Comparison operations** (`equals`, `notEquals`, `in`, `gt`, `lt`, `startswith`, `endswith`, `contains`, `regexp`, …) return `bool` and pass that boolean forward. A `false` result here does *not* short-circuit the chain — it just becomes the new value.
+  * **Terminal acceptance** is determined only by the *final* value: `MagicFilter::asFilter()` wraps the chain so the result `null` or empty `Iterable` becomes a `Filter` reject; any other value (including `false`, `0`, `''`, or a populated array) becomes accept.
+  * `.as_(name)` via `AsFilterResultOperation` (port of `aiogram/utils/magic_filter.py:9-18`) rejects only when value is `null` or `(Iterable && empty)`; otherwise wraps the value as `{$name => $value}`. So `F->text->startswith('hi')->as_('matched')` against `text='no'` resolves to `['matched' => false]` (accepted with the boolean payload) — matching upstream `magic_filter` semantics exactly.
 * `MagicFilter::asFilter(): Filter` wraps the chain in a `Filter` instance whose `__invoke($event)` calls `$this->resolve($event)`. Used implicitly when a `MagicFilter` is passed where a `Filter` is expected (via a `Filter::fromMagic()` shim).
 * `.as_(string $name): MagicFilter` appends an `AsFilterResultOperation`, which makes the terminal value either `null` (rejected) or `[$name => $value]` (a kwarg dict that the dispatcher merges into handler args). 1-for-1 port of `aiogram/utils/magic_filter.py:9-18`.
 * Convenience global: `Gruven\PhpBotGram\F` is a re-export of `MagicFilter::root()` (a class-level singleton) so users write `use Gruven\PhpBotGram\F;` then `F->text->equals('hi')`.
@@ -724,7 +807,7 @@ Users who don't want the magic-filter surface can implement plain `Filter` subcl
         * `null` → `''` (empty string)
         * `bool` → `'1'` / `'0'`
         * `int`, `float`, `string` → `(string) $value`
-        * `\Stringable` (Decimal-equivalent, BCMath wrappers) → `(string) $value`
+        * `\Stringable` (BigDecimal/Fraction equivalents, e.g. `Brick\Math\BigDecimal`, `\GMP`) → `(string) $value`
         * `\UnitEnum` (backed enum) → `$value->value`
         * `\Ramsey\Uuid\UuidInterface` (if installed) → `->getHex()`; otherwise `(string) $value`
         * Any other type → throws `\InvalidArgumentException` (upstream raises `ValueError`)
@@ -756,7 +839,7 @@ OrderStates::bootstrap();   // <-- canonical idiom: trailing call at the end of 
 
 * `StatesGroup::bootstrap(): void` is idempotent. It uses `ReflectionClass::getProperties(ReflectionProperty::IS_STATIC | ReflectionProperty::IS_PUBLIC)` to enumerate `State`-typed static properties, instantiates a `State` per property with `new State(state: $propertyName, groupName: null)` (matching upstream `State.__init__(state, group_name=None)` at `fsm/state.py:13`), then immediately calls `$state->setParent(static::class)` to register the owning group (parity with upstream's `set_parent` / `__set_name__` flow at `fsm/state.py:39-48`), and assigns it to the property. After bootstrap, the property is non-null and `$state->group` is set.
 * Defense in depth: `StateFilter::__construct(State|StatesGroup|class-string<StatesGroup> ...$states)`, `FSMContext::setState(State|string|null $state)`, and `SceneRegistry::add(class-string<Scene>)` all call `StatesGroup::bootstrapIfNeeded($groupClass)` on every passed group reference. So even if the user forgets the trailing call, the framework's first interaction with the group will boot it. The risk is only in raw property reads (`OrderStates::$waitingProduct`) before any framework call, which returns `null` and produces a `TypeError` on use — a fast, obvious failure.
-* `bootstrapIfNeeded(class-string<StatesGroup> $group): void` uses a private `array<class-string, true>` flag map to short-circuit re-entry.
+* `bootstrapIfNeeded(class-string<StatesGroup> $group): void` uses a private `array<class-string, true>` flag map to short-circuit re-entry. Walks the inheritance/`Children` chain bottom-up: for each group, the parents listed in `protected const array Children` (and any `StatesGroup` parents in the class hierarchy) are bootstrapped *first*, so a child group's `__full_group_name__` (built from its parent chain) resolves consistently regardless of which group the framework touches first.
 * Group nesting: `OrderStates` declares nested groups via a `protected const array Children = [PaymentStates::class];` constant; `bootstrap()` recursively resolves them. **Trade-off**: upstream uses visually-nested class declarations (Python supports class nesting; PHP doesn't). The `const Children` mechanism is a manual registration. An alternative considered — scanning `get_declared_classes()` for `StatesGroup` subclasses declared in the same file — was rejected as too implicit (load order matters, IDE refactoring breaks the link). The repeated `#[ChildGroup(PaymentStates::class)]` class attribute would also work; we keep `const Children` for its single-call-site clarity. Documented as an intentional deviation.
 * `default_state` and `any_state` exposed as `State::default()` and `State::any()` static factory methods returning shared singleton `State` instances with `state: null` and `state: '*'` respectively.
 
@@ -773,7 +856,7 @@ final class FSMContext
     public function setData(array $data): void;
     public function getData(): array;
     public function getValue(string $key, mixed $default = null): mixed;
-    public function updateData(array $data = [], mixed ...$kwargs): array;
+    public function updateData(array $data = [], mixed ...$kwargs): array;  // $data merges into $kwargs with $data keys winning, matching upstream's kwargs.update(data) at fsm/context.py:38-40
     public function clear(): void;
 }
 ```
@@ -811,8 +894,8 @@ Behaves identically to upstream: enters the isolation lock, materializes `FSMCon
 
 ### Scenes
 
-* `Scene` abstract class extended by user. Each subclass declares the FSM **state name** that scopes its handlers via a class-level `#[SceneState('order')]` attribute (the PHP analog of upstream's `class OrderScene(Scene, state='order'):` class-kwargs syntax). Omitting the attribute yields a `state: null` scene (matches upstream's default — only one such scene may exist per `SceneRegistry`).
-* Handlers are declared via attributes mapping to event types and optional filters, matching aiogram's decorator-driven Scene API:
+* `Scene` abstract class extended by user. The class-level `#[SceneState(state: 'order', resetDataOnEnter: false, resetHistoryOnEnter: false, callbackQueryWithoutState: false)]` attribute mirrors upstream's full set of `class OrderScene(Scene, state='order', reset_data_on_enter=..., reset_history_on_enter=..., callback_query_without_state=...)` class kwargs (`aiogram/fsm/scene.py:321-377`). Omitting the attribute yields a `state: null` scene (matches upstream's default — only one such scene may exist per `SceneRegistry`). The `callbackQueryWithoutState` flag drives the same behavior as upstream `scene.py:403`: when `true`, the `StateFilter` is **not** installed on the `callback_query` observer, allowing the scene to intercept CB queries before any state is set.
+* Handlers are declared via per-event marker attributes plus optional `After::*` transitions:
   ```php
   #[SceneState('order')]
   final class OrderScene extends Scene
@@ -826,13 +909,21 @@ Behaves identically to upstream: enters the isolation lock, materializes `FSMCon
       public function cancel(Message $message, SceneWizard $wizard): void {
           $wizard->exit();
       }
+
+      #[OnCallbackQuery(after: new After(action: SceneAction::Enter, scene: PaymentScene::class))]
+      public function gotoPayment(CallbackQuery $cb, SceneWizard $wizard): void { /* … */ }
+
+      #[OnMessage(filters: [/* MessageF::text()->equals('back') */], after: After::back())]
+      public function backStep(Message $message, SceneWizard $wizard): void { /* … */ }
   }
   ```
-* `Scene` event hooks: `#[OnEnter]`, `#[OnExit]`, `#[OnLeave]`, `#[OnBack]`, plus event-type attributes (`#[OnMessage]`, `#[OnCallbackQuery]`, …) that internally translate to `ObserverDecorator` instances mirroring `aiogram.fsm.scene.ObserverDecorator`.
-* `SceneRegistry` mirrors aiogram: `(new SceneRegistry($dispatcher))->add(OrderScene::class, …)`.
+* `Scene` event hooks: `#[OnEnter]`, `#[OnExit]`, `#[OnLeave]`, `#[OnBack]`, plus event-type attributes (`#[OnMessage]`, `#[OnCallbackQuery]`, `#[OnInlineQuery]`, `#[OnChatMember]`, `#[OnPoll]`, `#[OnPreCheckoutQuery]`, `#[OnShippingQuery]`, `#[OnChosenInlineResult]`, `#[OnChatJoinRequest]`, `#[OnMessageReaction]`, `#[OnChatBoost]`, `#[OnBusinessConnection]`, `#[OnBusinessMessage]`, `#[OnEditedBusinessMessage]`, `#[OnDeletedBusinessMessages]`, `#[OnPurchasedPaidMedia]`, `#[OnGuestMessage]`) — every observer name from `Router`. Each attribute accepts `filters: Filter[]` and `after: ?After`. Internally these translate to `ObserverDecorator` instances mirroring `aiogram.fsm.scene.ObserverDecorator` (`scene.py:104-145`).
+* **`After` action factory** (port of `aiogram.fsm.scene.After`): immutable DTO with `SceneAction $action` and `?class-string<Scene> $scene = null`. Static factories: `After::exit(): After`, `After::back(): After`, `After::goto(class-string<Scene> $scene): After`. When attached via `after:` on a handler attribute, the scene runtime runs the handler then performs the action automatically (exit / pop history / transition into a sibling scene).
+* **`Scene::asHandler(?Router $router = null): callable`** and **`Scene::asRouter(?Dispatcher $dispatcher = null): Router`** (port of `scene.py:407-439`) let users mount a scene without going through `SceneRegistry`. `asHandler()` is the common pattern: `$dp->message->register(OrderScene::asHandler())` to attach a scene-as-handler to an existing observer. `asRouter()` returns a sub-router pre-configured for the scene.
+* `SceneRegistry` mirrors aiogram: `(new SceneRegistry($dispatcher, registerOnAdd: true))->add(OrderScene::class, PaymentScene::class)`. The registry walks each scene's `ObserverDecorator` map and binds them to observers on the dispatcher (with the `StateFilter` scope-binding from `scene.py:405`).
 * `HistoryManager` ports the snapshot/rollback flow including the `scenes_history` destiny key.
-* `ScenesManager` (plural — the **registry-level** dispatcher) is injected as the `scenes` kwarg into every handler reached through the dispatcher. It exposes only `enter(string|class-string $sceneOrState, mixed ...$kwargs): void` and `close(mixed ...$kwargs): void`. 1-for-1 port of upstream `aiogram.fsm.scene.ScenesManager`.
-* `SceneWizard` (singular — the **per-active-scene** wizard) is accessed as `$this->wizard` inside `Scene` methods (and as the second handler parameter `SceneWizard $wizard`, supplied through the same reflection-driven kwarg binding the dispatcher uses everywhere else). It exposes the per-scene operations: `enter()`, `leave()`, `exit()`, `back()`, `retake()`, `goto(string|class-string $target)`, `setData(array $data): void`, `getData(): array`, `updateData(array $data): array`, `getValue(string $key, mixed $default = null): mixed`. 1-for-1 port of upstream `aiogram.fsm.scene.SceneWizard`.
+* `ScenesManager` (plural — the **registry-level** dispatcher) is injected as the `scenes` kwarg into every handler reached through the dispatcher. It exposes `enter(string|class-string|null $sceneOrState, bool $_checkActive = true, mixed ...$kwargs): void` and `close(mixed ...$kwargs): void`. 1-for-1 port of upstream `ScenesManager` (`scene.py:678-722`). The leading-underscore `$_checkActive` preserves upstream's "discouraged-but-accepted" naming convention (`scene.py:704`) and is used internally by scene transitions.
+* `SceneWizard` (singular — the **per-active-scene** wizard) is accessed as `$this->wizard` inside `Scene` methods (and as the second handler parameter `SceneWizard $wizard`, supplied through the reflection-driven kwarg binding the dispatcher uses everywhere else). It exposes the per-scene operations: `enter()`, `leave()`, `exit()`, `back()`, `retake()`, `goto(string|class-string $target)`, `setData(array $data): void`, `getData(): array`, `updateData(array $data): array`, `getValue(string $key, mixed $default = null): mixed`. 1-for-1 port of upstream `SceneWizard` (`scene.py:551-676`).
 
 ## Webhook
 
@@ -848,6 +939,8 @@ Behaves identically to upstream: enters the isolation lock, materializes `FSMCon
 `Security\IpFilter` matches upstream — built-in Telegram subnets `149.154.160.0/20` and `91.108.4.0/22`.
 
 `Webhook\Server\AmphpServer::run(BaseRequestHandler $handler, string $path, string $host = '0.0.0.0', int $port = 8443, ?array $tlsOptions = null): void` boots an `amphp/http-server` instance routing POST `$path` to the handler.
+
+**`Webhook\Setup::register(HttpServer $server, Dispatcher $dispatcher, BaseRequestHandler $handler, string $path, mixed ...$workflowData): void`** wires phpbotgram into an existing `amphp/http-server` application. It adds the POST `$path` route to the server, then registers `Dispatcher::emitStartup($bots[-1], ...$workflowData)` against the server's `onStart` callback and `Dispatcher::emitShutdown($bots[-1], ...$workflowData)` against `onStop`. Port of upstream `aiogram/webhook/aiohttp_server.py:22-46 setup_application`. Without this helper, users embedding the framework into an existing amphp/http-server app would have to wire startup/shutdown observers manually — a common foot-gun in upstream `aiogram` setup code.
 
 A PSR-7/PSR-15 webhook bridge — for users running on top of Symfony HttpKernel, Slim, or Laravel — is intentionally deferred to a separate optional package (`gruven/phpbotgram-psr-webhook`, future). Keeping PSR adapters out of core lets us avoid the entire PSR-7/17/18 dependency stack while still allowing integration to grow on demand.
 
@@ -931,6 +1024,15 @@ tests/
     * PHPUnit's `MockBuilder` covers `BaseStorage`, `Filter`, `BaseMiddleware`, etc. where appropriate.
     * Signal-emulation in polling-loop tests is done by directly resolving the dispatcher's shared `$stopSignal` deferred — bypassing `EventLoop::onSignal` since PHPUnit cannot raise OS signals.
 * Parameterized cases use PHPUnit data providers.
+* **pytest fixture → PHPUnit fixture mapping**: upstream `conftest.py` exposes `bot`, `dispatcher`, `memory_storage`, `redis_storage`, `pymongo_storage`, `lock_isolation`, `disabled_isolation`, `storage_key` as pytest fixtures with auto-injection by parameter name. PHPUnit 13 has no parameter-name fixture injection; the port uses **one trait per fixture group** under `tests/Support/`:
+    * `MakesMockedBot` — provides `protected MockedBot $bot { get; }`, populated in `setUp()`.
+    * `MakesDispatcher` — provides `protected Dispatcher $dispatcher { get; }`, with `setUp()` emitting `startup` and `tearDown()` emitting `shutdown`.
+    * `MakesMemoryStorage` — provides `protected MemoryStorage $memoryStorage { get; }` with `tearDown()` closing.
+    * `MakesRedisStorageWhenEnv` — checks `PHPBOTGRAM_REDIS_DSN`, otherwise marks the test skipped; provides `protected RedisStorage $redisStorage { get; }` plus `tearDown()` that flushes and closes.
+    * `MakesPyMongoStorageWhenEnv` — same shape for Mongo.
+    * `MakesLockIsolation` / `MakesDisabledIsolation` — provide isolation fixtures.
+    * `MakesStorageKey` — provides `protected StorageKey $storageKey { get; }` keyed on `bot_id=42, chat_id=-42, user_id=42` (matching upstream constants).
+    * Test classes opt in to whichever traits they need via `use MakesMockedBot, MakesDispatcher, MakesMemoryStorage;`. PHPUnit 13's trait `setUp` chaining (via the `#[Before]` attribute or trait-merged `setUp()`) keeps composition explicit.
 
 ### External services
 
@@ -994,6 +1096,8 @@ Documentation: a `docs/` directory with English Markdown sources, structured to 
 * **`feedUpdate` re-mount validator semantics**: `withBot()` is a structural deep-clone of an already-validated `Update`. Upstream re-runs Pydantic validators on every nested field via the `model_dump → model_validate` JSON roundtrip. Tests that exercise validator behavior on `feed_update` will not exercise it identically in PHP. Mitigation: if a parity-bug is discovered, switch the re-mount path to `Serializer::load(Update::class, $update->jsonSerialize(), bot: $bot)` (full re-validation, slower).
 * **PHP 8.5 cadence**: PHP 8.5 is the release branch active at design time. If a contributor needs PHP 8.4, the package's lowest-supported version can be relaxed without API changes — the generator output uses no PHP 8.5-exclusive syntax outside the `|>` operator (used sparingly, replaceable by method chains).
 * **Generator maintenance burden**: keeping the codegen in PHP means PHP-side contributors can self-serve schema updates. Upstream's Python butcher remains the canonical reference for any schema patch we don't yet handle; the `scripts/sync-schema.sh` step pulls the latest schema.json plus patches and re-runs the generator.
+* **MagicFilter port scope (largest hand-authored subsystem)**: porting `magic_filter` to PHP plus aiogram's `.as_()` extension is the biggest single non-codegen workload in the framework. The runtime DSL is ~1000 LOC in Python; PHP needs equivalent coverage of `__get`/`__call`/`cast`/operations + reflection-friendly resolution + sealed value semantics through chains. The earlier "~800 LOC" target is the optimistic case; treat 1200-1500 LOC as the realistic bound and budget Phase 4 accordingly. If the port slips, this is the most likely culprit.
+* **PHPUnit 13 baseline (verified)**: `phpunit/phpunit ^13.1` is the GA major as of the design date (`13.1.8` on packagist, confirmed). `amphp/phpunit-util v3` still pins to PHPUnit 9 — that's the compatibility gap we mitigate via the in-house Fiber helper, not a release-cadence problem.
 
 ## Acceptance criteria
 
