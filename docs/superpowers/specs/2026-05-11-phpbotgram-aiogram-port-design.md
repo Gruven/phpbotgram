@@ -61,7 +61,7 @@ Gruven\PhpBotGram\
 │   ├── Session\AmphpSession         # client/session/aiohttp.py — production async
 │   ├── Session\Middleware\RequestMiddlewareManager
 │   ├── Session\Middleware\BaseRequestMiddleware
-│   ├── TelegramApiServer            # client/telegram.py — final readonly class with `static fn production(): self` / `static fn test(): self` factories + `static fn fromBase(string $base): self`. No `PRODUCTION`/`TEST` constants because the parent type carries URL pattern fields (a backed enum is precluded).
+│   ├── TelegramApiServer            # client/telegram.py — final readonly class with `public static function production(): self` / `public static function test(): self` factories + `public static function fromBase(string $base): self`. No `PRODUCTION`/`TEST` class constants because PHP 8.5 still doesn't accept `new`-expressions in class-constant initializers (`new` works in top-level `const` / attribute args / default parameter values / static-var initializers only).
 │   ├── DefaultBotProperties         # client/default.py
 │   ├── BotDefault                   # client/default.py — Default sentinel (renamed: PHP reserves `default` keyword, `class Default` won't parse)
 │   └── BotContextController         # client/context_controller.py
@@ -198,7 +198,7 @@ Upstream uses Pydantic's `model_validate(..., context={"bot": bot})` to inject t
   }
   ```
 
-* All generated type classes accept `?Bot $bot = null` as the **last** constructor parameter and forward it via `parent::__construct(bot: $bot)`. Methods and Unions do the same.
+* All generated type classes accept `?Bot $bot = null` as the **last** constructor parameter. This single trailing parameter is **not** promoted (no `public readonly` prefix); the `readonly ?Bot $bot` property is owned by the root `BotContextController` and re-declaring it in a child would error with `Cannot redeclare readonly property`. The child constructor body forwards via `parent::__construct($bot)`. Methods, Unions, and the worked-example `Message` follow the same shape.
 * `Serializer::load(string $class, array $data, ?Bot $bot = null)` recursively threads `$bot` into every nested `TelegramObject` it constructs. The traversal table is generated alongside the type class: for each property whose static type is a `TelegramObject` (or list of them), the generator emits a `load()` helper that calls `Serializer::load(NestedType::class, $value, $bot)` before passing it to the parent constructor.
 * `BotContextController::withBot()` is used at the dispatcher boundary in three places that mirror upstream:
   1. `Dispatcher::feedUpdate(Bot $bot, Update $update, ...)` re-mounts `$update` to `$bot` when `$update->bot !== $bot`. Upstream's roundtrip-via-JSON workaround (`dispatcher.py:152-161`) becomes `withBot()` (which does the same deep clone, but without the JSON roundtrip — PHP's `clone` is shallow, so each nested `TelegramObject` field carries its own `withBot()` invocation via the generated helper). This is noted in "Open questions / risks" as a hotspot worth profiling.
@@ -400,7 +400,7 @@ PHP CLI built with plain `getopt()` (kept dep-free; switch to `symfony/console` 
          ))->bindBot($this->bot);
      }
      ```
-     The schema currently ships `aliases.yml` for exactly these 11 types: Message, InaccessibleMessage, User, Chat, CallbackQuery, ChatJoinRequest, InlineQuery, PreCheckoutQuery, ShippingQuery, ChatMemberUpdated, Sticker. (Note: `Update` does **not** have `aliases.yml` despite intuition — events route through dispatcher observers rather than type shortcuts.) The generator iterates `.butcher/types/*/aliases.yml`.
+     The schema currently ships `aliases.yml` for exactly these 11 types: Message, InaccessibleMessage, User, Chat, CallbackQuery, ChatJoinRequest, InlineQuery, PreCheckoutQuery, ShippingQuery, ChatMemberUpdated, Sticker. (Note: `Update` does **not** have `aliases.yml` despite intuition — events route through dispatcher observers rather than type shortcuts.) The generator iterates `.butcher/types/*/aliases.yml` and **silently skips** types whose directory lacks the file — no error, no warning. The remaining ~294 types simply receive no alias methods.
   7. `DefaultsResolver` consumes `methods/<name>/default.yml` per method entity. Each file is a flat YAML mapping of method-parameter names (snake_case, wire-level) to `DefaultBotProperties` field names. Example from `methods/sendMessage/default.yml`:
      ```yaml
      disable_web_page_preview: link_preview_is_disabled
@@ -435,7 +435,7 @@ Telegram update keys (`message`, `edited_message`, `business_connection`, `purch
   /**
    * @extends TelegramMethod<Message>
    */
-  final readonly class SendMessage extends TelegramMethod { … }
+  final class SendMessage extends TelegramMethod { … }   // not declared `readonly class` because TelegramMethod's chain isn't readonly (so MutableTelegramObject can subclass alongside); properties are individually `public readonly`
   ```
 * `Bot`:
   ```php
@@ -472,9 +472,10 @@ final class Message extends MaybeInaccessibleMessage
         public readonly ?DirectMessagesTopic $directMessagesTopic = null,
         public readonly ?User $fromUser = null,   // mapped from "from"
         public readonly ?Chat $senderChat = null,
-        // ...
+        // ... (all other schema fields)
+        ?Bot $bot = null,                          // last param, NOT promoted; forwarded to parent
     ) {
-        parent::__construct();
+        parent::__construct($bot);
     }
 }
 ```
@@ -518,8 +519,16 @@ final class SendMessage extends TelegramMethod
         public readonly ?SuggestedPostParameters $suggestedPostParameters = null,
         public readonly ?ReplyParameters $replyParameters = null,
         public readonly ?ReplyMarkupUnion $replyMarkup = null,
-        // deprecated parameters omitted from the constructor in PHP — accessible via withX helpers if needed
-    ) {}
+        // Deprecated parameters are emitted with #[Deprecated] attribute + PHPDoc @deprecated.
+        // This preserves the upstream constructor surface so users porting an aiogram script
+        // that uses e.g. allow_sending_without_reply=True keep working without compile errors.
+        #[\Deprecated(message: 'Use reply_parameters instead', since: '7.0')]
+        public readonly ?bool $allowSendingWithoutReply = null,
+        ?Bot $bot = null,   // NOT promoted: parent BotContextController owns `public readonly ?Bot $bot`;
+                            // this is the only non-promoted constructor parameter and forwards to parent
+    ) {
+        parent::__construct($bot);
+    }
 }
 ```
 
@@ -605,7 +614,7 @@ The `id` property is lazily extracted from the token via `Token::extractBotId()`
 
 `Dispatcher extends Router`:
 
-* Constructor: `__construct(?BaseStorage $storage = null, FsmStrategy $fsmStrategy = FsmStrategy::UserInChat, ?BaseEventIsolation $eventsIsolation = null, bool $disableFsm = false, ?string $name = null, mixed ...$workflowData)`. The `$workflowData` named-args become part of the per-handler kwargs dict the dispatcher merges into every handler invocation. Mirrors upstream `dispatcher.py:43-99`.
+* Constructor: `__construct(?BaseStorage $storage = null, FsmStrategy $fsmStrategy = FsmStrategy::UserInChat, ?BaseEventIsolation $eventsIsolation = null, bool $disableFsm = false, ?string $name = null, mixed ...$workflowData)`. The `$workflowData` named-args become part of the per-handler kwargs dict the dispatcher merges into every handler invocation. Mirrors upstream `dispatcher.py:43-99`. **Convention**: all non-variadic parameters are documented as **named-only** — call as `new Dispatcher(storage: $s, fsmStrategy: ..., name: '...')`. PHP doesn't enforce keyword-only, but the spec contract is that positional calls are not supported (so future parameter insertions don't silently break callers). Upstream enforces this via the Python `*` separator.
 * `Dispatcher` implements `ArrayAccess` (`offsetGet/offsetSet/offsetExists/offsetUnset`) plus a typed `get(string $key, mixed $default = null): mixed` against `$workflowData`, exactly mirroring upstream's `__getitem__`/`__setitem__`/`__delitem__`/`get` on `Dispatcher`. So users can do `$dp['my_dep'] = $foo;` and handlers receive `my_dep` as a kwarg.
 * `feedUpdate(Bot $bot, Update $update, mixed ...$kwargs): mixed` — re-mounts the update if `$update->bot !== $bot` via `$update->withBot($bot)` (see "BotContextController & bot binding"). Returns the handler's result or `UNHANDLED`. Note: `withBot()` is a structural deep-clone that reuses already-validated field values. Upstream's `Update.model_validate(update.model_dump(), context={"bot": bot})` instead re-runs all Pydantic validators on the JSON roundtrip. This is a documented semantic difference (see "Open questions / risks").
 * `feedRawUpdate(Bot $bot, array $update, mixed ...$kwargs): ?TelegramMethod` — deserializes the raw payload to `Update` via `Serializer::load(Update::class, $update, bot: $bot)` then delegates to `_feedWebhookUpdate(...)` (the same internal flow used by `feedWebhookUpdate`). Matches upstream `dispatcher.py:186-195` where `feed_raw_update` is implemented as a thin shim around `_feed_webhook_update`. The return is the optional `TelegramMethod` (so webhook callers can wire the result as the HTTP response body).
@@ -734,7 +743,12 @@ final class MiddlewareManager implements \Countable, \IteratorAggregate, \ArrayA
      *   $register(new MyMiddleware());
      */
     public function __invoke(?BaseMiddleware $middleware = null): BaseMiddleware|callable;
-    public function offsetGet(int $i): BaseMiddleware;
+    // \ArrayAccess requires `mixed $offset` for parameter compatibility (PHP enforces invariant params on interface impl).
+    // The implementation runtime-asserts the offset is an int and throws \TypeError otherwise.
+    public function offsetGet(mixed $offset): BaseMiddleware;
+    public function offsetExists(mixed $offset): bool;
+    public function offsetSet(mixed $offset, mixed $value): void;   // appends if $offset is null; throws otherwise
+    public function offsetUnset(mixed $offset): void;
     public function count(): int;
     public function getIterator(): \Iterator;
     /** Wraps a chain of middlewares around the terminal handler — used internally by TelegramEventObserver::trigger. */
@@ -772,6 +786,7 @@ Full PHP port of `magic_filter` plus aiogram's `.as_()` extension. ~800 LOC.
   * `.as_(name)` via `AsFilterResultOperation` (port of `aiogram/utils/magic_filter.py:9-18`) rejects only when value is `null` or `(Iterable && empty)`; otherwise wraps the value as `{$name => $value}`. So `F->text->startswith('hi')->as_('matched')` against `text='no'` resolves to `['matched' => false]` (accepted with the boolean payload) — matching upstream `magic_filter` semantics exactly.
 * `MagicFilter::asFilter(): Filter` wraps the chain in a `Filter` instance whose `__invoke($event)` calls `$this->resolve($event)`. Used implicitly when a `MagicFilter` is passed where a `Filter` is expected (via a `Filter::fromMagic()` shim).
 * `.as_(string $name): MagicFilter` appends an `AsFilterResultOperation`, which makes the terminal value either `null` (rejected) or `[$name => $value]` (a kwarg dict that the dispatcher merges into handler args). 1-for-1 port of `aiogram/utils/magic_filter.py:9-18`.
+* `MagicFilter::root(): MagicFilter` returns an unbound chain seed (a fresh `MagicFilter` instance with an empty operation chain) — equivalent to upstream's bare `F`. Used by typed-builder factories that need a fresh root per call (`MessageF::text()` does `new StringField(MagicFilter::root()->text)`).
 * Convenience global: `Gruven\PhpBotGram\F` is a top-level **constant** (`const F = new MagicFilter();` — PHP 8.5 added `new` in `const` initializers at the top level). Users import it as `use const Gruven\PhpBotGram\F;` then write `F->text->equals('hi')`. (A plain `use Gruven\PhpBotGram\F;` would import a class symbol, and `F->...` would not be valid PHP — the syntax requires a constant or variable.)
 
 ### Layer 2 — `Filters\MagicData`
@@ -936,7 +951,7 @@ OrderStates::bootstrap();   // <-- canonical idiom: trailing call at the end of 
 * Defense in depth: `StateFilter::__construct(State|StatesGroup|class-string<StatesGroup> ...$states)`, `FSMContext::setState(State|string|null $state)`, and `SceneRegistry::add(class-string<Scene>)` all call `StatesGroup::bootstrapIfNeeded($groupClass)` on every passed group reference. So even if the user forgets the trailing call, the framework's first interaction with the group will boot it. The risk is only in raw property reads (`OrderStates::$waitingProduct`) before any framework call, which returns `null` and produces a `TypeError` on use — a fast, obvious failure.
 * `bootstrapIfNeeded(class-string<StatesGroup> $group): void` uses a private `array<class-string, true>` flag map to short-circuit re-entry. Walks the inheritance/`Children` chain bottom-up: for each group, the parents listed in `protected const array Children` (and any `StatesGroup` parents in the class hierarchy) are bootstrapped *first*, so a child group's `__full_group_name__` (built from its parent chain) resolves consistently regardless of which group the framework touches first.
 * Group nesting: `OrderStates` declares nested groups via a `protected const array CHILDREN = [PaymentStates::class];` constant (UPPER_CASE per PHP convention for class constants); `bootstrap()` recursively resolves them. **Trade-off**: upstream uses visually-nested class declarations (Python supports class nesting; PHP doesn't). The `const CHILDREN` mechanism is a manual registration. An alternative considered — scanning `get_declared_classes()` for `StatesGroup` subclasses declared in the same file — was rejected as too implicit (load order matters, IDE refactoring breaks the link). The repeated `#[ChildGroup(PaymentStates::class)]` class attribute would also work; we keep `const CHILDREN` for its single-call-site clarity. Documented as an intentional deviation.
-* `default_state` and `any_state` exposed as `State::default()` and `State::any()` static factory methods returning shared singleton `State` instances with `state: null` and `state: '*'` respectively.
+* `default_state` and `any_state` exposed as `State::defaultState()` and `State::anyState()` static factory methods returning shared singleton `State` instances with `state: null` and `state: '*'` respectively. (Names avoid `State::default()` / `State::any()`: while PHP allows reserved-word method names, the `NameMapper` at the codegen layer forbids them, and using them here would carve out an inconsistent exception.)
 
 Why explicit bootstrap, not static methods (`OrderStates::waitingProduct(): State`)? The decision is locked to property-style access (decision 6) for upstream-feel parity. The trailing `Bootstrap()` call is the smallest possible deviation from that idiom; it's a one-liner that the documentation calls out prominently. A code-style rule (PHP-CS-Fixer custom fixer or static-analyzer assertion) can be added later if call-site forgetting becomes a frequent pitfall.
 
@@ -1038,7 +1053,7 @@ Behaves identically to upstream: enters the isolation lock, materializes `FSMCon
 
 `Webhook\Server\AmphpServer::run(BaseRequestHandler $handler, string $path, string $host = '0.0.0.0', int $port = 8443, ?array $tlsOptions = null): void` boots an `amphp/http-server` instance routing POST `$path` to the handler.
 
-**`Webhook\Setup::register(HttpServer $server, Dispatcher $dispatcher, BaseRequestHandler $handler, string $path, mixed ...$workflowData): void`** wires phpbotgram into an existing `amphp/http-server` application. It adds the POST `$path` route to the server, then registers `Dispatcher::emitStartup(bot: last(bots in workflow), ...$workflowData)` against the server's `onStart` callback and `Dispatcher::emitShutdown(...)` against `onStop` (the "last bot in workflow" is computed via `array_key_last(...)`; PHP arrays don't support upstream's Python `bots[-1]` negative-index syntax). Port of upstream `aiogram/webhook/aiohttp_server.py:22-46 setup_application`. Without this helper, users embedding the framework into an existing amphp/http-server app would have to wire startup/shutdown observers manually — a common foot-gun in upstream `aiogram` setup code.
+**`Webhook\Setup::register(\Amp\Http\Server\HttpServer $server, Dispatcher $dispatcher, BaseRequestHandler $handler, string $path, mixed ...$workflowData): void`** wires phpbotgram into an existing `amphp/http-server` application. Like `Server\AmphpServer`, this class file `use`s amphp/http-server types via FQN imports — its autoload triggers the amphp/http-server dependency, but only when the class itself is referenced. Polling-only users never touch it. It adds the POST `$path` route to the server, then registers `Dispatcher::emitStartup(bot: last(bots in workflow), ...$workflowData)` against the server's `onStart` callback and `Dispatcher::emitShutdown(...)` against `onStop` (the "last bot in workflow" is computed via `array_key_last(...)`; PHP arrays don't support upstream's Python `bots[-1]` negative-index syntax). Port of upstream `aiogram/webhook/aiohttp_server.py:22-46 setup_application`. Without this helper, users embedding the framework into an existing amphp/http-server app would have to wire startup/shutdown observers manually — a common foot-gun in upstream `aiogram` setup code.
 
 A PSR-7/PSR-15 webhook bridge — for users running on top of Symfony HttpKernel, Slim, or Laravel — is intentionally deferred to a separate optional package (`gruven/phpbotgram-psr-webhook`, future). Keeping PSR adapters out of core lets us avoid the entire PSR-7/17/18 dependency stack while still allowing integration to grow on demand.
 
