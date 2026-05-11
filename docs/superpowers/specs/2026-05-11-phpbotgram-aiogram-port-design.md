@@ -234,7 +234,7 @@ Polling loop (mirrors upstream `dispatcher/dispatcher.py` `_listen_updates` / `_
 * `Router::emitStartup()` and `Router::emitShutdown()` are called once each (around the polling task fan-out) with `bot: $bots[array_key_last($bots)]` plus the merged workflow_data, and recurse into sub-routers (`router.py:274-298`). The injected `bot` parameter is then available to startup/shutdown callbacks as a handler kwarg.
 * `Dispatcher::runPolling(...)` is the public sync wrapper that boots the event loop via `Amp\async(...)->await()` then awaits the future returned by `startPolling`. It swallows `\Throwable` only for the keyboard interrupt case (signal-driven graceful exit) so `^C` from a TTY behaves like upstream's `with suppress(KeyboardInterrupt):` block.
 * `_listen_updates` analog: per-bot generator that pages through `getUpdates` with exponential `Backoff` retry on `TelegramNetworkError` / `TelegramServerError`. Failed-then-succeeded transition logs the recovery and resets the backoff counter (matches `dispatcher.py:237-244`).
-* `Dispatcher::stopPolling(): void` resolves the shared `$stopSignal` and awaits the per-bot tasks. Throws `\RuntimeException('Polling is not started')` if no polling lock is held.
+* `Dispatcher` holds a `private \Amp\Sync\LocalMutex $runningLock;` initialized once. `startPolling()`/`runPolling()` acquire this mutex on entry (and release on exit via `finally`) to prevent two polling drivers from running concurrently against the same dispatcher — matches upstream `self._running_lock: asyncio.Lock` at `dispatcher.py:100, 558`. `Dispatcher::stopPolling(): void` resolves the shared `$stopSignal` and awaits the per-bot tasks. Throws `\RuntimeException('Polling is not started')` if `$runningLock` is not currently held (checked via `$runningLock->isLocked()`, an amphp v3 sync helper). Mirrors upstream `dispatcher.py:497-509`.
 
 Example call site:
 
@@ -286,7 +286,7 @@ PHP CLI built with plain `getopt()` (kept dep-free; switch to `symfony/console` 
      * `Array of X` → `array` at runtime, annotated only with `@var list<X>` PHPDoc (PHPStan ^2 level 9-compatible). The previous draft also annotated `array<int, X>`; that duplication confuses the analyzer because `list<X>` is the stricter form. Use `list<X>` only
      * `X or Y` → `X|Y` union
      * Date/time-ish strings handled by a custom `DateTime` subclass of `\DateTimeImmutable` on the `Message.date`-style fields (per aiogram custom `DateTime` field in `aiogram/types/custom.py`); the serializer converts Unix-timestamps both ways
-     * Deprecated parameters (those bearing `deprecated:` in `entity.json`) are **emitted** on the constructor with a `#[Deprecated]` attribute and a PHPDoc `@deprecated` tag — matches aiogram's behavior of preserving the constructor signature for backward compatibility. Users migrating an aiogram bot keep working without compile errors; the deprecation surface is purely documentation.
+     * Deprecated parameters (those bearing `deprecated:` in `entity.json`) are **emitted** on the constructor with a PHPDoc `@deprecated <since> — <reason>` tag. PHP's native `#[\Deprecated]` attribute does **not** target parameters (allowed targets: class, function, method, class-constant, constant — verified), so the deprecation lives in the docblock. IDEs and PHPStan honor `@deprecated` for parameter-level warnings, which matches aiogram's behavior of preserving the constructor signature for backward compatibility. Users migrating an aiogram bot keep working without compile errors; the deprecation surface is purely documentation.
   3. `NameMapper` converts snake_case → camelCase, escapes PHP reserved words via a fail-closed lookup table. The complete table (PHP 8.5 keywords from <https://www.php.net/manual/en/reserved.keywords.php>) is checked against every emitted identifier; collisions are renamed with a documented convention. Known renames from the current schema: `from` → `fromUser`, `class` → `className`, `list` → `items`, `function` → `fn`. Encountering an unknown collision aborts the generator with an explicit error rather than silently emitting invalid PHP. Wire-level event/property names remain snake_case (see "Event name conventions" below) so JSON serialization stays byte-compatible with the Telegram API.
   4. `TypeOverrideApplier` consumes `replace.yml` per entity. The patches cover three operation classes, applied **after** primitive type resolution and **before** the union detector:
 
@@ -315,7 +315,7 @@ PHP CLI built with plain `getopt()` (kept dep-free; switch to `symfony/console` 
   5. `UnionDetector` identifies sealed unions (e.g. `BackgroundFill`) and emits:
      * abstract base class `BackgroundFill` with discriminator field `type`,
      * concrete subclasses (`BackgroundFillSolid`, …),
-     * a `BackgroundFillUnion` final class that exposes `public const array Members = [BackgroundFillSolid::class, BackgroundFillGradient::class, …]` (typed `@var list<class-string<BackgroundFill>>` in PHPDoc; PHP class-constant native types accept `array` only, not generic shapes) plus a static `resolve(array $payload): TelegramObject` dispatcher used by the serializer.
+     * a `BackgroundFillUnion` final class that exposes `public static function members(): array { return [BackgroundFillSolid::class, BackgroundFillGradient::class, …]; }` (with PHPDoc `@return list<class-string<BackgroundFill>>` so PHPStan infers the precise list type — a class constant declared as `public const array Members` would erase to `array<int, mixed>` at the consumer site because PHPStan only reads `@var` from the constant's docblock, not the elements). Plus a static `resolve(array $payload): TelegramObject` dispatcher used by the serializer to discriminate by the `type` field.
      * For PHPStan: every method/type field whose schema type is the union emits a plain PHP union signature (`BackgroundFillSolid|BackgroundFillGradient|BackgroundFillFreeformGradient`) — no `@phpstan-type` aliases (which would need `@phpstan-import-type` in every consumer file). The verbosity is acceptable since it's generated code.
   6. `ShortcutDetector` reads `aliases.yml` per type — this file **is** codegen input, not a hand-authored trait. The generator emits each alias as a public instance method directly on the type class. The `aliases.yml` DSL covers:
      * **YAML anchors and aliases** (`&assert-chat`, `*assert-chat`, `<<: *fill-answer`) — handled by the YAML parser. The loader (e.g. `symfony/yaml`) expands anchors before any codegen sees them. `<<:` map-merge keys propagate fill defaults across aliased methods (e.g. `reply` inherits `answer`'s fill block and adds `reply_parameters`).
@@ -416,7 +416,7 @@ PHP CLI built with plain `getopt()` (kept dep-free; switch to `symfony/console` 
 
 Telegram update keys (`message`, `edited_message`, `business_connection`, `purchased_paid_media`, …) are snake_case wire-level strings. PHP property names on `Router` and `TelegramEventObserver` are camelCase (`$router->editedMessage`, `$router->businessConnection`). The mapping is two-way:
 
-* `Update::eventType(): string` returns the snake_case key from the payload (`'edited_message'`). The implementation is **hand-authored, not generated** — it copies the exact upstream `if … elif …` chain from `types/update.py:163-223` so the priority order matches: `message`, `edited_message`, `channel_post`, `edited_channel_post`, `inline_query`, `chosen_inline_result`, `callback_query`, `shipping_query`, `pre_checkout_query`, `poll`, `poll_answer`, `my_chat_member`, `chat_member`, `chat_join_request`, `message_reaction`, `message_reaction_count`, `chat_boost`, `removed_chat_boost`, `deleted_business_messages`, `business_connection`, `edited_business_message`, `business_message`, `purchased_paid_media`, `guest_message`, `managed_bot`. This order is observable (a payload carrying both `message` and `edited_message` would dispatch to `message` first), and the spec freezes it.
+* `Update::eventType(): string` returns the snake_case key from the payload (`'edited_message'`). The implementation is **hand-authored, not generated** — it copies the exact upstream `if … elif …` chain from `types/update.py:163-223` so the priority order matches: `message`, `edited_message`, `channel_post`, `edited_channel_post`, `inline_query`, `chosen_inline_result`, `callback_query`, `shipping_query`, `pre_checkout_query`, `poll`, `poll_answer`, `my_chat_member`, `chat_member`, `chat_join_request`, `message_reaction`, `message_reaction_count`, `chat_boost`, `removed_chat_boost`, `deleted_business_messages`, `business_connection`, `edited_business_message`, `business_message`, `purchased_paid_media`, `guest_message`, `managed_bot`. This order is observable: if an `Update` payload carries both `message` and `edited_message` (Telegram doesn't normally send both at once, but tests may construct such fixtures), the `message` branch wins and handlers registered on the `edited_message` observer never fire. This matches upstream's `if … elif …` chain exactly, and the spec freezes the order.
 * `Router::$observers` is a `array<string, TelegramEventObserver>` keyed by the snake_case string; the camelCase properties are aliases backed by the same instance: `$this->editedMessage = $this->observers['edited_message'] = new TelegramEventObserver(...)`.
 
 ### PHPStan generics layout
@@ -485,7 +485,7 @@ Notes:
 * All types inherit from `TelegramObject` (which extends `BotContextController`). The base class holds the optional `?Bot $bot` instance injected during deserialization for shortcuts. **`TelegramObject` itself is *not* declared `readonly class`** — only its properties are readonly. This is deliberate: a `readonly` class cannot be extended by a non-`readonly` class, so making `TelegramObject` a readonly class would break `MutableTelegramObject extends TelegramObject`. Property-level readonly enforcement covers the immutability requirement for the 95% of schema types that are immutable, while leaving the door open for the small mutable family.
 * Final-by-default. Subclassing is allowed only where the schema models a hierarchy (e.g. `MaybeInaccessibleMessage` parent of `Message` and `InaccessibleMessage`).
 * `readonly` properties enforce immutability (aiogram models are `frozen=True`). Mutation goes through `withX($value)` clone helpers when needed.
-* PHP doesn't allow `from` as a property identifier? It does (`from` is not a reserved keyword in PHP context), but it conflicts with the `from` PHP language construct in some positions. The generator renames `from` → `fromUser` to match aiogram (`from_user`).
+* PHP does allow `from` as a property identifier (`public readonly ?string $from = null` parses fine). The rename `from` → `fromUser` is purely to mirror upstream's `from_user` for grep-friendly translation, not to dodge a keyword conflict.
 
 ### Generated method class shape
 
@@ -519,10 +519,13 @@ final class SendMessage extends TelegramMethod
         public readonly ?SuggestedPostParameters $suggestedPostParameters = null,
         public readonly ?ReplyParameters $replyParameters = null,
         public readonly ?ReplyMarkupUnion $replyMarkup = null,
-        // Deprecated parameters are emitted with #[Deprecated] attribute + PHPDoc @deprecated.
+        // Deprecated parameters are emitted with a @deprecated PHPDoc tag.
+        // (PHP's native #[\Deprecated] attribute does NOT target parameters — allowed targets are
+        // class/function/method/class-constant/constant only — so the deprecation surface lives in
+        // PHPDoc; IDEs and PHPStan honor the @deprecated tag for parameter-level warnings.)
         // This preserves the upstream constructor surface so users porting an aiogram script
         // that uses e.g. allow_sending_without_reply=True keep working without compile errors.
-        #[\Deprecated(message: 'Use reply_parameters instead', since: '7.0')]
+        /** @deprecated since API 7.0 — use reply_parameters instead */
         public readonly ?bool $allowSendingWithoutReply = null,
         ?Bot $bot = null,   // NOT promoted: parent BotContextController owns `public readonly ?Bot $bot`;
                             // this is the only non-promoted constructor parameter and forwards to parent
@@ -562,7 +565,13 @@ public function sendMessage(
 ```php
 interface BotShortcutsContract
 {
-    public function id(): int;
+    /**
+     * Bot ID extracted from the token. Named `getId()` (not `id()`) because upstream `bot.id` is a Python @property:
+     * users grep-translating aiogram code that writes `bot.id` would see PHP return a method handle instead
+     * of the int. The explicit `getId()` makes the difference loud. The Token::extractBotId helper validates
+     * the token format (`<digits>:<rest>`) and throws PhpBotGramException on malformed input at construction time.
+     */
+    public function getId(): int;
     /** Returns a closure-based "with"-block: runs the body, then closes the bot session on exit. Mirrors upstream Bot.context(auto_close=True) at client/bot.py:357-369. */
     public function context(bool $autoClose = true): callable;
     public static function current(): ?Bot;
@@ -574,7 +583,7 @@ interface BotShortcutsContract
 
 trait BotShortcuts
 {
-    public function id(): int { /* extract from token */ }
+    public function getId(): int { /* extract from token via Token::extractBotId */ }
     public function context(bool $autoClose = true): callable { /* closure-based with-block */ }
     public static function current(): ?Bot { /* FiberLocal accessor */ }
     public static function setCurrent(?Bot $bot): void { /* FiberLocal mutator */ }
@@ -673,10 +682,10 @@ The `id` property is lazily extracted from the token via `Token::extractBotId()`
 * Static helpers: `Filter::all(Filter ...$filters): AndFilter`, `Filter::any(Filter ...$filters): OrFilter`, `Filter::invertOf(Filter $f): InvertFilter`. The static negation helper is named `invertOf` rather than `not` because PHP cannot declare both a static method `Filter::not(Filter)` and an instance method `$filter->not()` with the same name in one class.
 * **Flags attachment mechanism** (port of `aiogram/dispatcher/flags.py`):
 
-Upstream attaches flags by mutating the callback function: `value.aiogram_flag = {...}` (`dispatcher/flags.py:53-57`). PHP closures and `Closure` instances do not support arbitrary attribute assignment; the framework instead uses a hybrid of PHP attributes + a `\WeakMap<callable, Flag[]>`:
+Upstream attaches flags by mutating the callback function: `value.aiogram_flag = {...}` (`dispatcher/flags.py:53-57`). PHP closures and `Closure` instances do not support arbitrary attribute assignment; the framework instead uses a hybrid of PHP attributes + a `\WeakMap<\Closure|object, Flag[]>`:
 
-* Method/function handlers declared in a class can wear PHP attributes: `#[Flag(name: 'chat_action', value: 'typing')]` on the handler method. `FlagDecorator::register(callable, Flag)` is the imperative entry point used when there's no class to attach an attribute to (anonymous closures registered programmatically).
-* The framework's `extractFlagsFromObject(callable $h): array<string, mixed>` first scans for `#[Flag]` attributes via `ReflectionFunction`/`ReflectionMethod`, then consults the `\WeakMap` for any programmatically-attached flags, and merges them into the handler's flags array (mirroring `dispatcher/flags.py:extract_flags_from_object`).
+* Method/function handlers declared in a class can wear PHP attributes: `#[Flag(name: 'chat_action', value: 'typing')]` on the handler method. `FlagDecorator::register(callable $cb, Flag $flag): \Closure` is the imperative entry point used when there's no class to attach an attribute to. **PHP's `\WeakMap` requires object keys**; string-callable and array-callable (`[$obj, 'method']`) inputs are lifted into closures via `\Closure::fromCallable($cb)` before storage. The lifted closure is returned so callers can re-register it for dispatch.
+* The framework's `extractFlagsFromObject(callable $h): array<string, mixed>` first scans for `#[Flag]` attributes via `ReflectionFunction`/`ReflectionMethod`, then — if the callable is a `Closure` or `__invoke`-able object — consults the `\WeakMap` for any programmatically-attached flags, and merges them into the handler's flags array (mirroring `dispatcher/flags.py:extract_flags_from_object`). String-callable inputs (`'my_function'`) carry only attribute-based flags.
 * `flags = new FlagGenerator()` is the PHP top-level singleton matching upstream `from aiogram import flags`. Usage like `$flags->chatAction('typing')` returns a `FlagDecorator` instance that, when applied to a handler via `FlagDecorator::__invoke(callable): callable`, stores the flag in the `\WeakMap`. PHP equivalent of the upstream `@flags.chat_action("typing")` decorator:
   ```php
   $router->message->register(
@@ -715,6 +724,8 @@ Every middleware that writes into `$data` is part of the contract — handlers a
 | `fsm_storage` | `BaseStorage` | `FSMContextMiddleware` (`fsm/middleware.py:36`) | when FSM enabled |
 | `scenes` | `ScenesManager` | `SceneRegistry` | when scenes are wired |
 | `handler` | `HandlerObject` | `TelegramEventObserver::trigger` | inside handler dispatch |
+| `event` | `ErrorEvent` | `ErrorsMiddleware` | error observer only — the `ErrorEvent` DTO carries `Throwable $exception` and `Update $update` |
+| `exception` | `\Throwable` | `ErrorsMiddleware` | error observer only — alias for `$event->exception` |
 | user-supplied via `Dispatcher::__construct(..., mixed ...$workflowData)` or `$dp['key'] = $value` | `mixed` | dispatcher constructor / ArrayAccess | always |
 
 `EventContext` is a readonly DTO carrying `?Chat $chat`, `?User $user`, `?int $threadId`, `?string $businessConnectionId`. Mirrors upstream's `aiogram.dispatcher.middlewares.user_context.EventContext`. The `businessConnectionId` field is accessible only via `event_context.businessConnectionId` — it is **not** written as a top-level kwarg (the deprecated `event_business_connection_id` key in upstream's `MiddlewareData` TypedDict is documentation residue, not populated by the live middleware).
@@ -1030,7 +1041,7 @@ Behaves identically to upstream: enters the isolation lock, materializes `FSMCon
   }
   ```
 * `Scene` lifecycle hooks: `#[OnEnter]`, `#[OnExit]`, `#[OnLeave]`, `#[OnBack]` (the `leave` hook fires when the scene is left via `goto`, distinct from `exit`; verified against upstream `aiogram/fsm/scene.py:908-927` where `enter/leave/exit/back` are all `ObserverMarker` action methods).
-* `Scene` per-event handler attributes — one per Telegram observer event, all 25 observer names: `#[OnMessage]`, `#[OnEditedMessage]`, `#[OnChannelPost]`, `#[OnEditedChannelPost]`, `#[OnInlineQuery]`, `#[OnChosenInlineResult]`, `#[OnCallbackQuery]`, `#[OnShippingQuery]`, `#[OnPreCheckoutQuery]`, `#[OnPoll]`, `#[OnPollAnswer]`, `#[OnMyChatMember]`, `#[OnChatMember]`, `#[OnChatJoinRequest]`, `#[OnMessageReaction]`, `#[OnMessageReactionCount]`, `#[OnChatBoost]`, `#[OnRemovedChatBoost]`, `#[OnDeletedBusinessMessages]`, `#[OnBusinessConnection]`, `#[OnEditedBusinessMessage]`, `#[OnBusinessMessage]`, `#[OnPurchasedPaidMedia]`, `#[OnManagedBot]`, `#[OnGuestMessage]`. Each attribute accepts `filters: Filter[]` and `after: ?After`. Internally these translate to `ObserverDecorator` instances mirroring `aiogram.fsm.scene.ObserverDecorator` (`scene.py:104-145`).
+* `Scene` per-event handler attributes — one per Telegram update-type observer (25 total): `#[OnMessage]`, `#[OnEditedMessage]`, `#[OnChannelPost]`, `#[OnEditedChannelPost]`, `#[OnInlineQuery]`, `#[OnChosenInlineResult]`, `#[OnCallbackQuery]`, `#[OnShippingQuery]`, `#[OnPreCheckoutQuery]`, `#[OnPoll]`, `#[OnPollAnswer]`, `#[OnMyChatMember]`, `#[OnChatMember]`, `#[OnChatJoinRequest]`, `#[OnMessageReaction]`, `#[OnMessageReactionCount]`, `#[OnChatBoost]`, `#[OnRemovedChatBoost]`, `#[OnDeletedBusinessMessages]`, `#[OnBusinessConnection]`, `#[OnEditedBusinessMessage]`, `#[OnBusinessMessage]`, `#[OnPurchasedPaidMedia]`, `#[OnManagedBot]`, `#[OnGuestMessage]`. Each attribute accepts `filters: Filter[]` and `after: ?After`. Internally these translate to `ObserverDecorator` instances mirroring `aiogram.fsm.scene.ObserverDecorator` (`scene.py:104-145`). **No `#[OnError]`**: errors are handled outside scenes via the dispatcher's top-level `errors` observer with `ExceptionTypeFilter`/`ExceptionMessageFilter`; scenes never dispatch exception events.
 * **`After` action factory** (port of `aiogram.fsm.scene.After`): immutable DTO with `SceneAction $action` and `?class-string<Scene> $scene = null`. Static factories: `After::exit(): After`, `After::back(): After`, `After::goto(class-string<Scene> $scene): After`. When attached via `after:` on a handler attribute, the scene runtime runs the handler then performs the action automatically (exit / pop history / transition into a sibling scene).
 * **`Scene::asHandler(mixed ...$handlerKwargs): callable`** and **`Scene::asRouter(?string $name = null): Router`** (port of `scene.py:407-439`) let users mount a scene without going through `SceneRegistry`. Signatures mirror upstream exactly: `as_router(cls, name: str | None = None) -> Router` returns a freshly-constructed `Router` named after the scene (`"Scene 'Foo.Bar'"` if no name given); the caller wires it via `$dp->includeRouter($scene::asRouter())`. `asHandler(...): callable` returns an entry-point handler that enters the scene when invoked, suitable for direct registration: `$dp->message->register(OrderScene::asHandler(), null, new Command(['start']))`.
 * `SceneRegistry` mirrors aiogram: `(new SceneRegistry($router, registerOnAdd: true))->add(OrderScene::class, PaymentScene::class)`. Constructor parameter is `Router $router` (matches upstream `SceneRegistry.__init__(router: Router, register_on_add: bool = True)` at `scene.py:751`); `Dispatcher extends Router`, so passing `$dispatcher` is valid. The registry walks each scene's `ObserverDecorator` map and binds them to observers on the router (with the `StateFilter` scope-binding from `scene.py:405`).
