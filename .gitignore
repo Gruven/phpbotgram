@@ -1,0 +1,17 @@
+/vendor/
+.vscode/
+.history/
+.idea/
+logs
+*.log
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+.cache
+.DS_Store
+
+# php cs fixer
+.php-cs-fixer.php
+.php-cs-fixer.cache
