@@ -448,7 +448,17 @@ final class TypeRenderer
       // (`array` for lists, scalars/classnames left as-is).
       $declType = $this->declTypeFor($resolved);
 
-      $default = $this->resolveDefault($a, $resolved, $discriminatorWireField, $discriminatorValue);
+      $default = $this->resolveDefault($type, $a, $resolved, $discriminatorWireField, $discriminatorValue);
+
+      // BotDefault widening: when the type-level `default.yml` mapped this
+      // property to a `BotDefault` sentinel, the declared type must admit
+      // `BotDefault` alongside the natural type AND null (so the caller can
+      // explicitly opt out of the bot-level default by passing null).
+      if ($default !== null && str_starts_with($default, 'new BotDefault(')) {
+        $imports['Gruven\\PhpBotGram\\Client\\BotDefault'] = true;
+        $declType = $this->widenForBotDefault($declType);
+        $declType = $this->widenNullable($declType);
+      }
 
       // Nullable widening: an optional param defaulting to null becomes ?T
       // for single types, or T|null for already-union types (PHP forbids
@@ -460,8 +470,11 @@ final class TypeRenderer
 
       // Sort rank for the constructor signature:
       //   0 — required-no-default (e.g. `int $messageId`)
-      //   1 — required-with-default (e.g. discriminator `string $type = 'solid'`)
-      //   2 — optional-with-default `= null` (e.g. `?int $messageThreadId = null`)
+      //   1 — required-with-default (discriminator literal, required True
+      //       literal, etc. — these are schema-required but carry a default)
+      //   2 — optional-with-default `= null` / `= new BotDefault(...)`
+      //       (e.g. `?int $messageThreadId = null`,
+      //        `LinkPreviewOptions::$isDisabled = new BotDefault(...)`)
       //
       // Mirrors `MethodRenderer::buildParameters`. The reorder is mandatory
       // because cs-fixer's `no_unreachable_default_argument_value` rule strips
@@ -470,10 +483,14 @@ final class TypeRenderer
       // instantiate via named-only arguments.
       if ($default === null) {
         $sortRank = 0;
-      } elseif ($default === 'null') {
-        $sortRank = 2;
-      } else {
+      } elseif ($a->required) {
+        // Schema-required slot that nonetheless carries a default value —
+        // sits between required-no-default and optional buckets so callers
+        // can still omit it via named arguments without breaking the
+        // optional params that follow.
         $sortRank = 1;
+      } else {
+        $sortRank = 2;
       }
 
       $staged[] = [
@@ -523,15 +540,21 @@ final class TypeRenderer
    * Order of precedence:
    *   1. Union-discriminator field on a union child: pin to the literal wire
    *      value (e.g. `'solid'` for `BackgroundFillSolid::$type`).
-   *   2. Required `True`-literal annotation (rare on types): emit `true`.
-   *   3. Optional (`required: false`) annotation: `null`.
-   *   4. Required, non-discriminator: no default (the constructor signature
+   *   2. Type-level `default.yml` entry: emit `new BotDefault('<rhs>')` so the
+   *      property carries the bot-level default through to the wire encoder
+   *      (e.g. `LinkPreviewOptions::$isDisabled` -> `new BotDefault('link_preview_is_disabled')`).
+   *      Mirrors the method-side `DefaultsResolver` semantics.
+   *   3. Required `True`-literal annotation (rare on types): emit `true`.
+   *   4. Optional (`required: false`) annotation: `null`.
+   *   5. Required, non-discriminator: no default (the constructor signature
    *      omits the `=` clause).
    *
-   * DefaultsResolver is consulted only for method parameters, not type
-   * properties — that's why this routine ignores it.
+   * The method-level `DefaultsResolver` is only consulted for method
+   * parameters; types use their own per-type `default.yml` map carried on
+   * `TypeEntity::$defaults`.
    */
   private function resolveDefault(
+    TypeEntity $type,
     AnnotationEntity $a,
     PhpType $resolved,
     ?string $discriminatorWireField,
@@ -543,6 +566,14 @@ final class TypeRenderer
       $escaped = strtr($discriminatorValue, ['\\' => '\\\\', "'" => "\\'"]);
 
       return "'{$escaped}'";
+    }
+
+    if (isset($type->defaults[$a->name])) {
+      $sentinel = $type->defaults[$a->name];
+      // Same escape rules DefaultsResolver applies for method params.
+      $escapedSentinel = strtr($sentinel, ['\\' => '\\\\', "'" => "\\'"]);
+
+      return "new BotDefault('{$escapedSentinel}')";
     }
 
     if ($a->required) {

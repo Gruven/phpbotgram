@@ -138,6 +138,41 @@ final class SchemaLoaderTest extends TestCase
     self::assertSame([], $update->aliases);
   }
 
+  /**
+   * Cycle 2 review fix: `.butcher/types/<X>/default.yml` was silently
+   * dropped on load — `TypeEntity::$defaults` simply didn't exist. After
+   * the fix, every type carrying a `default.yml` surfaces the
+   * wire_field => bot_default_sentinel map on the loaded entity for the
+   * renderer to consume.
+   */
+  public function testLinkPreviewOptionsDefaultsAreLoaded(): void
+  {
+    $type = $this->findType('LinkPreviewOptions');
+
+    self::assertSame([
+      'is_disabled' => 'link_preview_is_disabled',
+      'prefer_small_media' => 'link_preview_prefer_small_media',
+      'prefer_large_media' => 'link_preview_prefer_large_media',
+      'show_above_text' => 'link_preview_show_above_text',
+    ], $type->defaults);
+  }
+
+  public function testReplyParametersDefaultsAreLoaded(): void
+  {
+    $type = $this->findType('ReplyParameters');
+
+    self::assertSame([
+      'quote_parse_mode' => 'parse_mode',
+      'allow_sending_without_reply' => 'allow_sending_without_reply',
+    ], $type->defaults);
+  }
+
+  public function testTypeWithoutDefaultYmlHasEmptyDefaults(): void
+  {
+    $update = $this->findType('Update');
+    self::assertSame([], $update->defaults);
+  }
+
   public function testChatFullInfoBasesIsReadFromReplaceYml(): void
   {
     $chat = $this->findType('ChatFullInfo');

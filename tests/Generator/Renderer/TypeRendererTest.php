@@ -275,6 +275,69 @@ final class TypeRendererTest extends TestCase
     self::assertLessThan($typePos, $colorPos, '$color (required-no-default) must precede $type (required-with-default)');
   }
 
+  /**
+   * Cycle 2 review fix: type-level `default.yml` files weren't being read
+   * by the loader, so the `LinkPreviewOptions::$isDisabled` property (and
+   * its three siblings) lost their `BotDefault` sentinels — every emitted
+   * `LinkPreviewOptions` constructor surfaced plain `?bool = null` instead
+   * of `null|BotDefault|bool = new BotDefault('link_preview_is_disabled')`.
+   * After the fix, the type-level default surfaces identically to the
+   * method-level path: PHPDoc-grade union, runtime widened to admit the
+   * sentinel, and `BotDefault` imported.
+   */
+  public function testLinkPreviewOptionsCarriesBotDefaultForIsDisabled(): void
+  {
+    $out = $this->render('LinkPreviewOptions');
+
+    // BotDefault must be imported so the `new BotDefault(...)` expressions
+    // compile. The renderer emits the union in `null|BotDefault|<base>`
+    // order; cs-fixer's ordered-types rule will resort it to alphabetical
+    // (`null|bool|BotDefault`) on the regenerated tree — we assert
+    // against the renderer's pre-fixer form because the renderer-level
+    // test bypasses the fixer pass.
+    self::assertStringContainsString('use Gruven\\PhpBotGram\\Client\\BotDefault;', $out);
+
+    // The four BotDefault-bearing properties widen to admit the sentinel
+    // and default to a `new BotDefault('<rhs>')` expression.
+    self::assertStringContainsString(
+      "public readonly null|BotDefault|bool \$isDisabled = new BotDefault('link_preview_is_disabled'),",
+      $out,
+    );
+    self::assertStringContainsString(
+      "public readonly null|BotDefault|bool \$preferSmallMedia = new BotDefault('link_preview_prefer_small_media'),",
+      $out,
+    );
+    self::assertStringContainsString(
+      "public readonly null|BotDefault|bool \$preferLargeMedia = new BotDefault('link_preview_prefer_large_media'),",
+      $out,
+    );
+    self::assertStringContainsString(
+      "public readonly null|BotDefault|bool \$showAboveText = new BotDefault('link_preview_show_above_text'),",
+      $out,
+    );
+  }
+
+  /**
+   * Cycle 2 review fix sanity: `ReplyParameters` ships a type-level
+   * default.yml that maps `quote_parse_mode -> parse_mode` and
+   * `allow_sending_without_reply -> allow_sending_without_reply`. Both
+   * properties must carry their `BotDefault` sentinels on the ctor.
+   */
+  public function testReplyParametersCarriesBotDefaultDefaults(): void
+  {
+    $out = $this->render('ReplyParameters');
+
+    self::assertStringContainsString('use Gruven\\PhpBotGram\\Client\\BotDefault;', $out);
+    self::assertStringContainsString(
+      "public readonly null|BotDefault|string \$quoteParseMode = new BotDefault('parse_mode'),",
+      $out,
+    );
+    self::assertStringContainsString(
+      "public readonly null|BotDefault|bool \$allowSendingWithoutReply = new BotDefault('allow_sending_without_reply'),",
+      $out,
+    );
+  }
+
   public function testRendersUnionParentAsAbstract(): void
   {
     $out = $this->render('BackgroundFill');
