@@ -1,0 +1,86 @@
+{#-
+  Type class template.
+
+  Variables provided by `TypeRenderer::render()`:
+    - class_name        : string  — short PHP class name (e.g. "Message")
+    - namespace         : string  — namespace the class lives in
+    - imports           : list<string>  — sorted list of FQCNs to `use`
+    - class_keyword     : string  — "final class" or "abstract class"
+    - parent_class      : string  — short name of parent class (e.g. "TelegramObject")
+    - description_lines : list<string>  — docblock summary lines (already prefix-cleaned)
+    - source_anchor     : string  — lowercased name for the Telegram docs URL
+    - wire_names        : list<{phpName: string, wireName: string}>  — WireNames entries
+    - properties        : list<{phpName, wireName, phpType, phpdocType, default}>
+    - phpdoc_params     : list<{phpdocType, phpName}>  — @param lines for the ctor docblock
+    - shortcut_methods  : list<{name, parameters, returnType, methodClass, callArgs}>
+    - trait_short_name  : ?string  — short name of hand-authored Shortcuts trait
+
+  The template intentionally pre-processes nothing structural — the renderer
+  produces lists ready for iteration so the template stays close to a
+  literal-text-with-`{{ … }}`-holes style. cs-fixer (run by the pipeline
+  orchestrator at Task 2.12) polishes the final whitespace; this template
+  prioritises emitting valid PHP over pixel-perfect formatting.
+-#}
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+{% if imports is not empty %}
+
+{% for fqcn in imports -%}
+use {{ fqcn }};
+{% endfor -%}
+{% endif %}
+
+/**
+{% for line in description_lines %} * {{ line }}
+{% endfor %} *
+ * Source: https://core.telegram.org/bots/api#{{ source_anchor }}
+ *
+ * @generated do not edit; regenerate via `make regenerate`
+ */
+{{ class_keyword }} {{ class_name }} extends {{ parent_class }}
+{
+{% if trait_short_name is not null -%}
+  use {{ trait_short_name }};
+
+{% endif -%}
+{% if wire_names is not empty -%}
+  /** @var array<string, string> */
+  public const array WireNames = [
+{% for entry in wire_names -%}
+    '{{ entry.phpName }}' => '{{ entry.wireName }}',
+{% endfor -%}
+  ];
+
+{% endif -%}
+{% if phpdoc_params is not empty -%}
+  /**
+{% for p in phpdoc_params -%}
+   * @param {{ p.phpdocType }} ${{ p.phpName }}
+{% endfor -%}
+   */
+{% endif -%}
+  public function __construct(
+{% for p in properties -%}
+    public readonly {{ p.phpType }} ${{ p.phpName }}{% if p.default is not null %} = {{ p.default }}{% endif %},
+{% endfor -%}
+    ?Bot $bot = null,
+  ) {
+    parent::__construct($bot);
+  }
+{% for m in shortcut_methods %}
+  public function {{ m.name }}(
+{% for p in m.parameters -%}
+    {{ p.phpType }} ${{ p.phpName }}{% if p.default is not null %} = {{ p.default }}{% endif %},
+{% endfor -%}
+  ): {{ m.returnType }} {
+    return new {{ m.methodClass }}(
+{% for arg in m.callArgs -%}
+      {{ arg.name }}: {{ arg.expr }},
+{% endfor -%}
+    );
+  }
+{% endfor -%}
+}

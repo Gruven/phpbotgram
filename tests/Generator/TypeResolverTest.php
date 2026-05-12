@@ -419,6 +419,34 @@ final class TypeResolverTest extends TestCase
     self::assertNull($t->importFqcn);
   }
 
+  public function testParsedTypeArrayWrapsInnerParsedTypeInListOf(): void
+  {
+    // `getChatAdministrators.returning.parsed_type` ships the `{type:
+    // array, items: {type: union, ...}}` form. Construct a synthetic
+    // envelope and assert the resolver wraps the inner union in a ListOf.
+    $envelope = new AnnotationEntity(
+      name: '__synthetic__',
+      description: '',
+      type: 'Array of ChatMember',
+      required: true,
+      parsedType: [
+        'type' => 'array',
+        'items' => [
+          'type' => 'entity',
+          'references' => ['category' => 'types', 'name' => 'ChatMember'],
+        ],
+      ],
+    );
+
+    $t = $this->resolver()->resolve($envelope);
+
+    self::assertSame(PhpTypeKind::ListOf, $t->kind);
+    self::assertSame('list<ChatMember>', $t->phpType);
+    self::assertNotNull($t->innerType);
+    self::assertSame(PhpTypeKind::ClassName, $t->innerType->kind);
+    self::assertSame('Gruven\\PhpBotGram\\Types\\ChatMember', $t->innerType->importFqcn);
+  }
+
   private function resolver(): TypeResolver
   {
     $r = self::$resolver;

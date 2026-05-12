@@ -204,8 +204,40 @@ final class TypeResolver
       'entity' => $this->resolveParsedEntity($parsed),
       'enum' => $this->resolveParsedEnum($parsed),
       'union' => $this->resolveParsedUnion($parsed),
+      'array' => $this->resolveParsedArray($parsed),
       default => throw new RuntimeException("Unknown parsed_type kind: {$type}"),
     };
+  }
+
+  /**
+   * Resolve the `{type: array, items: {parsed_type sub-shape}}` form.
+   *
+   * Today the form appears only on a handful of method returns
+   * (`getChatAdministrators`, `sendPoll.options`) — the renderer needs it
+   * so a future schema patch that ships it on type annotations doesn't
+   * blow up the codegen pipeline. The lowering mirrors `Array of …` wire
+   * grammar: recursively resolve the inner parsed_type, wrap in a
+   * `PhpTypeKind::ListOf` envelope, and let the renderer collapse the
+   * declaration to `array` while keeping the PHPDoc `list<…>` narrow.
+   *
+   * @param ParsedType $parsed
+   */
+  private function resolveParsedArray(array $parsed): PhpType
+  {
+    if (!isset($parsed['items']) || !is_array($parsed['items'])) {
+      throw new RuntimeException('parsed_type array is missing an `items` block');
+    }
+
+    /** @var ParsedType $items */
+    $items = $parsed['items'];
+    $inner = $this->resolveParsed($items);
+
+    return new PhpType(
+      kind: PhpTypeKind::ListOf,
+      phpType: 'list<' . $inner->phpType . '>',
+      importFqcn: $inner->importFqcn,
+      innerType: $inner,
+    );
   }
 
   /**
