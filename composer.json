@@ -10,15 +10,41 @@
 	],
 	"require" : {
 		"php": "^8.5",
-		"php-64bit": "^8.5"
+		"php-64bit": "^8.5",
+		"ext-mbstring": "*",
+		"ext-json": "*",
+		"amphp/amp": "^3",
+		"amphp/byte-stream": "^2",
+		"amphp/file": "^3",
+		"amphp/http-client": "^5",
+		"amphp/sync": "^2",
+		"revolt/event-loop": "^1"
 	},
 	"require-dev" : {
+		"amphp/http-server": "^3",
+		"amphp/redis": "^2",
 		"friendsofphp/php-cs-fixer": "^3.95",
-		"phpunit/phpunit": "^13.1"
+		"mongodb/mongodb": "^2",
+		"phpstan/phpstan": "^2.1",
+		"phpunit/phpunit": "^13.1",
+		"twig/twig": "^3.10"
+	},
+	"suggest" : {
+		"amphp/http-server": "^3 — required to host webhooks via the bundled AmphpServer adapter",
+		"amphp/redis": "^2 — required for the RedisStorage FSM backend and RedisEventIsolation",
+		"mongodb/mongodb": "^2 — required for the MongoStorage FSM backend",
+		"ext-mongodb": "^2.3 — required by mongodb/mongodb",
+		"ext-pcntl": "* — enables EventLoop::onSignal for graceful polling shutdown (unix only)"
 	},
 	"autoload" : {
 		"psr-4" : {
 			"Gruven\\PhpBotGram\\" : "src/"
+		}
+	},
+	"autoload-dev" : {
+		"psr-4" : {
+			"Gruven\\PhpBotGram\\Tests\\" : "tests/",
+			"Gruven\\PhpBotGram\\Generator\\" : "tools/generator/src/"
 		}
 	},
 	"config" : {
