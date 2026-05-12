@@ -34,5 +34,5 @@ interface BotShortcutsContract
 
   public function downloadFile(File|string $fileOrPath, mixed $destination = null, int $chunkSize = 65536): ?string;
 
-  public function download(Downloadable $object, mixed $destination = null, int $chunkSize = 65536): ?string;
+  public function download(Downloadable|string $object, mixed $destination = null, int $chunkSize = 65536): ?string;
 }

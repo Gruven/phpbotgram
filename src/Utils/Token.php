@@ -21,9 +21,13 @@ final class Token
     }
     [$left, $right] = explode(':', $token, 2);
 
-    // Telegram-issued bot tokens use only `[A-Za-z0-9_-]` after the colon —
-    // pinning the regex blocks path-traversal style payloads from slash-injecting
-    // into URLs constructed by TelegramApiServer::apiUrl.
+    // We empirically observe BotFather to emit only `[A-Za-z0-9_-]` after the
+    // colon — Telegram does not publicly document this guarantee. The regex is
+    // pinned because `TelegramApiServer::apiUrl`/`fileUrl` concatenate the token
+    // directly into the URL path (`/bot{token}/{method}`); without the
+    // restriction a `/` or `..` in the right half would inject into the path.
+    // If Telegram ever introduces a new character in tokens, this regex must
+    // be relaxed AND the URL builder updated to URL-encode the right half.
     if (!ctype_digit($left) || $right === '' || preg_match('/^[A-Za-z0-9_-]+$/', $right) !== 1) {
       throw new TokenValidationException("Invalid token format: '{$token}'");
     }

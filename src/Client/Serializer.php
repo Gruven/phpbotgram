@@ -125,7 +125,15 @@ final class Serializer
       $wireName = is_string($aliases[$phpName] ?? null) ? $aliases[$phpName] : self::camelToSnake($phpName);
 
       if (!array_key_exists($wireName, $data)) {
-        if ($param->isDefaultValueAvailable() || $param->allowsNull()) {
+        if ($param->isDefaultValueAvailable()) {
+          continue;
+        }
+
+        if ($param->allowsNull()) {
+          // Nullable param with no default — pass null explicitly so `newInstance`
+          // doesn't ArgumentCountError on the missing slot.
+          $args[$phpName] = null;
+
           continue;
         }
 

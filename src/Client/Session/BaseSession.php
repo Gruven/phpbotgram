@@ -47,6 +47,14 @@ abstract class BaseSession
   public private(set) RequestMiddlewareManager $middleware;
 
   /**
+   * Stable first-class-callable reference to makeRequest, captured once at
+   * construction. Re-creating `$this->makeRequest(...)` per invocation would
+   * produce a fresh Closure each time and bust RequestMiddlewareManager's
+   * chain cache (which keys by spl_object_id).
+   */
+  private readonly Closure $makeRequestRef;
+
+  /**
    * @param null|Closure(string): mixed $jsonLoads injectable JSON decoder (parity with aiogram's BaseSession.json_loads). Defaults to `json_decode(..., true, JSON_THROW_ON_ERROR)`.
    * @param null|Closure(mixed): string $jsonDumps injectable JSON encoder (parity with aiogram's BaseSession.json_dumps). Defaults to `json_encode(..., JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)`.
    */
@@ -60,6 +68,7 @@ abstract class BaseSession
     $this->jsonLoads = $jsonLoads ?? static fn(string $payload): mixed => json_decode($payload, associative: true, flags: JSON_THROW_ON_ERROR);
     $this->jsonDumps = $jsonDumps ?? static fn(mixed $value): string => (string)json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
     $this->middleware = new RequestMiddlewareManager();
+    $this->makeRequestRef = $this->makeRequest(...);
   }
 
   /**
@@ -76,7 +85,7 @@ abstract class BaseSession
    */
   public function __invoke(Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
   {
-    $chain = $this->middleware->wrap($this->makeRequest(...));
+    $chain = $this->middleware->wrap($this->makeRequestRef);
 
     return $chain($bot, $method, $timeout);
   }

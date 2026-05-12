@@ -111,8 +111,17 @@ final class MockedSession extends BaseSession
     $this->closed = true;
   }
 
+  /** @var array<string, string> map<url, body> for streamContent canned responses */
+  public array $cannedStreamBodies = [];
+
+  /** @var list<string> recorded streamContent URLs */
+  public array $streamedUrls = [];
+
   public function streamContent(string $url, array $headers = [], int $timeout = 30, int $chunkSize = 65536, bool $raiseForStatus = true): ReadableStream
   {
-    return new ReadableBuffer('');
+    $this->streamedUrls[] = $url;
+    $body = $this->cannedStreamBodies[$url] ?? '';
+
+    return new ReadableBuffer($body);
   }
 }
