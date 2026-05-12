@@ -9,7 +9,7 @@ use Gruven\PhpBotGram\Client\BotContextController;
 use LogicException;
 
 /**
- * @template TReturn
+ * @template-covariant TReturn
  */
 abstract class TelegramMethod extends BotContextController
 {
