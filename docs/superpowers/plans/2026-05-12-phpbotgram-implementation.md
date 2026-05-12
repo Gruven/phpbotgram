@@ -293,6 +293,10 @@ Also extend `autoload-dev`:
 Run: `NO_PROXY='*' composer update --no-progress 2>&1 | tail -20`
 Expected: dependencies install cleanly, lock file regenerated, no version conflicts. If amphp/* packages report version-pin conflicts, drop to looser constraints (`^3` → exact version) and re-pin.
 
+- [ ] **Step 2.5: Regenerate autoloader** (so the new autoload-dev block takes effect)
+
+Run: `composer dump-autoload`
+
 - [ ] **Step 3: Sanity-check vendor**
 
 Run: `composer show --installed --no-dev | wc -l`
@@ -589,17 +593,9 @@ class Bot
 }
 ```
 
-- [ ] **Step 5: Update composer.json autoload**
+- [ ] **Step 5: Regenerate autoloader**
 
-Add to `composer.json#autoload.psr-4`:
-
-```json
-"autoload": {
-    "psr-4": {
-        "Gruven\\PhpBotGram\\": "src/"
-    }
-}
-```
+The `autoload.psr-4` was already present in the initial composer.json; Task 0.1 only extended `autoload-dev`. Just regenerate:
 
 Run: `composer dump-autoload`
 
@@ -990,8 +986,13 @@ namespace Gruven\PhpBotGram\Types;
  * Renamed from upstream `UNSET` because PHP reserves `unset` as a keyword
  * so `class Unset` won't parse. The serializer strips fields whose value
  * is Unspecified::instance() before validation/encoding.
+ *
+ * NOT declared `readonly class`: PHP forbids `static` properties on a
+ * readonly class, and the singleton needs `private static ?self $instance`
+ * to cache the sole instance. The private constructor + singleton pattern
+ * already enforces the desired immutability.
  */
-final readonly class Unspecified
+final class Unspecified
 {
     private static ?self $instance = null;
 
@@ -1396,23 +1397,36 @@ final class TelegramMigrateToChat extends TelegramApiException
 }
 ```
 
-Add the remaining no-payload subclasses (each ~5 lines):
+Each of the no-payload subclasses goes in its own `src/Exceptions/<Name>.php` file (one class per file, PSR-4):
+
+`src/Exceptions/TelegramNetworkException.php`:
 
 ```php
-// src/Exceptions/TelegramNetworkException.php
+<?php
+
+declare(strict_types=1);
+
 namespace Gruven\PhpBotGram\Exceptions;
-class TelegramNetworkException extends TelegramApiException {
+
+class TelegramNetworkException extends TelegramApiException
+{
     protected string $label = 'HTTP Client says';
 }
 ```
 
+`src/Exceptions/TelegramBadRequestException.php`:
+
 ```php
-// src/Exceptions/TelegramBadRequestException.php
+<?php
+
+declare(strict_types=1);
+
 namespace Gruven\PhpBotGram\Exceptions;
+
 class TelegramBadRequestException extends TelegramApiException {}
 ```
 
-Repeat for: `TelegramNotFoundException`, `TelegramConflictException`, `TelegramUnauthorizedException`, `TelegramForbiddenException`, `TelegramServerException`, `RestartingTelegram` (extends `TelegramServerException`), `TelegramEntityTooLarge` (extends `TelegramNetworkException`).
+Repeat the same one-class-per-file pattern for: `TelegramNotFoundException`, `TelegramConflictException`, `TelegramUnauthorizedException`, `TelegramForbiddenException`, `TelegramServerException`, `RestartingTelegram` (extends `TelegramServerException`), `TelegramEntityTooLarge` (extends `TelegramNetworkException`).
 
 `src/Exceptions/ClientDecodeException.php`:
 
@@ -1436,16 +1450,56 @@ final class ClientDecodeException extends PhpBotGramException
 }
 ```
 
-`src/Exceptions/DataNotDictLikeException.php`, `CallbackAnswerException`, `SceneException`, `UnsupportedKeywordArgumentException`, `UpdateTypeLookupException` (extends `\LookupError` / `PhpBotGramException`):
+Each of the remaining error classes lives in its own file under `src/Exceptions/`:
+
+`src/Exceptions/CallbackAnswerException.php`:
 
 ```php
+<?php
+declare(strict_types=1);
 namespace Gruven\PhpBotGram\Exceptions;
 final class CallbackAnswerException extends PhpBotGramException {}
+```
+
+`src/Exceptions/SceneException.php`:
+
+```php
+<?php
+declare(strict_types=1);
+namespace Gruven\PhpBotGram\Exceptions;
 final class SceneException extends PhpBotGramException {}
-final class UnsupportedKeywordArgumentException extends DetailedPhpBotGramException {
-    public function __construct(public readonly string $argName, string $message) { parent::__construct($message); }
+```
+
+`src/Exceptions/UnsupportedKeywordArgumentException.php`:
+
+```php
+<?php
+declare(strict_types=1);
+namespace Gruven\PhpBotGram\Exceptions;
+final class UnsupportedKeywordArgumentException extends DetailedPhpBotGramException
+{
+    public function __construct(public readonly string $argName, string $message)
+    {
+        parent::__construct($message);
+    }
 }
+```
+
+`src/Exceptions/UpdateTypeLookupException.php`:
+
+```php
+<?php
+declare(strict_types=1);
+namespace Gruven\PhpBotGram\Exceptions;
 final class UpdateTypeLookupException extends PhpBotGramException {}
+```
+
+`src/Exceptions/DataNotDictLikeException.php`:
+
+```php
+<?php
+declare(strict_types=1);
+namespace Gruven\PhpBotGram\Exceptions;
 final class DataNotDictLikeException extends DetailedPhpBotGramException {}
 ```
 
@@ -1481,14 +1535,15 @@ use PHPUnit\Framework\TestCase;
 
 final class BasesTest extends TestCase
 {
-    public function testUnhandledIsSingleton(): void
+    public function testUnhandledHasStableSentinelValue(): void
     {
-        self::assertSame(Bases::UNHANDLED, Bases::UNHANDLED);
+        // Pin the actual sentinel string so a rename in Bases::class breaks this test.
+        self::assertSame('__phpbotgram_unhandled__', Bases::UNHANDLED);
     }
 
     public function testRejectedIsDistinctFromUnhandled(): void
     {
-        self::assertNotEquals(Bases::UNHANDLED, Bases::REJECTED);
+        self::assertNotSame(Bases::UNHANDLED, Bases::REJECTED);
     }
 
     public function testSkipHelperThrowsSkipException(): void
@@ -1522,10 +1577,29 @@ final class Bases
 }
 ```
 
+PSR-4 requires one class per file. Split into two files:
+
+`src/Dispatcher/Event/SkipHandlerException.php`:
+
 ```php
 <?php
+
+declare(strict_types=1);
+
 namespace Gruven\PhpBotGram\Dispatcher\Event;
+
 final class SkipHandlerException extends \Exception {}
+```
+
+`src/Dispatcher/Event/CancelHandlerException.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Gruven\PhpBotGram\Dispatcher\Event;
+
 final class CancelHandlerException extends \Exception {}
 ```
 
@@ -1536,20 +1610,17 @@ git add src/Dispatcher/Event/Bases.php src/Dispatcher/Event/SkipHandlerException
 git commit -m "feat: Bases (UNHANDLED/REJECTED) + SkipHandler/CancelHandler exceptions"
 ```
 
-### Task 0.11: MockedSession + MockedBot test harness
+### Task 0.11: BaseSession + Bot stubs (no-op constructors)
 
 **Files:**
-- Create: `tests/Support/MockedSession.php`
-- Create: `tests/Support/MockedBot.php`
-- Create: `tests/Support/MockedSessionTest.php`
+- Create: `src/Client/Session/BaseSession.php` (Phase 0 stub — replaced by Task 1.3)
+- Replace: `src/Bot.php` (stub created at Task 0.4) — add a `public function __construct() {}` so subclasses can call `parent::__construct()` without fatal errors
 
-Spec § "Test infrastructure" — pre-stubs `me()` with `bot.id=42, username='tbot'` matching `tests/mocked_bot.py:63-70`.
+The actual `MockedSession` and `MockedBot` are deferred to **Task 1.7** (a new task after Phase 1.6's full Bot/BaseSession lands). Phase 0 only needs the abstract surfaces in place so later tests reference them.
 
-This task requires `BaseSession` and `Bot`-with-token, which we don't fully have yet. We write *stubs* sufficient for the harness; full BaseSession comes in Task 1.3.
+- [ ] **Step 1: Phase 0 BaseSession stub with no-op constructor**
 
-- [ ] **Step 1: Stub BaseSession interface**
-
-`src/Client/Session/BaseSession.php` (placeholder; Task 1.3 finalizes):
+`src/Client/Session/BaseSession.php` (placeholder; Task 1.3 replaces with the full version):
 
 ```php
 <?php
@@ -1564,159 +1635,38 @@ use Gruven\PhpBotGram\Methods\TelegramMethod;
 
 abstract class BaseSession
 {
+    /** No-op constructor — replaced by Task 1.3 with the full ?TelegramApiServer/$timeout signature. Lets future subclasses chain parent::__construct() without fatal errors. */
+    public function __construct() {}
+
     abstract public function makeRequest(Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed;
     abstract public function close(): void;
 }
 ```
 
-- [ ] **Step 2: Implement MockedSession**
+- [ ] **Step 2: Extend Bot stub with no-op constructor**
+
+Replace `src/Bot.php` to add a constructor so subclasses (MockedBot in Task 1.7) can `parent::__construct()`:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Gruven\PhpBotGram\Tests\Support;
+namespace Gruven\PhpBotGram;
 
-use Gruven\PhpBotGram\Bot;
-use Gruven\PhpBotGram\Client\Session\BaseSession;
-use Gruven\PhpBotGram\Methods\Response;
-use Gruven\PhpBotGram\Methods\TelegramMethod;
-
-final class MockedSession extends BaseSession
+/**
+ * Phase 0 stub. Phase 1.6 regenerates with the full 176-method facade and the
+ * real constructor `(string $token, ?BaseSession $session = null, ?DefaultBotProperties $defaultProperties = null)`.
+ */
+class Bot
 {
-    /** @var \SplDoublyLinkedList<Response> */
-    private \SplDoublyLinkedList $responses;
-    /** @var \SplDoublyLinkedList<TelegramMethod> */
-    private \SplDoublyLinkedList $requests;
-    public bool $closed = true;
-
-    public function __construct()
-    {
-        parent::__construct();   // initialize $api, $middleware on BaseSession
-        $this->responses = new \SplDoublyLinkedList();
-        $this->requests = new \SplDoublyLinkedList();
-    }
-
-    public function addResult(Response $response): Response
-    {
-        $this->responses->push($response);
-        return $response;
-    }
-
-    public function getRequest(): TelegramMethod
-    {
-        if ($this->requests->isEmpty()) {
-            throw new \RuntimeException('No recorded requests');
-        }
-        return $this->requests->pop();
-    }
-
-    public function makeRequest(Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
-    {
-        $this->closed = false;
-        $this->requests->push($method);
-        if ($this->responses->isEmpty()) {
-            throw new \RuntimeException('No canned responses left');
-        }
-        return $this->responses->pop()->result;
-    }
-
-    public function close(): void
-    {
-        $this->closed = true;
-    }
+    public function __construct() {}
 }
 ```
 
-- [ ] **Step 3: Implement MockedBot**
+- [ ] **Step 3: User stub (replaced by Phase 2 codegen)**
 
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace Gruven\PhpBotGram\Tests\Support;
-
-use Gruven\PhpBotGram\Bot;
-use Gruven\PhpBotGram\Methods\Response;
-use Gruven\PhpBotGram\Methods\TelegramMethod;
-use Gruven\PhpBotGram\Types\User;
-
-final class MockedBot extends Bot
-{
-    private User $cachedMe;
-
-    public function __construct(string $token = '42:TEST')
-    {
-        // Forward to parent Bot::__construct, supplying a MockedSession so the
-        // inherited readonly $session is a MockedSession at runtime. Do NOT
-        // redeclare $session — PHP fatal-errors on `readonly` redeclaration.
-        parent::__construct(token: $token, session: new MockedSession());
-        $this->cachedMe = new User(
-            id: 42,
-            isBot: true,
-            firstName: 'FirstName',
-            lastName: 'LastName',
-            username: 'tbot',
-            languageCode: 'uk-UA',
-        );
-    }
-
-    public function getMockedSession(): MockedSession
-    {
-        // Type-narrow at use-site; the parent declares $session: ?BaseSession.
-        assert($this->session instanceof MockedSession);
-        return $this->session;
-    }
-
-    /**
-     * Pre-stub matching upstream tests/mocked_bot.py:63-70.
-     */
-    public function me(): User
-    {
-        return $this->cachedMe;
-    }
-
-    /**
-     * @template T of TelegramMethod
-     * @param class-string<T> $methodClass
-     */
-    public function addResultFor(
-        string $methodClass,
-        bool $ok,
-        mixed $result = null,
-        ?string $description = null,
-        int $errorCode = 200,
-        ?int $migrateToChatId = null,
-        ?int $retryAfter = null,
-    ): Response {
-        // Mirror upstream tests/mocked_bot.py:85-92: ResponseParameters is
-        // always constructed (fields default null).
-        $parameters = new \Gruven\PhpBotGram\Types\ResponseParameters(
-            migrateToChatId: $migrateToChatId,
-            retryAfter: $retryAfter,
-        );
-
-        $response = new Response(
-            ok: $ok,
-            result: $result,
-            description: $description,
-            errorCode: $errorCode,
-            parameters: $parameters,
-        );
-        $this->getMockedSession()->addResult($response);
-        return $response;
-    }
-
-    public function getRequest(): TelegramMethod
-    {
-        return $this->getMockedSession()->getRequest();
-    }
-}
-```
-
-Note: `User` is a generated type; here we add a stub so MockedBot compiles. Replace the User stub once Phase 2 emits the real class.
+The real MockedBot lands at **Task 1.7** (after Phase 1.6's full Bot/BaseSession/Serializer are in place). For Phase 0 we just need a User stub so other tests can compile:
 
 Add `src/Types/User.php` placeholder:
 
@@ -1736,36 +1686,11 @@ final class User extends TelegramObject {
 }
 ```
 
-- [ ] **Step 4: Smoke test**
-
-`tests/Support/MockedSessionTest.php`:
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace Gruven\PhpBotGram\Tests\Support;
-
-use PHPUnit\Framework\TestCase;
-
-final class MockedSessionTest extends TestCase
-{
-    public function testBotMeReturnsStub(): void
-    {
-        $bot = new MockedBot();
-        $me = $bot->me();
-        self::assertSame(42, $me->id);
-        self::assertSame('tbot', $me->username);
-    }
-}
-```
-
-- [ ] **Step 5: Run — pass; Commit**
+- [ ] **Step 4: Commit BaseSession + Bot stubs + User stub**
 
 ```bash
-git add tests/Support/ src/Client/Session/BaseSession.php src/Types/User.php
-git commit -m "feat(test): MockedSession + MockedBot with pre-stubbed me()"
+git add src/Client/Session/BaseSession.php src/Bot.php src/Types/User.php
+git commit -m "feat: Phase 0 BaseSession/Bot stubs with no-op constructors + User stub"
 ```
 
 ### Task 0.12: RunAsyncTrait test helper
@@ -1865,62 +1790,9 @@ git add tests/Support/RunAsyncTrait.php tests/Support/RunAsyncTraitTest.php
 git commit -m "feat(test): RunAsyncTrait — Fiber-aware test helper with EventLoop driver reset"
 ```
 
-### Task 0.13: RecordingDispatcher test fixture
+### Task 0.13: Phase 0 acceptance gate
 
-**Files:**
-- Create: `tests/Support/RecordingDispatcher.php`
-
-Spec § "Test infrastructure" — replaces upstream's `unittest.mock.patch("aiogram.dispatcher.dispatcher.Dispatcher.silent_call_request", new_callable=AsyncMock)` since PHP static-method mocking is awkward; making `silentCallRequest` a public instance method allows a recording subclass.
-
-- [ ] **Step 1: Implement the recording proxy as a stub that subclasses Dispatcher**
-
-Note: full `Dispatcher` lands at Task 3.10. For Phase 0, we ship the RecordingDispatcher class file with the methods that will be overridden, marked `@phpstan-ignore` until Phase 3 lands the parent.
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace Gruven\PhpBotGram\Tests\Support;
-
-use Gruven\PhpBotGram\Bot;
-use Gruven\PhpBotGram\Dispatcher\Dispatcher;
-use Gruven\PhpBotGram\Methods\TelegramMethod;
-
-/**
- * Test-only Dispatcher subclass that records every silentCallRequest invocation
- * instead of dispatching it through the bot's session.
- */
-final class RecordingDispatcher extends Dispatcher
-{
-    /** @var list<array{Bot, TelegramMethod}> */
-    public array $silentCalls = [];
-
-    public function silentCallRequest(Bot $bot, TelegramMethod $method): void
-    {
-        $this->silentCalls[] = [$bot, $method];
-    }
-}
-```
-
-(The class will fail to load until Task 3.10 lands `Dispatcher`; the empty file is staged for Phase 3 tests to find. PHPUnit auto-loading allows the test file to live as a class definition without a real parent class — but the `extends Dispatcher` line will error. Defer the actual write to **Task 3.13** where it's first used.)
-
-- [ ] **Step 2: Stub-only — create empty file with comment**
-
-```php
-<?php
-// Implementation lands at Task 3.13 once Dispatcher class exists.
-// See plan Task 0.13 for the full class body.
-```
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add tests/Support/RecordingDispatcher.php
-git commit -m "chore(test): RecordingDispatcher placeholder (filled in Task 3.13)"
-```
-
-### Task 0.14: Phase 0 acceptance gate
+(`RecordingDispatcher` test fixture is deferred entirely to **Task 3.13** — it requires the real `Dispatcher` class as a parent, which lands in Phase 3. Phase 0 does not ship a placeholder for it.)
 
 - [ ] **Step 1: Full suite + static analysis**
 
@@ -2629,6 +2501,12 @@ final class Serializer
      * Walks a TelegramObject/TelegramMethod into a snake_case-keyed array.
      * Skips Unspecified values; preserves BotDefault sentinels (resolved later
      * in BaseSession::prepareValue).
+     *
+     * Deviation from spec § "Serializer" line 602 (`dump(object, bot, &files)`):
+     * the plan splits responsibilities — Serializer::dump is value-only; bot
+     * threading + InputFile detachment + JSON encoding all live in
+     * BaseSession::prepareValue. This keeps the Serializer side-effect-free
+     * and pure, easing testing.
      */
     public static function dump(TelegramObject $object): array
     {
@@ -2784,6 +2662,7 @@ final class AmphpSession extends BaseSession
         $body = $this->buildFormBody($bot, $method, $files);
 
         $request = new Request($url, 'POST');
+        $request->setHeader('Content-Type', 'application/x-www-form-urlencoded');
         $request->setBody($body);
         if ($timeout !== null) {
             $request->setTcpConnectTimeout((float) $timeout);
@@ -3185,7 +3064,190 @@ git add src/Bot.php src/Client/BotShortcutsContract.php src/Client/BotShortcuts.
 git commit -m "feat: Bot facade skeleton + BotShortcuts + Phase-1 hand-coded SendMessage/Message smoke test"
 ```
 
-### Task 1.7: Phase 1 acceptance gate
+### Task 1.7: MockedSession + MockedBot test harness (moved here from Phase 0)
+
+**Files:**
+- Create: `tests/Support/MockedSession.php`
+- Create: `tests/Support/MockedBot.php`
+- Create: `tests/Support/MockedSessionTest.php`
+
+After Phase 1.3 (full BaseSession) and Phase 1.6 (full Bot with real constructor) land, the test harness can subclass them cleanly. Spec § "Test infrastructure" — `me()` pre-stub, `addResultFor` helper.
+
+- [ ] **Step 1: Implement MockedSession**
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Gruven\PhpBotGram\Tests\Support;
+
+use Amp\ByteStream\ReadableBuffer;
+use Amp\ByteStream\ReadableStream;
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\Session\BaseSession;
+use Gruven\PhpBotGram\Methods\Response;
+use Gruven\PhpBotGram\Methods\TelegramMethod;
+
+final class MockedSession extends BaseSession
+{
+    /** @var \SplDoublyLinkedList<Response> */
+    private \SplDoublyLinkedList $responses;
+    /** @var \SplDoublyLinkedList<TelegramMethod> */
+    private \SplDoublyLinkedList $requests;
+    public bool $closed = true;
+
+    public function __construct()
+    {
+        parent::__construct();   // BaseSession's $api, $middleware are now initialized
+        $this->responses = new \SplDoublyLinkedList();
+        $this->requests = new \SplDoublyLinkedList();
+    }
+
+    public function addResult(Response $response): Response
+    {
+        $this->responses->push($response);
+        return $response;
+    }
+
+    public function getRequest(): TelegramMethod
+    {
+        if ($this->requests->isEmpty()) {
+            throw new \RuntimeException('No recorded requests');
+        }
+        return $this->requests->pop();
+    }
+
+    public function makeRequest(Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
+    {
+        $this->closed = false;
+        $this->requests->push($method);
+        if ($this->responses->isEmpty()) {
+            throw new \RuntimeException('No canned responses left');
+        }
+        return $this->responses->pop()->result;
+    }
+
+    public function close(): void
+    {
+        $this->closed = true;
+    }
+
+    public function streamContent(string $url, array $headers = [], int $timeout = 30, int $chunkSize = 65536, bool $raiseForStatus = true): ReadableStream
+    {
+        // Not exercised in MockedBot-driven tests; return empty stream as a sensible default.
+        return new ReadableBuffer('');
+    }
+}
+```
+
+- [ ] **Step 2: Implement MockedBot**
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Gruven\PhpBotGram\Tests\Support;
+
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Methods\Response;
+use Gruven\PhpBotGram\Methods\TelegramMethod;
+use Gruven\PhpBotGram\Types\User;
+
+final class MockedBot extends Bot
+{
+    private User $cachedMeStub;
+
+    public function __construct(string $token = '42:TEST')
+    {
+        // Phase 1.6 Bot::__construct accepts (token, session, defaultProperties).
+        // We supply a MockedSession; the inherited readonly $session resolves to it.
+        parent::__construct(token: $token, session: new MockedSession());
+        $this->cachedMeStub = new User(
+            id: 42,
+            isBot: true,
+            firstName: 'FirstName',
+            lastName: 'LastName',
+            username: 'tbot',
+            languageCode: 'uk-UA',
+        );
+    }
+
+    public function getMockedSession(): MockedSession
+    {
+        assert($this->session instanceof MockedSession);
+        return $this->session;
+    }
+
+    /**
+     * Pre-stub matching upstream tests/mocked_bot.py:63-70. Override the trait's
+     * me() since we want to bypass the GetMe network round-trip.
+     */
+    public function me(): User
+    {
+        return $this->cachedMeStub;
+    }
+
+    /**
+     * @template T of TelegramMethod
+     * @param class-string<T> $methodClass
+     */
+    public function addResultFor(
+        string $methodClass,
+        bool $ok,
+        mixed $result = null,
+        ?string $description = null,
+        int $errorCode = 200,
+        ?int $migrateToChatId = null,
+        ?int $retryAfter = null,
+    ): Response {
+        $parameters = new \Gruven\PhpBotGram\Types\ResponseParameters(
+            migrateToChatId: $migrateToChatId,
+            retryAfter: $retryAfter,
+        );
+        $response = new Response(
+            ok: $ok,
+            result: $result,
+            description: $description,
+            errorCode: $errorCode,
+            parameters: $parameters,
+        );
+        $this->getMockedSession()->addResult($response);
+        return $response;
+    }
+
+    public function getRequest(): TelegramMethod
+    {
+        return $this->getMockedSession()->getRequest();
+    }
+}
+```
+
+- [ ] **Step 3: Smoke test**
+
+```php
+<?php
+declare(strict_types=1);
+namespace Gruven\PhpBotGram\Tests\Support;
+use PHPUnit\Framework\TestCase;
+final class MockedSessionTest extends TestCase {
+    public function testBotMeReturnsStub(): void {
+        $bot = new MockedBot();
+        self::assertSame(42, $bot->me()->id);
+        self::assertSame('tbot', $bot->me()->username);
+    }
+}
+```
+
+- [ ] **Step 4: Run — pass; Commit**
+
+```bash
+git add tests/Support/MockedSession.php tests/Support/MockedBot.php tests/Support/MockedSessionTest.php
+git commit -m "feat(test): MockedSession + MockedBot — full implementation after Phase 1 base classes"
+```
+
+### Task 1.8: Phase 1 acceptance gate
 
 - [ ] **Step 1: Full check**
 
@@ -3476,7 +3538,24 @@ For each component, port the upstream class to PHP via TDD. The spec sections "D
 - [ ] **Task 3.10: `Dispatcher`** — extends Router; constructor signature per spec § "Dispatcher" (named-only convention documented); `feedUpdate`/`feedRawUpdate`/`_feedWebhookUpdate`/`feedWebhookUpdate`/`silentCallRequest`. Files: `src/Dispatcher/Dispatcher.php`, `tests/Dispatcher/DispatcherTest.php`.
 - [ ] **Task 3.11: `PollingOptions` DTO** + `Backoff` + `BackoffConfig`. Spec defaults (pollingTimeout=10, backoffConfig=1.0/5.0/1.3/0.1). Files: `src/Dispatcher/PollingOptions.php`, `src/Utils/{Backoff,BackoffConfig}.php`, `tests/Utils/BackoffTest.php`.
 - [ ] **Task 3.12: Polling loop** — `_listenUpdates`/`_polling`/`startPolling`/`runPolling`/`stopPolling` with `$runningLock: LocalMutex` + `$isPolling: bool` flag, per-bot `$handleUpdateTasks: array<int, Future>`, shared `$stopSignal: DeferredFuture`, signal handling via `EventLoop::onSignal`. Files: extends `src/Dispatcher/Dispatcher.php`, `tests/Dispatcher/PollingTest.php`.
-- [ ] **Task 3.13: Webhook response contract** — `feedWebhookUpdate` 55s deadline + `silentCallRequest` fall-through + `trigger_error("Detected slow response into webhook…", E_USER_WARNING)`. Tests use `RecordingDispatcher`. Files: extends `Dispatcher`, `tests/Dispatcher/WebhookContractTest.php`.
+- [ ] **Task 3.13: Webhook response contract + RecordingDispatcher** — `feedWebhookUpdate` 55s deadline + `silentCallRequest` fall-through + `trigger_error("Detected slow response into webhook…", E_USER_WARNING)`. Also create `tests/Support/RecordingDispatcher.php`:
+   ```php
+   <?php
+   declare(strict_types=1);
+   namespace Gruven\PhpBotGram\Tests\Support;
+   use Gruven\PhpBotGram\Bot;
+   use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+   use Gruven\PhpBotGram\Methods\TelegramMethod;
+   /** Records silentCallRequest invocations instead of dispatching. */
+   final class RecordingDispatcher extends Dispatcher {
+       /** @var list<array{Bot, TelegramMethod}> */
+       public array $silentCalls = [];
+       public function silentCallRequest(Bot $bot, TelegramMethod $method): void {
+           $this->silentCalls[] = [$bot, $method];
+       }
+   }
+   ```
+   Files: extends `Dispatcher`, `tests/Dispatcher/WebhookContractTest.php`, `tests/Support/RecordingDispatcher.php`.
 - [ ] **Task 3.14: Echo bot end-to-end** — port `examples/echo_bot.py`. Files: `examples/echo_bot.php`. Verifies the dispatcher works against the generated `Bot`.
 - [ ] **Task 3.15: Phase 3 acceptance gate**
 
