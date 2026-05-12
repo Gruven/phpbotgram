@@ -34,8 +34,12 @@ final class BotDefault implements JsonSerializable
 
   /**
    * Returns a per-name singleton so `BotDefault::for('parse_mode') === BotDefault::for('parse_mode')`.
-   * Phase 2 codegen should prefer this over `new BotDefault(...)` so 176 method classes share
-   * one sentinel per field name instead of allocating per-construction.
+   *
+   * NOTE: PHP 8.5 disallows static method calls in default-parameter expressions
+   * (only `new ClassName(...)` is legal there), so Phase 2 codegen still has to
+   * emit `new BotDefault(...)` for default parameter values. This helper is for
+   * non-default callsites — user code that wants a stable sentinel identity when
+   * comparing externally.
    */
   public static function for(string $name): self
   {

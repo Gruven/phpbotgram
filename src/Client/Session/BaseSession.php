@@ -207,11 +207,15 @@ abstract class BaseSession
     if ($value instanceof DateInterval) {
       $now = new DateTimeImmutable();
 
-      return (string)$now->add($value)->getTimestamp();
+      return (string)(int)round((float)$now->add($value)->format('U.u'));
     }
 
     if ($value instanceof DateTimeInterface) {
-      return (string)$value->getTimestamp();
+      // Round fractional seconds (parity with aiogram's `str(round(value.timestamp()))`).
+      // `getTimestamp()` truncates microseconds; a DateTime constructed from
+      // sub-second-precision sources would otherwise differ from upstream by 1 second
+      // on values whose microsecond component is >= 500_000.
+      return (string)(int)round((float)$value->format('U.u'));
     }
 
     if ($value instanceof BackedEnum) {
