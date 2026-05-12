@@ -57,7 +57,10 @@ final class MockedSession extends BaseSession
       throw new RuntimeException('No recorded requests');
     }
 
-    return $this->requests->pop();
+    // FIFO drain — symmetric with `makeRequest`'s response queue. The
+    // upstream aiogram MockedSession's `get_request()` likewise pops from
+    // the head so callers can inspect requests in dispatch order.
+    return $this->requests->shift();
   }
 
   public function makeRequest(Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
@@ -68,7 +71,12 @@ final class MockedSession extends BaseSession
     if ($this->responses->isEmpty()) {
       throw new RuntimeException('No canned responses left');
     }
-    $response = $this->responses->pop();
+    // FIFO: requests in the order they were queued. SplDoublyLinkedList::push
+    // appends to the tail, so a `shift()` (remove head) gives the earliest
+    // queued response. Necessary for any test that queues multiple responses
+    // and expects them consumed in registration order — single-response tests
+    // are unaffected. Matches upstream aiogram MockedBot's `responses.popleft()`.
+    $response = $this->responses->shift();
 
     // Mirror aiogram's MockedBot.make_request: error responses (ok=false) get
     // routed through checkResponse so the typed exception mapping is exercised

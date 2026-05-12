@@ -4,14 +4,36 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Dispatcher;
 
+use function Amp\async;
+
+use Amp\DeferredFuture;
+
+use function Amp\delay;
+
+use Amp\Future;
+
+use function Amp\Future\await;
+
+use Amp\Sync\LocalMutex;
+use Amp\Sync\LocalSemaphore;
+use Generator;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\ErrorsMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\UserContextMiddleware;
+use Gruven\PhpBotGram\Exceptions\RestartingTelegram;
+use Gruven\PhpBotGram\Exceptions\TelegramNetworkException;
+use Gruven\PhpBotGram\Exceptions\TelegramRetryAfter;
 use Gruven\PhpBotGram\Exceptions\UpdateTypeLookupException;
+use Gruven\PhpBotGram\Methods\GetUpdates;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Update;
+use Gruven\PhpBotGram\Utils\Backoff;
+use LogicException;
+use Revolt\EventLoop;
+use Revolt\EventLoop\UnsupportedFeatureException;
+use Throwable;
 
 /**
  * Root router with polling/webhook entry points — port of
@@ -118,9 +140,59 @@ class Dispatcher extends Router
    */
   public array $workflowData = [];
 
+  /**
+   * Single-instance guard for the polling driver. Acquired in `startPolling`
+   * before the `$isPolling` flag is set so a second concurrent invocation on
+   * the same Dispatcher can detect and reject. Mirrors upstream
+   * `self._running_lock: asyncio.Lock` (`dispatcher.py:100`).
+   *
+   * Note: `LocalMutex` is single-fiber by nature — the mutex is only
+   * meaningful inside an event loop. The mutex protects the
+   * `$isPolling` / `$stopSignal` mutation site against another fiber
+   * (or a signal handler that resumes a suspended fiber) racing to
+   * read-modify-write the same fields.
+   */
+  private readonly LocalMutex $runningLock;
+
+  /**
+   * Boolean toggled inside the `$runningLock` critical section. `true`
+   * between `startPolling` entry (after the guard accepts) and the
+   * finally-block exit. `stopPolling` reads it via the mutex to decide
+   * whether the call is meaningful — calls when no polling is in flight
+   * are silently no-op (matches upstream `_signal_stop_polling`'s
+   * "if not locked return" guard at `dispatcher.py:512-513`).
+   */
+  private bool $isPolling = false;
+
+  /**
+   * Shared cancellation signal across every per-bot polling fiber. `null`
+   * when no polling is in flight; replaced with a fresh DeferredFuture on
+   * each `startPolling` call (so a Dispatcher can be re-started after a
+   * graceful shutdown). Resolved by `stopPolling` and by the SIGTERM /
+   * SIGINT signal handlers.
+   *
+   * Type-narrowed to `DeferredFuture<null>` because the carried value is
+   * unused — only the "completed" status matters.
+   *
+   * @var ?DeferredFuture<null>
+   */
+  private ?DeferredFuture $stopSignal = null;
+
+  /**
+   * In-flight handler-dispatch fibers, keyed by `spl_object_id($future)`.
+   * Populated by `pollingFor` when `handleAsTasks` requests concurrent
+   * dispatch; each entry self-cleans via `Future::finally`. Mirrors
+   * upstream `self._handle_update_tasks: set[asyncio.Task]`
+   * (`dispatcher.py:103`).
+   *
+   * @var array<int, Future<void>>
+   */
+  private array $handleUpdateTasks = [];
+
   public function __construct(?string $name = null)
   {
     parent::__construct($name);
+    $this->runningLock = new LocalMutex();
 
     // Wire UserContextMiddleware first so subsequent middlewares (and the
     // error observer) see the canonical `event_context` keys populated.
@@ -269,5 +341,348 @@ class Dispatcher extends Router
   public function silentCallRequest(Bot $bot, TelegramMethod $method): mixed
   {
     return $bot($method);
+  }
+
+  /**
+   * Endless updates reader — port of `aiogram._listen_updates`
+   * (`dispatcher.py:198-253`).
+   *
+   * Implementation is a `Generator` (PHP generators are Fiber-safe under
+   * Revolt). Each iteration calls `getUpdates(timeout: pollingTimeout)`
+   * inside a try/catch. On success the backoff is reset, every returned
+   * Update is yielded to the caller, and `offset` advances by
+   * `updateId + 1` (Telegram's confirm-by-incrementing-offset protocol).
+   *
+   * Retry semantics on failure mirror upstream:
+   * - `TelegramRetryAfter`: sleep for the exact `retryAfter` seconds the
+   *   API advertised, then retry without consulting the backoff. This is
+   *   the explicit flood-wait contract — backoff growth would be wrong.
+   * - `RestartingTelegram` / `TelegramNetworkException`: route through
+   *   `Backoff::asleep()` so concurrent bots don't retry in lockstep.
+   * - Any other Throwable is **re-raised** — it's a bug at the dispatch
+   *   layer, not a transient API hiccup. Upstream catches everything; the
+   *   port narrows the catch because a typed dispatch path is in scope
+   *   here (TelegramApiException hierarchy), and ErrorsMiddleware will
+   *   already have unwound user-level errors before they reach this loop.
+   *
+   * Loop termination: between rounds we inspect `$stopSignal->isComplete()`.
+   * Inside a Telegram long-poll the loop is parked in the HTTP transport
+   * (or in `delay()` during a retry sleep). The signal fires the fiber that
+   * called `stopPolling`; the polling fiber notices on its next round.
+   *
+   * @return Generator<int, Update, mixed, void>
+   */
+  public function listenUpdates(Bot $bot, PollingOptions $options): Generator
+  {
+    $offset = null;
+    $backoff = new Backoff($options->backoffConfig);
+
+    while ($this->stopSignal === null || !$this->stopSignal->isComplete()) {
+      try {
+        /** @var list<Update> $updates */
+        $updates = $bot(new GetUpdates(
+          offset: $offset,
+          timeout: $options->pollingTimeout,
+          allowedUpdates: $options->allowedUpdates,
+        ));
+      } catch (TelegramRetryAfter $e) {
+        delay((float)$e->retryAfter);
+
+        continue;
+      } catch (RestartingTelegram|TelegramNetworkException) {
+        $backoff->asleep();
+
+        continue;
+      }
+
+      // Reset backoff on success — upstream resets on the failed→succeeded
+      // transition specifically; calling `reset()` unconditionally is
+      // observably equivalent because the counter is zero anyway on the
+      // happy path.
+      $backoff->reset();
+
+      foreach ($updates as $update) {
+        yield $update;
+        $offset = $update->updateId + 1;
+
+        // Re-check stop after each yield so callers using a per-update
+        // stop pattern (e.g. tests calling stopPolling from inside a
+        // handler) terminate without dispatching the rest of the batch.
+        if ($this->stopSignal !== null && $this->stopSignal->isComplete()) {
+          return;
+        }
+      }
+    }
+  }
+
+  /**
+   * Internal polling driver for a single bot — port of `aiogram._polling`
+   * (`dispatcher.py:354-418`). Consumes `listenUpdates` and dispatches each
+   * Update via `feedUpdate`, honoring `handleAsTasks` for concurrent
+   * fan-out.
+   *
+   * Three modes (collapsed from upstream's `handle_as_tasks` bool +
+   * `tasks_concurrency_limit` int|None pair):
+   * - `handleAsTasks === null` => serial. Each `feedUpdate` runs inline;
+   *   the next Update is consumed only after the previous handler returns.
+   * - `handleAsTasks === int n` => concurrent with `LocalSemaphore`
+   *   of size n. Each Update spawns a fiber that acquires the semaphore,
+   *   runs `feedUpdate`, and releases on completion.
+   *
+   * Spawned fibers are tracked in `$this->handleUpdateTasks` keyed by
+   * `spl_object_id` so a future `Future::cancel` pass on shutdown (added in
+   * the spec but not exposed by amphp v3's `Future` directly) can reap
+   * them. The keyed map is also opportunistically purged each round so a
+   * long-running polling session doesn't accumulate completed-future
+   * references.
+   *
+   * Handler exceptions are **not** caught here — `ErrorsMiddleware`
+   * (wired onto every observer at Dispatcher construction) already does
+   * the catch and either invokes the error observer or re-raises. A
+   * truly uncaught exception will surface to the awaiter of the spawned
+   * fiber's Future or, in serial mode, terminate the polling loop. The
+   * latter matches upstream's `_process_update` semantics, where the
+   * Exception logger swallows everything inside the inner try.
+   */
+  public function pollingFor(Bot $bot, PollingOptions $options): void
+  {
+    $concurrency = $options->handleAsTasks;
+    // Narrow `int|null` to `positive-int|null` for LocalSemaphore. The
+    // PollingOptions constructor already enforces `>= 1 or null`, but
+    // PHPStan can't read that invariant without the local guard.
+    $semaphore = $concurrency !== null && $concurrency >= 1
+      ? new LocalSemaphore($concurrency)
+      : null;
+
+    foreach ($this->listenUpdates($bot, $options) as $update) {
+      if ($semaphore === null) {
+        // Serial dispatch: every handler runs to completion before the
+        // next Update is consumed. Exceptions terminate the polling loop;
+        // upstream's catch-and-log lives in ErrorsMiddleware, not here.
+        $this->feedUpdate($bot, $update);
+
+        continue;
+      }
+
+      // Concurrent dispatch: the semaphore caps in-flight work at
+      // `handleAsTasks`. Acquire BEFORE spawning so back-pressure flows
+      // back to listenUpdates — the loop suspends here when the pool is
+      // saturated, which in turn delays the next getUpdates round.
+      $lock = $semaphore->acquire();
+
+      $task = async(function () use ($bot, $update, $lock): void {
+        try {
+          $this->feedUpdate($bot, $update);
+        } finally {
+          $lock->release();
+        }
+      });
+
+      $taskId = spl_object_id($task);
+      $this->handleUpdateTasks[$taskId] = $task;
+      $task->finally(function () use ($taskId): void {
+        unset($this->handleUpdateTasks[$taskId]);
+      });
+    }
+  }
+
+  /**
+   * Spawn polling for one or more bots. Returns a Future that resolves
+   * when every per-bot polling fiber has finished — i.e. after
+   * `stopPolling()` (or a SIGTERM/SIGINT) has fired and the loops have
+   * drained their current round.
+   *
+   * The spec mandates `(PollingOptions $options, Bot ...$bots)` order
+   * because PHP forbids any parameter following a variadic — the mission
+   * brief's `(Bot $bot, ..., Bot ...$additionalBots)` shape would also
+   * trigger a "Variadic parameter must be the last parameter" parse error.
+   *
+   * Concurrency contract:
+   * 1. The `$runningLock` mutex serialises the `isPolling` check / set so
+   *    a second concurrent `startPolling` call sees the flag and raises
+   *    `LogicException`. Mirrors upstream `async with self._running_lock:`
+   *    at `dispatcher.py:558`.
+   * 2. `emitStartup` and `emitShutdown` are called once each, around the
+   *    fan-out, with `bots => $bots` injected per spec § "Polling loop".
+   *    The shutdown closes every bot's session as a final cleanup step.
+   * 3. Per-bot polling fibers are spawned via `Amp\async`; the returned
+   *    Future awaits all of them (success or first error).
+   *
+   * @return Future<void>
+   *
+   * @throws LogicException if polling is already in progress on this Dispatcher.
+   */
+  public function startPolling(PollingOptions $options, Bot ...$bots): Future
+  {
+    if ($bots === []) {
+      throw new LogicException('startPolling: at least one Bot must be supplied');
+    }
+
+    $lock = $this->runningLock->acquire();
+
+    try {
+      if ($this->isPolling) {
+        throw new LogicException('startPolling: polling already in progress on this Dispatcher');
+      }
+      $this->isPolling = true;
+      $this->stopSignal = new DeferredFuture();
+    } finally {
+      $lock->release();
+    }
+
+    // Fire emitStartup BEFORE spawning fibers so a startup handler can
+    // raise to abort the whole launch (the LogicException bubbles up to
+    // the caller without ever entering the polling loop). The `bots` key
+    // mirrors upstream's `dispatcher.py:588` injection.
+    $startupKwargs = [
+      ...$this->workflowData,
+      'bots' => $bots,
+      'dispatcher' => $this,
+    ];
+    $this->emitStartup($startupKwargs);
+
+    // Spawn one polling fiber per bot. The returned Future from
+    // `async(...)` carries the inner closure's exceptions, which `await`
+    // re-raises here — ErrorsMiddleware should already have swallowed
+    // user-level errors so anything reaching this point is a framework
+    // bug worth surfacing.
+    $polls = [];
+
+    foreach ($bots as $bot) {
+      $polls[] = async(function () use ($bot, $options): void {
+        $this->pollingFor($bot, $options);
+      });
+    }
+
+    /** @var Future<void> $awaiter */
+    $awaiter = async(function () use ($polls, $bots, $startupKwargs): void {
+      try {
+        await($polls);
+      } finally {
+        try {
+          $this->emitShutdown($startupKwargs);
+        } finally {
+          // Close every bot's session — equivalent to upstream's
+          // `asyncio.gather(*(bot.session.close() for bot in bots))`
+          // at `dispatcher.py:629`. Failures are not aggregated (PHP
+          // has no native equivalent of asyncio.gather's exception
+          // group); the first failing close propagates and the rest
+          // happen on next GC via amphp's destruct paths.
+          foreach ($bots as $bot) {
+            $bot->session->close();
+          }
+        }
+
+        // Final state reset under the lock so a follow-up startPolling
+        // sees a clean slate. The reset itself is not racy with another
+        // stopPolling because the stopSignal future is already complete
+        // by the time we reach this finally — but we still take the
+        // lock for symmetry with the entry critical section.
+        $lock = $this->runningLock->acquire();
+
+        try {
+          $this->isPolling = false;
+          $this->stopSignal = null;
+          $this->handleUpdateTasks = [];
+        } finally {
+          $lock->release();
+        }
+      }
+    });
+
+    return $awaiter;
+  }
+
+  /**
+   * Synchronous polling driver — awaits the Future returned by
+   * `startPolling` and installs SIGTERM / SIGINT handlers that resolve
+   * the shared stop signal. Mirrors upstream `run_polling`
+   * (`dispatcher.py:632-684`).
+   *
+   * Signal handling is best-effort: `EventLoop::onSignal` requires the
+   * `pcntl` extension at minimum, and may throw
+   * `UnsupportedFeatureException` on Windows or in PHP builds without
+   * pcntl. We swallow the throw silently — parity with upstream's
+   * `with suppress(NotImplementedError):` block.
+   */
+  public function runPolling(PollingOptions $options, Bot ...$bots): void
+  {
+    $signalIds = $this->installSignalHandlers();
+
+    try {
+      $this->startPolling($options, ...$bots)->await();
+    } finally {
+      foreach ($signalIds as $id) {
+        try {
+          EventLoop::cancel($id);
+        } catch (Throwable) {
+          // EventLoop::cancel is idempotent and shouldn't throw for a
+          // known id, but defensively guard in case the loop has
+          // already been torn down (e.g. by a parallel test reset).
+        }
+      }
+    }
+  }
+
+  /**
+   * Signal the polling loop to stop. Safe to call from any fiber, from a
+   * signal handler, or from the main thread (the latter only meaningful
+   * outside the loop — but calling it then is harmless since the
+   * stopSignal will simply be `null`).
+   *
+   * The mutex round-trip is the canonical way to read/mutate the
+   * `$stopSignal` slot without a torn read between concurrent fibers
+   * (e.g. a SIGTERM handler firing while a user-level `stopPolling` call
+   * is mid-flight).
+   *
+   * Idempotent: multiple calls collapse to a single complete() because
+   * `DeferredFuture::complete()` would otherwise throw on a second call.
+   */
+  public function stopPolling(): void
+  {
+    $lock = $this->runningLock->acquire();
+
+    try {
+      if ($this->stopSignal !== null && !$this->stopSignal->isComplete()) {
+        $this->stopSignal->complete(null);
+      }
+    } finally {
+      $lock->release();
+    }
+  }
+
+  /**
+   * Register SIGTERM + SIGINT handlers that resolve `$stopSignal`. Returns
+   * the event-loop callback ids so `runPolling` can cancel them on exit
+   * (otherwise the loop holds a reference that prevents shutdown of the
+   * fresh driver in tests).
+   *
+   * `EventLoop::onSignal` throws `UnsupportedFeatureException` when the
+   * pcntl extension is unavailable (Windows, some minimal PHP CLIs).
+   * That's exactly upstream's NotImplementedError swallow case at
+   * `dispatcher.py:572`; we mirror by skipping silently.
+   *
+   * @return list<string>
+   */
+  private function installSignalHandlers(): array
+  {
+    if (!extension_loaded('pcntl')) {
+      return [];
+    }
+
+    $ids = [];
+    $handler = fn() => $this->stopPolling();
+
+    foreach ([\SIGTERM, \SIGINT] as $sig) {
+      try {
+        $ids[] = EventLoop::onSignal($sig, $handler);
+      } catch (UnsupportedFeatureException) {
+        // Loop driver doesn't support signal handling — give up on the
+        // remaining handlers too, since they'd all fail the same way.
+        return $ids;
+      }
+    }
+
+    return $ids;
   }
 }
