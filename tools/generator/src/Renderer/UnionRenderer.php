@@ -108,6 +108,15 @@ final class UnionRenderer
       'discriminator' => $this->escapeStringLiteral($plan->discriminator),
       'members' => $members,
       'all_members' => $allMembers,
+      // When two children share a wire discriminator value (the
+      // `InlineQueryResult` family's `audio`/`document`/`gif`/… are claimed
+      // by both the cached and non-cached subtypes), a `match` resolver
+      // would silently dispatch every payload to whichever child happens
+      // to land in the table first. The template omits resolve() in that
+      // case and emits a docblock explaining why; callers must use
+      // `instanceof`-against-`members()` or a runtime payload heuristic
+      // (e.g. presence of `audio_file_id` vs `audio_url`) instead.
+      'has_ambiguous_discriminator' => $plan->hasAmbiguousDiscriminator,
     ]);
   }
 

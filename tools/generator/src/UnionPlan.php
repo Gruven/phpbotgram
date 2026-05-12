@@ -25,10 +25,19 @@ final readonly class UnionPlan
 {
   /**
    * @param list<UnionMember> $members
+   * @param bool $hasAmbiguousDiscriminator true when two or more members
+   *                                        share the same wire discriminator
+   *                                        value. The renderer omits the
+   *                                        `resolve()` helper in that case
+   *                                        since a `match($payload[$disc])`
+   *                                        would silently route every
+   *                                        ambiguous payload to the first
+   *                                        registered member.
    */
   public function __construct(
     public string $parentName,
     public string $discriminator,
     public array $members,
+    public bool $hasAmbiguousDiscriminator = false,
   ) {}
 }

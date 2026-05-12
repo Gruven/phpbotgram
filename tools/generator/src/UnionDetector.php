@@ -124,7 +124,35 @@ final class UnionDetector
       parentName: $parent->name,
       discriminator: $discriminator,
       members: $members,
+      hasAmbiguousDiscriminator: $this->detectAmbiguousDiscriminator($members),
     );
+  }
+
+  /**
+   * Return true when two or more members carry the same wire discriminator
+   * value. The vendored 10.0 schema's `InlineQueryResult` family triggers
+   * this (e.g. both `InlineQueryResultCachedAudio` and `InlineQueryResultAudio`
+   * declare `type = 'audio'`); the renderer drops `resolve()` for such
+   * unions because a `match($payload['type'])` would silently dispatch
+   * every ambiguous payload to whichever member happens to be registered
+   * first in declaration order.
+   *
+   * @param list<UnionMember> $members
+   */
+  private function detectAmbiguousDiscriminator(array $members): bool
+  {
+    /** @var array<string, true> $seen */
+    $seen = [];
+
+    foreach ($members as $m) {
+      if (isset($seen[$m->wireValue])) {
+        return true;
+      }
+
+      $seen[$m->wireValue] = true;
+    }
+
+    return false;
   }
 
   private function extractWireValue(
