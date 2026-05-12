@@ -2541,6 +2541,13 @@ final class Serializer
     public static function dump(TelegramObject $object): array
     {
         $r = new \ReflectionClass($object);
+        // Per-class wire-name aliases: generated types declare
+        //   public const array WireNames = ['fromUser' => 'from'];
+        // for fields whose Telegram wire key differs from the PHP property name.
+        // 9 schema types currently need this (Message, CallbackQuery, ChatJoinRequest,
+        // ChatMemberUpdated, ChosenInlineResult, InlineQuery, PaidMediaPurchased,
+        // PreCheckoutQuery, ShippingQuery) plus ManagedBotCreated/ManagedBotUpdated.
+        $aliases = $r->hasConstant('WireNames') ? (array) $r->getConstant('WireNames') : [];
         $result = [];
         foreach ($r->getProperties(\ReflectionProperty::IS_PUBLIC) as $prop) {
             if ($prop->getName() === 'bot') {
@@ -2550,7 +2557,8 @@ final class Serializer
             if ($value === Unspecified::instance()) {
                 continue;
             }
-            $key = self::camelToSnake($prop->getName());
+            $phpName = $prop->getName();
+            $key = $aliases[$phpName] ?? self::camelToSnake($phpName);
             $result[$key] = self::dumpValue($value);
         }
         return $result;
@@ -2578,20 +2586,22 @@ final class Serializer
     {
         $r = new \ReflectionClass($class);
         $ctor = $r->getConstructor() ?? throw new \LogicException("{$class} has no constructor");
+        $aliases = $r->hasConstant('WireNames') ? (array) $r->getConstant('WireNames') : [];
         $args = [];
         foreach ($ctor->getParameters() as $param) {
             if ($param->getName() === 'bot') {
                 $args['bot'] = $bot;
                 continue;
             }
-            $snake = self::camelToSnake($param->getName());
-            if (!array_key_exists($snake, $data)) {
+            $phpName = $param->getName();
+            $wireName = $aliases[$phpName] ?? self::camelToSnake($phpName);
+            if (!array_key_exists($wireName, $data)) {
                 if ($param->isDefaultValueAvailable()) {
                     continue;
                 }
-                throw new \LogicException("Missing key '{$snake}' for {$class}");
+                throw new \LogicException("Missing key '{$wireName}' for {$class}");
             }
-            $args[$param->getName()] = self::loadValue($param, $data[$snake], $bot);
+            $args[$phpName] = self::loadValue($param, $data[$wireName], $bot);
         }
         return $r->newInstance(...$args);
     }
@@ -2601,6 +2611,14 @@ final class Serializer
         $type = $param->getType();
         if ($type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
             $typeName = $type->getName();
+            // Unix-timestamp fields arrive as int on the wire (Telegram emits seconds-since-epoch),
+            // but generated types declare them as Custom\DateTime. Convert here.
+            if (is_int($value) && (
+                $typeName === \Gruven\PhpBotGram\Types\Custom\DateTime::class
+                || is_subclass_of($typeName, \DateTimeImmutable::class)
+            )) {
+                return \Gruven\PhpBotGram\Types\Custom\DateTime::fromTimestamp($value);
+            }
             if (is_subclass_of($typeName, TelegramObject::class) && is_array($value)) {
                 return self::load($typeName, $value, $bot);
             }
@@ -3059,47 +3077,13 @@ interface Downloadable {
 }
 ```
 
-- [ ] **Step 4: Smoke test against MockedBot**
+- [ ] **Step 4: Commit production code only (test deferred to Task 1.7)**
 
-`tests/Bot/BotSmokeTest.php`:
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace Gruven\PhpBotGram\Tests\Bot;
-
-use Gruven\PhpBotGram\Methods\SendMessage;
-use Gruven\PhpBotGram\Methods\Response;
-use Gruven\PhpBotGram\Tests\Support\MockedBot;
-use Gruven\PhpBotGram\Types\Message;
-use PHPUnit\Framework\TestCase;
-
-final class BotSmokeTest extends TestCase
-{
-    public function testSendMessageRoundtrip(): void
-    {
-        $bot = new MockedBot();
-        $bot->addResultFor(SendMessage::class, ok: true, result: new Message(messageId: 1, date: 0, chat: ['id' => 42], text: 'hi'));
-
-        $result = $bot->sendMessage(chatId: 42, text: 'hi');
-
-        self::assertInstanceOf(Message::class, $result);
-        self::assertSame('hi', $result->text);
-
-        $sent = $bot->getRequest();
-        self::assertInstanceOf(SendMessage::class, $sent);
-        self::assertSame('hi', $sent->text);
-    }
-}
-```
-
-- [ ] **Step 5: Run — pass; Commit**
+The `BotSmokeTest` exercises MockedBot, which lands in Task 1.7. Commit Bot + traits + hand-coded methods/types now; merge the test in Task 1.7 alongside MockedBot.
 
 ```bash
-git add src/Bot.php src/Client/BotShortcutsContract.php src/Client/BotShortcuts.php src/Methods/SendMessage.php src/Methods/GetMe.php src/Methods/GetFile.php src/Types/Message.php src/Types/File.php src/Types/Downloadable.php tests/Bot/BotSmokeTest.php
-git commit -m "feat: Bot facade skeleton + BotShortcuts + Phase-1 hand-coded SendMessage/Message smoke test"
+git add src/Bot.php src/Client/BotShortcutsContract.php src/Client/BotShortcuts.php src/Methods/SendMessage.php src/Methods/GetMe.php src/Methods/GetFile.php src/Types/Message.php src/Types/File.php src/Types/Downloadable.php
+git commit -m "feat: Bot facade skeleton + BotShortcuts + Phase-1 hand-coded SendMessage/Message"
 ```
 
 ### Task 1.7: MockedSession + MockedBot test harness (moved here from Phase 0)
@@ -3278,11 +3262,58 @@ final class MockedSessionTest extends TestCase {
 }
 ```
 
-- [ ] **Step 4: Run — pass; Commit**
+- [ ] **Step 4: Add deferred tests from Tasks 1.2, 1.3, 1.4, 1.6**
+
+Now that MockedBot is available, write/commit the tests that were deferred earlier:
+
+`tests/Bot/BotSmokeTest.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Gruven\PhpBotGram\Tests\Bot;
+
+use Gruven\PhpBotGram\Methods\SendMessage;
+use Gruven\PhpBotGram\Tests\Support\MockedBot;
+use Gruven\PhpBotGram\Types\Message;
+use PHPUnit\Framework\TestCase;
+
+final class BotSmokeTest extends TestCase
+{
+    public function testSendMessageRoundtrip(): void
+    {
+        $bot = new MockedBot();
+        $bot->addResultFor(SendMessage::class, ok: true, result: new Message(messageId: 1, date: 0, chat: ['id' => 42], text: 'hi'));
+
+        $result = $bot->sendMessage(chatId: 42, text: 'hi');
+
+        self::assertInstanceOf(Message::class, $result);
+        self::assertSame('hi', $result->text);
+
+        $sent = $bot->getRequest();
+        self::assertInstanceOf(SendMessage::class, $sent);
+        self::assertSame('hi', $sent->text);
+    }
+}
+```
+
+Also bring up the previously-deferred `tests/Client/Session/BaseSessionTest.php` (Task 1.3 step 1) and `tests/Client/SerializerTest.php` (Task 1.4 step 1) — they're written but were not committed in their original tasks because of the MockedBot dependency. Add them now.
+
+- [ ] **Step 5: Run — full suite passes**
 
 ```bash
-git add tests/Support/MockedSession.php tests/Support/MockedBot.php tests/Support/MockedSessionTest.php
-git commit -m "feat(test): MockedSession + MockedBot — full implementation after Phase 1 base classes"
+vendor/bin/phpunit
+```
+
+Expected: all green, including BaseSessionTest's retry-after/bad-request branches, SerializerTest's dump/load, and BotSmokeTest.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add tests/Support/MockedSession.php tests/Support/MockedBot.php tests/Support/MockedSessionTest.php tests/Bot/BotSmokeTest.php tests/Client/Session/BaseSessionTest.php tests/Client/SerializerTest.php
+git commit -m "feat(test): MockedSession + MockedBot + deferred tests (BaseSessionTest, SerializerTest, BotSmokeTest)"
 ```
 
 ### Task 1.8: Phase 1 acceptance gate
@@ -3373,7 +3404,7 @@ For each stage, write the class under `tools/generator/src/` with a correspondin
 - [ ] **Task 2.8: `DefaultsResolver`** — consumes `methods/<name>/default.yml`; threads `new BotDefault(...)` defaults into method constructor parameter expressions.
 - [ ] **Task 2.9: `HandAuthoredShortcutsIntegrator`** — detects `src/Types/Shortcuts/<TypeName>Shortcuts.php` traits and emits `use <TypeName>Shortcuts;` in the generated class. Aborts on method-name collisions between alias and trait.
 - [ ] **Task 2.10: `Renderer`** — Twig-based file emission with sorted iteration + cs-fixer post-pass. Templates: `type.php.twig`, `method.php.twig`, `enum.php.twig`, `bot.php.twig`, `f-builder.php.twig`.
-- [ ] **Task 2.11: `FDslGenerator` (build only; do NOT emit yet)** — design the generator class and write its tests against frozen fixtures. **Do not run** it during Phase 2 because the emitted builders depend on `Utils\MagicFilter\MagicFilter` and `Filters\F\BaseField`/etc., which land in Phase 4. F-DSL emission is moved to **Phase 4 Task 4.11** (after MagicFilter + runtime field primitives exist).
+- [ ] **Task 2.11: `FDslGenerator` (build only; do NOT emit yet)** — design the generator class and write its tests against frozen fixtures. **Do not run** it during Phase 2 because the emitted builders depend on `Utils\MagicFilter\MagicFilter` and `Filters\F\BaseField`/etc., which land in Phase 4. F-DSL emission is moved to **Phase 4 Task 4.12** (after MagicFilter + runtime field primitives exist).
 
 Each task follows the TDD pattern: write fixtures of a sample entity → expected PHP output → integration test that runs the stage and diffs.
 
@@ -3565,7 +3596,7 @@ git add src/Bot.php src/Types/ src/Methods/ src/Enums/
 git commit -m "feat: regenerate full Bot/Types/Methods/Enums from .butcher"
 ```
 
-F-DSL builders (`src/Filters/F/*F.php`) are NOT emitted in Phase 2 — they depend on `Utils\MagicFilter\MagicFilter` and `Filters\F\BaseField`/`StringField`/etc. which land in Phase 4. They're emitted at Phase 4 Task 4.11 after their runtime dependencies exist.
+F-DSL builders (`src/Filters/F/*F.php`) are NOT emitted in Phase 2 — they depend on `Utils\MagicFilter\MagicFilter` and `Filters\F\BaseField`/`StringField`/etc. which land in Phase 4. They're emitted at Phase 4 Task 4.12 after their runtime dependencies exist.
 
 ### Task 2.15: Phase 2 acceptance gate
 
@@ -3590,7 +3621,7 @@ For each component, port the upstream class to PHP via TDD. The spec sections "D
 - [ ] **Task 3.4: `BaseMiddleware`** + `MiddlewareManager` (with the `mixed $offset` ArrayAccess shape per spec). Tests: register/wrap/chain. Files: `src/Dispatcher/Middlewares/BaseMiddleware.php`, `src/Dispatcher/Middlewares/MiddlewareManager.php`, `tests/Dispatcher/Middlewares/MiddlewareManagerTest.php`.
 - [ ] **Task 3.5: `EventContext` + `UserContextMiddleware`** — injects `event_context`, `event_from_user`, `event_chat`, `event_thread_id`. Files: `src/Dispatcher/Middlewares/{EventContext,UserContextMiddleware}.php`, `tests/Dispatcher/Middlewares/UserContextMiddlewareTest.php`.
 - [ ] **Task 3.6: `ErrorsMiddleware`** — catches handler exceptions, swallows `SkipHandlerException`/`CancelHandlerException`, routes to the `errors` observer. Files: `src/Dispatcher/Middlewares/ErrorsMiddleware.php`, `tests/Dispatcher/Middlewares/ErrorsMiddlewareTest.php`.
-- [ ] **Task 3.7: Flags subsystem** — `Flag`, `FlagAttribute` (`#[Flag]`), `FlagDecorator`, `FlagGenerator`, plus helpers (`extractFlags`, `extractFlagsFromObject`, `getFlag`, `checkFlags`). Closures stored in `\WeakMap<\Closure|object, list<Flag>>`. Files: `src/Dispatcher/Flags/`, `tests/Dispatcher/Flags/FlagsTest.php`.
+- [ ] **Task 3.7: Flags subsystem** — `Flag` is a single class wearing `#[\Attribute(\Attribute::TARGET_METHOD | \Attribute::TARGET_FUNCTION | \Attribute::IS_REPEATABLE)]` itself (NOT a separate `FlagAttribute`); constructor `(string $name, mixed $value = true)`. Plus `FlagDecorator` (imperative WeakMap-based attachment), `FlagGenerator` (singleton with `__call`), helpers (`extractFlags`, `extractFlagsFromObject`, `getFlag`, `checkFlags`). Closures stored in `\WeakMap<\Closure|object, list<Flag>>`. Files: `src/Dispatcher/Flags/`, `tests/Dispatcher/Flags/FlagsTest.php`.
 - [ ] **Task 3.8: `TelegramEventObserver`** — `register`, `filter` (global), `__invoke` (decorator factory), `trigger`. Signatures per spec § "TelegramEventObserver" (variadic last, `?array $flags = null` named arg). Files: `src/Dispatcher/Event/TelegramEventObserver.php`, `tests/Dispatcher/Event/TelegramEventObserverTest.php`.
 - [ ] **Task 3.9: `Router`** — observers map for all 25 update types + `errors`; `includeRouter`/`includeRouters`/`resolveUsedUpdateTypes`/`propagateEvent` (injects `event_router`); `emitStartup`/`emitShutdown` (injects `router`). Files: `src/Dispatcher/Router.php`, `tests/Dispatcher/RouterTest.php`.
 - [ ] **Task 3.10: `Dispatcher`** — extends Router; constructor signature per spec § "Dispatcher" (named-only convention documented); `feedUpdate`/`feedRawUpdate`/`_feedWebhookUpdate`/`feedWebhookUpdate`/`silentCallRequest`. Files: `src/Dispatcher/Dispatcher.php`, `tests/Dispatcher/DispatcherTest.php`.
