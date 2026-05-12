@@ -11,6 +11,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotContextController;
 use Gruven\PhpBotGram\Client\BotDefault;
 use Gruven\PhpBotGram\Client\Serializer;
 use Gruven\PhpBotGram\Client\Session\Middleware\RequestMiddlewareManager;
@@ -30,7 +31,6 @@ use Gruven\PhpBotGram\Exceptions\TelegramUnauthorizedException;
 use Gruven\PhpBotGram\Methods\Response;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Types\InputFile;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Unspecified;
 use JsonException;
 use RuntimeException;
@@ -208,7 +208,11 @@ abstract class BaseSession
       return $this->prepareValue($value->value, $bot, $files);
     }
 
-    if ($value instanceof TelegramObject) {
+    // Catch both TelegramObject (Types) and TelegramMethod (Methods) — they share
+    // BotContextController as their nearest common ancestor. Without this a nested
+    // TelegramMethod would fall through to json_encode, which invokes
+    // BotDefault::jsonSerialize and throws LogicException.
+    if ($value instanceof BotContextController) {
       $dumped = Serializer::dump($value);
 
       return $this->prepareValue($dumped, $bot, $files, dumpsJson: $dumpsJson);

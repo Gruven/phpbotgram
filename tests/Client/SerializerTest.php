@@ -7,6 +7,7 @@ namespace Gruven\PhpBotGram\Tests\Client;
 use DateTimeImmutable;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
+use Gruven\PhpBotGram\Exceptions\ClientDecodeException;
 use Gruven\PhpBotGram\Tests\Support\MockedSession;
 use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Unspecified;
@@ -68,5 +69,11 @@ final class SerializerTest extends TestCase
   {
     $loaded = Serializer::load(SerializerTestDateFixture::class, ['stamp' => 1_700_000_000]);
     self::assertSame(1_700_000_000, $loaded->stamp->getTimestamp());
+  }
+
+  public function testLoadThrowsClientDecodeOnMissingRequiredKey(): void
+  {
+    $this->expectException(ClientDecodeException::class);
+    Serializer::load(SerializerTestDateFixture::class, []);
   }
 }

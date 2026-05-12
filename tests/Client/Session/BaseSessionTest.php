@@ -98,6 +98,24 @@ final class BaseSessionTest extends TestCase
     self::assertSame('HTML', $prepared);
   }
 
+  public function testPrepareValueDumpsNestedTelegramMethod(): void
+  {
+    // A TelegramMethod nested inside another method's payload should be
+    // dumped via Serializer (not json_encoded directly, which would hit
+    // BotDefault::jsonSerialize and throw LogicException).
+    $bot = new MockedBot();
+    $session = $bot->getMockedSession();
+    $files = [];
+
+    $nested = new SendMessage(chatId: 99, text: 'nested', parseMode: null);
+    // Wrap the method as a nested value the way a generated method might.
+    $prepared = $session->prepareValue($nested, $bot, $files, dumpsJson: false);
+
+    self::assertIsArray($prepared);
+    self::assertSame(99, $prepared['chat_id']);
+    self::assertSame('nested', $prepared['text']);
+  }
+
   public function testJsonLoadsAndJsonDumpsAreInjectable(): void
   {
     $calls = ['loads' => 0, 'dumps' => 0];

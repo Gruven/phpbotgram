@@ -18,9 +18,9 @@ final class TelegramRetryAfter extends TelegramApiException
     public readonly int $retryAfter,
   ) {
     $this->url = 'https://core.telegram.org/bots/faq#my-bot-is-hitting-limits-how-do-i-avoid-this';
-    $reflect = new ReflectionClass($method);
-    $methodName = $reflect->getShortName();
-    $chatId = $reflect->hasProperty('chatId') ? $reflect->getProperty('chatId')->getValue($method) : null;
+    $methodName = (new ReflectionClass($method))->getShortName();
+    // property_exists works on public/promoted slots without Reflection's accessibility quirks.
+    $chatId = property_exists($method, 'chatId') ? $method->chatId : null;
     $context = is_scalar($chatId) ? " (chat_id={$chatId})" : '';
     $description = "Flood control exceeded on method '{$methodName}'{$context}. Retry in {$retryAfter} seconds.\nOriginal description: {$message}";
     parent::__construct($method, $description);

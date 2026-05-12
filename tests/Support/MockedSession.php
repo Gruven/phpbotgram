@@ -21,7 +21,7 @@ final class MockedSession extends BaseSession
 
   /** @var SplDoublyLinkedList<TelegramMethod<mixed>> */
   private SplDoublyLinkedList $requests;
-  public bool $closed = true;
+  public bool $closed = false;
 
   /**
    * @param null|Closure(string): mixed $jsonLoads

@@ -6,15 +6,16 @@ namespace Gruven\PhpBotGram\Client;
 
 use DateTimeImmutable;
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Exceptions\ClientDecodeException;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Unspecified;
-use LogicException;
 use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionProperty;
 use ReflectionUnionType;
+use RuntimeException;
 
 /**
  * Walks a TelegramObject/TelegramMethod into a snake_case-keyed array
@@ -61,7 +62,11 @@ final class Serializer
 
   private static function dumpValue(mixed $value): mixed
   {
-    if ($value instanceof TelegramObject) {
+    // Use BotContextController (not TelegramObject) — TelegramMethod also extends
+    // BotContextController directly, and Serializer::dump accepts it. Without this
+    // a nested TelegramMethod would slip through and hit json_encode (which then
+    // invokes BotDefault::jsonSerialize → LogicException).
+    if ($value instanceof BotContextController) {
       return self::dump($value);
     }
 
@@ -101,12 +106,16 @@ final class Serializer
   public static function load(string $class, array $data, ?Bot $bot = null): TelegramObject
   {
     $r = new ReflectionClass($class);
-    $ctor = $r->getConstructor() ?? throw new LogicException("{$class} has no constructor");
+    $ctor = $r->getConstructor()
+      ?? throw new ClientDecodeException('Class has no constructor', new RuntimeException("{$class} has no constructor"), $data);
     $aliases = $r->hasConstant('WireNames') ? (array)$r->getConstant('WireNames') : [];
     $args = [];
 
     foreach ($ctor->getParameters() as $param) {
       if ($param->getName() === 'bot') {
+        // Inject only when the class actually declares a $bot parameter;
+        // user-defined BotContextController subclasses without it would otherwise
+        // hard-fail at newInstance(...) with "unknown named parameter".
         $args['bot'] = $bot;
 
         continue;
@@ -115,11 +124,15 @@ final class Serializer
       $wireName = is_string($aliases[$phpName] ?? null) ? $aliases[$phpName] : self::camelToSnake($phpName);
 
       if (!array_key_exists($wireName, $data)) {
-        if ($param->isDefaultValueAvailable()) {
+        if ($param->isDefaultValueAvailable() || $param->allowsNull()) {
           continue;
         }
 
-        throw new LogicException("Missing key '{$wireName}' for {$class}");
+        throw new ClientDecodeException(
+          "Missing required key '{$wireName}' for {$class}",
+          new RuntimeException("Missing required key '{$wireName}'"),
+          $data,
+        );
       }
       $args[$phpName] = self::loadValue($param, $data[$wireName], $bot);
     }
