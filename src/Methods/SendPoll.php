@@ -10,7 +10,7 @@ use Gruven\PhpBotGram\Client\BotDefault;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\ForceReply;
 use Gruven\PhpBotGram\Types\InlineKeyboardMarkup;
-use Gruven\PhpBotGram\Types\InputPollMedia;
+use Gruven\PhpBotGram\Types\InputPollMediaInterface;
 use Gruven\PhpBotGram\Types\InputPollOption;
 use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Types\MessageEntity;
@@ -58,7 +58,7 @@ final class SendPoll extends TelegramMethod
     public readonly null|BotDefault|string $explanationParseMode = new BotDefault('parse_mode'),
     /** @var list<MessageEntity> */
     public readonly ?array $explanationEntities = null,
-    public readonly ?InputPollMedia $explanationMedia = null,
+    public readonly ?InputPollMediaInterface $explanationMedia = null,
     public readonly ?int $openPeriod = null,
     public readonly null|DateInterval|DateTime|int $closeDate = null,
     public readonly ?bool $isClosed = null,
@@ -66,7 +66,7 @@ final class SendPoll extends TelegramMethod
     public readonly null|BotDefault|string $descriptionParseMode = new BotDefault('parse_mode'),
     /** @var list<MessageEntity> */
     public readonly ?array $descriptionEntities = null,
-    public readonly ?InputPollMedia $media = null,
+    public readonly ?InputPollMediaInterface $media = null,
     public readonly ?bool $disableNotification = null,
     public readonly null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
     public readonly ?bool $allowPaidBroadcast = null,

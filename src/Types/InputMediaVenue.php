@@ -13,7 +13,7 @@ use Gruven\PhpBotGram\Bot;
  *
  * @generated do not edit; regenerate via `make regenerate`
  */
-final class InputMediaVenue extends InputPollMedia
+final class InputMediaVenue extends InputPollMedia implements InputPollOptionMediaInterface
 {
   public function __construct(
     public readonly float $latitude,

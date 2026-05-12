@@ -14,7 +14,7 @@ use Gruven\PhpBotGram\Client\BotDefault;
  *
  * @generated do not edit; regenerate via `make regenerate`
  */
-final class InputMediaPhoto extends InputMedia
+final class InputMediaPhoto extends InputMedia implements InputPollMediaInterface, InputPollOptionMediaInterface
 {
   /**
    * @param list<MessageEntity> $captionEntities

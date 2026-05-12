@@ -219,7 +219,7 @@ use Gruven\PhpBotGram\Types\InputMediaLivePhoto;
 use Gruven\PhpBotGram\Types\InputMediaPhoto;
 use Gruven\PhpBotGram\Types\InputMediaVideo;
 use Gruven\PhpBotGram\Types\InputPaidMedia;
-use Gruven\PhpBotGram\Types\InputPollMedia;
+use Gruven\PhpBotGram\Types\InputPollMediaInterface;
 use Gruven\PhpBotGram\Types\InputPollOption;
 use Gruven\PhpBotGram\Types\InputProfilePhoto;
 use Gruven\PhpBotGram\Types\InputSticker;
@@ -1149,14 +1149,14 @@ class Bot implements BotShortcutsContract
     ?string $explanation = null,
     null|BotDefault|string $explanationParseMode = new BotDefault('parse_mode'),
     ?array $explanationEntities = null,
-    ?InputPollMedia $explanationMedia = null,
+    ?InputPollMediaInterface $explanationMedia = null,
     ?int $openPeriod = null,
     null|DateInterval|DateTime|int $closeDate = null,
     ?bool $isClosed = null,
     ?string $description = null,
     null|BotDefault|string $descriptionParseMode = new BotDefault('parse_mode'),
     ?array $descriptionEntities = null,
-    ?InputPollMedia $media = null,
+    ?InputPollMediaInterface $media = null,
     ?bool $disableNotification = null,
     null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,

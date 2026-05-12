@@ -19,7 +19,7 @@ use RuntimeException;
 final class InputPollOptionMediaUnion
 {
   /**
-   * @return list<class-string<MutableTelegramObject>>
+   * @return list<class-string<InputPollOptionMediaInterface>>
    */
   public static function members(): array
   {
@@ -37,7 +37,7 @@ final class InputPollOptionMediaUnion
   /**
    * @param array<string, mixed> $payload
    */
-  public static function resolve(array $payload, ?Bot $bot = null): MutableTelegramObject
+  public static function resolve(array $payload, ?Bot $bot = null): InputPollOptionMediaInterface
   {
     $discriminator = $payload['type'] ?? null;
     $resolved = match (is_string($discriminator) ? $discriminator : null) {

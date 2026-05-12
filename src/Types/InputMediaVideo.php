@@ -16,7 +16,7 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
  *
  * @generated do not edit; regenerate via `make regenerate`
  */
-final class InputMediaVideo extends InputMedia
+final class InputMediaVideo extends InputMedia implements InputPollMediaInterface, InputPollOptionMediaInterface
 {
   /**
    * @param list<MessageEntity> $captionEntities

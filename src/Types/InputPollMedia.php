@@ -21,7 +21,7 @@ use Gruven\PhpBotGram\Bot;
  *
  * @generated do not edit; regenerate via `make regenerate`
  */
-abstract class InputPollMedia extends MutableTelegramObject
+abstract class InputPollMedia extends MutableTelegramObject implements InputPollMediaInterface
 {
   public function __construct(
     ?Bot $bot = null,

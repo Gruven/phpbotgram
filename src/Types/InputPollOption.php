@@ -23,7 +23,7 @@ final class InputPollOption extends TelegramObject
     public readonly string $text,
     public readonly null|BotDefault|string $textParseMode = new BotDefault('parse_mode'),
     public readonly ?array $textEntities = null,
-    public readonly ?InputPollOptionMedia $media = null,
+    public readonly ?InputPollOptionMediaInterface $media = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);
