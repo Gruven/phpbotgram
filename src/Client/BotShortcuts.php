@@ -20,8 +20,14 @@ use RuntimeException;
 
 trait BotShortcuts
 {
-  /** @var null|FiberLocal<?Bot> */
-  private static ?FiberLocal $currentBotLocal = null;
+  /**
+   * Per-class FiberLocal slots, keyed by `static::class`. A trait-level
+   * `private static ?FiberLocal` would otherwise collapse across the
+   * using class hierarchy (Bot + MockedBot would share one slot).
+   *
+   * @var array<class-string, FiberLocal<?Bot>>
+   */
+  private static array $currentBotLocals = [];
   private ?User $cachedMe = null;
   private ?int $cachedId = null;
 
@@ -56,11 +62,9 @@ trait BotShortcuts
   /** @return FiberLocal<?Bot> */
   private static function botLocal(): FiberLocal
   {
-    if (self::$currentBotLocal === null) {
-      self::$currentBotLocal = self::makeBotLocal(static fn(): ?Bot => null);
-    }
+    $key = static::class;
 
-    return self::$currentBotLocal;
+    return self::$currentBotLocals[$key] ??= self::makeBotLocal(static fn(): ?Bot => null);
   }
 
   public static function current(): ?Bot
@@ -74,14 +78,14 @@ trait BotShortcuts
   }
 
   /**
-   * @internal Test/teardown helper — clears the FiberLocal storage so the next
-   * test starts with a clean current bot. Production code should not call this;
-   * use setCurrent(null) instead, which keeps the FiberLocal slot but resets
-   * the stored Bot for the current fiber.
+   * @internal Test/teardown helper — clears the FiberLocal storage for the
+   * calling class so the next test starts with a clean current bot. Production
+   * code should not call this; use setCurrent(null) instead, which keeps the
+   * FiberLocal slot but resets the stored Bot for the current fiber.
    */
   public static function resetCurrentBot(): void
   {
-    self::$currentBotLocal = null;
+    unset(self::$currentBotLocals[static::class]);
   }
 
   public function me(): User
@@ -128,9 +132,18 @@ trait BotShortcuts
       return $buf;
     }
 
-    $handle = is_string($destination) ? fopen($destination, 'wb') : $destination;
+    if (is_string($destination)) {
+      // @-suppress the E_WARNING — we surface the failure as a typed exception below.
+      $handle = @fopen($destination, 'wb');
 
-    if (!is_resource($handle)) {
+      if ($handle === false) {
+        $err = error_get_last()['message'] ?? 'unknown error';
+
+        throw new RuntimeException("Failed to open destination '{$destination}': {$err}");
+      }
+    } elseif (is_resource($destination)) {
+      $handle = $destination;
+    } else {
       throw new InvalidArgumentException('Destination must be a string path or writable resource');
     }
 

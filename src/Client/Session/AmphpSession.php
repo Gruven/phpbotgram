@@ -9,6 +9,7 @@ use Amp\Http\Client\HttpClient;
 use Amp\Http\Client\HttpClientBuilder;
 use Amp\Http\Client\HttpException;
 use Amp\Http\Client\Request;
+use Closure;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
 use Gruven\PhpBotGram\Client\TelegramApiServer;
@@ -29,12 +30,17 @@ final class AmphpSession extends BaseSession
 {
   private ?HttpClient $client = null;
 
+  /**
+   * @param null|Closure(string): mixed $jsonLoads
+   * @param null|Closure(mixed): string $jsonDumps
+   */
   public function __construct(
     ?TelegramApiServer $api = null,
-    public readonly int $limit = 100,
     float $timeout = 60.0,
+    ?Closure $jsonLoads = null,
+    ?Closure $jsonDumps = null,
   ) {
-    parent::__construct(api: $api, timeout: $timeout);
+    parent::__construct(api: $api, jsonLoads: $jsonLoads, jsonDumps: $jsonDumps, timeout: $timeout);
   }
 
   private function client(): HttpClient

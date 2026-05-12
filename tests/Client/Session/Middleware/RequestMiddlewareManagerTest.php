@@ -12,6 +12,7 @@ use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
 use Gruven\PhpBotGram\Tests\Support\MockedSession;
+use Gruven\PhpBotGram\Types\Message;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
@@ -144,12 +145,13 @@ final class RequestMiddlewareManagerTest extends TestCase
       }
     });
 
-    $bot->addResultFor(SendMessage::class, ok: true, result: 'ok-payload');
+    $payload = new Message(messageId: 1, date: 0, chat: ['id' => 1]);
+    $bot->addResultFor(SendMessage::class, ok: true, result: $payload);
 
     $method = new SendMessage(chatId: 1, text: 'hi');
     $returned = $session($bot, $method);
 
-    self::assertSame('ok-payload', $returned);
+    self::assertSame($payload, $returned);
     self::assertSame(['mw-before', 'mw-after'], $log);
   }
 }

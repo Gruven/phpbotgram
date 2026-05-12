@@ -16,6 +16,7 @@ use ReflectionParameter;
 use ReflectionProperty;
 use ReflectionUnionType;
 use RuntimeException;
+use TypeError;
 
 /**
  * Walks a TelegramObject/TelegramMethod into a snake_case-keyed array
@@ -137,8 +138,16 @@ final class Serializer
       $args[$phpName] = self::loadValue($param, $data[$wireName], $bot);
     }
 
-    /** @var T */
-    return $r->newInstance(...$args);
+    try {
+      /** @var T */
+      return $r->newInstance(...$args);
+    } catch (TypeError $e) {
+      // Wire payload type-mismatch (e.g. {"chat": null} against `readonly Chat $chat`)
+      // is a remote-data error, not a programming bug — wrap so callers can catch
+      // ClientDecodeException and recover the same way upstream catches pydantic
+      // ValidationError around model_validate.
+      throw new ClientDecodeException("Type mismatch constructing {$class}", $e, $data);
+    }
   }
 
   private static function loadValue(ReflectionParameter $param, mixed $value, ?Bot $bot): mixed

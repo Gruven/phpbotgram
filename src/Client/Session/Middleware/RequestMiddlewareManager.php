@@ -64,6 +64,10 @@ final class RequestMiddlewareManager implements ArrayAccess, Countable
     return is_int($offset) && isset($this->middlewares[$offset]);
   }
 
+  /**
+   * @throws OutOfBoundsException when offset is non-int or out of range —
+   *                              strict by design so callers must guard with offsetExists/isset first.
+   */
   public function offsetGet(mixed $offset): BaseRequestMiddleware
   {
     if (!is_int($offset) || !isset($this->middlewares[$offset])) {

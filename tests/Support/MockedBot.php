@@ -9,6 +9,7 @@ use Gruven\PhpBotGram\Methods\Response;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Types\ResponseParameters;
 use Gruven\PhpBotGram\Types\User;
+use LogicException;
 
 final class MockedBot extends Bot
 {
@@ -53,6 +54,21 @@ final class MockedBot extends Bot
     ?int $migrateToChatId = null,
     ?int $retryAfter = null,
   ): Response {
+    // Type-check the canned result against the method's declared ReturnsType.
+    // Catches misconfigured tests at queueing time rather than as a confusing
+    // TypeError at the user-facing return-type boundary.
+    if ($ok && $result !== null) {
+      $expected = $methodClass::ReturnsType;
+
+      if ($expected !== '' && class_exists($expected) && !($result instanceof $expected)) {
+        throw new LogicException(sprintf(
+          'Canned result for %s must be an instance of %s — got %s',
+          $methodClass,
+          $expected,
+          get_debug_type($result),
+        ));
+      }
+    }
     $parameters = new ResponseParameters(
       migrateToChatId: $migrateToChatId,
       retryAfter: $retryAfter,
