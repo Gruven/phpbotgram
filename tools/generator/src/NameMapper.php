@@ -193,6 +193,35 @@ final class NameMapper
   }
 
   /**
+   * Map a snake_case alias-method root (e.g. `get_profile_photos`, `do`,
+   * `delete_reply_markup`) to a PHP camelCase method identifier.
+   *
+   * Unlike `property()`, this does NOT enforce the PHP reserved-keyword guard:
+   * PHP 7.0+ allows reserved keywords (`do`, `list`, `match`, `for`, `if`, …)
+   * as instance method names — the parser only forbids them as property names
+   * outside of dynamic-access contexts. Telegram's shortcut grammar exploits
+   * that latitude (e.g. `Chat.do -> sendChatAction`), so the mapper exposes a
+   * dedicated entry-point that skips the rename-table escape hatch and emits
+   * the result of the same snake-to-camel transform `property()` uses.
+   *
+   * @throws InvalidArgumentException when `$wireName` is empty
+   */
+  public function methodFromSnake(string $wireName): string
+  {
+    if ($wireName === '') {
+      throw new InvalidArgumentException('Wire alias method name must not be empty');
+    }
+
+    $normalised = rtrim($wireName, '_');
+
+    if ($normalised === '') {
+      throw new InvalidArgumentException('Wire alias method name must not be empty after stripping underscores');
+    }
+
+    return $this->snakeToCamel($normalised);
+  }
+
+  /**
    * Inverse mapping — given a PHP camelCase property name, return the wire
    * snake_case name. Honours the rename table in reverse so the canonical
    * `fromUser -> from` round-trip works.
