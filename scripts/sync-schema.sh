@@ -11,8 +11,12 @@ if [[ ! -d "${UPSTREAM_PATH}/schema" ]]; then
 fi
 
 rsync -a --delete "${UPSTREAM_PATH}/schema/"  .butcher/schema/
-rsync -a --delete "${UPSTREAM_PATH}/types/"   .butcher/types/
-rsync -a --delete "${UPSTREAM_PATH}/methods/" .butcher/methods/
+# `entity.json` files are vendored by upstream butcher but never consumed by
+# SchemaLoader (it reads `.butcher/schema/schema.json` plus per-entity
+# `replace.yml`/`aliases.yml`/`default.yml`/`subtypes.yml` patch files only).
+# Excluding them keeps ~50MB of dead weight out of the tree.
+rsync -a --delete --exclude='entity.json' "${UPSTREAM_PATH}/types/"   .butcher/types/
+rsync -a --delete --exclude='entity.json' "${UPSTREAM_PATH}/methods/" .butcher/methods/
 rsync -a --delete "${UPSTREAM_PATH}/enums/"   .butcher/enums/
 
 echo "Schema synced from ${UPSTREAM_PATH}"
