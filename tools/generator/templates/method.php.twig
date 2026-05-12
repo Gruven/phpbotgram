@@ -1,0 +1,64 @@
+{#-
+  Method class template.
+
+  Variables provided by `MethodRenderer::render()`:
+    - class_name        : string  — PascalCase PHP class name (e.g. "SendMessage")
+    - namespace         : string  — namespace the class lives in
+    - imports           : list<string>  — sorted list of FQCNs to `use`
+    - description_lines : list<string>  — docblock summary lines (already prefix-cleaned)
+    - source_anchor     : string  — lowercased name for the Telegram docs URL
+    - extends_generic   : string  — PHPStan @extends type argument (e.g. "Message", "list<Update>", "bool")
+    - api_method        : string  — camelCase wire method name (e.g. "sendMessage")
+    - returns_expr      : string  — PHP expression for ReturnsType const value (e.g. "Message::class", "'list:Update'", "'bool'")
+    - parameters        : list<{phpName, phpType, phpdocType, default, description}>
+                          required-then-optional, schema-order within each group
+
+  The template intentionally pre-processes nothing structural — the renderer
+  produces lists ready for iteration so the template stays close to a
+  literal-text-with-`{{ … }}`-holes style. cs-fixer (run by the pipeline
+  orchestrator at Task 2.12) polishes the final whitespace; this template
+  prioritises emitting valid PHP over pixel-perfect formatting.
+-#}
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+{% if imports is not empty %}
+
+{% for fqcn in imports -%}
+use {{ fqcn }};
+{% endfor -%}
+{% endif %}
+
+/**
+{% for line in description_lines %} * {{ line }}
+{% endfor %} *
+ * Source: https://core.telegram.org/bots/api#{{ source_anchor }}
+ *
+ * @generated do not edit; regenerate via `make regenerate`
+ *
+ * @extends TelegramMethod<{{ extends_generic }}>
+ */
+final class {{ class_name }} extends TelegramMethod
+{
+  public const string ApiMethod = '{{ api_method }}';
+  public const string ReturnsType = {{ returns_expr }};
+{% if parameters is not empty %}
+
+  public function __construct(
+{% for p in parameters -%}
+{% if p.phpdocType is not null %}    /** @var {{ p.phpdocType }} */
+{% endif %}    public readonly {{ p.phpType }} ${{ p.phpName }}{% if p.default is not null %} = {{ p.default }}{% endif %},
+{% endfor %}    ?Bot $bot = null,
+  ) {
+    parent::__construct($bot);
+  }
+{% else %}
+
+  public function __construct(?Bot $bot = null)
+  {
+    parent::__construct($bot);
+  }
+{% endif %}
+}
