@@ -30,7 +30,7 @@ jobs:
           coverage: xdebug
       - uses: ramsey/composer-install@v3
       - run: vendor/bin/php-cs-fixer fix --dry-run --diff
-      - run: vendor/bin/phpstan analyze --no-progress
+      - run: vendor/bin/phpstan analyze --no-progress --memory-limit=512M
       - run: vendor/bin/phpunit --coverage-text
         env:
           PHPBOTGRAM_REDIS_DSN: redis://localhost:6379

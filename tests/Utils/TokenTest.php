@@ -30,6 +30,14 @@ final class TokenTest extends TestCase
     yield 'left non-digit' => ['abc:TEST'];
 
     yield 'right empty' => ['42:'];
+
+    yield 'trailing newline' => ["42:TEST\n"];
+
+    yield 'leading space' => [' 42:TEST'];
+
+    yield 'embedded tab' => ["42:\tTEST"];
+
+    yield 'embedded space' => ['42:TE ST'];
   }
 
   #[DataProvider('invalidTokens')]

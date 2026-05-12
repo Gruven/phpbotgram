@@ -34,4 +34,49 @@ final class BotContextControllerTest extends TestCase
     $bot = new Bot(token: '1:test', session: new MockedSession());
     self::assertSame($obj->withBot($bot)->bot, $obj->as_($bot)->bot);
   }
+
+  public function testWithBotRebindsNestedControllers(): void
+  {
+    $bot = new Bot(token: '1:test', session: new MockedSession());
+    $inner = new class extends BotContextController {};
+    $outer = new class ($inner) extends BotContextController {
+      public function __construct(public readonly BotContextController $child)
+      {
+        parent::__construct();
+      }
+    };
+
+    $rebound = $outer->withBot($bot);
+
+    self::assertSame($bot, $rebound->bot);
+    self::assertSame($bot, $rebound->child->bot);
+    self::assertNull($outer->bot, 'original outer bot must remain null');
+    self::assertNull($outer->child->bot, 'original inner bot must remain null');
+  }
+
+  public function testWithBotWalksArraysOfControllers(): void
+  {
+    $bot = new Bot(token: '1:test', session: new MockedSession());
+    $leaf = new class extends BotContextController {};
+    $owner = new class ([$leaf, $leaf]) extends BotContextController {
+      /** @param list<BotContextController> $items */
+      public function __construct(public readonly array $items)
+      {
+        parent::__construct();
+      }
+    };
+
+    $rebound = $owner->withBot($bot);
+
+    self::assertSame($bot, $rebound->bot);
+    self::assertCount(2, $rebound->items);
+
+    foreach ($rebound->items as $item) {
+      self::assertSame($bot, $item->bot);
+    }
+
+    foreach ($owner->items as $item) {
+      self::assertNull($item->bot, 'original array elements must remain null');
+    }
+  }
 }

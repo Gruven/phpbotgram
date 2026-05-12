@@ -54,7 +54,16 @@ class Bot implements BotShortcutsContract
     return ($this->session)($this, $method, $timeout);
   }
 
-  // Hand-coded for Phase 1 smoke test; replaced in Phase 2 with the full 176-method facade.
+  /**
+   * Hand-coded for Phase 1 smoke test; replaced in Phase 2 with the full 176-method facade.
+   *
+   * Phase 1 caveat: against a real AmphpSession this currently returns whatever
+   * `BaseSession::buildResponse` produces — which is `null` until Phase 2
+   * codegen wires `Serializer::load` into the success path. The `: Message`
+   * return type holds for `MockedSession` (which bypasses checkResponse) and
+   * for Phase 2 onwards. Production callers MUST go through a mocked session
+   * until Phase 2 codegen lands.
+   */
   public function sendMessage(int|string $chatId, string $text, ?string $parseMode = null, ?int $timeout = null): Message
   {
     /** @var Message */

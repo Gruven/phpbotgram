@@ -7,9 +7,17 @@ namespace Gruven\PhpBotGram\Tests\Client;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
 use Gruven\PhpBotGram\Tests\Support\MockedSession;
+use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Unspecified;
 use Gruven\PhpBotGram\Types\User;
 use PHPUnit\Framework\TestCase;
+
+final class SerializerTestAliasFixture extends TelegramObject
+{
+  public const array WireNames = ['fromUser' => 'from'];
+
+  public function __construct(public readonly string $fromUser) {}
+}
 
 final class SerializerTest extends TestCase
 {
@@ -36,5 +44,17 @@ final class SerializerTest extends TestCase
     $user = Serializer::load(User::class, ['id' => 5, 'is_bot' => true, 'first_name' => 'B'], $bot);
     self::assertSame(5, $user->id);
     self::assertSame($bot, $user->bot);
+  }
+
+  public function testWireNamesAliasRespectedOnDumpAndLoad(): void
+  {
+    $aliased = new SerializerTestAliasFixture(fromUser: 'alice');
+    $dumped = Serializer::dump($aliased);
+    self::assertArrayHasKey('from', $dumped);
+    self::assertArrayNotHasKey('from_user', $dumped);
+    self::assertSame('alice', $dumped['from']);
+
+    $loaded = Serializer::load(SerializerTestAliasFixture::class, ['from' => 'bob']);
+    self::assertSame('bob', $loaded->fromUser);
   }
 }

@@ -15,9 +15,8 @@ final class FsInputFile extends InputFile
     public readonly string $path,
     ?string $filename = null,
     int $chunkSize = self::DEFAULT_CHUNK_SIZE,
-    ?Bot $bot = null,
   ) {
-    parent::__construct(filename: $filename ?? basename($path), chunkSize: $chunkSize, bot: $bot);
+    parent::__construct(filename: $filename ?? basename($path), chunkSize: $chunkSize);
   }
 
   /**

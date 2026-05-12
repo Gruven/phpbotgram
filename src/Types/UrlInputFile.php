@@ -17,9 +17,10 @@ final class UrlInputFile extends InputFile
     ?string $filename = null,
     int $chunkSize = self::DEFAULT_CHUNK_SIZE,
     public readonly int $timeout = 30,
-    ?Bot $bot = null,
+    /** Optional fallback bot — used by Phase 6 streaming when read() is called without an explicit bot. */
+    public readonly ?Bot $bot = null,
   ) {
-    parent::__construct(filename: $filename, chunkSize: $chunkSize, bot: $bot);
+    parent::__construct(filename: $filename, chunkSize: $chunkSize);
   }
 
   public function read(Bot $bot): ReadableStream

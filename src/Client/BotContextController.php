@@ -5,35 +5,64 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Client;
 
 use Gruven\PhpBotGram\Bot;
+use ReflectionObject;
+use ReflectionProperty;
 
 abstract class BotContextController
 {
   public function __construct(public readonly ?Bot $bot = null) {}
 
   /**
-   * Returns a clone of $this with $bot rebound. The base implementation only
-   * rebinds the controller's own `$bot` slot — it does not walk nested
-   * TelegramObject properties.
+   * Returns a clone of $this with $bot rebound recursively. Walks every public
+   * property; nested `BotContextController` instances are rebound via their
+   * own `withBot`, arrays/lists of them are walked element-wise. Plain values
+   * (scalars, DateTime, enums, InputFile etc.) pass through untouched.
    *
-   * Deep rebinding is per-class by necessity: PHP 8.5's `clone($this, [...])`
-   * scope check requires writes to a readonly property happen from inside the
-   * declaring class. So a single base override cannot rewrite a subclass's
-   * readonly `Chat $chat` slot — the subclass itself has to do that.
-   *
-   * The Phase 2 codegen emits a `withBot` override on every generated
-   * TelegramObject that carries nested TelegramObject fields. Each override
-   * calls `parent::withBot($bot)` to get the base clone and then layers its
-   * own per-property rebinds via clone-with inside the subclass scope.
-   *
-   * Until Phase 2 lands, callers who build a deep graph by hand and need a
-   * rebound copy should round-trip through `Serializer::dump`/`::load` with
-   * `$bot` in context — `Serializer::load` does walk recursively and applies
-   * per-leaf `withBot`, mirroring upstream pydantic
-   * `model_validate(context={"bot": bot})`.
+   * Mirrors upstream pydantic `model_validate(context={"bot": bot})` (aiogram
+   * `ContextController.as_`/`model_dump_json`+`model_validate`). PHP 8.5's
+   * `clone($this, [...])` clone-with syntax permits the base method to rewrite
+   * `public readonly` slots declared anywhere in the inheritance chain — the
+   * scope check is on the *caller* and `public readonly` is publicly writable
+   * via clone-with from any caller.
    */
   public function withBot(?Bot $bot): static
   {
-    return clone ($this, ['bot' => $bot]);
+    $overrides = ['bot' => $bot];
+
+    foreach ((new ReflectionObject($this))->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
+      if ($prop->isStatic() || $prop->getName() === 'bot') {
+        continue;
+      }
+
+      $name = $prop->getName();
+      $value = $prop->getValue($this);
+
+      if ($value instanceof self) {
+        $overrides[$name] = $value->withBot($bot);
+
+        continue;
+      }
+
+      if (is_array($value)) {
+        $rebound = [];
+        $touched = false;
+
+        foreach ($value as $k => $item) {
+          if ($item instanceof self) {
+            $rebound[$k] = $item->withBot($bot);
+            $touched = true;
+          } else {
+            $rebound[$k] = $item;
+          }
+        }
+
+        if ($touched) {
+          $overrides[$name] = $rebound;
+        }
+      }
+    }
+
+    return clone ($this, $overrides);
   }
 
   /**

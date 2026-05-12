@@ -14,9 +14,8 @@ final class BufferedInputFile extends InputFile
     public readonly string $data,
     string $filename,
     int $chunkSize = self::DEFAULT_CHUNK_SIZE,
-    ?Bot $bot = null,
   ) {
-    parent::__construct(filename: $filename, chunkSize: $chunkSize, bot: $bot);
+    parent::__construct(filename: $filename, chunkSize: $chunkSize);
   }
 
   public static function fromFile(string $path, ?string $filename = null, int $chunkSize = self::DEFAULT_CHUNK_SIZE): self
