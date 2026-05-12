@@ -16,10 +16,10 @@ use Gruven\PhpBotGram\Bot;
 final class BackgroundTypePattern extends BackgroundType
 {
   public function __construct(
-    public readonly string $type,
     public readonly Document $document,
     public readonly BackgroundFill $fill,
     public readonly int $intensity,
+    public readonly string $type = 'pattern',
     public readonly ?bool $isInverted = null,
     public readonly ?bool $isMoving = null,
     ?Bot $bot = null,

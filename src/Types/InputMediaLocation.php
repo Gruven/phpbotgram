@@ -16,9 +16,9 @@ use Gruven\PhpBotGram\Bot;
 final class InputMediaLocation extends InputPollMedia
 {
   public function __construct(
-    public readonly string $type,
     public readonly float $latitude,
     public readonly float $longitude,
+    public readonly string $type = 'location',
     public readonly ?float $horizontalAccuracy = null,
     ?Bot $bot = null,
   ) {

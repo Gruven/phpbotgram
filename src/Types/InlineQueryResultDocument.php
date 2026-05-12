@@ -19,14 +19,14 @@ final class InlineQueryResultDocument extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $title,
-    public readonly ?string $caption,
-    public readonly ?string $parseMode,
-    public readonly ?array $captionEntities,
     public readonly string $documentUrl,
     public readonly string $mimeType,
+    public readonly string $type = 'document',
+    public readonly ?string $caption = null,
+    public readonly ?string $parseMode = null,
+    public readonly ?array $captionEntities = null,
     public readonly ?string $description = null,
     public readonly ?InlineKeyboardMarkup $replyMarkup = null,
     public readonly ?InputMessageContent $inputMessageContent = null,

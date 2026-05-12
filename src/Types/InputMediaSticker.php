@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class InputMediaSticker extends InputPollOptionMedia
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $media,
+    public readonly string $type = 'sticker',
     public readonly ?string $emoji = null,
     ?Bot $bot = null,
   ) {

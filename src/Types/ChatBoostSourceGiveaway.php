@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class ChatBoostSourceGiveaway extends ChatBoostSource
 {
   public function __construct(
-    public readonly string $source,
     public readonly int $giveawayMessageId,
+    public readonly string $source = 'giveaway',
     public readonly ?User $user = null,
     public readonly ?int $prizeStarCount = null,
     public readonly ?bool $isUnclaimed = null,

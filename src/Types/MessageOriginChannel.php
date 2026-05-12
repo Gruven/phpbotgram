@@ -17,10 +17,10 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class MessageOriginChannel extends MessageOrigin
 {
   public function __construct(
-    public readonly string $type,
     public readonly DateTime $date,
     public readonly Chat $chat,
     public readonly int $messageId,
+    public readonly string $type = 'channel',
     public readonly ?string $authorSignature = null,
     ?Bot $bot = null,
   ) {

@@ -17,9 +17,9 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class SuggestedPostApproved extends TelegramObject
 {
   public function __construct(
-    public readonly ?Message $suggestedPostMessage,
-    public readonly ?SuggestedPostPrice $price,
     public readonly DateTime $sendDate,
+    public readonly ?Message $suggestedPostMessage = null,
+    public readonly ?SuggestedPostPrice $price = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

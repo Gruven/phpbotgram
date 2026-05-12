@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class TransactionPartnerTelegramApi extends TransactionPartner
 {
   public function __construct(
-    public readonly string $type,
     public readonly int $requestCount,
+    public readonly string $type = 'telegram_api',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

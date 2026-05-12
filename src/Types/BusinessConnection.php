@@ -21,8 +21,8 @@ final class BusinessConnection extends TelegramObject
     public readonly User $user,
     public readonly int $userChatId,
     public readonly DateTime $date,
-    public readonly ?BusinessBotRights $rights,
     public readonly bool $isEnabled,
+    public readonly ?BusinessBotRights $rights = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

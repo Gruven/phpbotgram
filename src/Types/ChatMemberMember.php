@@ -17,9 +17,9 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class ChatMemberMember extends ChatMember
 {
   public function __construct(
-    public readonly string $status,
-    public readonly ?string $tag,
     public readonly User $user,
+    public readonly string $status = 'member',
+    public readonly ?string $tag = null,
     public readonly ?DateTime $untilDate = null,
     ?Bot $bot = null,
   ) {

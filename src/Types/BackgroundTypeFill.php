@@ -16,9 +16,9 @@ use Gruven\PhpBotGram\Bot;
 final class BackgroundTypeFill extends BackgroundType
 {
   public function __construct(
-    public readonly string $type,
     public readonly BackgroundFill $fill,
     public readonly int $darkThemeDimming,
+    public readonly string $type = 'fill',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

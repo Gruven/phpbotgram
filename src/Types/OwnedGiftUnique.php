@@ -17,11 +17,11 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class OwnedGiftUnique extends OwnedGift
 {
   public function __construct(
-    public readonly string $type,
     public readonly UniqueGift $gift,
-    public readonly ?string $ownedGiftId,
-    public readonly ?User $senderUser,
     public readonly int $sendDate,
+    public readonly string $type = 'unique',
+    public readonly ?string $ownedGiftId = null,
+    public readonly ?User $senderUser = null,
     public readonly ?bool $isSaved = null,
     public readonly ?bool $canBeTransferred = null,
     public readonly ?int $transferStarCount = null,

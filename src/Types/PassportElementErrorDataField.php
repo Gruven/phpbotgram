@@ -16,11 +16,11 @@ use Gruven\PhpBotGram\Bot;
 final class PassportElementErrorDataField extends PassportElementError
 {
   public function __construct(
-    public readonly string $source,
     public readonly string $type,
     public readonly string $fieldName,
     public readonly string $dataHash,
     public readonly string $message,
+    public readonly string $source = 'data',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

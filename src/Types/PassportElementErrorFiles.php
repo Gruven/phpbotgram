@@ -19,10 +19,10 @@ final class PassportElementErrorFiles extends PassportElementError
    * @param list<string> $fileHashes
    */
   public function __construct(
-    public readonly string $source,
     public readonly string $type,
     public readonly array $fileHashes,
     public readonly string $message,
+    public readonly string $source = 'files',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

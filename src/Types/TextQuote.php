@@ -20,8 +20,8 @@ final class TextQuote extends TelegramObject
    */
   public function __construct(
     public readonly string $text,
-    public readonly ?array $entities,
     public readonly int $position,
+    public readonly ?array $entities = null,
     public readonly ?bool $isManual = null,
     ?Bot $bot = null,
   ) {

@@ -23,11 +23,11 @@ final class MessageReactionUpdated extends TelegramObject
   public function __construct(
     public readonly Chat $chat,
     public readonly int $messageId,
-    public readonly ?User $user,
-    public readonly ?Chat $actorChat,
     public readonly DateTime $date,
     public readonly array $oldReaction,
     public readonly array $newReaction,
+    public readonly ?User $user = null,
+    public readonly ?Chat $actorChat = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

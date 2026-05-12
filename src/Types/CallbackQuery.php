@@ -25,9 +25,9 @@ final class CallbackQuery extends TelegramObject
   public function __construct(
     public readonly string $id,
     public readonly User $fromUser,
-    public readonly ?MaybeInaccessibleMessage $message,
-    public readonly ?string $inlineMessageId,
     public readonly string $chatInstance,
+    public readonly ?MaybeInaccessibleMessage $message = null,
+    public readonly ?string $inlineMessageId = null,
     public readonly ?string $data = null,
     public readonly ?string $gameShortName = null,
     ?Bot $bot = null,

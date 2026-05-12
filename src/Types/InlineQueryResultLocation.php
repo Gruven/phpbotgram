@@ -16,11 +16,11 @@ use Gruven\PhpBotGram\Bot;
 final class InlineQueryResultLocation extends InlineQueryResult
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly float $latitude,
     public readonly float $longitude,
     public readonly string $title,
+    public readonly string $type = 'location',
     public readonly ?float $horizontalAccuracy = null,
     public readonly ?int $livePeriod = null,
     public readonly ?int $heading = null,

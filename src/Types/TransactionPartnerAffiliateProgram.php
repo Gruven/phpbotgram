@@ -16,9 +16,9 @@ use Gruven\PhpBotGram\Bot;
 final class TransactionPartnerAffiliateProgram extends TransactionPartner
 {
   public function __construct(
-    public readonly string $type,
-    public readonly ?User $sponsorUser,
     public readonly int $commissionPerMille,
+    public readonly string $type = 'affiliate_program',
+    public readonly ?User $sponsorUser = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

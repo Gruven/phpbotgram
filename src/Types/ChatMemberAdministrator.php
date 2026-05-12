@@ -16,7 +16,6 @@ use Gruven\PhpBotGram\Bot;
 final class ChatMemberAdministrator extends ChatMember
 {
   public function __construct(
-    public readonly string $status,
     public readonly User $user,
     public readonly bool $canBeEdited,
     public readonly bool $isAnonymous,
@@ -30,6 +29,7 @@ final class ChatMemberAdministrator extends ChatMember
     public readonly bool $canPostStories,
     public readonly bool $canEditStories,
     public readonly bool $canDeleteStories,
+    public readonly string $status = 'administrator',
     public readonly ?bool $canPostMessages = null,
     public readonly ?bool $canEditMessages = null,
     public readonly ?bool $canPinMessages = null,

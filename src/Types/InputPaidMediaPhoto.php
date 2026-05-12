@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class InputPaidMediaPhoto extends InputPaidMedia
 {
   public function __construct(
-    public readonly string $type,
     public readonly InputFile|string $media,
+    public readonly string $type = 'photo',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

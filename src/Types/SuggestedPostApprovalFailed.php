@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class SuggestedPostApprovalFailed extends TelegramObject
 {
   public function __construct(
-    public readonly ?Message $suggestedPostMessage,
     public readonly SuggestedPostPrice $price,
+    public readonly ?Message $suggestedPostMessage = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

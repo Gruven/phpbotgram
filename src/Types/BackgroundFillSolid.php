@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class BackgroundFillSolid extends BackgroundFill
 {
   public function __construct(
-    public readonly string $type,
     public readonly int $color,
+    public readonly string $type = 'solid',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

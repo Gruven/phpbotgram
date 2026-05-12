@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class ChatBoostSourceGiftCode extends ChatBoostSource
 {
   public function __construct(
-    public readonly string $source,
     public readonly User $user,
+    public readonly string $source = 'gift_code',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

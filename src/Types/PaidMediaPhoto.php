@@ -19,8 +19,8 @@ final class PaidMediaPhoto extends PaidMedia
    * @param list<PhotoSize> $photo
    */
   public function __construct(
-    public readonly string $type,
     public readonly array $photo,
+    public readonly string $type = 'photo',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

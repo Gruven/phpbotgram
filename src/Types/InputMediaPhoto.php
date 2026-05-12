@@ -19,8 +19,8 @@ final class InputMediaPhoto extends InputMedia
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly InputFile|string $media,
+    public readonly string $type = 'photo',
     public readonly ?string $caption = null,
     public readonly ?string $parseMode = null,
     public readonly ?array $captionEntities = null,

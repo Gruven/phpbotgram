@@ -19,9 +19,9 @@ final class InlineQueryResultCachedPhoto extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $photoFileId,
+    public readonly string $type = 'photo',
     public readonly ?string $title = null,
     public readonly ?string $description = null,
     public readonly ?string $caption = null,

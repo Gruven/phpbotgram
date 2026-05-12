@@ -24,9 +24,9 @@ final class ChosenInlineResult extends TelegramObject
   public function __construct(
     public readonly string $resultId,
     public readonly User $fromUser,
-    public readonly ?Location $location,
-    public readonly ?string $inlineMessageId,
     public readonly string $query,
+    public readonly ?Location $location = null,
+    public readonly ?string $inlineMessageId = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

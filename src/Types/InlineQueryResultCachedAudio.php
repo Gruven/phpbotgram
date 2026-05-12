@@ -19,9 +19,9 @@ final class InlineQueryResultCachedAudio extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $audioFileId,
+    public readonly string $type = 'audio',
     public readonly ?string $caption = null,
     public readonly ?string $parseMode = null,
     public readonly ?array $captionEntities = null,

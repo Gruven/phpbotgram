@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class StoryAreaTypeUniqueGift extends StoryAreaType
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $name,
+    public readonly string $type = 'unique_gift',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

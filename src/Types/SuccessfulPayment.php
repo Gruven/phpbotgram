@@ -19,13 +19,13 @@ final class SuccessfulPayment extends TelegramObject
     public readonly string $currency,
     public readonly int $totalAmount,
     public readonly string $invoicePayload,
-    public readonly ?int $subscriptionExpirationDate,
-    public readonly ?bool $isRecurring,
-    public readonly ?bool $isFirstRecurring,
-    public readonly ?string $shippingOptionId,
-    public readonly ?OrderInfo $orderInfo,
     public readonly string $telegramPaymentChargeId,
     public readonly string $providerPaymentChargeId,
+    public readonly ?int $subscriptionExpirationDate = null,
+    public readonly ?bool $isRecurring = null,
+    public readonly ?bool $isFirstRecurring = null,
+    public readonly ?string $shippingOptionId = null,
+    public readonly ?OrderInfo $orderInfo = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

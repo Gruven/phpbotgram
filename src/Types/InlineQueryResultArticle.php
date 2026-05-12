@@ -16,10 +16,10 @@ use Gruven\PhpBotGram\Bot;
 final class InlineQueryResultArticle extends InlineQueryResult
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $title,
     public readonly InputMessageContent $inputMessageContent,
+    public readonly string $type = 'article',
     public readonly ?InlineKeyboardMarkup $replyMarkup = null,
     public readonly ?string $url = null,
     public readonly ?string $description = null,

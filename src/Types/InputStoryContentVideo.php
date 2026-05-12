@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class InputStoryContentVideo extends InputStoryContent
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $video,
+    public readonly string $type = 'video',
     public readonly ?float $duration = null,
     public readonly ?float $coverFrameTimestamp = null,
     public readonly ?bool $isAnimation = null,

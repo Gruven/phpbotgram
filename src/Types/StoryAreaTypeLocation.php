@@ -16,9 +16,9 @@ use Gruven\PhpBotGram\Bot;
 final class StoryAreaTypeLocation extends StoryAreaType
 {
   public function __construct(
-    public readonly string $type,
     public readonly float $latitude,
     public readonly float $longitude,
+    public readonly string $type = 'location',
     public readonly ?LocationAddress $address = null,
     ?Bot $bot = null,
   ) {

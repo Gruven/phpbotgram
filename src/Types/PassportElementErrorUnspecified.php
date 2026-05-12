@@ -16,10 +16,10 @@ use Gruven\PhpBotGram\Bot;
 final class PassportElementErrorUnspecified extends PassportElementError
 {
   public function __construct(
-    public readonly string $source,
     public readonly string $type,
     public readonly string $elementHash,
     public readonly string $message,
+    public readonly string $source = 'unspecified',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

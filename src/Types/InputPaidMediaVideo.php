@@ -18,8 +18,8 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class InputPaidMediaVideo extends InputPaidMedia
 {
   public function __construct(
-    public readonly string $type,
     public readonly InputFile|string $media,
+    public readonly string $type = 'video',
     public readonly ?InputFile $thumbnail = null,
     public readonly null|InputFile|string $cover = null,
     public readonly null|DateInterval|DateTime|int $startTimestamp = null,

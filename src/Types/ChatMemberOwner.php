@@ -16,9 +16,9 @@ use Gruven\PhpBotGram\Bot;
 final class ChatMemberOwner extends ChatMember
 {
   public function __construct(
-    public readonly string $status,
     public readonly User $user,
     public readonly bool $isAnonymous,
+    public readonly string $status = 'creator',
     public readonly ?string $customTitle = null,
     ?Bot $bot = null,
   ) {

@@ -19,9 +19,9 @@ final class InlineQueryResultCachedGif extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $gifFileId,
+    public readonly string $type = 'gif',
     public readonly ?string $title = null,
     public readonly ?string $caption = null,
     public readonly ?string $parseMode = null,

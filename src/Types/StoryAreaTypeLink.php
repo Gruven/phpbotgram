@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class StoryAreaTypeLink extends StoryAreaType
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $url,
+    public readonly string $type = 'link',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

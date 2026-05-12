@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class PaidMediaLivePhoto extends PaidMedia
 {
   public function __construct(
-    public readonly string $type,
     public readonly LivePhoto $livePhoto,
+    public readonly string $type = 'live_photo',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

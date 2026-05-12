@@ -21,15 +21,15 @@ final class EncryptedPassportElement extends TelegramObject
    */
   public function __construct(
     public readonly string $type,
-    public readonly ?string $data,
-    public readonly ?string $phoneNumber,
-    public readonly ?string $email,
-    public readonly ?array $files,
-    public readonly ?PassportFile $frontSide,
-    public readonly ?PassportFile $reverseSide,
-    public readonly ?PassportFile $selfie,
-    public readonly ?array $translation,
     public readonly string $hash,
+    public readonly ?string $data = null,
+    public readonly ?string $phoneNumber = null,
+    public readonly ?string $email = null,
+    public readonly ?array $files = null,
+    public readonly ?PassportFile $frontSide = null,
+    public readonly ?PassportFile $reverseSide = null,
+    public readonly ?PassportFile $selfie = null,
+    public readonly ?array $translation = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

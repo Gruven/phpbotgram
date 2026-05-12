@@ -19,11 +19,11 @@ final class OwnedGiftRegular extends OwnedGift
    * @param list<MessageEntity> $entities
    */
   public function __construct(
-    public readonly string $type,
     public readonly Gift $gift,
-    public readonly ?string $ownedGiftId,
-    public readonly ?User $senderUser,
     public readonly int $sendDate,
+    public readonly string $type = 'regular',
+    public readonly ?string $ownedGiftId = null,
+    public readonly ?User $senderUser = null,
     public readonly ?string $text = null,
     public readonly ?array $entities = null,
     public readonly ?bool $isPrivate = null,

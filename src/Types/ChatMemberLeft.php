@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class ChatMemberLeft extends ChatMember
 {
   public function __construct(
-    public readonly string $status,
     public readonly User $user,
+    public readonly string $status = 'left',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

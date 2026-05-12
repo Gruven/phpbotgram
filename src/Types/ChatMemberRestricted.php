@@ -17,8 +17,6 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class ChatMemberRestricted extends ChatMember
 {
   public function __construct(
-    public readonly string $status,
-    public readonly ?string $tag,
     public readonly User $user,
     public readonly bool $isMember,
     public readonly bool $canSendMessages,
@@ -38,6 +36,8 @@ final class ChatMemberRestricted extends ChatMember
     public readonly bool $canPinMessages,
     public readonly bool $canManageTopics,
     public readonly DateTime $untilDate,
+    public readonly string $status = 'restricted',
+    public readonly ?string $tag = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

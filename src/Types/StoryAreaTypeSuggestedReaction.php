@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class StoryAreaTypeSuggestedReaction extends StoryAreaType
 {
   public function __construct(
-    public readonly string $type,
     public readonly ReactionType $reactionType,
+    public readonly string $type = 'suggested_reaction',
     public readonly ?bool $isDark = null,
     public readonly ?bool $isFlipped = null,
     ?Bot $bot = null,

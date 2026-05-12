@@ -16,10 +16,10 @@ use Gruven\PhpBotGram\Bot;
 final class BackgroundFillGradient extends BackgroundFill
 {
   public function __construct(
-    public readonly string $type,
     public readonly int $topColor,
     public readonly int $bottomColor,
     public readonly int $rotationAngle,
+    public readonly string $type = 'gradient',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

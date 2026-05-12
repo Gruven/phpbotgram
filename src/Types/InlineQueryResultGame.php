@@ -16,9 +16,9 @@ use Gruven\PhpBotGram\Bot;
 final class InlineQueryResultGame extends InlineQueryResult
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $gameShortName,
+    public readonly string $type = 'game',
     public readonly ?InlineKeyboardMarkup $replyMarkup = null,
     ?Bot $bot = null,
   ) {

@@ -16,10 +16,10 @@ use Gruven\PhpBotGram\Bot;
 final class AffiliateInfo extends TelegramObject
 {
   public function __construct(
-    public readonly ?User $affiliateUser,
-    public readonly ?Chat $affiliateChat,
     public readonly int $commissionPerMille,
     public readonly int $amount,
+    public readonly ?User $affiliateUser = null,
+    public readonly ?Chat $affiliateChat = null,
     public readonly ?int $nanostarAmount = null,
     ?Bot $bot = null,
   ) {

@@ -19,8 +19,8 @@ final class BackgroundFillFreeformGradient extends BackgroundFill
    * @param list<int> $colors
    */
   public function __construct(
-    public readonly string $type,
     public readonly array $colors,
+    public readonly string $type = 'freeform_gradient',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

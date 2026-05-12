@@ -16,9 +16,9 @@ use Gruven\PhpBotGram\Bot;
 final class InlineQueryResultCachedSticker extends InlineQueryResult
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $stickerFileId,
+    public readonly string $type = 'sticker',
     public readonly ?InlineKeyboardMarkup $replyMarkup = null,
     public readonly ?InputMessageContent $inputMessageContent = null,
     ?Bot $bot = null,

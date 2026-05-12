@@ -16,9 +16,9 @@ use Gruven\PhpBotGram\Bot;
 final class MenuButtonWebApp extends MenuButton
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $text,
     public readonly WebAppInfo $webApp,
+    public readonly string $type = 'web_app',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

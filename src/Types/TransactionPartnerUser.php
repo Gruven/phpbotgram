@@ -19,9 +19,9 @@ final class TransactionPartnerUser extends TransactionPartner
    * @param list<PaidMedia> $paidMedia
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $transactionType,
     public readonly User $user,
+    public readonly string $type = 'user',
     public readonly ?AffiliateInfo $affiliate = null,
     public readonly ?string $invoicePayload = null,
     public readonly ?int $subscriptionPeriod = null,

@@ -19,9 +19,9 @@ final class InputMediaLivePhoto extends InputMedia
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $media,
     public readonly string $photo,
+    public readonly string $type = 'live_photo',
     public readonly ?string $caption = null,
     public readonly ?string $parseMode = null,
     public readonly ?array $captionEntities = null,

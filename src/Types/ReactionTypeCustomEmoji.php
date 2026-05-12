@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class ReactionTypeCustomEmoji extends ReactionType
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $customEmojiId,
+    public readonly string $type = 'custom_emoji',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

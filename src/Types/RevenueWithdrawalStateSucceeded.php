@@ -17,9 +17,9 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class RevenueWithdrawalStateSucceeded extends RevenueWithdrawalState
 {
   public function __construct(
-    public readonly string $type,
     public readonly DateTime $date,
     public readonly string $url,
+    public readonly string $type = 'succeeded',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

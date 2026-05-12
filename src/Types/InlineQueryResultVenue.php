@@ -16,12 +16,12 @@ use Gruven\PhpBotGram\Bot;
 final class InlineQueryResultVenue extends InlineQueryResult
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly float $latitude,
     public readonly float $longitude,
     public readonly string $title,
     public readonly string $address,
+    public readonly string $type = 'venue',
     public readonly ?string $foursquareId = null,
     public readonly ?string $foursquareType = null,
     public readonly ?string $googlePlaceId = null,

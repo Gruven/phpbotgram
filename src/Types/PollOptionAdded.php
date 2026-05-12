@@ -19,9 +19,9 @@ final class PollOptionAdded extends TelegramObject
    * @param list<MessageEntity> $optionTextEntities
    */
   public function __construct(
-    public readonly ?MaybeInaccessibleMessage $pollMessage,
     public readonly string $optionPersistentId,
     public readonly string $optionText,
+    public readonly ?MaybeInaccessibleMessage $pollMessage = null,
     public readonly ?array $optionTextEntities = null,
     ?Bot $bot = null,
   ) {

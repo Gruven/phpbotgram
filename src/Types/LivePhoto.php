@@ -19,12 +19,12 @@ final class LivePhoto extends TelegramObject
    * @param list<PhotoSize> $photo
    */
   public function __construct(
-    public readonly ?array $photo,
     public readonly string $fileId,
     public readonly string $fileUniqueId,
     public readonly int $width,
     public readonly int $height,
     public readonly int $duration,
+    public readonly ?array $photo = null,
     public readonly ?string $mimeType = null,
     public readonly ?int $fileSize = null,
     ?Bot $bot = null,

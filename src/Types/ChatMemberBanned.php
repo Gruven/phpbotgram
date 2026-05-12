@@ -17,9 +17,9 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class ChatMemberBanned extends ChatMember
 {
   public function __construct(
-    public readonly string $status,
     public readonly User $user,
     public readonly DateTime $untilDate,
+    public readonly string $status = 'kicked',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

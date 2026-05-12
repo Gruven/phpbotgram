@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class InputStoryContentPhoto extends InputStoryContent
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $photo,
+    public readonly string $type = 'photo',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

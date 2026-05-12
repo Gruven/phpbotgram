@@ -19,8 +19,8 @@ final class StarTransaction extends TelegramObject
   public function __construct(
     public readonly string $id,
     public readonly int $amount,
-    public readonly ?int $nanostarAmount,
     public readonly DateTime $date,
+    public readonly ?int $nanostarAmount = null,
     public readonly ?TransactionPartner $source = null,
     public readonly ?TransactionPartner $receiver = null,
     ?Bot $bot = null,

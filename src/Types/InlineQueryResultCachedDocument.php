@@ -19,10 +19,10 @@ final class InlineQueryResultCachedDocument extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $title,
     public readonly string $documentFileId,
+    public readonly string $type = 'document',
     public readonly ?string $description = null,
     public readonly ?string $caption = null,
     public readonly ?string $parseMode = null,

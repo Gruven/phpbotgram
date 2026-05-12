@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class BackgroundTypeChatTheme extends BackgroundType
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $themeName,
+    public readonly string $type = 'chat_theme',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

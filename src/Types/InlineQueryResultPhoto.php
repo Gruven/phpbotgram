@@ -19,10 +19,10 @@ final class InlineQueryResultPhoto extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $photoUrl,
     public readonly string $thumbnailUrl,
+    public readonly string $type = 'photo',
     public readonly ?int $photoWidth = null,
     public readonly ?int $photoHeight = null,
     public readonly ?string $title = null,

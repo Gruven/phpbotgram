@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class TransactionPartnerChat extends TransactionPartner
 {
   public function __construct(
-    public readonly string $type,
     public readonly Chat $chat,
+    public readonly string $type = 'chat',
     public readonly ?Gift $gift = null,
     ?Bot $bot = null,
   ) {

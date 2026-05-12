@@ -19,10 +19,10 @@ final class InlineQueryResultCachedVideo extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $videoFileId,
     public readonly string $title,
+    public readonly string $type = 'video',
     public readonly ?string $description = null,
     public readonly ?string $caption = null,
     public readonly ?string $parseMode = null,

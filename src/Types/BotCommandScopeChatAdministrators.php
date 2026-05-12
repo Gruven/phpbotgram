@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class BotCommandScopeChatAdministrators extends BotCommandScope
 {
   public function __construct(
-    public readonly string $type,
     public readonly int|string $chatId,
+    public readonly string $type = 'chat_administrators',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

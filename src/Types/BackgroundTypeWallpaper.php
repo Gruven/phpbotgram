@@ -16,9 +16,9 @@ use Gruven\PhpBotGram\Bot;
 final class BackgroundTypeWallpaper extends BackgroundType
 {
   public function __construct(
-    public readonly string $type,
     public readonly Document $document,
     public readonly int $darkThemeDimming,
+    public readonly string $type = 'wallpaper',
     public readonly ?bool $isBlurred = null,
     public readonly ?bool $isMoving = null,
     ?Bot $bot = null,

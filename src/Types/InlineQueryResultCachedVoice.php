@@ -19,10 +19,10 @@ final class InlineQueryResultCachedVoice extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $voiceFileId,
     public readonly string $title,
+    public readonly string $type = 'voice',
     public readonly ?string $caption = null,
     public readonly ?string $parseMode = null,
     public readonly ?array $captionEntities = null,

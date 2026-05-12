@@ -19,13 +19,13 @@ final class InlineQueryResultGif extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $gifUrl,
-    public readonly ?int $gifWidth,
-    public readonly ?int $gifHeight,
-    public readonly ?int $gifDuration,
     public readonly string $thumbnailUrl,
+    public readonly string $type = 'gif',
+    public readonly ?int $gifWidth = null,
+    public readonly ?int $gifHeight = null,
+    public readonly ?int $gifDuration = null,
     public readonly ?string $thumbnailMimeType = null,
     public readonly ?string $title = null,
     public readonly ?string $caption = null,

@@ -16,10 +16,10 @@ use Gruven\PhpBotGram\Bot;
 final class PassportElementErrorReverseSide extends PassportElementError
 {
   public function __construct(
-    public readonly string $source,
     public readonly string $type,
     public readonly string $fileHash,
     public readonly string $message,
+    public readonly string $source = 'reverse_side',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

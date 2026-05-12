@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class InputProfilePhotoStatic extends InputProfilePhoto
 {
   public function __construct(
-    public readonly string $type,
     public readonly InputFile|string $photo,
+    public readonly string $type = 'static',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

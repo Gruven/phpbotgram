@@ -16,10 +16,10 @@ use Gruven\PhpBotGram\Bot;
 final class StoryAreaTypeWeather extends StoryAreaType
 {
   public function __construct(
-    public readonly string $type,
     public readonly float $temperature,
     public readonly string $emoji,
     public readonly int $backgroundColor,
+    public readonly string $type = 'weather',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

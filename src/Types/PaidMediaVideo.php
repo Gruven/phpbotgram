@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class PaidMediaVideo extends PaidMedia
 {
   public function __construct(
-    public readonly string $type,
     public readonly Video $video,
+    public readonly string $type = 'video',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

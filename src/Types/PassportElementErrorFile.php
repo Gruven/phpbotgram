@@ -16,10 +16,10 @@ use Gruven\PhpBotGram\Bot;
 final class PassportElementErrorFile extends PassportElementError
 {
   public function __construct(
-    public readonly string $source,
     public readonly string $type,
     public readonly string $fileHash,
     public readonly string $message,
+    public readonly string $source = 'file',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

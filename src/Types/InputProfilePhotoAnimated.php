@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class InputProfilePhotoAnimated extends InputProfilePhoto
 {
   public function __construct(
-    public readonly string $type,
     public readonly InputFile|string $animation,
+    public readonly string $type = 'animated',
     public readonly ?float $mainFrameTimestamp = null,
     ?Bot $bot = null,
   ) {

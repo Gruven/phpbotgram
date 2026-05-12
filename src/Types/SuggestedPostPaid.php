@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class SuggestedPostPaid extends TelegramObject
 {
   public function __construct(
-    public readonly ?Message $suggestedPostMessage,
     public readonly string $currency,
+    public readonly ?Message $suggestedPostMessage = null,
     public readonly ?int $amount = null,
     public readonly ?StarAmount $starAmount = null,
     ?Bot $bot = null,

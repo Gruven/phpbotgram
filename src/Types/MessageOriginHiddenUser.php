@@ -17,9 +17,9 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class MessageOriginHiddenUser extends MessageOrigin
 {
   public function __construct(
-    public readonly string $type,
     public readonly DateTime $date,
     public readonly string $senderUserName,
+    public readonly string $type = 'hidden_user',
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

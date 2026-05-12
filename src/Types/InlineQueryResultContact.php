@@ -16,10 +16,10 @@ use Gruven\PhpBotGram\Bot;
 final class InlineQueryResultContact extends InlineQueryResult
 {
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $phoneNumber,
     public readonly string $firstName,
+    public readonly string $type = 'contact',
     public readonly ?string $lastName = null,
     public readonly ?string $vcard = null,
     public readonly ?InlineKeyboardMarkup $replyMarkup = null,

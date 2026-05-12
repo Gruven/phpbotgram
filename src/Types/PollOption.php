@@ -22,9 +22,9 @@ final class PollOption extends TelegramObject
   public function __construct(
     public readonly string $persistentId,
     public readonly string $text,
-    public readonly ?array $textEntities,
-    public readonly ?PollMedia $media,
     public readonly int $voterCount,
+    public readonly ?array $textEntities = null,
+    public readonly ?PollMedia $media = null,
     public readonly ?User $addedByUser = null,
     public readonly ?Chat $addedByChat = null,
     public readonly ?DateTime $additionDate = null,

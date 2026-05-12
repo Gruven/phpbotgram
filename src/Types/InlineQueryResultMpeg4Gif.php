@@ -19,13 +19,13 @@ final class InlineQueryResultMpeg4Gif extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $mpeg4Url,
-    public readonly ?int $mpeg4Width,
-    public readonly ?int $mpeg4Height,
-    public readonly ?int $mpeg4Duration,
     public readonly string $thumbnailUrl,
+    public readonly string $type = 'mpeg4_gif',
+    public readonly ?int $mpeg4Width = null,
+    public readonly ?int $mpeg4Height = null,
+    public readonly ?int $mpeg4Duration = null,
     public readonly ?string $thumbnailMimeType = null,
     public readonly ?string $title = null,
     public readonly ?string $caption = null,

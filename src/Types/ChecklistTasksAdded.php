@@ -19,8 +19,8 @@ final class ChecklistTasksAdded extends TelegramObject
    * @param list<ChecklistTask> $tasks
    */
   public function __construct(
-    public readonly ?Message $checklistMessage,
     public readonly array $tasks,
+    public readonly ?Message $checklistMessage = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

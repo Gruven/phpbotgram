@@ -21,10 +21,10 @@ final class PollAnswer extends TelegramObject
    */
   public function __construct(
     public readonly string $pollId,
-    public readonly ?Chat $voterChat,
-    public readonly ?User $user,
     public readonly array $optionIds,
     public readonly array $optionPersistentIds,
+    public readonly ?Chat $voterChat = null,
+    public readonly ?User $user = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

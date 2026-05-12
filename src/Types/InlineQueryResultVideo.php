@@ -20,12 +20,12 @@ final class InlineQueryResultVideo extends InlineQueryResult
    * @param list<MessageEntity> $captionEntities
    */
   public function __construct(
-    public readonly string $type,
     public readonly string $id,
     public readonly string $videoUrl,
     public readonly string $mimeType,
     public readonly string $thumbnailUrl,
     public readonly string $title,
+    public readonly string $type = 'video',
     public readonly ?string $caption = null,
     public readonly ?string $parseMode = null,
     public readonly ?array $captionEntities = null,
