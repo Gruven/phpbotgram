@@ -101,13 +101,13 @@ trait BotShortcuts
     return $me;
   }
 
-  public function downloadFile(File|string $fileOrPath, mixed $destination = null, int $chunkSize = 65536): ?string
+  public function downloadFile(File|string $fileOrPath, mixed $destination = null, int $timeout = 30, int $chunkSize = 65536): ?string
   {
     $path = $fileOrPath instanceof File
         ? ($fileOrPath->filePath ?? throw new LogicException('File has no filePath'))
         : $fileOrPath;
     $url = $this->session->api->fileUrl($this->token, $path);
-    $stream = $this->session->streamContent($url, chunkSize: $chunkSize);
+    $stream = $this->session->streamContent($url, timeout: $timeout, chunkSize: $chunkSize);
 
     return $this->consumeStream($stream, $destination);
   }
@@ -118,14 +118,14 @@ trait BotShortcuts
    * downloading; a `Downloadable` (Document/Photo/Voice/etc) is unwrapped
    * via its `fileId()` method.
    */
-  public function download(Downloadable|string $object, mixed $destination = null, int $chunkSize = 65536): ?string
+  public function download(Downloadable|string $object, mixed $destination = null, int $timeout = 30, int $chunkSize = 65536): ?string
   {
     $fileId = $object instanceof Downloadable ? $object->fileId() : $object;
 
     /** @var File $file */
     $file = $this(new GetFile(fileId: $fileId));
 
-    return $this->downloadFile($file, $destination, $chunkSize);
+    return $this->downloadFile($file, $destination, $timeout, $chunkSize);
   }
 
   private function consumeStream(ReadableStream $stream, mixed $destination): ?string

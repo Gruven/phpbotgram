@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Client;
 
 use DateTimeImmutable;
+use Exception;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Exceptions\ClientDecodeException;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
@@ -165,10 +166,22 @@ final class Serializer
     if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
       $typeName = $type->getName();
 
-      // Unix-timestamp fields arrive as int on the wire but are typed as Custom\DateTime
-      // or plain DateTimeImmutable (matching aiogram's `datetime.datetime` mapping).
-      if (is_int($value) && is_a($typeName, DateTimeImmutable::class, allow_string: true)) {
-        return DateTime::fromTimestamp($value);
+      if (is_a($typeName, DateTimeImmutable::class, allow_string: true)) {
+        // Unix-timestamp fields arrive as int on the wire but are typed as Custom\DateTime
+        // or plain DateTimeImmutable (matching aiogram's `datetime.datetime` mapping).
+        // Defensive: also accept ISO-8601 strings so codegen / future schema shapes
+        // don't fall through to a raw TypeError at newInstance().
+        if (is_int($value)) {
+          return DateTime::fromTimestamp($value);
+        }
+
+        if (is_string($value)) {
+          try {
+            return new DateTime($value);
+          } catch (Exception $e) {
+            // Fall through to default return; let TypeError surface meaningfully.
+          }
+        }
       }
 
       if (is_subclass_of($typeName, TelegramObject::class) && is_array($value)) {

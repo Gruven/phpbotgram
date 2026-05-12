@@ -144,6 +144,10 @@ final class AmphpSession extends BaseSession
     foreach ($dumped as $key => $value) {
       $prepared = $this->prepareValue($value, $bot, $files);
 
+      // Drop only null. Upstream aiohttp drops every falsy value (`if not value`)
+      // which silently elides legitimate `false`/`0`/`""` parameters — a known
+      // wire-protocol bug aiogram inherits. The PHP port keeps those values so
+      // e.g. `disable_notification: false` reaches Telegram correctly.
       if ($prepared === null) {
         continue;
       }

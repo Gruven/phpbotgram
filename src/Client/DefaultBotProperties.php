@@ -13,7 +13,7 @@ use LogicException;
  */
 final class DefaultBotProperties implements ArrayAccess
 {
-  public ?LinkPreviewOptions $linkPreview;
+  public readonly ?LinkPreviewOptions $linkPreview;
 
   public function __construct(
     public readonly ?string $parseMode = null,

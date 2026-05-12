@@ -32,7 +32,7 @@ interface BotShortcutsContract
 
   public function me(): User;
 
-  public function downloadFile(File|string $fileOrPath, mixed $destination = null, int $chunkSize = 65536): ?string;
+  public function downloadFile(File|string $fileOrPath, mixed $destination = null, int $timeout = 30, int $chunkSize = 65536): ?string;
 
-  public function download(Downloadable|string $object, mixed $destination = null, int $chunkSize = 65536): ?string;
+  public function download(Downloadable|string $object, mixed $destination = null, int $timeout = 30, int $chunkSize = 65536): ?string;
 }

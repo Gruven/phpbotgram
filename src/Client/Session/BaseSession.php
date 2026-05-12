@@ -126,25 +126,7 @@ abstract class BaseSession
     }
 
     $description = $response->description ?? (isset($data['description']) && is_string($data['description']) ? $data['description'] : '');
-
-    // Prefer the typed $response->parameters once buildResponse populates them
-    // (Phase 2). Fall back to raw $data['parameters'] for the Phase 1 stub.
-    $retryAfter = $response->parameters?->retryAfter;
-    $migrateToChatId = $response->parameters?->migrateToChatId;
-
-    if ($retryAfter === null || $migrateToChatId === null) {
-      $params = $data['parameters'] ?? null;
-
-      if (is_array($params)) {
-        if ($retryAfter === null && isset($params['retry_after']) && is_int($params['retry_after'])) {
-          $retryAfter = $params['retry_after'];
-        }
-
-        if ($migrateToChatId === null && isset($params['migrate_to_chat_id']) && is_int($params['migrate_to_chat_id'])) {
-          $migrateToChatId = $params['migrate_to_chat_id'];
-        }
-      }
-    }
+    [$retryAfter, $migrateToChatId] = self::extractResponseParams($response, $data);
 
     if ($retryAfter !== null) {
       throw new TelegramRetryAfter($method, $description, retryAfter: $retryAfter);
@@ -251,6 +233,42 @@ abstract class BaseSession
     }
 
     return $value;
+  }
+
+  /**
+   * Reads `retry_after` / `migrate_to_chat_id` from the typed `$response->parameters`
+   * when populated (Phase 2 codegen wires `buildResponse` to materialise it), falling
+   * back to the raw `$data['parameters']` shape that the Phase 1 stub leaves untouched.
+   * Single extraction point so Phase 2 has one site to retire.
+   *
+   * @param Response<mixed> $response
+   * @param array<array-key, mixed> $data
+   *
+   * @return array{0: ?int, 1: ?int} [retryAfter, migrateToChatId]
+   */
+  private static function extractResponseParams(Response $response, array $data): array
+  {
+    $retryAfter = $response->parameters?->retryAfter;
+    $migrateToChatId = $response->parameters?->migrateToChatId;
+
+    if ($retryAfter !== null && $migrateToChatId !== null) {
+      return [$retryAfter, $migrateToChatId];
+    }
+    $params = $data['parameters'] ?? null;
+
+    if (!is_array($params)) {
+      return [$retryAfter, $migrateToChatId];
+    }
+
+    if ($retryAfter === null && isset($params['retry_after']) && is_int($params['retry_after'])) {
+      $retryAfter = $params['retry_after'];
+    }
+
+    if ($migrateToChatId === null && isset($params['migrate_to_chat_id']) && is_int($params['migrate_to_chat_id'])) {
+      $migrateToChatId = $params['migrate_to_chat_id'];
+    }
+
+    return [$retryAfter, $migrateToChatId];
   }
 
   /**
