@@ -10,5 +10,5 @@ namespace Gruven\PhpBotGram;
  */
 class Bot
 {
-    public function __construct() {}
+  public function __construct() {}
 }

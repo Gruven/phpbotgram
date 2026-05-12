@@ -4,4 +4,6 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Exceptions;
 
-class PhpBotGramException extends \Exception {}
+use Exception;
+
+class PhpBotGramException extends Exception {}

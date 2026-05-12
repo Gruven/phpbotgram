@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Client;
 
+use JsonSerializable;
+use LogicException;
+
 /**
  * Sentinel for "use the bot's configured default for this field".
  *
@@ -15,24 +18,24 @@ namespace Gruven\PhpBotGram\Client;
  * BotDefault that escapes resolution fails loudly rather than silently
  * emitting `null` on the wire.
  */
-final readonly class BotDefault implements \JsonSerializable
+final readonly class BotDefault implements JsonSerializable
 {
-    public function __construct(public string $name) {}
+  public function __construct(public string $name) {}
 
-    public function equals(BotDefault $other): bool
-    {
-        return $this->name === $other->name;
-    }
+  public function equals(BotDefault $other): bool
+  {
+    return $this->name === $other->name;
+  }
 
-    public function jsonSerialize(): never
-    {
-        throw new \LogicException(
-            "BotDefault sentinel reached json_encode without being resolved: {$this->name}"
-        );
-    }
+  public function jsonSerialize(): never
+  {
+    throw new LogicException(
+      "BotDefault sentinel reached json_encode without being resolved: {$this->name}"
+    );
+  }
 
-    public function __toString(): string
-    {
-        return "BotDefault('{$this->name}')";
-    }
+  public function __toString(): string
+  {
+    return "BotDefault('{$this->name}')";
+  }
 }

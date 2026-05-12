@@ -11,11 +11,11 @@ use Gruven\PhpBotGram\Types\ResponseParameters;
  */
 final readonly class Response
 {
-    public function __construct(
-        public bool $ok,
-        public mixed $result = null,
-        public ?string $description = null,
-        public ?int $errorCode = null,
-        public ?ResponseParameters $parameters = null,
-    ) {}
+  public function __construct(
+    public bool $ok,
+    public mixed $result = null,
+    public ?string $description = null,
+    public ?int $errorCode = null,
+    public ?ResponseParameters $parameters = null,
+  ) {}
 }

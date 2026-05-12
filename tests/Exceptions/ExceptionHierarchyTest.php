@@ -16,7 +16,8 @@ final class ExceptionHierarchyTest extends TestCase
 {
     public function testApiInheritsFromBase(): void
     {
-        self::assertTrue(is_subclass_of(TelegramApiException::class, PhpBotGramException::class));
+        $e = new TelegramApiException($this->anonymousMethod(), 'test');
+        self::assertInstanceOf(PhpBotGramException::class, $e);
     }
 
     public function testRetryAfterCarriesPayload(): void
@@ -36,14 +37,19 @@ final class ExceptionHierarchyTest extends TestCase
 
     public function testBadRequestInheritsFromApiException(): void
     {
-        self::assertTrue(is_subclass_of(TelegramBadRequestException::class, TelegramApiException::class));
+        $e = new TelegramBadRequestException($this->anonymousMethod(), 'test');
+        self::assertInstanceOf(TelegramApiException::class, $e);
     }
 
+    /**
+     * @return TelegramMethod<mixed>
+     */
     private function anonymousMethod(): TelegramMethod
     {
+        /** @extends TelegramMethod<mixed> */
         return new class extends TelegramMethod {
             public const string ApiMethod = 'x';
-            public const string ReturnsType = '';
+            public const string ReturnsType = \stdClass::class;
         };
     }
 }

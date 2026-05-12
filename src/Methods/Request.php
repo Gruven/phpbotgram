@@ -8,13 +8,13 @@ use Gruven\PhpBotGram\Types\InputFile;
 
 final readonly class Request
 {
-    /**
-     * @param array<string, mixed> $data
-     * @param array<string, InputFile>|null $files
-     */
-    public function __construct(
-        public string $method,
-        public array $data,
-        public ?array $files = null,
-    ) {}
+  /**
+   * @param array<string, mixed> $data
+   * @param null|array<string, InputFile> $files
+   */
+  public function __construct(
+    public string $method,
+    public array $data,
+    public ?array $files = null,
+  ) {}
 }

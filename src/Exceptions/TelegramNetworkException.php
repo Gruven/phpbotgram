@@ -6,5 +6,5 @@ namespace Gruven\PhpBotGram\Exceptions;
 
 class TelegramNetworkException extends TelegramApiException
 {
-    protected string $label = 'HTTP Client says';
+  protected string $label = 'HTTP Client says';
 }

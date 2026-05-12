@@ -12,6 +12,4 @@ namespace Gruven\PhpBotGram\Types;
  * also extend it directly. NOT abstract — matches upstream `aiogram/types/base.py:38-41`.
  * See spec § "Mutable type variant" and § "TypeOverrideApplier".
  */
-class MutableTelegramObject extends TelegramObject
-{
-}
+class MutableTelegramObject extends TelegramObject {}

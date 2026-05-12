@@ -17,6 +17,9 @@ final class TokenTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
+    /**
+     * @return iterable<string, array{string}>
+     */
     public static function invalidTokens(): iterable
     {
         yield 'empty' => [''];

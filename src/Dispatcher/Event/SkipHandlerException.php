@@ -4,4 +4,6 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Dispatcher\Event;
 
-final class SkipHandlerException extends \Exception {}
+use Exception;
+
+final class SkipHandlerException extends Exception {}
