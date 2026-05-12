@@ -54,6 +54,20 @@ abstract class BaseSession
    */
   abstract public function makeRequest(Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed;
 
+  /**
+   * Run $method through the session's middleware chain, terminating at makeRequest.
+   * Mirrors aiogram's `BaseSession.__call__` (session/base.py:267-274). With an empty
+   * chain this is equivalent to calling makeRequest directly.
+   *
+   * @param TelegramMethod<mixed> $method
+   */
+  public function __invoke(Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
+  {
+    $chain = $this->middleware->wrap($this->makeRequest(...));
+
+    return $chain($bot, $method, $timeout);
+  }
+
   abstract public function close(): void;
 
   /**

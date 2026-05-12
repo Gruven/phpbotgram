@@ -38,11 +38,9 @@ class Bot implements BotShortcutsContract
   }
 
   /**
-   * Polymorphic entry point: $bot($method) dispatches the method via the session.
-   *
-   * Phase 1 deliberately calls $session->makeRequest directly, bypassing
-   * BaseSession middleware. Phase 3 wires dispatcher middleware separately —
-   * raw method calls stay middleware-bypassed by design.
+   * Polymorphic entry point: $bot($method) dispatches the method through the
+   * session's middleware chain. Mirrors aiogram's `Bot.__call__` → `session(bot, method)`.
+   * Dispatcher middleware is layered separately on top of this (Phase 3).
    *
    * @template TReturn
    *
@@ -54,7 +52,7 @@ class Bot implements BotShortcutsContract
   {
     $session = $this->session ?? new AmphpSession();
 
-    return $session->makeRequest($this, $method, $timeout);
+    return $session($this, $method, $timeout);
   }
 
   // Hand-coded for Phase 1 smoke test; replaced in Phase 2 with the full 176-method facade.

@@ -15,7 +15,14 @@ abstract class TelegramMethod extends BotContextController
 {
   public const string ApiMethod = '';
 
-  /** @var class-string */
+  /**
+   * Subclasses override with either:
+   *   - a `class-string<TelegramObject>` (e.g. Message::class) for object returns
+   *   - a scalar type name ('bool', 'int', 'string') for primitive returns
+   *   - 'list:<inner>' for array returns
+   *
+   * Stays '' on the abstract base — Phase 2 codegen sets it per concrete method.
+   */
   public const string ReturnsType = '';
 
   /**

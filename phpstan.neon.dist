@@ -5,7 +5,7 @@ parameters:
         - tests
         - tools/generator/src
     excludePaths:
-        - tests/data (?)
+        - tests/data (?)   # PHPStan "optional path" syntax — directory may not exist
         - src/Types/*.php   # generated; rules relaxed during Phase 2
         - src/Methods/*.php # generated
         - src/Enums/*.php   # generated
