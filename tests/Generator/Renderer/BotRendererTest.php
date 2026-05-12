@@ -11,6 +11,7 @@ use Gruven\PhpBotGram\Generator\Renderer\BotRenderer;
 use Gruven\PhpBotGram\Generator\SchemaLoader;
 use Gruven\PhpBotGram\Generator\TypeOverrideApplier;
 use Gruven\PhpBotGram\Generator\TypeResolver;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
@@ -145,6 +146,46 @@ final class BotRendererTest extends TestCase
       '/public function logOut\\(\\s*\\?int \\$timeout = null,\\s*\\): bool/',
       $out,
     );
+  }
+
+  /**
+   * Cycle 2 review fix: the Bot facade's wrapper return-type lowering
+   * mirrors `MethodRenderer::resolveReturnType`. The six methods whose
+   * prose escaped the old matcher chain must now declare matching return
+   * types on the wrapper signature so the Method class's `ReturnsType`
+   * const and the Bot wrapper's declared return don't drift.
+   *
+   * @return list<array{0: string, 1: string, 2: null|string}>
+   */
+  public static function cycle2WrapperReturnTypes(): array
+  {
+    return [
+      // [name, php-level return (after wrapper signature), nullable phpdoc-return]
+      ['getStarTransactions', 'StarTransactions', null],
+      ['sendMediaGroup', 'array', 'list<Message>'],
+      ['copyMessages', 'array', 'list<MessageId>'],
+      ['forwardMessages', 'array', 'list<MessageId>'],
+      ['getGameHighScores', 'array', 'list<GameHighScore>'],
+      ['getUserPersonalChatMessages', 'array', 'list<Message>'],
+    ];
+  }
+
+  #[DataProvider('cycle2WrapperReturnTypes')]
+  public function testCycle2WrapperReturnType(string $name, string $phpReturn, ?string $phpdocReturn): void
+  {
+    $out = $this->rendered();
+
+    // Locate the wrapper function. The signature spans multiple lines so we
+    // scan for `public function <name>(` followed by ANY content up to the
+    // first `)` that immediately precedes `: <type> {`. The non-greedy `.*?`
+    // with the `s` flag handles newlines; bounding on the explicit
+    // `: <type> {` shape rules out accidental matches inside the body.
+    $pattern = '/public function ' . preg_quote($name, '/') . '\\(.*?\\): ' . preg_quote($phpReturn, '/') . '\s*\{/s';
+    self::assertMatchesRegularExpression($pattern, $out, "{$name}: wrapper return must be {$phpReturn}");
+
+    if ($phpdocReturn !== null) {
+      self::assertStringContainsString('@return ' . $phpdocReturn, $out, "{$name}: wrapper docblock must declare list-element PHPDoc");
+    }
   }
 
   public function testInvokeAndConstructorPreserved(): void

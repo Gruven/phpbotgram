@@ -14,6 +14,7 @@ use Gruven\PhpBotGram\Generator\PhpType;
 use Gruven\PhpBotGram\Generator\PhpTypeKind;
 use Gruven\PhpBotGram\Generator\TypeResolver;
 use Gruven\PhpBotGram\Generator\UnionPlan;
+use LogicException;
 use Throwable;
 use Twig\Environment;
 
@@ -41,6 +42,17 @@ use Twig\Environment;
 final class BotRenderer
 {
   /**
+   * Cached schema type/enum names — used by `extractReturnedType` to
+   * validate captured prose tokens against the actual schema before the
+   * resolver tries to import them. Mirrors `MethodRenderer::$schemaTypeNames`.
+   *
+   * @var null|array<string, true>
+   */
+  private ?array $schemaTypeNames = null;
+
+  private ?LoadedSchema $loadedForExtraction = null;
+
+  /**
    * @param array<string, UnionPlan> $unionsByParent indexed by parent name
    */
   public function __construct(
@@ -56,6 +68,13 @@ final class BotRenderer
    */
   public function render(LoadedSchema $schema): string
   {
+    // Make the schema reachable from the prose matcher's validator. Each
+    // `render()` call rebuilds the cache because the renderer can be reused
+    // across distinct schemas in tests (rare, but the invariant is cheap to
+    // maintain).
+    $this->loadedForExtraction = $schema;
+    $this->schemaTypeNames = null;
+
     /** @var array<string, true> $imports */
     $imports = $this->collectInitialImports();
 
@@ -302,27 +321,34 @@ final class BotRenderer
       return ['bool', null];
     }
 
-    $candidate = $this->extractReturnedType($method->returns);
+    // Schema-vendored prose: extract a structured candidate, fail loudly if
+    // the matcher can't parse it. Mirrors `MethodRenderer::resolveReturnType`
+    // exactly so the wrapper signature always matches the Method class's
+    // ReturnsType const.
+    $extracted = $this->extractReturnedType($method->returns);
 
-    if ($candidate === null) {
-      return ['bool', null];
+    if ($extracted === null) {
+      throw new LogicException(\sprintf(
+        'Could not extract return type for method %s from prose "%s". '
+          . 'Tighten BotRenderer::extractReturnedType, or add a `returning:` '
+          . 'override to .butcher/methods/%s/replace.yml.',
+        $method->name,
+        str_replace("\n", ' | ', $method->returns),
+        $method->name,
+      ));
     }
 
-    $candidate = $this->normaliseReturnAlias($candidate);
+    $candidate = $this->normaliseReturnAlias($extracted['token']);
 
     try {
-      $resolved = $this->types->resolveWire($candidate);
-    } catch (Throwable) {
-      return ['bool', null];
-    }
-
-    if (
-      $resolved->kind === PhpTypeKind::ClassName
-      && $resolved->importFqcn !== null
-      && str_starts_with($resolved->importFqcn, 'Gruven\\PhpBotGram\\Types\\')
-      && !$this->isKnownSchemaType($resolved->phpType)
-    ) {
-      return ['bool', null];
+      $resolved = $this->types->resolveWire($extracted['isArray'] ? 'Array of ' . $candidate : $candidate);
+    } catch (Throwable $e) {
+      throw new LogicException(\sprintf(
+        'Method %s prose returned token "%s" but TypeResolver rejected it: %s',
+        $method->name,
+        $candidate,
+        $e->getMessage(),
+      ), 0, $e);
     }
 
     return $this->lowerResolvedReturn($resolved, $imports);
@@ -468,32 +494,114 @@ final class BotRenderer
     return null;
   }
 
-  private function extractReturnedType(string $sentence): ?string
+  /**
+   * Mirrors `MethodRenderer::extractReturnedType` — keep the two
+   * implementations byte-equivalent so the wrapper's declared return
+   * matches the Method's ReturnsType const for every prose phrasing the
+   * schema ships.
+   *
+   * @return null|array{token: string, isArray: bool}
+   */
+  private function extractReturnedType(string $sentences): ?array
   {
-    // Mirrors MethodRenderer's matcher chain — keep the two implementations
-    // in sync so the wrapper's declared return matches the Method's
-    // ReturnsType const for every wire prose phrasing the schema ships.
-    $patterns = [
-      '/(?:On success,\s*)?(?:Returns?|returns?)\s+an\s+Array\s+of\s+([A-Z][A-Za-z0-9_]*)/',
-      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:[a-zA-Z ]+?)\s+as\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
-      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
-      '/(?<![A-Za-z])([A-Z][A-Za-z0-9_]*)\s+(?:is|are)\s+returned/',
-      '/\b([A-Z][A-Za-z0-9_]*)\s+object\b/',
-    ];
+    foreach (preg_split("/\r?\n/", $sentences) ?: [] as $sentence) {
+      $sentence = trim($sentence);
 
-    foreach ($patterns as $i => $pattern) {
-      if (preg_match($pattern, $sentence, $m) === 1) {
-        $token = $m[1];
+      if ($sentence === '') {
+        continue;
+      }
 
-        if ($i === 0) {
-          return 'Array of ' . $token;
-        }
+      $match = $this->matchSentence($sentence);
 
-        return $token;
+      if ($match !== null && $this->isValidCandidate($match['token'])) {
+        return $match;
       }
     }
 
     return null;
+  }
+
+  /**
+   * Per-sentence prose matcher chain — kept in sync with MethodRenderer.
+   *
+   * @return null|array{token: string, isArray: bool}
+   */
+  private function matchSentence(string $sentence): ?array
+  {
+    $arrayPatterns = [
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+an\s+Array\s+of\s+([A-Z][A-Za-z0-9_]*)/',
+      '/an?\s+array\s+of\s+([A-Z][A-Za-z0-9_]*)(?:\s+objects?)?\b[^.]*?\s+(?:is|are)\s+returned/i',
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+an\s+array\s+of\s+([A-Z][A-Za-z0-9_]*)/i',
+    ];
+
+    foreach ($arrayPatterns as $pattern) {
+      if (preg_match($pattern, $sentence, $m) === 1) {
+        return ['token' => $m[1], 'isArray' => true];
+      }
+    }
+
+    $scalarPatterns = [
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:[a-zA-Z ]+?)\s+as\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
+      '/(?<![A-Za-z])([A-Z][A-Za-z0-9_]*)(?:\s+object)?\s+(?:is|are)\s+returned/',
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:a |an |the )?(?:[a-z]+\s+)+([A-Z][A-Za-z0-9_]*)/',
+      '/\b([A-Z][A-Za-z0-9_]*)\s+object\b/',
+    ];
+
+    foreach ($scalarPatterns as $pattern) {
+      if (preg_match($pattern, $sentence, $m) === 1) {
+        return ['token' => $m[1], 'isArray' => false];
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Validate a captured prose token against the loaded schema's known
+   * types + scalars. Mirrors `MethodRenderer::isValidCandidate`.
+   */
+  private function isValidCandidate(string $token): bool
+  {
+    $normalised = $this->normaliseReturnAlias($token);
+
+    if (\in_array($normalised, ['Integer', 'String', 'Boolean', 'Float', 'True', 'False'], true)) {
+      return true;
+    }
+
+    return $this->isKnownSchemaType($normalised) && isset($this->schemaTypeNames()[$normalised]);
+  }
+
+  /**
+   * Lazy-built schema name index for the validator. The map is reset on
+   * each `render()` call so the renderer remains reusable across schemas.
+   *
+   * @return array<string, true>
+   */
+  private function schemaTypeNames(): array
+  {
+    if ($this->schemaTypeNames === null) {
+      /** @var array<string, true> $names */
+      $names = [];
+
+      $loaded = $this->loadedForExtraction;
+
+      if ($loaded === null) {
+        return [];
+      }
+
+      foreach ($loaded->types as $t) {
+        $names[$t->name] = true;
+      }
+
+      foreach ($loaded->enums as $e) {
+        $names[$e->name] = true;
+      }
+
+      $this->schemaTypeNames = $names;
+    }
+
+    return $this->schemaTypeNames;
   }
 
   private function normaliseReturnAlias(string $candidate): string
@@ -519,8 +627,6 @@ final class BotRenderer
       'Text' => true,
       'Object' => true,
       'Null' => true,
-      'False' => true,
-      'True' => true,
     ];
 
     return !isset($reserved[$name]);

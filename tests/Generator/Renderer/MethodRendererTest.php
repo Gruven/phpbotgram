@@ -14,6 +14,7 @@ use Gruven\PhpBotGram\Generator\TypeOverrideApplier;
 use Gruven\PhpBotGram\Generator\TypeResolver;
 use Gruven\PhpBotGram\Generator\UnionDetector;
 use Gruven\PhpBotGram\Generator\UnionPlan;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Throwable;
 use Twig\Environment;
@@ -66,6 +67,7 @@ final class MethodRendererTest extends TestCase
       names: $names,
       defaults: $defaults,
       unionsByParent: $unionsByParent,
+      schema: $loaded,
     );
   }
 
@@ -174,6 +176,41 @@ final class MethodRendererTest extends TestCase
     self::assertStringContainsString('public const string ReturnsType = ChatMember::class;', $out);
     self::assertStringContainsString('use Gruven\\PhpBotGram\\Types\\ChatMember;', $out);
     self::assertStringContainsString('@extends TelegramMethod<ChatMember>', $out);
+  }
+
+  /**
+   * Cycle 2 review fix: the prose return-type matcher silently lost six
+   * methods whose "On success, an array of <X> is returned." / "Returns a
+   * <X> object." phrasings escaped the old regex chain and fell back to a
+   * `bool` default. Each of these methods now has a concrete `ReturnsType`
+   * const tied to the schema entity their prose describes; emitting `bool`
+   * for any of them would corrupt the runtime wire-contract.
+   *
+   * The data-provider lists the six methods plus the expected
+   * (returnsExpr, extendsGeneric) pair the renderer must surface in the
+   * emitted class source.
+   *
+   * @return list<array{0: string, 1: string, 2: string}>
+   */
+  public static function cycle2ReturnTypeMethods(): array
+  {
+    return [
+      ['getStarTransactions', 'public const string ReturnsType = StarTransactions::class;', '@extends TelegramMethod<StarTransactions>'],
+      ['sendMediaGroup', "public const string ReturnsType = 'list:Message';", '@extends TelegramMethod<list<Message>>'],
+      ['copyMessages', "public const string ReturnsType = 'list:MessageId';", '@extends TelegramMethod<list<MessageId>>'],
+      ['forwardMessages', "public const string ReturnsType = 'list:MessageId';", '@extends TelegramMethod<list<MessageId>>'],
+      ['getGameHighScores', "public const string ReturnsType = 'list:GameHighScore';", '@extends TelegramMethod<list<GameHighScore>>'],
+      ['getUserPersonalChatMessages', "public const string ReturnsType = 'list:Message';", '@extends TelegramMethod<list<Message>>'],
+    ];
+  }
+
+  #[DataProvider('cycle2ReturnTypeMethods')]
+  public function testCycle2ReturnTypeFix(string $name, string $returnsType, string $extendsGeneric): void
+  {
+    $out = $this->render($name);
+
+    self::assertStringContainsString($returnsType, $out, "{$name}: ReturnsType const must surface the correct schema type");
+    self::assertStringContainsString($extendsGeneric, $out, "{$name}: @extends generic must match the ReturnsType");
   }
 
   public function testSendPhotoUsesInputFileStringUnion(): void

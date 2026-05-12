@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Generator\Renderer;
 
 use Gruven\PhpBotGram\Generator\AnnotationEntity;
 use Gruven\PhpBotGram\Generator\DefaultsResolver;
+use Gruven\PhpBotGram\Generator\LoadedSchema;
 use Gruven\PhpBotGram\Generator\MethodEntity;
 use Gruven\PhpBotGram\Generator\NameMapper;
 use Gruven\PhpBotGram\Generator\ParameterDefault;
@@ -13,6 +14,7 @@ use Gruven\PhpBotGram\Generator\PhpType;
 use Gruven\PhpBotGram\Generator\PhpTypeKind;
 use Gruven\PhpBotGram\Generator\TypeResolver;
 use Gruven\PhpBotGram\Generator\UnionPlan;
+use LogicException;
 use Throwable;
 use Twig\Environment;
 
@@ -45,6 +47,14 @@ use Twig\Environment;
 final class MethodRenderer
 {
   /**
+   * Cached set of schema type/enum names for O(1) validation of prose
+   * tokens against the known schema. Lazily populated on first matcher hit.
+   *
+   * @var null|array<string, true>
+   */
+  private ?array $schemaTypeNames = null;
+
+  /**
    * @param array<string, UnionPlan> $unionsByParent indexed by parent name
    */
   public function __construct(
@@ -53,6 +63,7 @@ final class MethodRenderer
     private readonly NameMapper $names,
     private readonly DefaultsResolver $defaults,
     private readonly array $unionsByParent,
+    private readonly LoadedSchema $schema,
   ) {}
 
   /**
@@ -248,7 +259,8 @@ final class MethodRenderer
    */
   private function resolveReturnType(MethodEntity $method, array &$imports): array
   {
-    // 1. Explicit `returning.parsed_type` override from replace.yml.
+    // 1. Explicit `returning.parsed_type` override from replace.yml — the
+    //    authoritative escape hatch for prose the matcher can't parse.
     if ($method->parsedReturning !== null) {
       $envelope = new AnnotationEntity(
         name: '__return__',
@@ -263,39 +275,47 @@ final class MethodRenderer
       return $this->returnFromResolved($resolved, $imports);
     }
 
-    // 2. Heuristic parse of the `Returns …` sentence from the description.
+    // 2. Methods with no "Returns …" prose at all (e.g. `setWebhook`,
+    //    documented out-of-band) fall back to bool — the historical convention
+    //    upstream uses for status-only API calls.
     if ($method->returns === '') {
       return $this->returnFromScalar('bool');
     }
 
-    $candidate = $this->extractReturnedType($method->returns);
+    // 3. Heuristic parse of the `Returns …` candidate sentences from the
+    //    description. The matcher validates every captured token against the
+    //    loaded schema's type/enum names, so a non-null return means we have
+    //    a concrete wire type to dispatch on.
+    $extracted = $this->extractReturnedType($method->returns);
 
-    if ($candidate === null) {
-      // Fall back to bool — the safe default for status-only methods. The
-      // schema's verbose-prose returns ("return to the chat on their own
-      // using invite links, etc.") all describe methods that return True.
-      return $this->returnFromScalar('bool');
+    if ($extracted === null) {
+      // Fail loudly: a schema-vendored method with a "Returns …" prose
+      // sentence we can't parse is a wire contract corruption hazard. The
+      // fix is either (a) tighten the prose matcher, or (b) add a
+      // `returning.parsed_type` override in `replace.yml`. Surfacing the
+      // failure at codegen time is the only safe option — silently
+      // defaulting to `bool` would ship the wrong runtime decode behaviour.
+      throw new LogicException(\sprintf(
+        'Could not extract return type for method %s from prose "%s". '
+          . 'Tighten MethodRenderer::extractReturnedType, or add a `returning:` '
+          . 'override to .butcher/methods/%s/replace.yml.',
+        $method->name,
+        str_replace("\n", ' | ', $method->returns),
+        $method->name,
+      ));
     }
 
-    $candidate = $this->normaliseReturnAlias($candidate);
+    $candidate = $this->normaliseReturnAlias($extracted['token']);
 
     try {
-      $resolved = $this->types->resolveWire($candidate);
-    } catch (Throwable) {
-      return $this->returnFromScalar('bool');
-    }
-
-    // Guard against `Types\Int`/`Types\Object`-style ghost classes the prose
-    // matcher could mint from generic English nouns. When the resolver lands
-    // a class-typed return whose name isn't a known schema entity, fall back
-    // to the safest scalar.
-    if (
-      $resolved->kind === PhpTypeKind::ClassName
-      && $resolved->importFqcn !== null
-      && str_starts_with($resolved->importFqcn, 'Gruven\\PhpBotGram\\Types\\')
-      && !$this->isKnownSchemaType($resolved->phpType)
-    ) {
-      return $this->returnFromScalar('bool');
+      $resolved = $this->types->resolveWire($extracted['isArray'] ? 'Array of ' . $candidate : $candidate);
+    } catch (Throwable $e) {
+      throw new LogicException(\sprintf(
+        'Method %s prose returned token "%s" but TypeResolver rejected it: %s',
+        $method->name,
+        $candidate,
+        $e->getMessage(),
+      ), 0, $e);
     }
 
     return $this->returnFromResolved($resolved, $imports);
@@ -502,6 +522,11 @@ final class MethodRenderer
    * reserved keywords / built-ins. Returning false here causes the caller
    * to fall back to a safe scalar rather than minting a `Types\Int` /
    * `Types\Object` ghost class. Mirrors `TypeRenderer::isKnownSchemaType`.
+   *
+   * `True` and `False` are NOT rejected here — they're valid wire-type
+   * tokens that `TypeResolver::resolveAtom` lowers to a `bool` scalar
+   * (the `isTrueLiteral` flag tracks the literal narrowing). The reserved
+   * list only filters tokens that would mint ghost classes.
    */
   private function isKnownSchemaType(string $name): bool
   {
@@ -516,8 +541,6 @@ final class MethodRenderer
       'Text' => true,
       'Object' => true,
       'Null' => true,
-      'False' => true,
-      'True' => true,
     ];
 
     return !isset($reserved[$name]);
@@ -525,52 +548,150 @@ final class MethodRenderer
 
   /**
    * Extract a wire-type candidate from a natural-language "Returns …"
-   * sentence.
+   * sentence (or set of sentences joined by `\n` as `SchemaLoader::extractReturnsSentence`
+   * emits).
    *
-   * Extends `TypeRenderer::extractReturnedType` with two extra matchers
-   * that pick up the prose shapes the type-side never sees but methods do:
+   * For each candidate sentence (in best-first order), tries a fallback
+   * chain of regex matchers from most-specific to most-generic, validates
+   * the captured token against the loaded schema's known types + scalar
+   * names, and returns the first match whose token resolves. Validation is
+   * critical: an unguarded match would happily mint `Types\Object` from a
+   * prose phrase like "Returns information about the object on success.",
+   * which `TypeResolver` would then try to import as a ghost class.
    *
-   *   - `Returns the <thing> as <X> on success.`     -> X
-   *     (covers `Returns the uploaded File on success.` and the
-   *      `Returns the new invite link as ChatInviteLink object.` family)
-   *   - `… <X> object`                               -> X
-   *     (covers `Returns basic information about the bot in form of a
-   *      User object.` — `User` is the type but isn't the first PascalCase
-   *      token after "Returns")
+   * Returns null when none of the candidate sentences yield a valid wire
+   * type. The caller (`resolveReturnType`) then surfaces the failure as
+   * a `LogicException` so the codegen halts loudly instead of silently
+   * shipping a `bool` corruption — `bool` is plausible enough to pass
+   * type-check but produces wrong runtime decode behaviour.
    *
-   * The fallback chain runs the most specific matchers first; the very
-   * last `<X> object` pattern is a wildcard scan that catches anything
-   * the targeted patterns miss.
+   * @return null|array{token: string, isArray: bool}
    */
-  private function extractReturnedType(string $sentence): ?string
+  private function extractReturnedType(string $sentences): ?array
   {
-    $patterns = [
-      // "Returns an Array of <X>"
-      '/(?:On success,\s*)?(?:Returns?|returns?)\s+an\s+Array\s+of\s+([A-Z][A-Za-z0-9_]*)/',
-      // "Returns [the | a | an] <X> as <Y>" (e.g. "Returns the new invite link as ChatInviteLink")
-      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:[a-zA-Z ]+?)\s+as\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
-      // "Returns [the | a | an] <X>" (X is the next PascalCase token)
-      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
-      // "<X> [is | are] returned"
-      '/(?<![A-Za-z])([A-Z][A-Za-z0-9_]*)\s+(?:is|are)\s+returned/',
-      // Wildcard fallback: any "<X> object" in the sentence (e.g.
-      // "Returns basic information about the bot in form of a User object.")
-      '/\b([A-Z][A-Za-z0-9_]*)\s+object\b/',
-    ];
+    foreach (preg_split("/\r?\n/", $sentences) ?: [] as $sentence) {
+      $sentence = trim($sentence);
 
-    foreach ($patterns as $i => $pattern) {
-      if (preg_match($pattern, $sentence, $m) === 1) {
-        $token = $m[1];
+      if ($sentence === '') {
+        continue;
+      }
 
-        if ($i === 0) {
-          return 'Array of ' . $token;
-        }
+      $match = $this->matchSentence($sentence);
 
-        return $token;
+      if ($match !== null && $this->isValidCandidate($match['token'])) {
+        return $match;
       }
     }
 
     return null;
+  }
+
+  /**
+   * Run the prose-matcher chain on a single sentence. Returns `null` if
+   * no pattern matched.
+   *
+   * @return null|array{token: string, isArray: bool}
+   */
+  private function matchSentence(string $sentence): ?array
+  {
+    // Specific patterns are tried first; anchors involving "Array" or
+    // "array" set the isArray flag so the caller wraps the resolved type
+    // in a `list<>` envelope.
+    $arrayPatterns = [
+      // "Returns an Array of <X>" — canonical schema phrasing.
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+an\s+Array\s+of\s+([A-Z][A-Za-z0-9_]*)/',
+      // "an array of <X> objects? [phrasing] is returned" / "are returned".
+      '/an?\s+array\s+of\s+([A-Z][A-Za-z0-9_]*)(?:\s+objects?)?\b[^.]*?\s+(?:is|are)\s+returned/i',
+      // "On success, an array of <X> [phrasing] is returned" — the loader
+      // strips terminal punctuation but the prose can include extra clauses
+      // ("array of MessageId of the sent messages is returned") so we let
+      // the inner content be anything except a sentence-terminator.
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+an\s+array\s+of\s+([A-Z][A-Za-z0-9_]*)/i',
+    ];
+
+    foreach ($arrayPatterns as $pattern) {
+      if (preg_match($pattern, $sentence, $m) === 1) {
+        return ['token' => $m[1], 'isArray' => true];
+      }
+    }
+
+    $scalarPatterns = [
+      // "Returns [the | a | an] <X> as <Y>" (e.g. "Returns the new invite
+      // link as ChatInviteLink object.").
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:[a-zA-Z ]+?)\s+as\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
+      // "<X> object is returned" / "<X> is returned" / "<X>s are returned".
+      '/(?<![A-Za-z])([A-Z][A-Za-z0-9_]*)(?:\s+object)?\s+(?:is|are)\s+returned/',
+      // "Returns [the | a | an] <X>" (X is the next PascalCase token,
+      // immediately after the article).
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
+      // "Returns the <english adjective(s)> <X>" — the wider form covers
+      // descriptors interleaved between the article and the type
+      // ("Returns the uploaded File on success.", "Returns the new invite
+      // link as a ChatInviteLink object.").
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:a |an |the )?(?:[a-z]+\s+)+([A-Z][A-Za-z0-9_]*)/',
+      // Wildcard fallback: any "<X> object" in the sentence.
+      '/\b([A-Z][A-Za-z0-9_]*)\s+object\b/',
+    ];
+
+    foreach ($scalarPatterns as $pattern) {
+      if (preg_match($pattern, $sentence, $m) === 1) {
+        return ['token' => $m[1], 'isArray' => false];
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Reject prose tokens that look like Telegram type names but don't
+   * correspond to any known schema entity / scalar. Used to fail fast on
+   * matches against generic English nouns (`Returns information about
+   * the object …` → `Object`) before the resolver tries to import a
+   * non-existent class.
+   *
+   * Accepts:
+   *   - Wire scalars: `Integer`, `String`, `Boolean`, `Float` (with their
+   *     `Int`/`Bool`/`Str`/`Text` aliases).
+   *   - Literal scalars: `True`, `False` (lowered to `bool` by the
+   *     resolver — `isTrueLiteral` carries the narrowing forward).
+   *   - Any name that resolves through `LoadedSchema::$types` / `$enums`.
+   */
+  private function isValidCandidate(string $token): bool
+  {
+    $normalised = $this->normaliseReturnAlias($token);
+
+    if (\in_array($normalised, ['Integer', 'String', 'Boolean', 'Float', 'True', 'False'], true)) {
+      return true;
+    }
+
+    return $this->isKnownSchemaType($normalised) && isset($this->schemaTypeNames()[$normalised]);
+  }
+
+  /**
+   * Set of schema type names indexed for O(1) membership tests. Lazily
+   * built on first call; the renderer's `TypeResolver` already carries
+   * the same info but doesn't expose a public predicate.
+   *
+   * @return array<string, true>
+   */
+  private function schemaTypeNames(): array
+  {
+    if ($this->schemaTypeNames === null) {
+      /** @var array<string, true> $names */
+      $names = [];
+
+      foreach ($this->schema->types as $t) {
+        $names[$t->name] = true;
+      }
+
+      foreach ($this->schema->enums as $e) {
+        $names[$e->name] = true;
+      }
+
+      $this->schemaTypeNames = $names;
+    }
+
+    return $this->schemaTypeNames;
   }
 
   /**

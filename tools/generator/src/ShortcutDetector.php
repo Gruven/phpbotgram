@@ -101,6 +101,20 @@ final class ShortcutDetector
    */
   private function buildPlan(string $ownerType, string $aliasName, array $body): ?ShortcutPlan
   {
+    // TODO(cycle3): the schema's `aliases.yml` entries also carry a
+    // `code:` block — a Python source snippet that asserts owner-property
+    // nullability before the auto-fill happens
+    // (e.g. `assert self.guest_query_id is not None`). The current
+    // renderer side-steps the assertion by null-guarding `self.<x>` fills
+    // with a `?? throw new LogicException(...)` when the property is
+    // optional (see TypeRenderer::fillExpressionIsNullable). That works
+    // for every assert the vendored 10.0 schema ships, but a future
+    // schema patch could add `code:` blocks the heuristic doesn't cover
+    // (compound conditions, multi-property guards). When that lands,
+    // wire a real `code:` lowering pass through here rather than
+    // extending the heuristic; the lowered shape is a sequence of
+    // `assert X !== null` statements emitted before the `new Method(...)`
+    // call.
     $method = $body['method'] ?? null;
 
     if (!is_string($method)) {

@@ -241,6 +241,20 @@ final class SchemaLoader
 
     $subtypeOf = $childToParent[$name] ?? null;
 
+    /** @var array<string, string> $defaults */
+    $defaults = [];
+
+    if (is_file($this->typeDir($name) . '/default.yml')) {
+      /** @var array<string, mixed> $rawDefaults */
+      $rawDefaults = $this->parseYaml($this->typeDir($name) . '/default.yml') ?? [];
+
+      foreach ($rawDefaults as $wire => $field) {
+        if (is_string($wire) && is_string($field)) {
+          $defaults[$wire] = $field;
+        }
+      }
+    }
+
     return new TypeEntity(
       name: $name,
       description: $child['description'] ?? '',
@@ -250,6 +264,7 @@ final class SchemaLoader
       subtypes: $subtypes,
       subtypeOf: $subtypeOf,
       discriminator: $discriminator,
+      defaults: $defaults,
     );
   }
 
@@ -300,35 +315,95 @@ final class SchemaLoader
   }
 
   /**
-   * Best-effort extraction of the "Returns X" / "X is returned" sentence
-   * from a method's description. Downstream `TypeResolver` is responsible
-   * for normalising this into a real PHP type; the empty string is a
-   * legitimate fallback when no explicit return sentence is present
-   * (e.g. `setWebhook`, where the response shape is documented elsewhere).
+   * Best-effort extraction of every candidate "returns" sentence from a
+   * method's description. Downstream `MethodRenderer::resolveReturnType`
+   * iterates these candidates and tries each against its prose matcher
+   * chain until one parses; this lets the loader surface every sentence
+   * that *could* describe the return shape rather than committing to a
+   * single early-match that may turn out to be wrong.
+   *
+   * Multiple candidates are joined with a `\n` so downstream consumers
+   * see a single string (preserving the legacy `$returns` API shape) but
+   * the prose matcher can split on newlines to try each independently.
+   *
+   * Ranking (best first):
+   *   1. Sentences containing an "is/are returned" anchor — these almost
+   *      always carry the wire-type token.
+   *   2. Sentences starting with "Returns" / "returns" — generic return
+   *      phrases ("Returns a StarTransactions object."). The LATER such
+   *      sentences in the description tend to be more structurally precise
+   *      ("On success, returns a User object.") than the first ones
+   *      ("Will return the score of …") which sometimes describe behaviour
+   *      rather than the wire type, so within this bucket we reverse to
+   *      try later sentences first.
+   *   3. Sentences containing a bare "<X> object" pattern — wildcard
+   *      fallback for the few methods whose return prose drops the
+   *      "Returns" preamble.
+   *
+   * Returns the empty string when no candidate sentence matches — a
+   * legitimate fallback for methods like `setWebhook` whose response shape
+   * is documented elsewhere; `MethodRenderer::resolveReturnType` interprets
+   * this as "no prose return-type hint, fall back to `bool`" only for
+   * methods with no `returning.parsed_type` patch.
    */
   private function extractReturnsSentence(string $description): string
   {
-    // Patterns are tried in order; the first match wins. Each pattern must
-    // be case-sensitive on the captured class-name token (`[A-Z][A-Za-z]+`)
-    // so a lowercase noun like `object` in "File object is returned" can't
-    // win the match — the downstream renderer's matcher chain relies on
-    // PascalCase tokens to map onto schema type names.
-    $patterns = [
-      '/(?:On success,\s*)?(?:Returns?|returns?)\s+[^.]+(?:on success)?\./',
-      // "<X> object is returned" / "<X> is returned" / "<X>s are returned" —
-      // the broad form, with optional `<X> object` interstitial so
-      // "a File object is returned" surfaces "File", not the lowercase
-      // "object" the previous version captured.
-      '/(?:On success,?\s+)?(?:the\s+sent\s+|the\s+|an?\s+array\s+of\s+|a\s+|an\s+)?[A-Z][A-Za-z]+(?:\s+(?:object|of\s+[A-Z][A-Za-z]+))?\s+(?:is|are)\s+returned/',
-    ];
+    if ($description === '') {
+      return '';
+    }
 
-    foreach ($patterns as $pattern) {
-      if (preg_match($pattern, $description, $m) === 1) {
-        return trim($m[0]);
+    // Split on terminal punctuation (period, newline) so we can rank each
+    // sentence independently. Telegram descriptions sometimes pack the
+    // return phrase onto a separate line ("Returns an Array of GameHighScore
+    // objects.\nThis method will currently …"), so the split needs to honour
+    // newlines as well.
+    /** @var list<string> $sentences */
+    $sentences = [];
+
+    foreach (preg_split('/(?<=\.)\s+|\r?\n/', $description) ?: [] as $s) {
+      $s = trim($s);
+
+      if ($s !== '') {
+        $sentences[] = $s;
       }
     }
 
-    return '';
+    /** @var list<string> $tier1 */
+    $tier1 = []; // "<X> is/are returned" — strongest signal
+
+    /** @var list<string> $tier2 */
+    $tier2 = []; // "Returns …" — generic
+
+    /** @var list<string> $tier3 */
+    $tier3 = []; // "<X> object" wildcard
+
+    foreach ($sentences as $s) {
+      if (preg_match('/\b(?:is|are)\s+returned\b/', $s) === 1) {
+        $tier1[] = $s;
+      } elseif (preg_match('/(?:^|\b)(?:On success,\s*)?(?:Returns?|returns?)\b/', $s) === 1) {
+        $tier2[] = $s;
+      } elseif (preg_match('/[A-Z][A-Za-z0-9_]+\s+object\b/', $s) === 1) {
+        $tier3[] = $s;
+      }
+    }
+
+    // Within tier 2 the LATER sentences are usually the structured one
+    // ("On success, returns a StarTransactions object.") while the EARLIER
+    // ones can describe behaviour ("Will return the score of …"). Reverse
+    // so we try later occurrences first.
+    $tier2 = array_reverse($tier2);
+
+    /** @var list<string> $candidates */
+    $candidates = array_merge($tier1, $tier2, $tier3);
+
+    if ($candidates === []) {
+      return '';
+    }
+
+    // Join with newlines so the existing MethodEntity::$returns string API
+    // is preserved (downstream consumers see a single string); the prose
+    // matcher splits on newlines to try each candidate sentence in turn.
+    return implode("\n", $candidates);
   }
 
   /**
