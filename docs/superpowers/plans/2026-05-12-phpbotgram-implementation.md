@@ -351,7 +351,13 @@ parameters:
         <testsuite name="phpbotgram">
             <directory>tests</directory>
             <exclude>tests/data</exclude>
-            <exclude>tests/Support</exclude>
+            <!--
+              NOTE: do NOT exclude tests/Support — the Mocked*, RunAsyncTrait, etc.
+              that live there are imported by other test files, AND tests/Support/
+              hosts a couple of *Test.php files that exercise the harness itself
+              (MockedSessionTest, RunAsyncTraitTest). Excluding the directory would
+              silently drop those tests.
+            -->
         </testsuite>
     </testsuites>
     <coverage>
@@ -1668,21 +1674,30 @@ class Bot
 
 The real MockedBot lands at **Task 1.7** (after Phase 1.6's full Bot/BaseSession/Serializer are in place). For Phase 0 we just need a User stub so other tests can compile:
 
-Add `src/Types/User.php` placeholder:
+Add `src/Types/User.php` placeholder (Phase 0 stub; Phase 2 regenerates with full schema fields):
 
 ```php
 <?php
+
+declare(strict_types=1);
+
 namespace Gruven\PhpBotGram\Types;
-final class User extends TelegramObject {
+
+final class User extends TelegramObject
+{
     public function __construct(
         public readonly int $id,
         public readonly bool $isBot,
         public readonly string $firstName,
-        public readonly ?string $lastName = null,
-        public readonly ?string $username = null,
-        public readonly ?string $languageCode = null,
+        // Nullable fields accept `Unspecified::instance()` to opt out of wire serialization
+        // (Serializer::dump strips these); explicit `null` is preserved on the wire.
+        public readonly string|Unspecified|null $lastName = null,
+        public readonly string|Unspecified|null $username = null,
+        public readonly string|Unspecified|null $languageCode = null,
         ?\Gruven\PhpBotGram\Bot $bot = null,
-    ) { parent::__construct($bot); }
+    ) {
+        parent::__construct($bot);
+    }
 }
 ```
 
@@ -1967,6 +1982,8 @@ git commit -m "feat: DefaultBotProperties with linkPreview aggregation"
 - Create: `tests/Types/InputFileTest.php`
 
 Spec § "Types and methods (codegen)" / "TypeResolver" — `DateTime` is a subclass of `\DateTimeImmutable`. InputFile per upstream `aiogram/types/input_file.py`.
+
+**Sequencing note:** The InputFile tests reference `MockedBot`, which is defined later in Task 1.7. Commit the production InputFile classes now; the tests can be merged at Task 1.7 after MockedBot lands. Alternative: stub the bot argument with a plain `Bot` constructor (Bot at this point has a no-op stub from Phase 0).
 
 - [ ] **Step 1: DateTime + InputFile tests**
 
@@ -2447,6 +2464,8 @@ git commit -m "feat: BaseSession with checkResponse/prepareValue + RequestMiddle
 
 Spec § "Serializer" — `dump()`/`load()` with recursive bot binding + Default/Unspecified handling.
 
+**Sequencing note:** The Serializer test references `MockedBot` (Task 1.7). Commit the Serializer production code now; merge the test into the suite at Task 1.7. Alternatively, substitute `MockedBot` with a plain `Bot` stub in the test — Phase 0's Bot has a no-op constructor and works as a sentinel object.
+
 - [ ] **Step 1: Failing tests**
 
 ```php
@@ -2466,10 +2485,21 @@ final class SerializerTest extends TestCase
 {
     public function testDumpStripsUnspecified(): void
     {
-        $user = new User(id: 1, isBot: false, firstName: 'A');
+        $user = new User(id: 1, isBot: false, firstName: 'A', lastName: Unspecified::instance());
         $dumped = Serializer::dump($user);
-        self::assertSame(['id' => 1, 'is_bot' => false, 'first_name' => 'A'], $dumped);
-        self::assertArrayNotHasKey('last_name', $dumped);
+        self::assertArrayNotHasKey('last_name', $dumped, 'Unspecified values are stripped from dump output');
+        self::assertSame(1, $dumped['id']);
+        self::assertFalse($dumped['is_bot']);
+    }
+
+    public function testDumpPreservesNulls(): void
+    {
+        // Null is a real wire value (e.g. some Telegram fields). Stripping nulls is the responsibility
+        // of BaseSession::prepareValue's null-filter rule, NOT Serializer::dump. See spec § Serializer.
+        $user = new User(id: 1, isBot: false, firstName: 'A', lastName: null);
+        $dumped = Serializer::dump($user);
+        self::assertArrayHasKey('last_name', $dumped);
+        self::assertNull($dumped['last_name']);
     }
 
     public function testLoadConstructsTypeWithBot(): void
@@ -2795,7 +2825,9 @@ trait BotShortcuts
                 return $body();
             } finally {
                 if ($autoClose) {
-                    $this->session->close();
+                    // $session is `?BaseSession`; null-safe call avoids fatal on
+                    // a Bot constructed without an explicit session (e.g. some test fixtures).
+                    $this->session?->close();
                 }
             }
         };
@@ -2892,6 +2924,12 @@ class Bot implements BotShortcutsContract
 
     /**
      * Polymorphic entry point: $bot($method) dispatches the method via the session.
+     *
+     * Note: Phase 1 deliberately calls `$session->makeRequest(...)` directly, bypassing
+     * the BaseSession middleware chain. Phase 3 (dispatcher) is where middleware-wrapping
+     * gets wired in via the request handler middleware manager — this $bot($method) entry
+     * point stays middleware-bypassed because middleware applies to dispatcher events,
+     * not raw method calls.
      *
      * @template TReturn
      * @param TelegramMethod<TReturn> $method
@@ -3482,7 +3520,27 @@ test -f src/Methods/SendMessage.php && grep -q 'auto-generated' src/Methods/Send
 test -f src/Types/Message.php && grep -q 'auto-generated' src/Types/Message.php && echo "regenerated: Message"
 ```
 
-Any file whose Phase 1 stub had a path the generator does NOT emit (e.g. `src/Types/Downloadable.php` is an interface, not a schema type) stays as-is. **Explicit allow-list of files that survive regeneration**: `src/Types/Downloadable.php`, `src/Types/InputFile.php` (we ship the abstract from Phase 1; generator only emits the concrete Buffered/Fs/Url variants — verify).
+Any file whose Phase 1 stub has a path the generator does NOT emit stays as-is. **Explicit allow-list of files that survive regeneration** (these are NOT in `.butcher/types/` and the generator must not touch them):
+- `src/Types/Downloadable.php` — interface, not a schema type
+- `src/Types/InputFile.php` — abstract base, hand-written
+- `src/Types/BufferedInputFile.php` — hand-written concrete subclass
+- `src/Types/FsInputFile.php` — hand-written concrete subclass
+- `src/Types/UrlInputFile.php` — hand-written concrete subclass
+- `src/Types/Custom/DateTime.php` — hand-written helper
+- `src/Types/Unspecified.php` — sentinel singleton, hand-written
+- `src/Types/MutableTelegramObject.php` — hand-written base (children may be schema-emitted via `bases:` patches)
+- `src/Types/TelegramObject.php` — hand-written root
+
+The renderer (Task 2.10) must consult `.butcher/types/<TypeName>/entity.json` for the allowed schema-name list and **skip overwrite** for any path that doesn't map to a schema entity. Add an explicit assertion to the codegen acceptance test:
+
+```bash
+# Phase 2 acceptance: verify hand-written files are unchanged after regenerate
+git diff --exit-code src/Types/InputFile.php src/Types/BufferedInputFile.php \
+                    src/Types/FsInputFile.php src/Types/UrlInputFile.php \
+                    src/Types/Custom/DateTime.php src/Types/Unspecified.php \
+                    src/Types/MutableTelegramObject.php src/Types/TelegramObject.php \
+                    src/Types/Downloadable.php
+```
 
 Update the Phase 1 smoke test (`tests/Bot/BotSmokeTest.php`) to instantiate the **regenerated** `Message` with the new constructor signature (`Chat $chat` typed object, not an array literal). Stub `Chat`:
 
@@ -3585,10 +3643,10 @@ Plus all the discrete filter classes (`Command`, `CallbackData`, `StateFilter`, 
 - [ ] **Task 4.9: `StateFilter`** — accepts `State|StatesGroup|string`. Triggers `StatesGroup::bootstrapIfNeeded` defensively.
 - [ ] **Task 4.10: `ChatMemberUpdatedFilter`** — port upstream transitions DSL.
 - [ ] **Task 4.11: `ExceptionTypeFilter` + `ExceptionMessageFilter`** + `BaseFilter` `class_alias`.
-- [ ] **Task 4.11: Run F-DSL codegen (Phase 2's `FDslGenerator` was built but not run).** Once `MagicFilter`, `BaseField`/`StringField`/`IntField`/etc. land (Tasks 4.2-4.5), execute the F-DSL emission step. Verify acceptance: `ls src/Filters/F | wc -l ≈ 50` (25 event-root builders + ~25 first-level nested field-builders), PHPStan level 9 clean, smoke test instantiates `MessageF::text()->equals('hi')`.
-- [ ] **Task 4.12: Wire-up generated `Filters\F\*` builders** — verify each generated event-typed builder constructs valid MagicFilter chains against a sample payload.
-- [ ] **Task 4.13: Port `tests/test_filters/*`** — translate upstream test cases module-by-module.
-- [ ] **Task 4.14: Phase 4 acceptance gate**
+- [ ] **Task 4.12: Run F-DSL codegen (Phase 2's `FDslGenerator` was built but not run).** Once `MagicFilter`, `BaseField`/`StringField`/`IntField`/etc. land (Tasks 4.2-4.5), execute the F-DSL emission step. Verify acceptance: `ls src/Filters/F | wc -l ≈ 50` (25 event-root builders + ~25 first-level nested field-builders), PHPStan level 9 clean, smoke test instantiates `MessageF::text()->equals('hi')`.
+- [ ] **Task 4.13: Wire-up generated `Filters\F\*` builders** — verify each generated event-typed builder constructs valid MagicFilter chains against a sample payload.
+- [ ] **Task 4.14: Port `tests/test_filters/*`** — translate upstream test cases module-by-module.
+- [ ] **Task 4.15: Phase 4 acceptance gate**
 
 ```bash
 git tag phase-4-complete
