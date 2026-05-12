@@ -6,15 +6,25 @@ namespace Gruven\PhpBotGram\Exceptions;
 
 class DetailedPhpBotGramException extends PhpBotGramException
 {
+  /** Subclasses set this in their constructor before the message is rendered. */
   public ?string $url = null;
 
   public function __construct(public readonly string $detail)
   {
-    $msg = $detail;
+    parent::__construct($detail);
+  }
 
+  /**
+   * Lazy URL augmentation — mirrors aiogram's `DetailedAiogramError.__str__`.
+   * `getMessage()` keeps the raw detail; stringifying the exception appends
+   * the documentation URL if the subclass set one.
+   */
+  public function __toString(): string
+  {
     if ($this->url !== null) {
-      $msg .= "\n(background on this error at: {$this->url})";
+      return "{$this->detail}\n(background on this error at: {$this->url})";
     }
-    parent::__construct($msg);
+
+    return $this->detail;
   }
 }

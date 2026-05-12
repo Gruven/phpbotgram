@@ -30,7 +30,6 @@ final class AmphpSession extends BaseSession
   private ?HttpClient $client = null;
 
   public function __construct(
-    public readonly ?string $proxy = null,
     public readonly int $limit = 100,
     ?TelegramApiServer $api = null,
     float $timeout = 60.0,

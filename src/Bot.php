@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram;
 
+use Gruven\PhpBotGram\Client\BotDefault;
 use Gruven\PhpBotGram\Client\BotShortcuts;
 use Gruven\PhpBotGram\Client\BotShortcutsContract;
 use Gruven\PhpBotGram\Client\DefaultBotProperties;
@@ -66,7 +67,7 @@ class Bot implements BotShortcutsContract
    * for Phase 2 onwards. Production callers MUST go through a mocked session
    * until Phase 2 codegen lands.
    */
-  public function sendMessage(int|string $chatId, string $text, ?string $parseMode = null, ?int $timeout = null): Message
+  public function sendMessage(int|string $chatId, string $text, null|BotDefault|string $parseMode = new BotDefault('parse_mode'), ?int $timeout = null): Message
   {
     /** @var Message */
     return $this(new SendMessage(chatId: $chatId, text: $text, parseMode: $parseMode), $timeout);

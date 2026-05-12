@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Tests\Support;
 
 use Amp\ByteStream\ReadableBuffer;
 use Amp\ByteStream\ReadableStream;
+use Closure;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Session\BaseSession;
 use Gruven\PhpBotGram\Methods\Response;
@@ -22,9 +23,15 @@ final class MockedSession extends BaseSession
   private SplDoublyLinkedList $requests;
   public bool $closed = true;
 
-  public function __construct()
-  {
-    parent::__construct();
+  /**
+   * @param null|Closure(string): mixed $jsonLoads
+   * @param null|Closure(mixed): string $jsonDumps
+   */
+  public function __construct(
+    ?Closure $jsonLoads = null,
+    ?Closure $jsonDumps = null,
+  ) {
+    parent::__construct(jsonLoads: $jsonLoads, jsonDumps: $jsonDumps);
     $this->responses = new SplDoublyLinkedList();
     $this->requests = new SplDoublyLinkedList();
   }

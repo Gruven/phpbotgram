@@ -11,6 +11,12 @@ use RuntimeException;
 
 final class FsInputFile extends InputFile
 {
+  /**
+   * Phase 1 caveat: $chunkSize is recorded on the parent but ignored by read()
+   * — the buffered read uses file_get_contents and returns a single ReadableBuffer.
+   * Phase 6 replaces the buffered path with a true streaming reader that honours
+   * the configured chunk size.
+   */
   public function __construct(
     public readonly string $path,
     ?string $filename = null,

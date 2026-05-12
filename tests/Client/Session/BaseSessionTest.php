@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Client\Session;
 
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
+use Gruven\PhpBotGram\Client\DefaultBotProperties;
 use Gruven\PhpBotGram\Exceptions\TelegramBadRequestException;
 use Gruven\PhpBotGram\Exceptions\TelegramRetryAfter;
 use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
+use Gruven\PhpBotGram\Tests\Support\MockedSession;
 use Gruven\PhpBotGram\Types\Unspecified;
 use PHPUnit\Framework\TestCase;
 
@@ -77,5 +81,50 @@ final class BaseSessionTest extends TestCase
     /** @var mixed $decoded */
     $decoded = json_decode($prepared, associative: true, flags: JSON_THROW_ON_ERROR);
     self::assertSame(['a' => 1, 'c' => 'keep'], $decoded);
+  }
+
+  public function testPrepareValueResolvesBotDefaultAgainstBotDefaultProperties(): void
+  {
+    $bot = new Bot(
+      token: '1:test',
+      session: new MockedSession(),
+      defaultProperties: new DefaultBotProperties(parseMode: 'HTML'),
+    );
+    $session = $bot->session;
+    self::assertInstanceOf(MockedSession::class, $session);
+    $files = [];
+
+    $prepared = $session->prepareValue(new BotDefault('parse_mode'), $bot, $files, dumpsJson: false);
+    self::assertSame('HTML', $prepared);
+  }
+
+  public function testJsonLoadsAndJsonDumpsAreInjectable(): void
+  {
+    $calls = ['loads' => 0, 'dumps' => 0];
+    $session = new MockedSession(
+      jsonLoads: static function (string $s) use (&$calls): mixed {
+        $calls['loads']++;
+
+        return json_decode($s, associative: true, flags: JSON_THROW_ON_ERROR);
+      },
+      jsonDumps: static function (mixed $v) use (&$calls): string {
+        $calls['dumps']++;
+
+        return (string)json_encode($v, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+      },
+    );
+    $bot = new Bot(token: '1:test', session: $session);
+    $files = [];
+
+    $session->prepareValue([['x' => 1]], $bot, $files);
+    self::assertSame(1, $calls['dumps'], 'jsonDumps should fire on list serialisation');
+
+    $session->checkResponse(
+      bot: $bot,
+      method: new SendMessage(chatId: 1, text: 'x'),
+      statusCode: 200,
+      content: (string)json_encode(['ok' => true]),
+    );
+    self::assertSame(1, $calls['loads'], 'jsonLoads should fire on response decode');
   }
 }

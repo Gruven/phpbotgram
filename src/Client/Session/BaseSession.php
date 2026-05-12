@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Client\Session;
 
 use Amp\ByteStream\ReadableStream;
 use BackedEnum;
+use Closure;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -37,13 +38,27 @@ use RuntimeException;
 abstract class BaseSession
 {
   public readonly TelegramApiServer $api;
+
+  /** @var Closure(string): mixed */
+  public readonly Closure $jsonLoads;
+
+  /** @var Closure(mixed): string */
+  public readonly Closure $jsonDumps;
   public private(set) RequestMiddlewareManager $middleware;
 
+  /**
+   * @param null|Closure(string): mixed $jsonLoads injectable JSON decoder (parity with aiogram's BaseSession.json_loads). Defaults to `json_decode(..., true, JSON_THROW_ON_ERROR)`.
+   * @param null|Closure(mixed): string $jsonDumps injectable JSON encoder (parity with aiogram's BaseSession.json_dumps). Defaults to `json_encode(..., JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)`.
+   */
   public function __construct(
     ?TelegramApiServer $api = null,
+    ?Closure $jsonLoads = null,
+    ?Closure $jsonDumps = null,
     public readonly float $timeout = 60.0,
   ) {
     $this->api = $api ?? TelegramApiServer::production();
+    $this->jsonLoads = $jsonLoads ?? static fn(string $payload): mixed => json_decode($payload, associative: true, flags: JSON_THROW_ON_ERROR);
+    $this->jsonDumps = $jsonDumps ?? static fn(mixed $value): string => (string)json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
     $this->middleware = new RequestMiddlewareManager();
   }
 
@@ -83,7 +98,7 @@ abstract class BaseSession
   public function checkResponse(Bot $bot, TelegramMethod $method, int $statusCode, string $content): Response
   {
     try {
-      $data = json_decode($content, associative: true, flags: JSON_THROW_ON_ERROR);
+      $data = ($this->jsonLoads)($content);
     } catch (JsonException $e) {
       throw new ClientDecodeException('Failed to decode response', $e, $content);
     }
@@ -173,7 +188,7 @@ abstract class BaseSession
       }
 
       if ($dumpsJson) {
-        return json_encode($prepared, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+        return ($this->jsonDumps)($prepared);
       }
 
       return $prepared;
@@ -200,7 +215,7 @@ abstract class BaseSession
     }
 
     if ($dumpsJson) {
-      return json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+      return ($this->jsonDumps)($value);
     }
 
     return $value;
