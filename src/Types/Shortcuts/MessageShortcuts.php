@@ -39,18 +39,19 @@ trait MessageShortcuts
    * generated `reply_*` shortcuts can default `reply_parameters` to
    * "reply to this message" without the caller spelling out the IDs.
    *
-   * The `quoteParseMode` parameter defaults to a `BotDefault('parse_mode')`
-   * sentinel that mirrors aiogram's `Default("parse_mode")`: when the
-   * message is bound to a Bot, the bot's `DefaultBotProperties.parseMode`
-   * is consulted; when there is no bound bot, the sentinel resolves to
-   * null and the server-side default applies. The sentinel is resolved
-   * inside this helper because `ReplyParameters::$quoteParseMode` is
-   * typed `?string` and PHP rejects assigning a `BotDefault` to it.
+   * Both `allowSendingWithoutReply` and `quoteParseMode` default to a
+   * `BotDefault(...)` sentinel that mirrors aiogram's `Default(...)`:
+   * when the message is bound to a Bot, the bot's `DefaultBotProperties`
+   * is consulted for the matching field; when there is no bound bot,
+   * the sentinel resolves to null and the server-side default applies.
+   * Both sentinels are resolved inside this helper because the
+   * `ReplyParameters` property types (`?string`, `?bool`) forbid holding
+   * the sentinel through to wire-encode time.
    *
    * @param null|list<MessageEntity> $quoteEntities
    */
   public function asReplyParameters(
-    ?bool $allowSendingWithoutReply = null,
+    null|bool|BotDefault $allowSendingWithoutReply = new BotDefault('allow_sending_without_reply'),
     ?string $quote = null,
     null|BotDefault|string $quoteParseMode = new BotDefault('parse_mode'),
     ?array $quoteEntities = null,
@@ -70,10 +71,23 @@ trait MessageShortcuts
       }
     }
 
+    $resolvedAllowSendingWithoutReply = $allowSendingWithoutReply;
+
+    if ($resolvedAllowSendingWithoutReply instanceof BotDefault) {
+      // Same resolution rule as `quoteParseMode`: bot-bound messages
+      // consult `DefaultBotProperties::allowSendingWithoutReply`,
+      // un-bound messages fall through to null (server-side default).
+      $resolvedAllowSendingWithoutReply = $this->bot?->getDefaultProperties()->get($resolvedAllowSendingWithoutReply->name);
+
+      if (!is_bool($resolvedAllowSendingWithoutReply)) {
+        $resolvedAllowSendingWithoutReply = null;
+      }
+    }
+
     return new ReplyParameters(
       messageId: $this->messageId,
       chatId: $this->chat->id,
-      allowSendingWithoutReply: $allowSendingWithoutReply,
+      allowSendingWithoutReply: $resolvedAllowSendingWithoutReply,
       quote: $quote,
       quoteParseMode: $resolvedQuoteParseMode,
       quoteEntities: $quoteEntities,

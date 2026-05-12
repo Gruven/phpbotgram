@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Types\Shortcuts;
 
+use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\BotDefault;
+use Gruven\PhpBotGram\Client\DefaultBotProperties;
+use Gruven\PhpBotGram\Tests\Support\MockedSession;
 use Gruven\PhpBotGram\Types\Chat;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\InaccessibleMessage;
@@ -70,10 +73,14 @@ final class AsReplyParametersTest extends TestCase
     self::assertSame('quoteEntities', $quoteEntities->getName());
     self::assertSame('quotePosition', $quotePosition->getName());
 
-    // Defaults: every param has a default; `quoteParseMode` defaults to a
-    // BotDefault sentinel; the rest default to null.
+    // Defaults: every param has a default; `allowSendingWithoutReply`
+    // and `quoteParseMode` default to `BotDefault(...)` sentinels — both
+    // are aiogram-side `Default(...)` slots so the bot's
+    // `DefaultBotProperties` can override them — the rest default to null.
     self::assertTrue($allow->isDefaultValueAvailable(), 'allowSendingWithoutReply must have a default');
-    self::assertNull($allow->getDefaultValue());
+    $allowDefault = $allow->getDefaultValue();
+    self::assertInstanceOf(BotDefault::class, $allowDefault, 'allowSendingWithoutReply must default to a BotDefault sentinel');
+    self::assertSame('allow_sending_without_reply', $allowDefault->name);
 
     self::assertTrue($quote->isDefaultValueAvailable(), 'quote must have a default');
     self::assertNull($quote->getDefaultValue());
@@ -93,6 +100,15 @@ final class AsReplyParametersTest extends TestCase
     $rt = $r->getReturnType();
     self::assertInstanceOf(ReflectionNamedType::class, $rt);
     self::assertSame(ReplyParameters::class, $rt->getName());
+
+    // allowSendingWithoutReply must accept BotDefault, bool, and null.
+    $allowType = $allow->getType();
+    self::assertInstanceOf(ReflectionUnionType::class, $allowType, 'allowSendingWithoutReply must be a union type');
+    $allowTypeNames = array_map(static fn($t) => $t instanceof ReflectionNamedType ? $t->getName() : (string)$t, $allowType->getTypes());
+
+    self::assertContains('null', $allowTypeNames);
+    self::assertContains('bool', $allowTypeNames);
+    self::assertContains(BotDefault::class, $allowTypeNames);
 
     // quoteParseMode must accept BotDefault, string, and null.
     $qpmType = $quoteParseMode->getType();
@@ -137,11 +153,13 @@ final class AsReplyParametersTest extends TestCase
 
   /**
    * Default-only invocation: produce a ReplyParameters pinned to the
-   * message's IDs with `quoteParseMode` resolved to null (no bound bot
-   * means no default-properties resolution; the server-side default
-   * applies). The aiogram-style `Default("parse_mode")` sentinel is
-   * resolved inside the trait because `ReplyParameters::$quoteParseMode`
-   * is typed `?string` and PHP rejects assigning a BotDefault to it.
+   * message's IDs with both BotDefault sentinels resolved to null (no
+   * bound bot means no default-properties resolution; the server-side
+   * default applies). The aiogram-style `Default("parse_mode")` and
+   * `Default("allow_sending_without_reply")` sentinels are resolved
+   * inside the trait because the corresponding `ReplyParameters`
+   * properties are typed `?string` / `?bool` and PHP rejects assigning a
+   * BotDefault to them.
    */
   public function testMessageDefaultsResolveBotDefaultToNullWithoutBot(): void
   {
@@ -155,11 +173,50 @@ final class AsReplyParametersTest extends TestCase
 
     self::assertSame(7, $rp->messageId);
     self::assertSame(42, $rp->chatId);
+    // No bot bound on this Message → both BotDefault sentinels resolve to null.
     self::assertNull($rp->allowSendingWithoutReply);
+    self::assertNull($rp->quoteParseMode);
     self::assertNull($rp->quote);
     self::assertNull($rp->quoteEntities);
     self::assertNull($rp->quotePosition);
-    // No bot bound on this Message → BotDefault('parse_mode') resolves to null.
-    self::assertNull($rp->quoteParseMode);
+  }
+
+  /**
+   * Cycle 2 review fix: `allowSendingWithoutReply` must also resolve via
+   * `DefaultBotProperties` when the Message is bound to a Bot — the
+   * widening adds a second `BotDefault` slot alongside the existing
+   * `quoteParseMode` resolution path. This test stubs a bot whose
+   * default properties carry `allowSendingWithoutReply: true` and asserts
+   * the trait threads that value through to the produced
+   * `ReplyParameters`.
+   */
+  public function testMessageBotBoundResolutionThreadsBothSentinels(): void
+  {
+    // Instantiate a real Bot (not MockedBot — its fixed signature pins the
+    // default properties) so we can supply both BotDefault values via the
+    // constructor and exercise the trait's resolution path end-to-end.
+    $bot = new Bot(
+      token: '12345:abcdefghijklmnopqrstuvwxyzABCDEFGHI',
+      session: new MockedSession(),
+      defaultProperties: new DefaultBotProperties(
+        parseMode: 'HTML',
+        allowSendingWithoutReply: true,
+      ),
+    );
+
+    $message = new Message(
+      messageId: 7,
+      date: new DateTime('@0'),
+      chat: new Chat(id: 42, type: 'private'),
+      bot: $bot,
+    );
+
+    $rp = $message->asReplyParameters();
+
+    self::assertSame(7, $rp->messageId);
+    self::assertSame(42, $rp->chatId);
+    // BotDefault sentinels resolved via the bot's DefaultBotProperties.
+    self::assertTrue($rp->allowSendingWithoutReply);
+    self::assertSame('HTML', $rp->quoteParseMode);
   }
 }
