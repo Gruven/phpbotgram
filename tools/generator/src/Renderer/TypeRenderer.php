@@ -16,7 +16,6 @@ use Gruven\PhpBotGram\Generator\TypeEntity;
 use Gruven\PhpBotGram\Generator\TypeResolver;
 use Gruven\PhpBotGram\Generator\UnionPlan;
 use LogicException;
-use Throwable;
 use Twig\Environment;
 
 /**
@@ -37,10 +36,29 @@ use Twig\Environment;
 final class TypeRenderer
 {
   /**
+   * Index of types that are extended by at least one other type via an
+   * explicit `bases:` declaration (e.g. `ChatFullInfo extends Chat`).
+   *
+   * The renderer consults this set when deciding whether to emit `final
+   * class` or plain `class` — PHP forbids `extends` on a final class, so
+   * any type that is extended must drop the `final` modifier even when no
+   * subtype relationship exists in the schema's `subtypes.yml`.
+   *
+   * @var array<string, true>
+   */
+  private readonly array $extendedTypes;
+
+  /**
    * @param array<string, UnionPlan> $unionsByParent indexed by parent name
    * @param array<string, list<ShortcutPlan>> $shortcutsByOwner indexed by ownerTypeName
    * @param array<string, HandAuthoredShortcutPlan> $traitsByOwner indexed by ownerTypeName
    * @param array<string, MethodEntity> $methodsByName indexed by method name
+   * @param array<string, TypeEntity> $typesByName indexed by type name; used
+   *                                               to look up a parent type's
+   *                                               annotations when emitting
+   *                                               child constructors that
+   *                                               forward overlapping
+   *                                               properties to the parent.
    */
   public function __construct(
     private readonly Environment $twig,
@@ -51,7 +69,31 @@ final class TypeRenderer
     private readonly array $shortcutsByOwner,
     private readonly array $traitsByOwner,
     private readonly array $methodsByName,
-  ) {}
+    private readonly array $typesByName = [],
+  ) {
+    /** @var array<string, true> $extended */
+    $extended = [];
+
+    foreach ($typesByName as $t) {
+      // A `bases:` entry on the child registers the parent as "extended" —
+      // BUT only when the parent is itself a schema type. The hand-written
+      // bases (`MutableTelegramObject`, `TelegramObject`) are intentionally
+      // not in $typesByName and stay `final` as a base class always
+      // permits extension. We index against $typesByName so a future
+      // schema-vendored hand-written base would land in this set too.
+      if ($t->bases === null) {
+        continue;
+      }
+
+      foreach ($t->bases as $baseName) {
+        if (isset($typesByName[$baseName])) {
+          $extended[$baseName] = true;
+        }
+      }
+    }
+
+    $this->extendedTypes = $extended;
+  }
 
   /**
    * Emit a single Type class source.
@@ -59,10 +101,21 @@ final class TypeRenderer
   public function render(TypeEntity $type): string
   {
     $isUnionParent = $type->subtypes !== null;
+    $isExtended = isset($this->extendedTypes[$type->name]);
     $parentClass = $this->resolveParentClass($type);
     $imports = $this->collectImports($type, $parentClass);
 
-    $properties = $this->buildProperties($type, $imports);
+    // Compute the set of wire-name annotations the parent (if a schema type)
+    // already declares. Overlapping properties on the child must not be
+    // re-promoted to readonly — PHP rejects redeclaration of a readonly
+    // ctor-promoted property, and PHPStan reports `property.parentPropertyFinalByPhpDoc`
+    // even when the redeclaration is syntactically legal. The child's
+    // constructor instead accepts these params as plain locals and forwards
+    // them through `parent::__construct(name: $name, ...)`.
+    $parentAnnotationNames = $this->parentAnnotationWireNames($type);
+
+    $properties = $this->buildProperties($type, $imports, $parentAnnotationNames);
+    $parentForwardArgs = $this->buildParentForwardArgs($properties);
     $wireNames = $this->buildWireNames($properties);
 
     $shortcutMethods = $this->buildShortcutMethods($type, $imports);
@@ -84,11 +137,19 @@ final class TypeRenderer
       }
     }
 
+    // A type that's extended by another (e.g. Chat is extended by
+    // ChatFullInfo) must drop `final` so PHP allows the subclass.
+    $classKeyword = match (true) {
+      $isUnionParent => 'abstract class',
+      $isExtended => 'class',
+      default => 'final class',
+    };
+
     return $this->twig->render('type.php.twig', [
       'class_name' => $type->name,
       'namespace' => 'Gruven\\PhpBotGram\\Types',
       'imports' => $sortedImports,
-      'class_keyword' => $isUnionParent ? 'abstract class' : 'final class',
+      'class_keyword' => $classKeyword,
       'parent_class' => $parentClass,
       'description_lines' => $this->splitDescription($type->description),
       'source_anchor' => strtolower($type->name),
@@ -97,7 +158,90 @@ final class TypeRenderer
       'phpdoc_params' => $phpdocParams,
       'shortcut_methods' => $shortcutMethods,
       'trait_short_name' => $trait?->traitShortName,
+      'parent_forward_args' => $parentForwardArgs,
     ]);
+  }
+
+  /**
+   * Look up the wire-names of every annotation declared by `$type`'s parent
+   * schema type, if any.
+   *
+   * Returns an empty set when:
+   *   - the type has no `bases:` declaration,
+   *   - the first base isn't itself a schema type (e.g. `TelegramObject`,
+   *     `MutableTelegramObject` — both hand-written),
+   *   - the type IS a union child (the union parent has no annotations of
+   *     its own; the child's constructor is independent).
+   *
+   * @return array<string, true>
+   */
+  private function parentAnnotationWireNames(TypeEntity $type): array
+  {
+    if ($type->subtypeOf !== null) {
+      // Union children inherit from an abstract parent that has no
+      // promoted props of its own.
+      return [];
+    }
+
+    if ($type->bases === null || $type->bases === []) {
+      return [];
+    }
+
+    $baseName = $type->bases[0];
+    $parent = $this->typesByName[$baseName] ?? null;
+
+    if ($parent === null) {
+      return [];
+    }
+
+    /** @var array<string, true> $names */
+    $names = [];
+
+    foreach ($parent->annotations as $a) {
+      $names[$a->name] = true;
+    }
+
+    return $names;
+  }
+
+  /**
+   * Build the named-argument list forwarded to `parent::__construct(...)`.
+   *
+   * Walks the child's promoted properties looking for entries flagged as
+   * `inheritedFromParent` — those values must reach the parent constructor
+   * for the parent's own promoted-readonly init to fire. Each entry maps to
+   * `name: $name` in PHP source.
+   *
+   * @param list<array{
+   *   phpName: string,
+   *   wireName: string,
+   *   phpType: string,
+   *   phpdocType: ?string,
+   *   default: ?string,
+   *   description: string,
+   *   rendererRenamed?: bool,
+   *   inheritedFromParent?: bool,
+   * }> $properties
+   *
+   * @return list<array{name: string, expr: string}>
+   */
+  private function buildParentForwardArgs(array $properties): array
+  {
+    /** @var list<array{name: string, expr: string}> $args */
+    $args = [];
+
+    foreach ($properties as $p) {
+      if (!($p['inheritedFromParent'] ?? false)) {
+        continue;
+      }
+
+      $args[] = [
+        'name' => $p['phpName'],
+        'expr' => '$' . $p['phpName'],
+      ];
+    }
+
+    return $args;
   }
 
   /**
@@ -132,20 +276,20 @@ final class TypeRenderer
    */
   private function resolveParentClass(TypeEntity $type): string
   {
+    // Union children ALWAYS extend their tagged-union parent class, even
+    // when `bases:` has been propagated onto them by `TypeOverrideApplier`.
+    // The propagation exists so the union PARENT itself extends the lifted
+    // base (`MutableTelegramObject` for the `InlineQueryResult`/`InputMedia`/
+    // …families); children stay one rung lower so `<Parent>Union::resolve()`
+    // returns a value typed as the union parent. The full chain
+    // `Child → Parent → LiftedBase → TelegramObject` is preserved naturally.
+    if ($type->subtypeOf !== null) {
+      return $type->subtypeOf;
+    }
+
     $bases = $type->bases;
 
     if ($bases === null || $bases === []) {
-      // Union children inherit from their tagged-union parent. The
-      // TypeOverrideApplier only propagates bases when the parent itself
-      // declares them (the `MutableTelegramObject` lift); for the
-      // discriminator-tagged unions whose parent stays a plain
-      // TelegramObject (BackgroundFill, MessageOrigin, ReactionType, …),
-      // the child still needs to `extends <Parent>` so the union members
-      // share a type that `<Parent>Union::resolve()` can return.
-      if ($type->subtypeOf !== null) {
-        return $type->subtypeOf;
-      }
-
       return 'TelegramObject';
     }
 
@@ -206,6 +350,15 @@ final class TypeRenderer
    *     fields (drives the `'solid'`-style default on `BackgroundFillSolid`)
    *
    * @param array<string, true> $imports
+   * @param array<string, true> $parentAnnotationNames Wire-name set of the
+   *                                                   parent schema type's
+   *                                                   own annotations. Used
+   *                                                   to flag overlapping
+   *                                                   child properties so
+   *                                                   they skip readonly
+   *                                                   promotion (the parent
+   *                                                   owns the promoted
+   *                                                   slot).
    *
    * @return list<array{
    *   phpName: string,
@@ -214,9 +367,11 @@ final class TypeRenderer
    *   phpdocType: ?string,
    *   default: ?string,
    *   description: string,
+   *   rendererRenamed: bool,
+   *   inheritedFromParent: bool,
    * }>
    */
-  private function buildProperties(TypeEntity $type, array &$imports): array
+  private function buildProperties(TypeEntity $type, array &$imports, array $parentAnnotationNames = []): array
   {
     /** @var list<array{
      *   phpName: string,
@@ -225,6 +380,8 @@ final class TypeRenderer
      *   phpdocType: ?string,
      *   default: ?string,
      *   description: string,
+     *   rendererRenamed: bool,
+     *   inheritedFromParent: bool,
      * }> $out */
     $out = [];
 
@@ -295,6 +452,7 @@ final class TypeRenderer
         'default' => $default,
         'description' => $a->description,
         'rendererRenamed' => $rendererRenamed,
+        'inheritedFromParent' => isset($parentAnnotationNames[$a->name]),
       ];
     }
 
@@ -426,7 +584,7 @@ final class TypeRenderer
    * Compute the `WireNames` constant entries (sorted by snake-case key, which
    * is the wire name) — but only emit them when at least one rename applies.
    *
-   * @param list<array{phpName: string, wireName: string, rendererRenamed?: bool}> $properties
+   * @param list<array{phpName: string, wireName: string, rendererRenamed: bool, inheritedFromParent?: bool}> $properties
    *
    * @return list<array{phpName: string, wireName: string}>
    */
@@ -436,7 +594,7 @@ final class TypeRenderer
     $renames = [];
 
     foreach ($properties as $p) {
-      $rendererRenamed = $p['rendererRenamed'] ?? false;
+      $rendererRenamed = $p['rendererRenamed'];
 
       // Only emit a WireNames entry when the runtime serializer's plain
       // `camelToSnake(phpName) === wireName` would yield the wrong wire
@@ -535,6 +693,19 @@ final class TypeRenderer
     $fill = $plan->fill;
     $ignore = array_fill_keys($plan->ignore, true);
 
+    // Index the owner's own annotations so we can detect when a fill
+    // expression references an optional (nullable) property on `self`. The
+    // schema's `aliases.yml` includes a Python `assert` in the `code:` block
+    // for these cases (e.g. `Message.answer_guest_query` asserts that
+    // `self.guest_query_id is not None`); the PHP equivalent is a runtime
+    // `?? throw` so the generated source survives PHPStan's null-check.
+    /** @var array<string, bool> $ownerAnnotationsRequired wireName => required */
+    $ownerAnnotationsRequired = [];
+
+    foreach ($type->annotations as $oa) {
+      $ownerAnnotationsRequired[$oa->name] = $oa->required;
+    }
+
     foreach ($method->annotations as $a) {
       $wire = $a->name;
 
@@ -549,9 +720,22 @@ final class TypeRenderer
       if (isset($fill[$wire])) {
         // Auto-filled — no signature entry, but the call expression
         // forwards the lowered path.
+        $expr = $this->lowerSelfPath($fill[$wire]);
+
+        // Null-guard a single-segment `self.<x>` reference when `x` is
+        // nullable on the owner but the target method requires a non-null
+        // value. The aiogram source pairs each such fill with a Python
+        // `assert` in the alias's `code:` block; the PHP equivalent fails
+        // loudly at runtime via the same exception class.
+        if ($a->required && $this->fillExpressionIsNullable($fill[$wire], $ownerAnnotationsRequired)) {
+          $expr = $expr . " ?? throw new \\LogicException('Shortcut "
+            . $type->name . '::' . $plan->phpMethodName
+            . " requires \\'" . $wire . "\\' to be set on this " . $type->name . ".')";
+        }
+
         $callArgs[] = [
           'name' => $this->names->property($wire),
-          'expr' => $this->lowerSelfPath($fill[$wire]),
+          'expr' => $expr,
         ];
 
         continue;
@@ -586,6 +770,12 @@ final class TypeRenderer
       // Nullable widening for `= null` defaults.
       if ($default === 'null') {
         $declType = $this->widenNullable($declType);
+
+        if ($phpdocType !== null) {
+          // Mirror the runtime declaration's nullable widening in the
+          // PHPDoc so PHPStan sees the param admits `null`.
+          $phpdocType = $this->widenPhpdocNullable($phpdocType);
+        }
       }
 
       // BotDefault widening: a `= new BotDefault(...)` default needs the
@@ -627,17 +817,54 @@ final class TypeRenderer
       'expr' => '$this->bot',
     ];
 
-    // Resolve the return type from the method's parsed_returning or returns
-    // sentence. The Methods\<X> class is the canonical short name to emit.
-    $returnType = $this->resolveShortcutReturnType($method, $imports);
+    // The return type of a shortcut is the TelegramMethod subclass itself
+    // (e.g. `Message::answer()` returns `SendMessage`, not `Message`). The
+    // user dispatches via `$bot(...)`, which invokes the session middleware
+    // and decodes the response according to the method's `ReturnsType`.
+    // Mirroring aiogram's `bot.send_message(...)` returning a `SendMessage`
+    // builder instance rather than the eventual `Message` response.
+    $methodClass = ucfirst($plan->methodEntityName);
+    $returnType = $methodClass;
 
     return [
       'name' => $plan->phpMethodName,
       'parameters' => $parameters,
       'returnType' => $returnType,
-      'methodClass' => ucfirst($plan->methodEntityName),
+      'methodClass' => $methodClass,
       'callArgs' => $callArgs,
     ];
+  }
+
+  /**
+   * Decide whether a `self.<single>` fill expression resolves to a nullable
+   * property on the owner type. Returns false for multi-segment paths,
+   * method-call forms, conditional expressions, and literals — those cases
+   * already have their own narrowing semantics and never need a top-level
+   * null-guard.
+   *
+   * @param array<string, bool> $ownerAnnotationsRequired wireName => required
+   */
+  private function fillExpressionIsNullable(string $expr, array $ownerAnnotationsRequired): bool
+  {
+    $expr = trim($expr);
+
+    if (!str_starts_with($expr, 'self.')) {
+      return false;
+    }
+
+    $rest = substr($expr, \strlen('self.'));
+
+    if (str_ends_with($rest, '()') || str_contains($rest, '.') || str_contains($rest, ' if ')) {
+      return false;
+    }
+
+    $wire = $rest;
+
+    if (!isset($ownerAnnotationsRequired[$wire])) {
+      return false;
+    }
+
+    return !$ownerAnnotationsRequired[$wire];
   }
 
   /**
@@ -731,162 +958,6 @@ final class TypeRenderer
   }
 
   /**
-   * Resolve the PHP return type for a shortcut method.
-   *
-   * Prefers the explicit `parsed_returning` block from `replace.yml` when
-   * present; falls back to a best-effort parse of the description's
-   * "Returns X" sentence. When neither yields a concrete type, returns the
-   * generic `mixed` (the shortcut still compiles — callers just lose the
-   * concrete return-type narrowing).
-   *
-   * @param array<string, true> $imports
-   */
-  private function resolveShortcutReturnType(MethodEntity $method, array &$imports): string
-  {
-    if ($method->parsedReturning !== null) {
-      // Synthesize an AnnotationEntity-like envelope so TypeResolver can
-      // consume the parsed override. Carrying the override through the
-      // public `resolve()` API keeps the resolution rules in one place.
-      $envelope = new AnnotationEntity(
-        name: '__return__',
-        description: '',
-        type: 'Boolean',
-        required: true,
-        parsedType: $method->parsedReturning,
-      );
-
-      $resolved = $this->types->resolve($envelope);
-      $this->collectImportsForType($resolved, $imports);
-
-      return $this->declTypeFor($resolved);
-    }
-
-    if ($method->returns === '') {
-      return 'mixed';
-    }
-
-    $candidate = $this->extractReturnedType($method->returns);
-
-    if ($candidate === null) {
-      return 'mixed';
-    }
-
-    // Telegram's prose occasionally uses `Int` / `Str` etc. as informal
-    // shorthands inside the description text. Normalise to the canonical
-    // wire-type tokens so TypeResolver can map them to PHP scalars.
-    $candidate = $this->normaliseReturnAlias($candidate);
-
-    try {
-      $resolved = $this->types->resolveWire($candidate);
-    } catch (Throwable) {
-      return 'mixed';
-    }
-
-    // A class-typed return must still be an actual schema type — guard
-    // against the resolver minting a `Types\Int`-style ghost class from a
-    // prose token that doesn't correspond to anything in the schema.
-    if (
-      $resolved->kind === PhpTypeKind::ClassName
-      && $resolved->importFqcn !== null
-      && str_starts_with($resolved->importFqcn, 'Gruven\\PhpBotGram\\Types\\')
-      && !$this->isKnownSchemaType($resolved->phpType)
-    ) {
-      return 'mixed';
-    }
-
-    $this->collectImportsForType($resolved, $imports);
-
-    return $this->declTypeFor($resolved);
-  }
-
-  /**
-   * Map prose-level scalar aliases (`Int`, `Str`, `Bool`) onto the
-   * canonical wire-type tokens. Returns the input verbatim when nothing
-   * matches.
-   */
-  private function normaliseReturnAlias(string $candidate): string
-  {
-    return match ($candidate) {
-      'Int', 'Integer' => 'Integer',
-      'Str', 'Text' => 'String',
-      'Bool', 'Boolean' => 'Boolean',
-      default => $candidate,
-    };
-  }
-
-  /**
-   * Reject prose tokens that look like Telegram type names but are really
-   * PHP-reserved keywords / built-ins. Returning false here causes the
-   * caller to fall back to `mixed` rather than minting a `Types\Int` /
-   * `Types\Object` ghost class. The list covers every offender surfaced by
-   * the vendored 10.0 schema's natural-language return-type sentences;
-   * extending it for future versions is cheap and forward-compatible.
-   */
-  private function isKnownSchemaType(string $name): bool
-  {
-    if (\strlen($name) < 2) {
-      return false;
-    }
-
-    $reserved = [
-      'Int' => true,
-      'Str' => true,
-      'Bool' => true,
-      'Text' => true,
-      'Object' => true,
-      'Null' => true,
-      'False' => true,
-      'True' => true,
-    ];
-
-    return !isset($reserved[$name]);
-  }
-
-  /**
-   * Extract a wire-type candidate from a natural-language "Returns …"
-   * sentence. Returns null when no recognised shape is found.
-   *
-   * The matcher handles four canonical phrasings:
-   *
-   *   - `Returns <X> on success.`               -> X
-   *   - `Returns an Array of <X> on success.`   -> "Array of X"
-   *   - `<X> is/are returned.`                  -> X
-   *   - `On success, returns <X>.`              -> X
-   *
-   * The `<X>` form must look like a wire-type token: `True`, a PascalCase
-   * class name, or `Array of <Y>`. Any noise after the class name (`of the
-   * sent message`, `object`) is dropped.
-   */
-  private function extractReturnedType(string $sentence): ?string
-  {
-    // The capture-group is intentionally case-sensitive ([A-Z] head + the
-    // [A-Za-z0-9_]* rest): only PascalCase tokens look like wire types.
-    // Case-insensitive matching for the surrounding verbs is fine.
-    $patterns = [
-      // "Returns an Array of <X>" (capture the array-of token)
-      '/(?:On success,\s*)?(?:Returns?|returns?)\s+an\s+Array\s+of\s+([A-Z][A-Za-z0-9_]*)/',
-      // "Returns [the | a | an] <X>"
-      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
-      // "<X> [is | are] returned"
-      '/(?<![A-Za-z])([A-Z][A-Za-z0-9_]*)\s+(?:is|are)\s+returned/',
-    ];
-
-    foreach ($patterns as $i => $pattern) {
-      if (preg_match($pattern, $sentence, $m) === 1) {
-        $token = $m[1];
-
-        if ($i === 0) {
-          return 'Array of ' . $token;
-        }
-
-        return $token;
-      }
-    }
-
-    return null;
-  }
-
-  /**
    * Plain camel-to-snake translation matching `Client\Serializer::camelToSnake`.
    *
    * Used to decide whether a property's PHP name round-trips to its wire
@@ -902,6 +973,22 @@ final class TypeRenderer
     }
 
     return strtolower($out);
+  }
+
+  /**
+   * Widen a PHPDoc-grade type to admit `null`.
+   *
+   * Unlike the PHP-declaration helper `widenNullable`, this is always
+   * additive ('|null' suffix) — PHPDoc tolerates `A|B|null` shapes the PHP
+   * declaration cannot express.
+   */
+  private function widenPhpdocNullable(string $phpdocType): string
+  {
+    if (str_contains($phpdocType, '|null') || str_starts_with($phpdocType, 'null|')) {
+      return $phpdocType;
+    }
+
+    return $phpdocType . '|null';
   }
 
   /**

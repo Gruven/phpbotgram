@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Tests\Generator\Renderer;
 
 use Gruven\PhpBotGram\Generator\Renderer\UnionRenderer;
 use Gruven\PhpBotGram\Generator\SchemaLoader;
+use Gruven\PhpBotGram\Generator\TypeEntity;
 use Gruven\PhpBotGram\Generator\TypeOverrideApplier;
 use Gruven\PhpBotGram\Generator\UnionDetector;
 use Gruven\PhpBotGram\Generator\UnionPlan;
@@ -36,12 +37,19 @@ final class UnionRendererTest extends TestCase
       self::$plansByParent[$plan->parentName] = $plan;
     }
 
+    /** @var array<string, TypeEntity> $typesByName */
+    $typesByName = [];
+
+    foreach ($loaded->types as $t) {
+      $typesByName[$t->name] = $t;
+    }
+
     $twig = new Environment(new FilesystemLoader(dirname(__DIR__, 3) . '/tools/generator/templates'), [
       'autoescape' => false,
       'strict_variables' => true,
     ]);
 
-    self::$renderer = new UnionRenderer($twig);
+    self::$renderer = new UnionRenderer($twig, $typesByName);
   }
 
   public function testRendersBackgroundFillUnion(): void
@@ -63,10 +71,8 @@ final class UnionRendererTest extends TestCase
     self::assertStringContainsString('BackgroundFillFreeformGradient::class,', $out);
 
     // resolve() match arms keyed by the wire discriminator.
-    self::assertMatchesRegularExpression(
-      "/match\\s*\\(\\\$payload\\['type'\\]\\s*\\?\\?\\s*null\\)/",
-      $out,
-    );
+    self::assertStringContainsString("\$discriminator = \$payload['type'] ?? null;", $out);
+    self::assertStringContainsString('match (is_string($discriminator) ? $discriminator : null)', $out);
     self::assertStringContainsString("'solid' => Serializer::load(BackgroundFillSolid::class, \$payload, \$bot),", $out);
     self::assertStringContainsString("'gradient' => Serializer::load(BackgroundFillGradient::class, \$payload, \$bot),", $out);
     self::assertStringContainsString("'freeform_gradient' => Serializer::load(BackgroundFillFreeformGradient::class, \$payload, \$bot),", $out);
@@ -81,10 +87,8 @@ final class UnionRendererTest extends TestCase
     $out = $this->render('MessageOrigin');
 
     self::assertMatchesRegularExpression('/final\s+class\s+MessageOriginUnion/', $out);
-    self::assertMatchesRegularExpression(
-      "/match\\s*\\(\\\$payload\\['type'\\]\\s*\\?\\?\\s*null\\)/",
-      $out,
-    );
+    self::assertStringContainsString("\$discriminator = \$payload['type'] ?? null;", $out);
+    self::assertStringContainsString('match (is_string($discriminator) ? $discriminator : null)', $out);
 
     // Four members.
     self::assertStringContainsString("'user' => Serializer::load(MessageOriginUser::class", $out);
@@ -99,10 +103,8 @@ final class UnionRendererTest extends TestCase
 
     self::assertMatchesRegularExpression('/final\s+class\s+ChatBoostSourceUnion/', $out);
     // Discriminator is `source` here (not `type`).
-    self::assertMatchesRegularExpression(
-      "/match\\s*\\(\\\$payload\\['source'\\]\\s*\\?\\?\\s*null\\)/",
-      $out,
-    );
+    self::assertStringContainsString("\$discriminator = \$payload['source'] ?? null;", $out);
+    self::assertStringContainsString('match (is_string($discriminator) ? $discriminator : null)', $out);
   }
 
   public function testReturnTypeAndStaticMethodsHavePhpDoc(): void

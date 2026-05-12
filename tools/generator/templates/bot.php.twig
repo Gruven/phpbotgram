@@ -81,17 +81,24 @@ class Bot implements BotShortcutsContract
     return ($this->session)($this, $method, $timeout);
   }
 {% for w in wrappers %}
-{% if w.phpdocReturn is not null %}
+{% set has_phpdoc_params = false %}{% for p in w.parameters %}{% if p.phpdocType is not null %}{% set has_phpdoc_params = true %}{% endif %}{% endfor -%}
+{% if has_phpdoc_params or w.phpdocReturn is not null -%}
   /**
+{% for p in w.parameters -%}
+{% if p.phpdocType is not null -%}
+   * @param {{ p.phpdocType }} ${{ p.phpName }}
+{% endif -%}
+{% endfor -%}
+{% if w.phpdocReturn is not null -%}
    * @return {{ w.phpdocReturn }}
+{% endif -%}
    */
-{% endif %}
+{% endif -%}
   public function {{ w.name }}(
 {% for p in w.parameters %}    {{ p.phpType }} ${{ p.phpName }}{% if p.default is not null %} = {{ p.default }}{% endif %},
 {% endfor %}    ?int ${{ w.timeoutParamName }} = null,
   ): {{ w.returnType }} {
 {% if w.phpdocReturn is not null %}    /** @var {{ w.phpdocReturn }} */
-{% else %}    /** @var {{ w.returnType }} */
 {% endif %}    return $this(new {{ w.methodClass }}(
 {% for p in w.parameters %}      {{ p.phpName }}: ${{ p.phpName }},
 {% endfor %}    ), ${{ w.timeoutParamName }});

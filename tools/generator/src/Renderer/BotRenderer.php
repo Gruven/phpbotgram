@@ -13,6 +13,7 @@ use Gruven\PhpBotGram\Generator\ParameterDefault;
 use Gruven\PhpBotGram\Generator\PhpType;
 use Gruven\PhpBotGram\Generator\PhpTypeKind;
 use Gruven\PhpBotGram\Generator\TypeResolver;
+use Gruven\PhpBotGram\Generator\UnionPlan;
 use Throwable;
 use Twig\Environment;
 
@@ -39,11 +40,15 @@ use Twig\Environment;
  */
 final class BotRenderer
 {
+  /**
+   * @param array<string, UnionPlan> $unionsByParent indexed by parent name
+   */
   public function __construct(
     private readonly Environment $twig,
     private readonly TypeResolver $types,
     private readonly NameMapper $names,
     private readonly DefaultsResolver $defaults,
+    private readonly array $unionsByParent = [],
   ) {}
 
   /**
@@ -210,6 +215,12 @@ final class BotRenderer
 
       if ($default === 'null') {
         $declType = $this->widenNullable($declType);
+
+        if ($phpdocType !== null) {
+          // Mirror the runtime declaration's nullable widening in the
+          // PHPDoc so PHPStan sees the param admits `null`.
+          $phpdocType = $this->widenPhpdocNullable($phpdocType);
+        }
       }
 
       if ($default !== null && str_starts_with($default, 'new BotDefault(')) {
@@ -342,24 +353,60 @@ final class BotRenderer
           return ['array', null];
         }
 
+        // Collapse the inner type if it's a union covered by a known
+        // discriminator-tagged parent. Mirrors `MethodRenderer::returnFromResolved`
+        // so the wrapper's `@return list<ChatMember>` matches the
+        // corresponding Method's `ReturnsType` const and the runtime
+        // serializer's per-union dispatch.
+        $collapsed = $this->collapseUnionToParent($inner);
+
+        if ($collapsed !== null) {
+          $imports[$collapsed['importFqcn']] = true;
+
+          return ['array', 'list<' . $collapsed['shortName'] . '>'];
+        }
+
         if ($inner->kind === PhpTypeKind::ClassName && $inner->importFqcn !== null) {
           $imports[$inner->importFqcn] = true;
+        }
+
+        if ($inner->kind === PhpTypeKind::Union) {
+          // Import every class-name union member so the PHPDoc references
+          // resolve.
+          foreach ($inner->unionMembers as $m) {
+            if ($m->importFqcn !== null) {
+              $imports[$m->importFqcn] = true;
+            }
+          }
         }
 
         return ['array', 'list<' . $inner->phpType . '>'];
 
       case PhpTypeKind::Union:
+        $collapsed = $this->collapseUnionToParent($resolved);
+
+        if ($collapsed !== null) {
+          // Tagged-union collapse: every member of the union maps to a
+          // single discriminator-tagged parent (e.g. `ChatMember`,
+          // `MenuButton`). Use the parent class as the PHP-declared return
+          // type so the wrapper signature matches the Method's
+          // `ReturnsType` const; the runtime serializer routes the
+          // response through `<Parent>Union::resolve()`.
+          $imports[$collapsed['importFqcn']] = true;
+
+          return [$collapsed['shortName'], null];
+        }
+
         foreach ($resolved->unionMembers as $m) {
           if ($m->importFqcn !== null) {
             $imports[$m->importFqcn] = true;
           }
         }
 
-        // For unions, prefer a tagged-parent collapse like MethodRenderer;
-        // but the BotRenderer needs a PHP-declarable type. The shorthand
-        // `T|U|V` is fine as long as every member is a single class name.
-        // When a member is a list, fall back to `array` and emit the union
-        // as PHPDoc.
+        // For unions without a covering parent, the BotRenderer needs a
+        // PHP-declarable type. The shorthand `T|U|V` is fine as long as
+        // every member is a single class name. When a member is a list,
+        // fall back to `array` and emit the union as PHPDoc.
         foreach ($resolved->unionMembers as $m) {
           if ($m->kind === PhpTypeKind::ListOf) {
             return ['array', $resolved->phpType];
@@ -368,6 +415,57 @@ final class BotRenderer
 
         return [$resolved->phpType, null];
     }
+  }
+
+  /**
+   * If `$type` is a tagged-union (kind=Union) whose members are exactly the
+   * children of a known `UnionPlan` parent, return the parent's short name
+   * and FQCN so the wrapper can declare the parent as its return type.
+   *
+   * Mirrors `MethodRenderer::collapseUnionToParent()` — keeping the two
+   * renderers in sync is what lets the wrapper's declared return match the
+   * Method's `ReturnsType` const for every union return in the schema.
+   *
+   * @return null|array{shortName: string, importFqcn: string}
+   */
+  private function collapseUnionToParent(PhpType $type): ?array
+  {
+    if ($type->kind !== PhpTypeKind::Union) {
+      return null;
+    }
+
+    /** @var array<string, true> $childNames */
+    $childNames = [];
+
+    foreach ($type->unionMembers as $m) {
+      if ($m->kind !== PhpTypeKind::ClassName) {
+        return null;
+      }
+
+      $childNames[$m->phpType] = true;
+    }
+
+    if ($childNames === []) {
+      return null;
+    }
+
+    foreach ($this->unionsByParent as $plan) {
+      /** @var array<string, true> $planChildren */
+      $planChildren = [];
+
+      foreach ($plan->members as $member) {
+        $planChildren[$member->childClassName] = true;
+      }
+
+      if ($planChildren == $childNames) { // phpcs:ignore SlevomatCodingStandard.Operators.DisallowEqualOperators.DisallowedEqualOperator
+        return [
+          'shortName' => $plan->parentName,
+          'importFqcn' => 'Gruven\\PhpBotGram\\Types\\' . $plan->parentName,
+        ];
+      }
+    }
+
+    return null;
   }
 
   private function extractReturnedType(string $sentence): ?string
@@ -495,6 +593,20 @@ final class BotRenderer
     }
 
     return '?' . $declType;
+  }
+
+  /**
+   * Widen a PHPDoc-grade type to admit `null`. Unlike `widenNullable`, this
+   * is always additive ('|null' suffix) — PHPDoc tolerates union shapes the
+   * PHP declaration cannot express.
+   */
+  private function widenPhpdocNullable(string $phpdocType): string
+  {
+    if (str_contains($phpdocType, '|null') || str_starts_with($phpdocType, 'null|')) {
+      return $phpdocType;
+    }
+
+    return $phpdocType . '|null';
   }
 
   private function widenForBotDefault(string $declType): string

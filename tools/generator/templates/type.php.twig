@@ -64,13 +64,36 @@ use {{ fqcn }};
 {% endif -%}
   public function __construct(
 {% for p in properties -%}
+{% if p.inheritedFromParent -%}
+    {{ p.phpType }} ${{ p.phpName }}{% if p.default is not null %} = {{ p.default }}{% endif %},
+{% else -%}
     public readonly {{ p.phpType }} ${{ p.phpName }}{% if p.default is not null %} = {{ p.default }}{% endif %},
+{% endif -%}
 {% endfor -%}
     ?Bot $bot = null,
   ) {
+{% if parent_forward_args is not empty -%}
+    parent::__construct(
+{% for arg in parent_forward_args -%}
+      {{ arg.name }}: {{ arg.expr }},
+{% endfor -%}
+      bot: $bot,
+    );
+{% else -%}
     parent::__construct($bot);
+{% endif -%}
   }
 {% for m in shortcut_methods %}
+{% set has_phpdoc_params = false %}{% for p in m.parameters %}{% if p.phpdocType is not null %}{% set has_phpdoc_params = true %}{% endif %}{% endfor -%}
+{% if has_phpdoc_params -%}
+  /**
+{% for p in m.parameters -%}
+{% if p.phpdocType is not null -%}
+   * @param {{ p.phpdocType }} ${{ p.phpName }}
+{% endif -%}
+{% endfor -%}
+   */
+{% endif -%}
   public function {{ m.name }}(
 {% for p in m.parameters -%}
     {{ p.phpType }} ${{ p.phpName }}{% if p.default is not null %} = {{ p.default }}{% endif %},

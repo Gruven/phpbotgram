@@ -257,18 +257,30 @@ final class HandAuthoredShortcutsIntegratorTest extends TestCase
     self::assertSame(['answer'], $plans[0]->declaredMethods);
   }
 
-  public function testRealRepoShortcutsDirectoryIsAbsent(): void
+  public function testRealRepoShortcutsDirectoryIsPresent(): void
   {
-    // Phase 1 ships no `src/Types/Shortcuts/` directory. The integrator must
-    // accept that as a no-op without erroring — this is the integration smoke
-    // test that proves the real-repo wiring point works.
+    // Phase 2 ships a populated `src/Types/Shortcuts/` directory holding
+    // the hand-authored `MessageShortcuts` / `InaccessibleMessageShortcuts`
+    // traits that supply `asReplyParameters()` to both sides of the
+    // `MaybeInaccessibleMessage` union. The integrator must surface these
+    // as `HandAuthoredShortcutPlan` instances so the renderer can weave
+    // `use MessageShortcuts;` directives into the generated class.
     $shortcutsDir = dirname(__DIR__, 2) . '/src/Types/Shortcuts';
 
-    self::assertDirectoryDoesNotExist($shortcutsDir);
+    self::assertDirectoryExists($shortcutsDir);
 
     $integrator = new HandAuthoredShortcutsIntegrator($shortcutsDir, []);
+    $plans = $integrator->plans();
 
-    self::assertSame([], $integrator->plans());
+    /** @var array<string, string> $byOwner */
+    $byOwner = [];
+
+    foreach ($plans as $plan) {
+      $byOwner[$plan->ownerTypeName] = $plan->traitShortName;
+    }
+
+    self::assertSame('MessageShortcuts', $byOwner['Message'] ?? null);
+    self::assertSame('InaccessibleMessageShortcuts', $byOwner['InaccessibleMessage'] ?? null);
   }
 
   private function makeTempDir(): string

@@ -35,23 +35,31 @@ use RuntimeException;
  */
 final class {{ class_name }}
 {
-  /** @return list<class-string<{{ parent_name }}>> */
+  /**
+   * @return list<class-string<{{ return_type }}>>
+   */
   public static function members(): array
   {
     return [
-{% for m in members %}      {{ m.className }}::class,
+{% for m in all_members %}      {{ m.className }}::class,
 {% endfor %}    ];
   }
 
-  public static function resolve(array $payload, ?Bot $bot = null): {{ parent_name }}
+  /**
+   * @param array<string, mixed> $payload
+   */
+  public static function resolve(array $payload, ?Bot $bot = null): {{ return_type }}
   {
-    return match ($payload['{{ discriminator }}'] ?? null) {
+    $discriminator = $payload['{{ discriminator }}'] ?? null;
+    $resolved = match (is_string($discriminator) ? $discriminator : null) {
 {% for m in members %}      '{{ m.wireValue }}' => Serializer::load({{ m.className }}::class, $payload, $bot),
 {% endfor %}      default => throw new ClientDecodeException(
-        sprintf('Unknown {{ parent_name }} {{ discriminator }}: %s', var_export($payload['{{ discriminator }}'] ?? null, true)),
+        sprintf('Unknown {{ parent_name }} {{ discriminator }}: %s', var_export($discriminator, true)),
         new RuntimeException('Discriminator value not recognised'),
         $payload,
       ),
     };
+
+    return $resolved;
   }
 }

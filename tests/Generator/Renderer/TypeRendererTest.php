@@ -88,6 +88,7 @@ final class TypeRendererTest extends TestCase
       shortcutsByOwner: $shortcutsByOwner,
       traitsByOwner: [],
       methodsByName: $methodsByName,
+      typesByName: self::$typesByName,
     );
   }
 
@@ -247,6 +248,7 @@ final class TypeRendererTest extends TestCase
       shortcutsByOwner: $shortcutsByOwner,
       traitsByOwner: ['Message' => $trait],
       methodsByName: $methodsByName,
+      typesByName: self::$typesByName,
     );
 
     $out = $renderer->render(self::$typesByName['Message']);

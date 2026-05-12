@@ -155,7 +155,26 @@ final class SchemaLoader
       ];
 
       foreach ($subtypeNames as $sub) {
-        $childToParent[$sub] = $name;
+        // Name-prefix-preferred mapping: a type that appears in multiple
+        // parents' subtype lists (e.g. `InputMediaAnimation` is listed by
+        // `InputMedia`, `InputPollMedia`, AND `InputPollOptionMedia`)
+        // canonically belongs to the parent whose name is a prefix of
+        // the child's. `InputMediaAnimation` → `InputMedia`; falls back
+        // to first-wins when no prefix-parent claims it. This produces a
+        // stable mapping the renderer's union-resolver shadow-parent
+        // detection relies on and lets every child PHP-level extend a
+        // single canonical parent class.
+        $existing = $childToParent[$sub] ?? null;
+        $existingIsPrefix = $existing !== null && str_starts_with($sub, $existing);
+        $newIsPrefix = str_starts_with($sub, $name);
+
+        if ($existing === null) {
+          $childToParent[$sub] = $name;
+        } elseif (!$existingIsPrefix && $newIsPrefix) {
+          // Newer name is a prefix; promote it over the prior claim.
+          $childToParent[$sub] = $name;
+        }
+        // else: keep $existing (either it's already a prefix, or neither is).
       }
     }
 
@@ -289,9 +308,18 @@ final class SchemaLoader
    */
   private function extractReturnsSentence(string $description): string
   {
+    // Patterns are tried in order; the first match wins. Each pattern must
+    // be case-sensitive on the captured class-name token (`[A-Z][A-Za-z]+`)
+    // so a lowercase noun like `object` in "File object is returned" can't
+    // win the match — the downstream renderer's matcher chain relies on
+    // PascalCase tokens to map onto schema type names.
     $patterns = [
       '/(?:On success,\s*)?(?:Returns?|returns?)\s+[^.]+(?:on success)?\./',
-      '/(?:On success,?\s+)?(?:the\s+sent\s+|the\s+|an?\s+array\s+of\s+)?[A-Z][A-Za-z]+(?:\s+of\s+[A-Z][A-Za-z]+)?\s+(?:is|are)\s+returned/i',
+      // "<X> object is returned" / "<X> is returned" / "<X>s are returned" —
+      // the broad form, with optional `<X> object` interstitial so
+      // "a File object is returned" surfaces "File", not the lowercase
+      // "object" the previous version captured.
+      '/(?:On success,?\s+)?(?:the\s+sent\s+|the\s+|an?\s+array\s+of\s+|a\s+|an\s+)?[A-Z][A-Za-z]+(?:\s+(?:object|of\s+[A-Z][A-Za-z]+))?\s+(?:is|are)\s+returned/',
     ];
 
     foreach ($patterns as $pattern) {

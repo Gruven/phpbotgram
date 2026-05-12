@@ -109,6 +109,13 @@ final class Pipeline
       $methodsByName[$m->name] = $m;
     }
 
+    /** @var array<string, TypeEntity> $typesByName */
+    $typesByName = [];
+
+    foreach ($loaded->types as $t) {
+      $typesByName[$t->name] = $t;
+    }
+
     // Stage 9: Twig environment shared by every renderer instance.
     $twig = new Environment(
       new FilesystemLoader($this->resolveTemplateDir()),
@@ -127,6 +134,7 @@ final class Pipeline
       shortcutsByOwner: $shortcutsByOwner,
       traitsByOwner: $traitsByOwner,
       methodsByName: $methodsByName,
+      typesByName: $typesByName,
     );
 
     $methodRenderer = new MethodRenderer(
@@ -138,13 +146,14 @@ final class Pipeline
     );
 
     $enumRenderer = new EnumRenderer(twig: $twig, names: $names, schema: $loaded);
-    $unionRenderer = new UnionRenderer(twig: $twig);
+    $unionRenderer = new UnionRenderer(twig: $twig, typesByName: $typesByName);
 
     $botRenderer = new BotRenderer(
       twig: $twig,
       types: $types,
       names: $names,
       defaults: $defaults,
+      unionsByParent: $unionsByParent,
     );
 
     $emitter = new FileEmitter($this->outDir);
