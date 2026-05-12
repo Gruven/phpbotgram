@@ -15,12 +15,12 @@
 		"ext-json": "*",
 		"amphp/amp": "^3",
 		"amphp/byte-stream": "^2",
-		"amphp/file": "^3",
 		"amphp/http-client": "^5",
 		"amphp/sync": "^2",
 		"revolt/event-loop": "^1"
 	},
 	"require-dev" : {
+		"amphp/file": "^3",
 		"amphp/http-server": "^3",
 		"amphp/redis": "^2",
 		"friendsofphp/php-cs-fixer": "^3.95",

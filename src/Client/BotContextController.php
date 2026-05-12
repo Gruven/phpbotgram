@@ -19,11 +19,22 @@ abstract class BotContextController
    * (scalars, DateTime, enums, InputFile etc.) pass through untouched.
    *
    * Mirrors upstream pydantic `model_validate(context={"bot": bot})` (aiogram
-   * `ContextController.as_`/`model_dump_json`+`model_validate`). PHP 8.5's
-   * `clone($this, [...])` clone-with syntax permits the base method to rewrite
-   * `public readonly` slots declared anywhere in the inheritance chain — the
-   * scope check is on the *caller* and `public readonly` is publicly writable
-   * via clone-with from any caller.
+   * `ContextController.as_`/`model_dump_json`+`model_validate`).
+   *
+   * Scope note: PHP 8.5 treats `public readonly` as effectively
+   * `public protected(set) readonly` for clone-with — only code running with
+   * a scope in the property's declaring class hierarchy (declaring class plus
+   * its ancestors and descendants) can use `clone($obj, ['x' => ...])` against
+   * it. Because this method lives on `BotContextController` and every
+   * TelegramObject/TelegramMethod subclass extends it, the walker's
+   * `clone($this, [...])` call legally rewrites subclass-declared readonly
+   * slots like `Message::$chat`. External callers cannot use the same syntax
+   * — they must funnel through this method.
+   *
+   * Limitation: arrays of arrays of controllers (`list<list<TelegramObject>>`)
+   * are NOT walked recursively into the nested arrays; only the first array
+   * dimension is. Telegram's wire format rarely emits such shapes, but if a
+   * future generated type needs deep array rebinding it must override this.
    */
   public function withBot(?Bot $bot): static
   {

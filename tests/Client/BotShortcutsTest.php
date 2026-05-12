@@ -48,5 +48,13 @@ final class BotShortcutsTest extends TestCase
   {
     $bot = new Bot(token: '7890123:hash', session: new MockedSession());
     self::assertSame(7890123, $bot->getId());
+    // Cache hit on the second call — same int, no exception.
+    self::assertSame(7890123, $bot->getId());
+  }
+
+  public function testGetDefaultPropertiesCachedAcrossCalls(): void
+  {
+    $bot = new Bot(token: '1:test', session: new MockedSession());
+    self::assertSame($bot->getDefaultProperties(), $bot->getDefaultProperties());
   }
 }

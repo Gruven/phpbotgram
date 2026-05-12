@@ -119,11 +119,9 @@ final class Serializer
     if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
       $typeName = $type->getName();
 
-      // Unix-timestamp fields arrive as int on the wire but are typed as Custom\DateTime.
-      if (is_int($value) && (
-        $typeName === DateTime::class
-          || is_subclass_of($typeName, DateTimeImmutable::class)
-      )) {
+      // Unix-timestamp fields arrive as int on the wire but are typed as Custom\DateTime
+      // or plain DateTimeImmutable (matching aiogram's `datetime.datetime` mapping).
+      if (is_int($value) && is_a($typeName, DateTimeImmutable::class, allow_string: true)) {
         return DateTime::fromTimestamp($value);
       }
 

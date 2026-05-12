@@ -23,10 +23,11 @@ trait BotShortcuts
   /** @var null|FiberLocal<?Bot> */
   private static ?FiberLocal $currentBotLocal = null;
   private ?User $cachedMe = null;
+  private ?int $cachedId = null;
 
   public function getId(): int
   {
-    return Token::extractBotId($this->token);
+    return $this->cachedId ??= Token::extractBotId($this->token);
   }
 
   public function context(bool $autoClose = true): Closure

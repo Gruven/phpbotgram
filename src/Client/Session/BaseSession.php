@@ -41,8 +41,6 @@ abstract class BaseSession
 
   public function __construct(
     ?TelegramApiServer $api = null,
-    public readonly mixed $jsonLoads = 'json_decode',
-    public readonly mixed $jsonDumps = 'json_encode',
     public readonly float $timeout = 60.0,
   ) {
     $this->api = $api ?? TelegramApiServer::production();

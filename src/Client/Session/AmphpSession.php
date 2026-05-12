@@ -14,6 +14,7 @@ use Gruven\PhpBotGram\Client\TelegramApiServer;
 use Gruven\PhpBotGram\Exceptions\TelegramNetworkException;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Types\InputFile;
+use LogicException;
 use RuntimeException;
 use Throwable;
 
@@ -47,7 +48,12 @@ final class AmphpSession extends BaseSession
    */
   public function makeRequest(Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
   {
-    $url = $this->api->apiUrl($bot->token, $method::ApiMethod);
+    $apiMethodName = $method::ApiMethod;
+
+    if ($apiMethodName === '') {
+      throw new LogicException(sprintf('%s::ApiMethod is empty — concrete method classes must override it with the wire-protocol method name', $method::class));
+    }
+    $url = $this->api->apiUrl($bot->token, $apiMethodName);
 
     /** @var array<string, InputFile> $files */
     $files = [];

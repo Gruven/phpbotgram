@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Client;
 
+use DateTimeImmutable;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
 use Gruven\PhpBotGram\Tests\Support\MockedSession;
@@ -17,6 +18,11 @@ final class SerializerTestAliasFixture extends TelegramObject
   public const array WireNames = ['fromUser' => 'from'];
 
   public function __construct(public readonly string $fromUser) {}
+}
+
+final class SerializerTestDateFixture extends TelegramObject
+{
+  public function __construct(public readonly DateTimeImmutable $stamp) {}
 }
 
 final class SerializerTest extends TestCase
@@ -56,5 +62,11 @@ final class SerializerTest extends TestCase
 
     $loaded = Serializer::load(SerializerTestAliasFixture::class, ['from' => 'bob']);
     self::assertSame('bob', $loaded->fromUser);
+  }
+
+  public function testLoadConvertsIntToPlainDateTimeImmutable(): void
+  {
+    $loaded = Serializer::load(SerializerTestDateFixture::class, ['stamp' => 1_700_000_000]);
+    self::assertSame(1_700_000_000, $loaded->stamp->getTimestamp());
   }
 }

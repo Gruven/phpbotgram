@@ -23,19 +23,21 @@ class Bot implements BotShortcutsContract
   use BotShortcuts;
 
   public readonly BaseSession $session;
+  public readonly DefaultBotProperties $defaultProperties;
 
   public function __construct(
     public readonly string $token,
     ?BaseSession $session = null,
-    public readonly ?DefaultBotProperties $defaultProperties = null,
+    ?DefaultBotProperties $defaultProperties = null,
   ) {
     Token::validate($token);
     $this->session = $session ?? new AmphpSession();
+    $this->defaultProperties = $defaultProperties ?? new DefaultBotProperties();
   }
 
   public function getDefaultProperties(): DefaultBotProperties
   {
-    return $this->defaultProperties ?? new DefaultBotProperties();
+    return $this->defaultProperties;
   }
 
   /**
