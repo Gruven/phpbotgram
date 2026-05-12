@@ -11,6 +11,7 @@ use Gruven\PhpBotGram\Exceptions\ClientDecodeException;
 use Gruven\PhpBotGram\Exceptions\TelegramBadRequestException;
 use Gruven\PhpBotGram\Exceptions\TelegramRetryAfter;
 use Gruven\PhpBotGram\Methods\DeleteMessage;
+use Gruven\PhpBotGram\Methods\EditMessageText;
 use Gruven\PhpBotGram\Methods\GetUpdates;
 use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
@@ -284,6 +285,64 @@ final class BaseSessionTest extends TestCase
       statusCode: 200,
       content: $payload,
     );
+  }
+
+  /**
+   * Cycle 4 C1 fix: a `'union:Message|bool'` `ReturnsType` (emitted by
+   * codegen for the seven `Edit*` / `setGameScore` methods that swap
+   * between `Message` and `True` based on whether the edit targets an
+   * inline message) dispatches by the raw response value's PHP type at
+   * decode time. `result: true` → bool through; `result: {message_id, …}`
+   * → loaded as `Message`.
+   *
+   * Pre-fix the path threw `ClientDecodeException` on every successful
+   * inline-message edit because `Serializer::load(Message::class, true)`
+   * sees a non-array and fails the type-mismatch guard.
+   */
+  public function testBuildResponseLoadsMessageOrBoolUnionAsBool(): void
+  {
+    $bot = new MockedBot();
+    $session = $bot->getMockedSession();
+    $method = new EditMessageText(text: 'x', inlineMessageId: 'inline-1');
+
+    $payload = (string)json_encode(['ok' => true, 'result' => true]);
+
+    $response = $session->checkResponse(
+      bot: $bot,
+      method: $method,
+      statusCode: 200,
+      content: $payload,
+    );
+
+    self::assertTrue($response->ok);
+    self::assertTrue($response->result);
+  }
+
+  public function testBuildResponseLoadsMessageOrBoolUnionAsMessage(): void
+  {
+    $bot = new MockedBot();
+    $session = $bot->getMockedSession();
+    $method = new EditMessageText(text: 'x', chatId: 1, messageId: 99);
+
+    $payload = (string)json_encode([
+      'ok' => true,
+      'result' => [
+        'message_id' => 99,
+        'date' => 1_700_000_000,
+        'chat' => ['id' => 42, 'type' => 'private'],
+      ],
+    ]);
+
+    $response = $session->checkResponse(
+      bot: $bot,
+      method: $method,
+      statusCode: 200,
+      content: $payload,
+    );
+
+    self::assertTrue($response->ok);
+    self::assertInstanceOf(Message::class, $response->result);
+    self::assertSame(99, $response->result->messageId);
   }
 
   public function testJsonLoadsAndJsonDumpsAreInjectable(): void

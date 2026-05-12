@@ -322,9 +322,13 @@ abstract class BaseSession
    * Recursively resolve `$returnsType` against `$raw`, returning a typed
    * value the caller can hand directly to a `: <Type>` return slot.
    *
-   * Supports the three `Method::ReturnsType` shapes the codegen emits:
+   * Supports the four `Method::ReturnsType` shapes the codegen emits:
    *   - scalar names (`'bool'`, `'int'`, `'string'`, `'float'`) — passthrough;
    *   - `'list:<X>'` — recurse on each element with `<X>` as the inner type;
+   *   - `'union:<X>|<Y>[|<Z>]'` — polymorphic return; dispatch each member
+   *     by the raw response value's PHP type (`is_bool` / `is_int` /
+   *     `is_string` / `is_array`). The canonical case is `Message|bool`
+   *     (seven `Edit*` / `setGameScore` methods);
    *   - class-string — `Serializer::load($class, $raw, $bot)`.
    *
    * Inner names for the list form are short names in the schema's `Types\`
@@ -367,6 +371,10 @@ abstract class BaseSession
       return $items;
     }
 
+    if (str_starts_with($returnsType, 'union:')) {
+      return $this->deserializeUnionResult($methodClass, substr($returnsType, 6), $raw, $bot);
+    }
+
     $class = $this->resolveResultClass($returnsType);
 
     if (!is_array($raw)) {
@@ -393,6 +401,81 @@ abstract class BaseSession
     }
 
     return Serializer::load($class, $raw, $bot);
+  }
+
+  /**
+   * Dispatch a `'union:<X>|<Y>[|<Z>]'` ReturnsType by inspecting the raw
+   * response value's PHP type and routing to the matching member.
+   *
+   * Each member is a short token: a scalar name (`bool`, `int`, `string`,
+   * `float`) for primitive returns, or a class short name for typed
+   * `Types\<X>` returns. Members are matched in declaration order with the
+   * first compatible runtime predicate winning:
+   *
+   *   - `bool` — `is_bool($raw)`,
+   *   - `int` — `is_int($raw)`,
+   *   - `string` — `is_string($raw)`,
+   *   - `float` — `is_float($raw)`,
+   *   - class name — `is_array($raw)` (Telegram object payloads are JSON
+   *     dictionaries).
+   *
+   * The canonical use is `'union:Message|bool'` (seven `Edit*` /
+   * `setGameScore` methods that return `Message` for chat-message targets
+   * and `True` for inline-message targets). Pre-fix the path threw
+   * `ClientDecodeException` on every successful inline-message edit
+   * because `Serializer::load(Message::class, true)` saw a non-array.
+   *
+   * @param class-string<TelegramMethod<mixed>> $methodClass for diagnostics
+   */
+  private function deserializeUnionResult(string $methodClass, string $unionSpec, mixed $raw, Bot $bot): mixed
+  {
+    if ($unionSpec === '') {
+      throw new LogicException(\sprintf(
+        '%s::ReturnsType is empty after the `union:` prefix — codegen must emit at least one member.',
+        $methodClass,
+      ));
+    }
+
+    $members = explode('|', $unionSpec);
+
+    foreach ($members as $member) {
+      if ($this->rawMatchesUnionMember($member, $raw)) {
+        return $this->deserializeResult($methodClass, $member, $raw, $bot);
+      }
+    }
+
+    throw new ClientDecodeException(
+      \sprintf(
+        'Expected one of [%s] for %s, got %s',
+        $unionSpec,
+        $methodClass,
+        get_debug_type($raw),
+      ),
+      new RuntimeException('Union type mismatch'),
+      $raw,
+    );
+  }
+
+  /**
+   * Runtime predicate for a single `'union:'` member token. Scalar member
+   * names match the matching PHP runtime type; everything else is taken to
+   * be a class name and matched against `is_array($raw)` (the wire
+   * representation of a typed Telegram object is always a JSON dictionary).
+   *
+   * `bool` runs the strict `is_bool` check so a `true` payload never
+   * accidentally dispatches as the class-name branch — the polymorphic
+   * `Message|bool` case depends on the bool member shadowing the class
+   * member whenever the raw value is a literal boolean.
+   */
+  private function rawMatchesUnionMember(string $member, mixed $raw): bool
+  {
+    return match ($member) {
+      'bool' => is_bool($raw),
+      'int' => is_int($raw),
+      'string' => is_string($raw),
+      'float' => is_float($raw),
+      default => is_array($raw),
+    };
   }
 
   /**
