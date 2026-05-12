@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         beStrictAboutOutputDuringTests="true"
+         beStrictAboutCoverageMetadata="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         cacheDirectory=".phpunit.cache">
+    <testsuites>
+        <testsuite name="phpbotgram">
+            <directory>tests</directory>
+            <exclude>tests/data</exclude>
+            <!--
+              NOTE: do NOT exclude tests/Support — the Mocked*, RunAsyncTrait, etc.
+              that live there are imported by other test files, AND tests/Support/
+              hosts a couple of *Test.php files that exercise the harness itself
+              (MockedSessionTest, RunAsyncTraitTest). Excluding the directory would
+              silently drop those tests.
+            -->
+        </testsuite>
+    </testsuites>
+    <coverage>
+        <report>
+            <text outputFile="php://stdout" showOnlySummary="true"/>
+            <html outputDirectory="coverage" lowUpperBound="50" highLowerBound="90"/>
+        </report>
+    </coverage>
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+    <php>
+        <env name="PHPBOTGRAM_REDIS_DSN" value=""/>
+        <env name="PHPBOTGRAM_MONGO_DSN" value=""/>
+    </php>
+</phpunit>

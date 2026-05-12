@@ -1,0 +1,14 @@
+parameters:
+    level: 9
+    paths:
+        - src
+        - tests
+        - tools/generator/src
+    excludePaths:
+        - tests/data (?)
+        - src/Types/*.php   # generated; rules relaxed during Phase 2
+        - src/Methods/*.php # generated
+        - src/Enums/*.php   # generated
+        - src/Bot.php (?)   # generated
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
