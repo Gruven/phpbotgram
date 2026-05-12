@@ -89,14 +89,14 @@ final class AmphpSession extends BaseSession
 
     $resp = $this->checkResponse($bot, $method, $response->getStatus(), $content);
 
-    // Phase 1 stub: BaseSession::buildResponse hard-codes result=null on the success
-    // path. Phase 2 codegen overrides buildResponse to deserialise via Serializer::load
-    // against $method::ReturnsType. Until then, refuse to silently return null on a
-    // successful real-network call — better to fail loudly than to coerce null through
-    // a `: Message` return type at the call site.
+    // Safety net: a 2xx + `ok: true` payload with a literal `result: null`
+    // would slip through `buildResponse` and reach the caller. The vendored
+    // schema doesn't ship a method whose `ReturnsType` is nullable, so this
+    // shape isn't expected on the wire — but raising loudly is still
+    // preferable to silently coercing null through a `: Message` return.
     if ($resp->result === null) {
       throw new LogicException(sprintf(
-        'AmphpSession received a successful response for %s but BaseSession::buildResponse is a Phase 1 stub that always returns result=null. Phase 2 codegen wires Serializer::load into the success path. Until then use MockedSession for end-to-end tests.',
+        'AmphpSession received a successful response for %s but the result was null — no method in the vendored schema declares a nullable ReturnsType, so this points at a malformed Telegram payload.',
         $method::class,
       ));
     }

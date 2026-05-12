@@ -31,7 +31,9 @@ use Gruven\PhpBotGram\Exceptions\TelegramUnauthorizedException;
 use Gruven\PhpBotGram\Methods\Response;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Types\InputFile;
+use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Unspecified;
+use LogicException;
 use RuntimeException;
 use Throwable;
 
@@ -276,10 +278,21 @@ abstract class BaseSession
   }
 
   /**
-   * Phase 1 shim — builds a Response with `result: null`. The exception-path
-   * branches of checkResponse don't need a real result. Phase 2 codegen wires
-   * this through Serializer::load against $method::ReturnsType so the result
-   * becomes a typed TelegramObject.
+   * Build a typed Response from the wire payload.
+   *
+   * On the happy path (`ok: true` + a present `result`), the raw result is
+   * routed through `deserializeResult()` against the method's declared
+   * `ReturnsType` const so the caller sees a typed TelegramObject (or list
+   * thereof, or scalar). Error / non-ok payloads land here too — they
+   * surface to `checkResponse()` which maps the status code to the
+   * matching exception subclass without consulting `$response->result`.
+   *
+   * Wired in by Cycle 3: prior to this commit, BaseSession returned
+   * `result: null` unconditionally — AmphpSession's success path would
+   * then throw a LogicException because the typed Method return contract
+   * couldn't be satisfied. The Method-class-side `ReturnsType` const is
+   * emitted by codegen precisely so this hook can do the right thing
+   * without per-method dispatch tables.
    *
    * @param TelegramMethod<mixed> $method
    * @param array<array-key, mixed> $data
@@ -291,11 +304,106 @@ abstract class BaseSession
     $description = isset($data['description']) && is_string($data['description']) ? $data['description'] : null;
     $errorCode = isset($data['error_code']) && is_int($data['error_code']) ? $data['error_code'] : null;
 
+    $result = null;
+
+    if (($data['ok'] ?? false) === true && array_key_exists('result', $data)) {
+      $result = $this->deserializeResult($method::class, $method::ReturnsType, $data['result'], $bot);
+    }
+
     return new Response(
       ok: (bool)($data['ok'] ?? false),
-      result: null,
+      result: $result,
       description: $description,
       errorCode: $errorCode,
     );
+  }
+
+  /**
+   * Recursively resolve `$returnsType` against `$raw`, returning a typed
+   * value the caller can hand directly to a `: <Type>` return slot.
+   *
+   * Supports the three `Method::ReturnsType` shapes the codegen emits:
+   *   - scalar names (`'bool'`, `'int'`, `'string'`, `'float'`) — passthrough;
+   *   - `'list:<X>'` — recurse on each element with `<X>` as the inner type;
+   *   - class-string — `Serializer::load($class, $raw, $bot)`.
+   *
+   * Inner names for the list form are short names in the schema's `Types\`
+   * namespace (the codegen never emits FQCNs for the inner element). They
+   * are prefixed before the class-string branch fires; if a future codegen
+   * change emits something else, the class-string branch handles FQCNs too.
+   *
+   * @param class-string<TelegramMethod<mixed>> $methodClass for diagnostics
+   */
+  private function deserializeResult(string $methodClass, string $returnsType, mixed $raw, Bot $bot): mixed
+  {
+    if ($returnsType === '') {
+      throw new LogicException(\sprintf(
+        '%s::ReturnsType is empty — concrete method classes must set it (codegen emits the const).',
+        $methodClass,
+      ));
+    }
+
+    if ($returnsType === 'bool' || $returnsType === 'int' || $returnsType === 'string' || $returnsType === 'float') {
+      return $raw;
+    }
+
+    if (str_starts_with($returnsType, 'list:')) {
+      $inner = substr($returnsType, 5);
+
+      if (!is_array($raw)) {
+        throw new ClientDecodeException(
+          \sprintf('Expected list for %s, got %s', $methodClass, get_debug_type($raw)),
+          new RuntimeException('Type mismatch'),
+          $raw,
+        );
+      }
+
+      $items = [];
+
+      foreach ($raw as $entry) {
+        $items[] = $this->deserializeResult($methodClass, $inner, $entry, $bot);
+      }
+
+      return $items;
+    }
+
+    $class = $this->resolveResultClass($returnsType);
+
+    if (!is_array($raw)) {
+      throw new ClientDecodeException(
+        \sprintf('Expected object payload for %s -> %s, got %s', $methodClass, $class, get_debug_type($raw)),
+        new RuntimeException('Type mismatch'),
+        $raw,
+      );
+    }
+
+    /** @var array<string, mixed> $raw */
+    return Serializer::load($class, $raw, $bot);
+  }
+
+  /**
+   * Map a `Method::ReturnsType` token to a `class-string<TelegramObject>`.
+   *
+   * Codegen emits either a FQCN (`Foo::class` constant materialises as the
+   * fully-qualified string) or a bare short name (the inner element of a
+   * `list:X` sentinel). Both shapes flow into here.
+   *
+   * @return class-string<TelegramObject>
+   */
+  private function resolveResultClass(string $token): string
+  {
+    if (class_exists($token) && is_a($token, TelegramObject::class, allow_string: true)) {
+      /** @var class-string<TelegramObject> $token */
+      return $token;
+    }
+
+    $prefixed = 'Gruven\\PhpBotGram\\Types\\' . $token;
+
+    if (class_exists($prefixed) && is_a($prefixed, TelegramObject::class, allow_string: true)) {
+      /** @var class-string<TelegramObject> $prefixed */
+      return $prefixed;
+    }
+
+    throw new LogicException(\sprintf('Unknown ReturnsType token %s', var_export($token, true)));
   }
 }
