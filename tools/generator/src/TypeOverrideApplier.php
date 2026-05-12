@@ -101,6 +101,7 @@ final class TypeOverrideApplier
       subtypeOf: $t->subtypeOf,
       discriminator: $t->discriminator,
       defaults: $t->defaults,
+      additionalUnionMemberships: $t->additionalUnionMemberships,
     );
   }
 }

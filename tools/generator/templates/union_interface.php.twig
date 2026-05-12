@@ -1,0 +1,40 @@
+{#-
+  Marker interface for a union parent.
+
+  Variables provided by `UnionRenderer::renderInterface()`:
+    - class_name        : string  — `<Parent>Interface`
+    - namespace         : string  — `Gruven\PhpBotGram\Types`
+    - parent_name       : string  — short class name of the union parent
+
+  PHP's single inheritance forces a multi-parent union member to pick a
+  canonical `extends` parent and declare the others via `implements
+  <X>Interface`. Single-parent union members pick up the interface via
+  the abstract parent class's own `implements` declaration, so every
+  member of the union admits the interface either way.
+
+  The interface is empty: it's a marker only. The renderer's downstream
+  field-typing logic uses the interface name (`<X>Interface`) where it
+  would previously have used the abstract class (`<X>`) so the property
+  type admits every union member regardless of the multi-parent split.
+-#}
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+/**
+ * Marker interface for the {@see {{ parent_name }}} union.
+ *
+ * Implemented by every member of the {{ parent_name }} union — directly
+ * (the canonical abstract parent class declares `implements {{ class_name }}`)
+ * or via the additional-union-membership channel for multi-parent members
+ * (e.g. an `InputMediaPhoto` belongs to three unions but PHP can only
+ * `extends` one; the other two memberships are declared with
+ * `implements <X>Interface`). Use this type when typing a property or
+ * parameter that must admit every member of the union, including those
+ * whose PHP `extends` chain points elsewhere.
+ *
+ * @generated do not edit; regenerate via `make regenerate`
+ */
+interface {{ class_name }} {}

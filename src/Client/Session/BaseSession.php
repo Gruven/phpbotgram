@@ -378,6 +378,20 @@ abstract class BaseSession
     }
 
     /** @var array<string, mixed> $raw */
+    // A discriminator-tagged union parent's `<X>Union::resolve()` is the
+    // only valid construction path — `Serializer::load` against the
+    // abstract parent class would fail at `newInstance()`. Codegen emits
+    // `ReturnsType = <Parent>::class` for methods like `getChatMember`,
+    // so we detect the union helper at runtime and route through it.
+    $unionClass = $class . 'Union';
+
+    if (class_exists($unionClass) && method_exists($unionClass, 'resolve')) {
+      /** @var callable(array<string, mixed>, ?Bot): mixed $resolver */
+      $resolver = [$unionClass, 'resolve'];
+
+      return $resolver($raw, $bot);
+    }
+
     return Serializer::load($class, $raw, $bot);
   }
 

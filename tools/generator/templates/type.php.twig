@@ -14,6 +14,12 @@
     - phpdoc_params     : list<{phpdocType, phpName}>  — @param lines for the ctor docblock
     - shortcut_methods  : list<{name, parameters, returnType, methodClass, callArgs}>
     - trait_short_name  : ?string  — short name of hand-authored Shortcuts trait
+    - interface_impls   : list<string>  — union-membership marker interfaces
+                          to declare via `implements …` (the abstract class
+                          declares its own interface; multi-parent children
+                          declare the additional interfaces). Always rendered
+                          via short name; the same-namespace interface needs
+                          no `use` import.
 
   The template intentionally pre-processes nothing structural — the renderer
   produces lists ready for iteration so the template stays close to a
@@ -40,7 +46,7 @@ use {{ fqcn }};
  *
  * @generated do not edit; regenerate via `make regenerate`
  */
-{{ class_keyword }} {{ class_name }} extends {{ parent_class }}
+{{ class_keyword }} {{ class_name }} extends {{ parent_class }}{% if interface_impls is not empty %} implements {{ interface_impls|join(', ') }}{% endif %}
 {
 {% if trait_short_name is not null -%}
   use {{ trait_short_name }};

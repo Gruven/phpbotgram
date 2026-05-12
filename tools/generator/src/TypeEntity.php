@@ -17,7 +17,17 @@ namespace Gruven\PhpBotGram\Generator;
  * - `$subtypes`/`$discriminator` are populated for union **parents** (types
  *   that ship a `subtypes.yml`); subtype names are parsed from the parent's
  *   description bullet-list.
- * - `$subtypeOf` is populated for union **children** with the parent name.
+ * - `$subtypeOf` is populated for union **children** with the canonical
+ *   parent name (the PHP-level `extends` parent). For multi-parent children
+ *   (e.g. `InputMediaPhoto` belongs to `InputMedia`, `InputPollMedia`, AND
+ *   `InputPollOptionMedia`), the canonical parent is picked by name-prefix
+ *   rule; the others land in `$additionalUnionMemberships`.
+ * - `$additionalUnionMemberships` carries the OTHER union-parent names a
+ *   multi-parent child belongs to (empty list for single-parent children).
+ *   The renderer emits `implements <X>Interface, …` for each — PHP's single
+ *   inheritance precludes lifting them to `extends`, so each non-canonical
+ *   union membership is declared via a marker interface emitted alongside
+ *   the abstract parent class.
  * - `$defaults` is the raw `wire_field_name => bot_default_field_name` mapping
  *   from `.butcher/types/<X>/default.yml` (or `[]` if absent). Mirrors the
  *   shape of `MethodEntity::$defaults`. Used by `TypeRenderer::resolveDefault`
@@ -36,6 +46,7 @@ final readonly class TypeEntity
    * @param Aliases $aliases
    * @param null|list<string> $subtypes
    * @param array<string, string> $defaults
+   * @param list<string> $additionalUnionMemberships
    */
   public function __construct(
     public string $name,
@@ -47,5 +58,6 @@ final readonly class TypeEntity
     public ?string $subtypeOf = null,
     public ?string $discriminator = null,
     public array $defaults = [],
+    public array $additionalUnionMemberships = [],
   ) {}
 }

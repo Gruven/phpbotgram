@@ -100,10 +100,10 @@ final class SchemaLoader
       }
     }
 
-    [$unionParents, $childToParent] = $this->buildUnionIndex($typeChildren);
+    [$unionParents, $childToParents] = $this->buildUnionIndex($typeChildren);
 
     foreach ($typeChildren as $child) {
-      $types[] = $this->buildType($child, $unionParents, $childToParent);
+      $types[] = $this->buildType($child, $unionParents, $childToParents);
     }
 
     foreach ($methodChildren as $child) {
@@ -116,11 +116,24 @@ final class SchemaLoader
   /**
    * Builds the union parent/child index in a single pass.
    *
+   * Returns:
+   *   - `$unionParents`: parent name → {subtypes, discriminator}
+   *   - `$childToParents`: child name → ordered list of every union parent
+   *     that lists this child. Order is `subtypes.yml`-encounter order; the
+   *     loader's caller (`buildType`) picks the canonical PHP-level
+   *     `extends` parent by name-prefix rule and stores the rest on
+   *     `TypeEntity::$additionalUnionMemberships` so the renderer can emit
+   *     `implements <X>Interface` for each. PHP's single inheritance is what
+   *     forces the multi-parent split — without the additional-memberships
+   *     channel, a value typed `?InputPollOptionMedia` would reject
+   *     `InputMediaPhoto` because the latter extends `InputMedia`, not
+   *     `InputPollOptionMedia`.
+   *
    * @param list<SchemaChild> $typeChildren
    *
    * @return array{
    *   array<string, array{subtypes: list<string>, discriminator: ?string}>,
-   *   array<string, string>
+   *   array<string, list<string>>
    * }
    */
   private function buildUnionIndex(array $typeChildren): array
@@ -128,8 +141,8 @@ final class SchemaLoader
     /** @var array<string, array{subtypes: list<string>, discriminator: ?string}> $unionParents */
     $unionParents = [];
 
-    /** @var array<string, string> $childToParent */
-    $childToParent = [];
+    /** @var array<string, list<string>> $childToParents */
+    $childToParents = [];
 
     foreach ($typeChildren as $child) {
       $name = $child['name'];
@@ -155,30 +168,47 @@ final class SchemaLoader
       ];
 
       foreach ($subtypeNames as $sub) {
-        // Name-prefix-preferred mapping: a type that appears in multiple
-        // parents' subtype lists (e.g. `InputMediaAnimation` is listed by
-        // `InputMedia`, `InputPollMedia`, AND `InputPollOptionMedia`)
-        // canonically belongs to the parent whose name is a prefix of
-        // the child's. `InputMediaAnimation` → `InputMedia`; falls back
-        // to first-wins when no prefix-parent claims it. This produces a
-        // stable mapping the renderer's union-resolver shadow-parent
-        // detection relies on and lets every child PHP-level extend a
-        // single canonical parent class.
-        $existing = $childToParent[$sub] ?? null;
-        $existingIsPrefix = $existing !== null && str_starts_with($sub, $existing);
-        $newIsPrefix = str_starts_with($sub, $name);
-
-        if ($existing === null) {
-          $childToParent[$sub] = $name;
-        } elseif (!$existingIsPrefix && $newIsPrefix) {
-          // Newer name is a prefix; promote it over the prior claim.
-          $childToParent[$sub] = $name;
-        }
-        // else: keep $existing (either it's already a prefix, or neither is).
+        $childToParents[$sub][] = $name;
       }
     }
 
-    return [$unionParents, $childToParent];
+    return [$unionParents, $childToParents];
+  }
+
+  /**
+   * Pick the canonical PHP-level `extends` parent for a child that appears
+   * in multiple union parents' subtype lists.
+   *
+   * Name-prefix-preferred selection: a child like `InputMediaAnimation` that
+   * is listed by `InputMedia`, `InputPollMedia`, AND `InputPollOptionMedia`
+   * canonically extends the parent whose name is a prefix of the child's
+   * (`InputMedia`). When no parent prefixes the child, first-wins keeps the
+   * declaration order from `subtypes.yml`. This produces a stable mapping
+   * the renderer relies on so every child has exactly one PHP `extends`
+   * parent — additional union memberships are surfaced as marker
+   * interfaces.
+   *
+   * @param list<string> $parents
+   */
+  private function selectCanonicalParent(string $child, array $parents): string
+  {
+    $canonical = $parents[0];
+    $canonicalIsPrefix = str_starts_with($child, $canonical);
+
+    foreach ($parents as $candidate) {
+      if ($candidate === $canonical) {
+        continue;
+      }
+
+      $candidateIsPrefix = str_starts_with($child, $candidate);
+
+      if ($candidateIsPrefix && !$canonicalIsPrefix) {
+        $canonical = $candidate;
+        $canonicalIsPrefix = true;
+      }
+    }
+
+    return $canonical;
   }
 
   /**
@@ -206,9 +236,9 @@ final class SchemaLoader
   /**
    * @param SchemaChild $child
    * @param array<string, array{subtypes: list<string>, discriminator: ?string}> $unionParents
-   * @param array<string, string> $childToParent
+   * @param array<string, list<string>> $childToParents
    */
-  private function buildType(array $child, array $unionParents, array $childToParent): TypeEntity
+  private function buildType(array $child, array $unionParents, array $childToParents): TypeEntity
   {
     $name = $child['name'];
     $replace = $this->loadPatch($this->typeDir($name) . '/replace.yml');
@@ -239,7 +269,21 @@ final class SchemaLoader
       $discriminator = $unionParents[$name]['discriminator'];
     }
 
-    $subtypeOf = $childToParent[$name] ?? null;
+    $allParents = $childToParents[$name] ?? [];
+    $subtypeOf = null;
+
+    /** @var list<string> $additionalUnionMemberships */
+    $additionalUnionMemberships = [];
+
+    if ($allParents !== []) {
+      $subtypeOf = $this->selectCanonicalParent($name, $allParents);
+
+      foreach ($allParents as $p) {
+        if ($p !== $subtypeOf) {
+          $additionalUnionMemberships[] = $p;
+        }
+      }
+    }
 
     /** @var array<string, string> $defaults */
     $defaults = [];
@@ -265,6 +309,7 @@ final class SchemaLoader
       subtypeOf: $subtypeOf,
       discriminator: $discriminator,
       defaults: $defaults,
+      additionalUnionMemberships: $additionalUnionMemberships,
     );
   }
 

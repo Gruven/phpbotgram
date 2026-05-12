@@ -187,7 +187,17 @@ final class Pipeline
       $this->record($emitter->emit($rel, $src), $rel, $written, $skipped);
     }
 
-    // Stage 11: union resolvers (sorted alphabetical by parent name).
+    // Stage 11: union resolvers + marker interfaces (sorted alphabetical
+    // by parent name). The interface file is needed by every union member
+    // whose PHP `extends` chain points elsewhere — see
+    // `TypeEntity::$additionalUnionMemberships` and the marker-interface
+    // discussion in `UnionRenderer::renderInterface()`.
+    //
+    // Discriminator-tagged unions get a `<X>Union::resolve()` class; every
+    // union parent (discriminated or structural) gets a `<X>Interface`
+    // marker. `UnionDetector` skips structural unions (`InputMessageContent`,
+    // `MaybeInaccessibleMessage`) because resolve() can't dispatch them, but
+    // their interface is still load-bearing for the property-typing layer.
     $unionPlans = array_values($unionsByParent);
     usort($unionPlans, static fn(UnionPlan $a, UnionPlan $b): int => strcmp($a->parentName, $b->parentName));
 
@@ -195,6 +205,35 @@ final class Pipeline
       $src = $unionRenderer->render($plan);
       $rel = 'Types/' . $plan->parentName . 'Union.php';
       $this->record($emitter->emit($rel, $src), $rel, $written, $skipped);
+    }
+
+    // Compute the set of union parents that have shadow members — a child
+    // whose canonical PHP `extends` chain points to a different union.
+    // Only these unions need an interface, because single-parent unions
+    // already satisfy property typing via the abstract class itself.
+    // Keeping the set minimal keeps the regenerated tree small.
+    /** @var array<string, true> $unionsWithShadowMembersSet */
+    $unionsWithShadowMembersSet = [];
+
+    foreach ($loaded->types as $t) {
+      foreach ($t->additionalUnionMemberships as $shadowParent) {
+        $unionsWithShadowMembersSet[$shadowParent] = true;
+      }
+    }
+
+    $unionsWithShadowMembers = array_keys($unionsWithShadowMembersSet);
+    sort($unionsWithShadowMembers);
+
+    foreach ($unionsWithShadowMembers as $name) {
+      $plan = $unionsByParent[$name] ?? new UnionPlan(
+        parentName: $name,
+        discriminator: '',
+        members: [],
+      );
+
+      $interfaceSrc = $unionRenderer->renderInterface($plan);
+      $interfaceRel = 'Types/' . $name . 'Interface.php';
+      $this->record($emitter->emit($interfaceRel, $interfaceSrc), $interfaceRel, $written, $skipped);
     }
 
     // Stage 12: Bot facade — the single non-namespaced output.

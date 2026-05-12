@@ -49,6 +49,17 @@ final class TypeRenderer
   private readonly array $extendedTypes;
 
   /**
+   * Index of union parents whose subtype list contains at least one shadow
+   * member — a child whose canonical PHP `extends` chain points to a
+   * different union. These parents get a marker interface emitted
+   * (`<X>Interface`) and the abstract parent class declares it via
+   * `implements <X>Interface` so single-parent children pick it up.
+   *
+   * @var array<string, true>
+   */
+  private readonly array $unionsWithShadowMembers;
+
+  /**
    * @param array<string, UnionPlan> $unionsByParent indexed by parent name
    * @param array<string, list<ShortcutPlan>> $shortcutsByOwner indexed by ownerTypeName
    * @param array<string, HandAuthoredShortcutPlan> $traitsByOwner indexed by ownerTypeName
@@ -93,6 +104,28 @@ final class TypeRenderer
     }
 
     $this->extendedTypes = $extended;
+
+    /** @var array<string, true> $shadow */
+    $shadow = [];
+
+    foreach ($typesByName as $t) {
+      foreach ($t->additionalUnionMemberships as $shadowParent) {
+        $shadow[$shadowParent] = true;
+      }
+    }
+
+    $this->unionsWithShadowMembers = $shadow;
+  }
+
+  /**
+   * Whether `$parentName` is a union whose subtype list includes at least
+   * one shadow member (a child whose canonical PHP `extends` chain points
+   * to a different union). Drives the `implements <X>Interface` emission
+   * on the abstract union parent.
+   */
+  private function unionHasShadowMembers(string $parentName): bool
+  {
+    return isset($this->unionsWithShadowMembers[$parentName]);
   }
 
   /**
@@ -124,6 +157,28 @@ final class TypeRenderer
     if ($trait !== null) {
       // Trait FQCN is imported, used by short name in the class body.
       $imports[$trait->traitFqcn] = true;
+    }
+
+    // Cycle 3: union-membership marker interfaces.
+    //   - A union PARENT that has at least one shadow member declares
+    //     `implements <Self>Interface` so single-parent children of that
+    //     union pick the interface up via inheritance.
+    //   - A multi-parent CHILD declares `implements <Extra>Interface, …`
+    //     for every union parent that lists it apart from the canonical
+    //     `extends` parent.
+    //
+    // Single-parent unions (no shadow members) emit no interface — every
+    // child extends the abstract parent directly and the property typing
+    // works through the existing class. Keeping the diff minimal.
+    /** @var list<string> $interfaceImpls */
+    $interfaceImpls = [];
+
+    if ($isUnionParent && $this->unionHasShadowMembers($type->name)) {
+      $interfaceImpls[] = $type->name . 'Interface';
+    }
+
+    foreach ($type->additionalUnionMemberships as $extraParent) {
+      $interfaceImpls[] = $extraParent . 'Interface';
     }
 
     $sortedImports = $this->sortImports($imports);
@@ -159,6 +214,7 @@ final class TypeRenderer
       'shortcut_methods' => $shortcutMethods,
       'trait_short_name' => $trait?->traitShortName,
       'parent_forward_args' => $parentForwardArgs,
+      'interface_impls' => $interfaceImpls,
     ]);
   }
 

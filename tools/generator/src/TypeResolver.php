@@ -48,12 +48,38 @@ final class TypeResolver
    */
   private array $enumNames;
 
+  /**
+   * Set of union parents that have at least one shadow member — a child
+   * whose canonical PHP `extends` chain points elsewhere. When a wire-type
+   * token names such a parent (e.g. `InputPollOptionMedia` has shadows
+   * `InputMediaPhoto`/`InputMediaVideo`/… whose `extends` parent is
+   * `InputMedia`), the resolver substitutes the marker interface
+   * (`InputPollOptionMediaInterface`) so the property/parameter admits
+   * every union member at construction time.
+   *
+   * For single-parent unions (no shadow members — every child extends
+   * this parent directly), the abstract class works as-is and we keep
+   * the existing name, both because the schema has dozens of these and
+   * the wider rename would touch every regenerated file.
+   *
+   * @var array<string, true>
+   */
+  private array $unionsWithShadowMembers;
+
   public function __construct(LoadedSchema $schema)
   {
     $this->enumNames = [];
 
     foreach ($schema->enums as $e) {
       $this->enumNames[$e->name] = true;
+    }
+
+    $this->unionsWithShadowMembers = [];
+
+    foreach ($schema->types as $t) {
+      foreach ($t->additionalUnionMemberships as $shadowParent) {
+        $this->unionsWithShadowMembers[$shadowParent] = true;
+      }
     }
   }
 
@@ -121,14 +147,39 @@ final class TypeResolver
 
   private function buildClassName(string $name): PhpType
   {
-    $fqcn = isset($this->enumNames[$name])
-      ? 'Gruven\\PhpBotGram\\Enums\\' . $name
-      : 'Gruven\\PhpBotGram\\Types\\' . $name;
+    if (isset($this->enumNames[$name])) {
+      return new PhpType(
+        kind: PhpTypeKind::ClassName,
+        phpType: $name,
+        importFqcn: 'Gruven\\PhpBotGram\\Enums\\' . $name,
+      );
+    }
+
+    // Union-parent substitution: when the union has at least one shadow
+    // member — a child whose canonical PHP `extends` chain points
+    // elsewhere — the property type slot is widened to the marker
+    // interface (`InputPollOptionMediaInterface`) so every union member
+    // admits the slot, including the multi-parent children whose PHP
+    // `extends` points to a different union. (See
+    // `TypeEntity::$additionalUnionMemberships` and
+    // `UnionRenderer::renderInterface()`.) Single-parent unions —
+    // every child extends this parent directly — keep the abstract
+    // class name; the resolver returns concrete subclasses that satisfy
+    // it directly.
+    if (isset($this->unionsWithShadowMembers[$name])) {
+      $interfaceName = $name . 'Interface';
+
+      return new PhpType(
+        kind: PhpTypeKind::ClassName,
+        phpType: $interfaceName,
+        importFqcn: 'Gruven\\PhpBotGram\\Types\\' . $interfaceName,
+      );
+    }
 
     return new PhpType(
       kind: PhpTypeKind::ClassName,
       phpType: $name,
-      importFqcn: $fqcn,
+      importFqcn: 'Gruven\\PhpBotGram\\Types\\' . $name,
     );
   }
 

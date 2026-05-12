@@ -50,14 +50,17 @@ final class SchemaInfo
   /**
    * Files emitted by `Pipeline::run()` under `$outDir/Types/`.
    *
-   * Composition: 303 schema types + 20 `<Parent>Union.php` resolvers.
-   * One protected path (`Types/InputFile.php`) appears in the emitter's
-   * `skipped` manifest but is also re-counted on disk because the
-   * hand-authored sibling already lives there in production — for the
-   * test we count emissions into a clean `$outDir`, where the protected
-   * path is skipped and so does NOT contribute to this number.
+   * Composition: 303 schema types + 20 `<Parent>Union.php` resolvers +
+   * 2 `<Parent>Interface.php` marker interfaces (only the two unions with
+   * shadow members — `InputPollMedia` and `InputPollOptionMedia` — get an
+   * interface; single-parent unions are satisfied by the abstract class
+   * itself). One protected path (`Types/InputFile.php`) appears in the
+   * emitter's `skipped` manifest but is also re-counted on disk because
+   * the hand-authored sibling already lives there in production — for
+   * the test we count emissions into a clean `$outDir`, where the
+   * protected path is skipped and so does NOT contribute to this number.
    */
-  public const int EMITTED_TYPE_FILES = 323;
+  public const int EMITTED_TYPE_FILES = 325;
 
   /** Files emitted under `$outDir/Methods/` — one PHP class per `MethodEntity`. */
   public const int EMITTED_METHOD_FILES = 176;

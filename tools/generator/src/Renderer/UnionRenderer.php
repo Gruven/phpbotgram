@@ -35,19 +35,38 @@ use Twig\Environment;
 final class UnionRenderer
 {
   /**
-   * @param array<string, TypeEntity> $typesByName indexed by type name; used
-   *                                               to detect "shadow" union
-   *                                               parents whose subtypes
-   *                                               already belong to another
-   *                                               parent (e.g.
-   *                                               `InputPollMedia` whose
-   *                                               subtypes all extend
-   *                                               `InputMedia`).
+   * @param array<string, TypeEntity> $typesByName indexed by type name. No
+   *                                               longer load-bearing after
+   *                                               the Cycle 3 marker-interface
+   *                                               refactor; preserved on the
+   *                                               constructor so external
+   *                                               callers (the renderer test
+   *                                               suite) keep their factory
+   *                                               wiring unchanged.
    */
   public function __construct(
     private readonly Environment $twig,
     private readonly array $typesByName = [],
   ) {}
+
+  /**
+   * Emit the marker interface for this union (`<Parent>Interface`).
+   *
+   * The interface is empty — its sole role is to carry the multi-parent
+   * union-membership for children whose canonical `extends` parent points
+   * elsewhere. The abstract parent class declares `implements
+   * <X>Interface` so single-parent children pick it up via inheritance;
+   * multi-parent children declare it explicitly via
+   * `TypeEntity::$additionalUnionMemberships`.
+   */
+  public function renderInterface(UnionPlan $plan): string
+  {
+    return $this->twig->render('union_interface.php.twig', [
+      'class_name' => $plan->parentName . 'Interface',
+      'namespace' => 'Gruven\\PhpBotGram\\Types',
+      'parent_name' => $plan->parentName,
+    ]);
+  }
 
   /**
    * Emit one `<Parent>Union` resolver class source.
@@ -88,17 +107,29 @@ final class UnionRenderer
       $members[] = $member;
     }
 
-    // Detect the "shadow parent" case: the parent declares subtypes whose
-    // PHP-level `subtypeOf` points to a different schema type. The
-    // `InputPollMedia` and `InputPollOptionMedia` unions in the vendored
-    // 10.0 schema have this shape — they enumerate the same InputMedia
-    // subtypes (`InputMediaAnimation`, …) that already extend the
-    // canonical `InputMedia` union parent. PHP's single inheritance
-    // prevents these classes from extending both parents at once, so the
-    // resolver must declare the actual common ancestor as the return type;
-    // otherwise PHPStan surfaces `return.type` errors because the subtypes
-    // aren't statically subtypes of the shadow parent.
-    $effectiveReturn = $this->resolveEffectiveReturn($plan);
+    // The resolver's return type is either the union's marker interface
+    // (when at least one shadow member exists — its PHP `extends` chain
+    // points to a different union, so PHPStan would reject it under the
+    // abstract class return type) or the abstract class itself (the
+    // common case — every member directly extends this parent).
+    //
+    // Detection: scan `typesByName` for any member whose canonical
+    // `subtypeOf` doesn't point at this parent — these are the shadow
+    // members surfaced via `additionalUnionMemberships`. The interface
+    // emitted via `renderInterface()` collects them.
+    $hasShadow = false;
+
+    foreach ($plan->members as $m) {
+      $child = $this->typesByName[$m->childClassName] ?? null;
+
+      if ($child !== null && $child->subtypeOf !== $plan->parentName) {
+        $hasShadow = true;
+
+        break;
+      }
+    }
+
+    $effectiveReturn = $hasShadow ? $plan->parentName . 'Interface' : $plan->parentName;
 
     return $this->twig->render('union.php.twig', [
       'class_name' => $plan->parentName . 'Union',
@@ -118,66 +149,6 @@ final class UnionRenderer
       // (e.g. presence of `audio_file_id` vs `audio_url`) instead.
       'has_ambiguous_discriminator' => $plan->hasAmbiguousDiscriminator,
     ]);
-  }
-
-  /**
-   * Determine the PHP-level return type the resolver's `resolve()` method
-   * should declare.
-   *
-   * Defaults to the union's parent type name. When the parent's subtypes
-   * have a fragmented inheritance chain (the InputPollMedia /
-   * InputPollOptionMedia "shadow union" case in the vendored 10.0
-   * schema), we widen the return type to a common ancestor.
-   *
-   * The widening rules:
-   *   - If every child legitimately considers this union as its `subtypeOf`,
-   *     keep the parent name (the most precise return type).
-   *   - If every child shares a single different `subtypeOf`, use that —
-   *     covers the simple shadow case where one canonical parent dominates.
-   *   - Otherwise — the children are scattered across multiple PHP-level
-   *     hierarchies — fall back to `MutableTelegramObject` (since these
-   *     unions exclusively wrap input-media types which all extend it
-   *     transitively).
-   */
-  private function resolveEffectiveReturn(UnionPlan $plan): string
-  {
-    if ($this->typesByName === []) {
-      return $plan->parentName;
-    }
-
-    /** @var array<string, true> $ancestors */
-    $ancestors = [];
-    $allMatchPlanParent = true;
-
-    foreach ($plan->members as $m) {
-      $childType = $this->typesByName[$m->childClassName] ?? null;
-
-      if ($childType === null) {
-        return $plan->parentName;
-      }
-
-      if ($childType->subtypeOf !== $plan->parentName) {
-        $allMatchPlanParent = false;
-      }
-
-      $effectiveParent = $childType->subtypeOf ?? $plan->parentName;
-      $ancestors[$effectiveParent] = true;
-    }
-
-    if ($allMatchPlanParent) {
-      return $plan->parentName;
-    }
-
-    if (count($ancestors) === 1) {
-      return (string)array_key_first($ancestors);
-    }
-
-    // Members scattered across multiple PHP hierarchies. The only common
-    // schema ancestor at this point is the structurally lifted base
-    // (`MutableTelegramObject`) — every InputMedia subtype in the vendored
-    // 10.0 schema extends it transitively, so widening to it preserves
-    // static type safety without introducing a synthetic intermediate.
-    return 'MutableTelegramObject';
   }
 
   /**
