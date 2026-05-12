@@ -143,6 +143,7 @@ final class Pipeline
       names: $names,
       defaults: $defaults,
       unionsByParent: $unionsByParent,
+      schema: $loaded,
     );
 
     $enumRenderer = new EnumRenderer(twig: $twig, names: $names, schema: $loaded);
@@ -270,41 +271,56 @@ final class Pipeline
    * Run `vendor/bin/php-cs-fixer fix` against `$outDir`. Throws on non-zero
    * exit so the orchestrator surfaces fixer failures rather than emitting
    * an unformatted tree silently.
+   *
+   * Uses `proc_open(cwd: $this->repoRoot)` instead of `chdir + exec` so
+   * the parent process's working directory is never mutated — a chdir
+   * leak is observable when the pipeline is run as part of a long-lived
+   * `phpunit` process (which then continues to look up files relative to
+   * the pipeline's `repoRoot` rather than the test runner's invocation
+   * cwd). `proc_open` accepts an explicit `cwd` parameter for the child
+   * process; the parent's cwd is unchanged.
    */
   private function runFixer(): void
   {
-    $cmd = sprintf(
-      '%s fix --quiet %s 2>&1',
-      escapeshellarg($this->fixerBin),
-      escapeshellarg($this->outDir),
-    );
-
-    $cwd = $this->repoRoot;
-    $previousCwd = getcwd();
-
-    if (!is_dir($cwd)) {
-      throw new RuntimeException("Pipeline repoRoot is not a directory: {$cwd}");
+    if (!is_dir($this->repoRoot)) {
+      throw new RuntimeException("Pipeline repoRoot is not a directory: {$this->repoRoot}");
     }
 
-    if (!chdir($cwd)) {
-      throw new RuntimeException("Failed to chdir to repoRoot for cs-fixer: {$cwd}");
+    $cmd = [
+      $this->fixerBin,
+      'fix',
+      '--quiet',
+      $this->outDir,
+    ];
+
+    $descriptors = [
+      0 => ['pipe', 'r'],
+      1 => ['pipe', 'w'],
+      2 => ['pipe', 'w'],
+    ];
+
+    $process = proc_open($cmd, $descriptors, $pipes, $this->repoRoot);
+
+    if (!is_resource($process)) {
+      throw new RuntimeException("Failed to spawn cs-fixer (cwd: {$this->repoRoot})");
     }
 
-    try {
-      /** @var list<string> $output */
-      $output = [];
-      $exitCode = 0;
-      exec($cmd, $output, $exitCode);
+    // Close stdin immediately — cs-fixer takes no input.
+    fclose($pipes[0]);
 
-      if ($exitCode !== 0) {
-        throw new RuntimeException(
-          "cs-fixer failed (exit {$exitCode}):\n" . implode("\n", $output),
-        );
-      }
-    } finally {
-      if ($previousCwd !== false) {
-        chdir($previousCwd);
-      }
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    $exitCode = proc_close($process);
+
+    if ($exitCode !== 0) {
+      throw new RuntimeException(
+        "cs-fixer failed (exit {$exitCode}):\n"
+          . ($stdout !== false ? $stdout : '')
+          . ($stderr !== false ? $stderr : ''),
+      );
     }
   }
 }
