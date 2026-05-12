@@ -54,6 +54,12 @@ final class FileEmitter
    *     that want to distinguish "explicit null" from "argument omitted".
    *   - `Types/MutableTelegramObject.php` and `Types/TelegramObject.php`:
    *     the runtime base classes every generated type extends from.
+   *   - `Types/ErrorEvent.php`: dispatcher-synthetic event built by
+   *     `ErrorsMiddleware` to route handler exceptions to the `errors`
+   *     observer. The schema doesn't describe it — it exists only in the
+   *     dispatcher domain — so codegen would not emit it; this listing keeps
+   *     a hostile rerun (e.g. one that adds it speculatively) from clobbering
+   *     the hand-authored file.
    *
    * Adding to this list requires re-running the codegen with the protected
    * file already on disk to verify the orchestrator skips it correctly.
@@ -70,6 +76,7 @@ final class FileEmitter
     'Types/Unspecified.php',
     'Types/MutableTelegramObject.php',
     'Types/TelegramObject.php',
+    'Types/ErrorEvent.php',
   ];
 
   /**
