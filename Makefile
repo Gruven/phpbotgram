@@ -13,4 +13,4 @@ fix:
 	vendor/bin/php-cs-fixer fix
 
 regenerate:
-	php tools/generator/bin/generate.php --schema .butcher/schema/schema.json --out src/
+	php tools/generator/bin/generate.php
