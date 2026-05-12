@@ -1,0 +1,532 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Gruven\PhpBotGram\Generator\Renderer;
+
+use Gruven\PhpBotGram\Generator\AnnotationEntity;
+use Gruven\PhpBotGram\Generator\DefaultsResolver;
+use Gruven\PhpBotGram\Generator\LoadedSchema;
+use Gruven\PhpBotGram\Generator\MethodEntity;
+use Gruven\PhpBotGram\Generator\NameMapper;
+use Gruven\PhpBotGram\Generator\ParameterDefault;
+use Gruven\PhpBotGram\Generator\PhpType;
+use Gruven\PhpBotGram\Generator\PhpTypeKind;
+use Gruven\PhpBotGram\Generator\TypeResolver;
+use Throwable;
+use Twig\Environment;
+
+/**
+ * Renderer for the `Bot` facade.
+ *
+ * Consumes the entire `LoadedSchema` and emits a single PHP source string
+ * containing the Bot class with one wrapper method per Telegram API
+ * method. The wrapper preserves the corresponding `<Method>` constructor's
+ * parameter list (minus the trailing `?Bot $bot = null`), appends a
+ * trailing `?int $timeout = null`, and forwards every parameter by name
+ * to `new <Method>(...)` inside `return $this(new <Method>(...), $timeout)`.
+ *
+ * Return-type lowering mirrors `MethodRenderer::resolveReturnType()`:
+ *   - `Foo::class`-style returns surface as `Foo` (with `Foo` imported);
+ *   - scalar returns (`'bool'`, `'int'`, `'string'`) surface as the
+ *     matching PHP scalar;
+ *   - `'list:Foo'` surfaces as `array` typed in PHP, with `@return list<Foo>`
+ *     PHPDoc, and `Foo` imported.
+ *
+ * The hand-coded Phase 1 surface — constructor, `__invoke`,
+ * `getDefaultProperties`, the `BotShortcuts` trait inclusion — is
+ * preserved verbatim alongside the generated wrappers.
+ */
+final class BotRenderer
+{
+  public function __construct(
+    private readonly Environment $twig,
+    private readonly TypeResolver $types,
+    private readonly NameMapper $names,
+    private readonly DefaultsResolver $defaults,
+  ) {}
+
+  /**
+   * Emit the full Bot facade source.
+   */
+  public function render(LoadedSchema $schema): string
+  {
+    /** @var array<string, true> $imports */
+    $imports = $this->collectInitialImports();
+
+    /** @var list<array{
+     *   name: string,
+     *   parameters: list<array{phpName: string, phpType: string, phpdocType: ?string, default: ?string}>,
+     *   methodClass: string,
+     *   returnType: string,
+     *   phpdocReturn: ?string,
+     *   description: string,
+     *   timeoutParamName: string,
+     * }> $wrappers */
+    $wrappers = [];
+
+    foreach ($schema->methods as $method) {
+      $wrappers[] = $this->buildWrapper($method, $imports);
+    }
+
+    $sortedImports = $this->sortImports($imports);
+
+    return $this->twig->render('bot.php.twig', [
+      'namespace' => 'Gruven\\PhpBotGram',
+      'imports' => $sortedImports,
+      'wrappers' => $wrappers,
+    ]);
+  }
+
+  /**
+   * Imports the facade unconditionally needs alongside whatever the
+   * wrappers pull in. These mirror the Phase 1 hand-coded surface so the
+   * generated file keeps every existing import the constructor + __invoke
+   * reference.
+   *
+   * @return array<string, true>
+   */
+  private function collectInitialImports(): array
+  {
+    return [
+      'Gruven\\PhpBotGram\\Client\\BotShortcuts' => true,
+      'Gruven\\PhpBotGram\\Client\\BotShortcutsContract' => true,
+      'Gruven\\PhpBotGram\\Client\\DefaultBotProperties' => true,
+      'Gruven\\PhpBotGram\\Client\\Session\\AmphpSession' => true,
+      'Gruven\\PhpBotGram\\Client\\Session\\BaseSession' => true,
+      'Gruven\\PhpBotGram\\Methods\\TelegramMethod' => true,
+      'Gruven\\PhpBotGram\\Utils\\Token' => true,
+    ];
+  }
+
+  /**
+   * Build the descriptor for a single wrapper method.
+   *
+   * @param array<string, true> $imports
+   *
+   * @return array{
+   *   name: string,
+   *   parameters: list<array{phpName: string, phpType: string, phpdocType: ?string, default: ?string}>,
+   *   methodClass: string,
+   *   returnType: string,
+   *   phpdocReturn: ?string,
+   *   description: string,
+   *   timeoutParamName: string,
+   * }
+   */
+  private function buildWrapper(MethodEntity $method, array &$imports): array
+  {
+    $methodClass = ucfirst($method->name);
+    $imports['Gruven\\PhpBotGram\\Methods\\' . $methodClass] = true;
+
+    $defaultsForMethod = $this->defaults->forMethod($method->name);
+    $parameters = $this->buildParameters($method, $defaultsForMethod, $imports);
+
+    [$returnType, $phpdocReturn] = $this->resolveReturnType($method, $imports);
+
+    // Surface the method's "Returns …" prose into the wrapper docblock so
+    // IDEs can show it on hover. Defensive trim — some methods have empty
+    // returns strings which we'd rather not noise the docblock with.
+    $description = trim($method->description);
+
+    // The facade-side trailing `$timeout = null` parameter steers the session
+    // dispatch timeout (default: bound to `BaseSession::$timeout`). If the
+    // wrapped method already exposes a wire `timeout` parameter — the only
+    // such case in the vendored 10.0 schema is `getUpdates` — we rename to
+    // `$apiTimeout` to keep both slots addressable from the same signature.
+    $timeoutParamName = 'timeout';
+
+    foreach ($parameters as $p) {
+      if ($p['phpName'] === 'timeout') {
+        $timeoutParamName = 'apiTimeout';
+
+        break;
+      }
+    }
+
+    return [
+      'name' => $this->names->method($method->name),
+      'parameters' => $parameters,
+      'methodClass' => $methodClass,
+      'returnType' => $returnType,
+      'phpdocReturn' => $phpdocReturn,
+      'description' => $description,
+      'timeoutParamName' => $timeoutParamName,
+    ];
+  }
+
+  /**
+   * Lower every wire annotation of the method into a wrapper-parameter
+   * descriptor. Parameter list is the same as the Method constructor's —
+   * required params first (no default), then optional. Trailing
+   * `?int $timeout = null` is added by the template.
+   *
+   * @param array<string, ParameterDefault> $defaultsForMethod
+   * @param array<string, true> $imports
+   *
+   * @return list<array{
+   *   phpName: string,
+   *   phpType: string,
+   *   phpdocType: ?string,
+   *   default: ?string,
+   * }>
+   */
+  private function buildParameters(
+    MethodEntity $method,
+    array $defaultsForMethod,
+    array &$imports,
+  ): array {
+    /** @var list<array{
+     *   phpName: string,
+     *   phpType: string,
+     *   phpdocType: ?string,
+     *   default: ?string,
+     *   originalOrder: int,
+     * }> $params */
+    $params = [];
+
+    foreach ($method->annotations as $i => $a) {
+      $resolved = $this->types->resolve($a);
+      $this->collectImportsForType($resolved, $imports);
+
+      $phpName = $this->names->property($a->name);
+      $declType = $this->declTypeFor($resolved);
+      $phpdocType = $this->phpdocFor($resolved);
+
+      $default = null;
+
+      if (isset($defaultsForMethod[$a->name])) {
+        $pd = $defaultsForMethod[$a->name];
+        $default = $pd->expression;
+
+        if ($pd->isBotDefault) {
+          $imports['Gruven\\PhpBotGram\\Client\\BotDefault'] = true;
+        }
+      }
+
+      if ($a->required && $resolved->isTrueLiteral && $default === null) {
+        $default = 'true';
+      }
+
+      if ($default === 'null') {
+        $declType = $this->widenNullable($declType);
+      }
+
+      if ($default !== null && str_starts_with($default, 'new BotDefault(')) {
+        $declType = $this->widenForBotDefault($declType);
+
+        if (!$a->required) {
+          $declType = $this->widenNullable($declType);
+        }
+      }
+
+      $params[] = [
+        'phpName' => $phpName,
+        'phpType' => $declType,
+        'phpdocType' => $phpdocType,
+        'default' => $default,
+        'originalOrder' => $i,
+      ];
+    }
+
+    // Reorder: required-without-default first (schema order preserved
+    // within group), then params with defaults. Mirrors MethodRenderer so
+    // the wrapper signature aligns one-for-one with the Method constructor.
+    usort($params, static function (array $a, array $b): int {
+      $aHas = $a['default'] === null ? 0 : 1;
+      $bHas = $b['default'] === null ? 0 : 1;
+
+      if ($aHas !== $bHas) {
+        return $aHas <=> $bHas;
+      }
+
+      return $a['originalOrder'] <=> $b['originalOrder'];
+    });
+
+    /** @var list<array{phpName: string, phpType: string, phpdocType: ?string, default: ?string}> $stripped */
+    $stripped = array_map(
+      static fn(array $p): array => [
+        'phpName' => $p['phpName'],
+        'phpType' => $p['phpType'],
+        'phpdocType' => $p['phpdocType'],
+        'default' => $p['default'],
+      ],
+      $params,
+    );
+
+    return $stripped;
+  }
+
+  /**
+   * Compute the wrapper's return type pair: the PHP-level declaration
+   * (`User`, `bool`, `array`, …) and the optional PHPDoc-grade `@return`
+   * (`list<Update>` when the PHP-level form collapses to `array`).
+   *
+   * Mirrors the resolution rules in `MethodRenderer::resolveReturnType()` —
+   * keeping both renderers consistent is what lets the runtime serializer
+   * dispatch on the Method's `ReturnsType` const without mismatching the
+   * wrapper's declared return.
+   *
+   * @param array<string, true> $imports
+   *
+   * @return array{0: string, 1: ?string}
+   */
+  private function resolveReturnType(MethodEntity $method, array &$imports): array
+  {
+    if ($method->parsedReturning !== null) {
+      $envelope = new AnnotationEntity(
+        name: '__return__',
+        description: '',
+        type: 'Boolean',
+        required: true,
+        parsedType: $method->parsedReturning,
+      );
+
+      $resolved = $this->types->resolve($envelope);
+
+      return $this->lowerResolvedReturn($resolved, $imports);
+    }
+
+    if ($method->returns === '') {
+      return ['bool', null];
+    }
+
+    $candidate = $this->extractReturnedType($method->returns);
+
+    if ($candidate === null) {
+      return ['bool', null];
+    }
+
+    $candidate = $this->normaliseReturnAlias($candidate);
+
+    try {
+      $resolved = $this->types->resolveWire($candidate);
+    } catch (Throwable) {
+      return ['bool', null];
+    }
+
+    if (
+      $resolved->kind === PhpTypeKind::ClassName
+      && $resolved->importFqcn !== null
+      && str_starts_with($resolved->importFqcn, 'Gruven\\PhpBotGram\\Types\\')
+      && !$this->isKnownSchemaType($resolved->phpType)
+    ) {
+      return ['bool', null];
+    }
+
+    return $this->lowerResolvedReturn($resolved, $imports);
+  }
+
+  /**
+   * @param array<string, true> $imports
+   *
+   * @return array{0: string, 1: ?string}
+   */
+  private function lowerResolvedReturn(PhpType $resolved, array &$imports): array
+  {
+    switch ($resolved->kind) {
+      case PhpTypeKind::Scalar:
+        return [$resolved->phpType, null];
+
+      case PhpTypeKind::ClassName:
+        if ($resolved->importFqcn !== null) {
+          $imports[$resolved->importFqcn] = true;
+        }
+
+        return [$resolved->phpType, null];
+
+      case PhpTypeKind::ListOf:
+        $inner = $resolved->innerType;
+
+        if ($inner === null) {
+          return ['array', null];
+        }
+
+        if ($inner->kind === PhpTypeKind::ClassName && $inner->importFqcn !== null) {
+          $imports[$inner->importFqcn] = true;
+        }
+
+        return ['array', 'list<' . $inner->phpType . '>'];
+
+      case PhpTypeKind::Union:
+        foreach ($resolved->unionMembers as $m) {
+          if ($m->importFqcn !== null) {
+            $imports[$m->importFqcn] = true;
+          }
+        }
+
+        // For unions, prefer a tagged-parent collapse like MethodRenderer;
+        // but the BotRenderer needs a PHP-declarable type. The shorthand
+        // `T|U|V` is fine as long as every member is a single class name.
+        // When a member is a list, fall back to `array` and emit the union
+        // as PHPDoc.
+        foreach ($resolved->unionMembers as $m) {
+          if ($m->kind === PhpTypeKind::ListOf) {
+            return ['array', $resolved->phpType];
+          }
+        }
+
+        return [$resolved->phpType, null];
+    }
+  }
+
+  private function extractReturnedType(string $sentence): ?string
+  {
+    // Mirrors MethodRenderer's matcher chain — keep the two implementations
+    // in sync so the wrapper's declared return matches the Method's
+    // ReturnsType const for every wire prose phrasing the schema ships.
+    $patterns = [
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+an\s+Array\s+of\s+([A-Z][A-Za-z0-9_]*)/',
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:[a-zA-Z ]+?)\s+as\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
+      '/(?:On success,\s*)?(?:Returns?|returns?)\s+(?:a |an |the )?([A-Z][A-Za-z0-9_]*)/',
+      '/(?<![A-Za-z])([A-Z][A-Za-z0-9_]*)\s+(?:is|are)\s+returned/',
+      '/\b([A-Z][A-Za-z0-9_]*)\s+object\b/',
+    ];
+
+    foreach ($patterns as $i => $pattern) {
+      if (preg_match($pattern, $sentence, $m) === 1) {
+        $token = $m[1];
+
+        if ($i === 0) {
+          return 'Array of ' . $token;
+        }
+
+        return $token;
+      }
+    }
+
+    return null;
+  }
+
+  private function normaliseReturnAlias(string $candidate): string
+  {
+    return match ($candidate) {
+      'Int', 'Integer' => 'Integer',
+      'Str', 'Text' => 'String',
+      'Bool', 'Boolean' => 'Boolean',
+      default => $candidate,
+    };
+  }
+
+  private function isKnownSchemaType(string $name): bool
+  {
+    if (\strlen($name) < 2) {
+      return false;
+    }
+
+    $reserved = [
+      'Int' => true,
+      'Str' => true,
+      'Bool' => true,
+      'Text' => true,
+      'Object' => true,
+      'Null' => true,
+      'False' => true,
+      'True' => true,
+    ];
+
+    return !isset($reserved[$name]);
+  }
+
+  private function declTypeFor(PhpType $type): string
+  {
+    if ($type->kind === PhpTypeKind::ListOf) {
+      return 'array';
+    }
+
+    if ($type->kind === PhpTypeKind::Union) {
+      foreach ($type->unionMembers as $m) {
+        if ($m->kind === PhpTypeKind::ListOf) {
+          return 'array';
+        }
+      }
+    }
+
+    return $type->phpType;
+  }
+
+  private function phpdocFor(PhpType $type): ?string
+  {
+    if ($type->kind === PhpTypeKind::ListOf) {
+      return $type->phpType;
+    }
+
+    if ($type->kind === PhpTypeKind::Union) {
+      foreach ($type->unionMembers as $m) {
+        if ($m->kind === PhpTypeKind::ListOf) {
+          return $type->phpType;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * @param array<string, true> $imports
+   */
+  private function collectImportsForType(PhpType $type, array &$imports): void
+  {
+    if ($type->importFqcn !== null) {
+      $imports[$type->importFqcn] = true;
+    }
+
+    if ($type->innerType !== null) {
+      $this->collectImportsForType($type->innerType, $imports);
+    }
+
+    foreach ($type->unionMembers as $m) {
+      $this->collectImportsForType($m, $imports);
+    }
+  }
+
+  private function widenNullable(string $declType): string
+  {
+    if ($declType === 'null' || $declType === 'mixed') {
+      return $declType;
+    }
+
+    if (str_starts_with($declType, '?') || str_contains($declType, '|null')) {
+      return $declType;
+    }
+
+    if (str_contains($declType, '|')) {
+      return 'null|' . $declType;
+    }
+
+    return '?' . $declType;
+  }
+
+  private function widenForBotDefault(string $declType): string
+  {
+    if (str_contains($declType, 'BotDefault')) {
+      return $declType;
+    }
+
+    if (str_starts_with($declType, '?')) {
+      $base = substr($declType, 1);
+
+      return 'null|BotDefault|' . $base;
+    }
+
+    if (str_contains($declType, '|null') || str_starts_with($declType, 'null|')) {
+      return 'BotDefault|' . $declType;
+    }
+
+    return 'BotDefault|' . $declType;
+  }
+
+  /**
+   * @param array<string, true> $imports
+   *
+   * @return list<string>
+   */
+  private function sortImports(array $imports): array
+  {
+    $fqcns = array_keys($imports);
+    sort($fqcns, SORT_STRING);
+
+    /** @var list<string> $fqcns */
+    return $fqcns;
+  }
+}
