@@ -182,7 +182,7 @@ abstract class BaseSession
     }
 
     if ($value instanceof TelegramObject) {
-      $dumped = Serializer::dump($value); // @phpstan-ignore-line
+      $dumped = Serializer::dump($value);
 
       return $this->prepareValue($dumped, $bot, $files, dumpsJson: $dumpsJson);
     }
