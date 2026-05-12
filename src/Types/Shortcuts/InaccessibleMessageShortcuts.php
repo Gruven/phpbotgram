@@ -35,13 +35,9 @@ trait InaccessibleMessageShortcuts
    * path stays uniform across `Message` and `InaccessibleMessage`.
    *
    * Both `allowSendingWithoutReply` and `quoteParseMode` default to a
-   * `BotDefault(...)` sentinel that mirrors aiogram's `Default(...)`:
-   * when the message is bound to a Bot, the bot's `DefaultBotProperties`
-   * is consulted for the matching field; when there is no bound bot,
-   * the sentinel resolves to null and the server-side default applies.
-   * Both sentinels are resolved inside this helper because the
-   * `ReplyParameters` property types (`?string`, `?bool`) forbid holding
-   * the sentinel through to wire-encode time.
+   * `BotDefault(...)` sentinel that mirrors aiogram's `Default(...)`.
+   * The sentinels pass through to `ReplyParameters` unchanged — deferred
+   * resolution happens at wire-encode time in `BaseSession::prepareValue`.
    *
    * @param null|list<MessageEntity> $quoteEntities
    */
@@ -52,35 +48,12 @@ trait InaccessibleMessageShortcuts
     ?array $quoteEntities = null,
     ?int $quotePosition = null,
   ): ReplyParameters {
-    $resolvedQuoteParseMode = $quoteParseMode;
-
-    if ($resolvedQuoteParseMode instanceof BotDefault) {
-      $resolvedQuoteParseMode = $this->bot?->getDefaultProperties()->get($resolvedQuoteParseMode->name);
-
-      if (!is_string($resolvedQuoteParseMode)) {
-        $resolvedQuoteParseMode = null;
-      }
-    }
-
-    $resolvedAllowSendingWithoutReply = $allowSendingWithoutReply;
-
-    if ($resolvedAllowSendingWithoutReply instanceof BotDefault) {
-      // Same resolution rule as `quoteParseMode`: bot-bound messages
-      // consult `DefaultBotProperties::allowSendingWithoutReply`,
-      // un-bound messages fall through to null (server-side default).
-      $resolvedAllowSendingWithoutReply = $this->bot?->getDefaultProperties()->get($resolvedAllowSendingWithoutReply->name);
-
-      if (!is_bool($resolvedAllowSendingWithoutReply)) {
-        $resolvedAllowSendingWithoutReply = null;
-      }
-    }
-
     return new ReplyParameters(
       messageId: $this->messageId,
       chatId: $this->chat->id,
-      allowSendingWithoutReply: $resolvedAllowSendingWithoutReply,
+      allowSendingWithoutReply: $allowSendingWithoutReply,
       quote: $quote,
-      quoteParseMode: $resolvedQuoteParseMode,
+      quoteParseMode: $quoteParseMode,
       quoteEntities: $quoteEntities,
       quotePosition: $quotePosition,
     );

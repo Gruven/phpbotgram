@@ -152,16 +152,21 @@ final class AsReplyParametersTest extends TestCase
   }
 
   /**
-   * Default-only invocation: produce a ReplyParameters pinned to the
-   * message's IDs with both BotDefault sentinels resolved to null (no
-   * bound bot means no default-properties resolution; the server-side
-   * default applies). The aiogram-style `Default("parse_mode")` and
-   * `Default("allow_sending_without_reply")` sentinels are resolved
-   * inside the trait because the corresponding `ReplyParameters`
-   * properties are typed `?string` / `?bool` and PHP rejects assigning a
-   * BotDefault to them.
+   * Cycle 3 review fix: BotDefault sentinels survive the
+   * `asReplyParameters()` call when no bot is bound — they are no longer
+   * eagerly resolved inside the trait. Aiogram's `Message.as_reply_parameters`
+   * threads the sentinels straight through to `ReplyParameters` so that
+   * deferred resolution against whichever bot ultimately dispatches the
+   * payload can pick up the right default — eager resolution here would
+   * lock the value to the binding bot (or to null when unbound), defeating
+   * the entire point of the sentinel.
+   *
+   * `ReplyParameters` itself widens both fields (`allowSendingWithoutReply`,
+   * `quoteParseMode`) to admit `BotDefault`, so the type-checker accepts
+   * the passthrough. `BaseSession::prepareValue` handles the final
+   * resolution at wire-encode time.
    */
-  public function testMessageDefaultsResolveBotDefaultToNullWithoutBot(): void
+  public function testMessageDefaultsPassBotDefaultSentinelsThroughWithoutBot(): void
   {
     $message = new Message(
       messageId: 7,
@@ -173,24 +178,25 @@ final class AsReplyParametersTest extends TestCase
 
     self::assertSame(7, $rp->messageId);
     self::assertSame(42, $rp->chatId);
-    // No bot bound on this Message → both BotDefault sentinels resolve to null.
-    self::assertNull($rp->allowSendingWithoutReply);
-    self::assertNull($rp->quoteParseMode);
+    // Sentinels survive: no eager resolution happened in the helper.
+    self::assertInstanceOf(BotDefault::class, $rp->allowSendingWithoutReply);
+    self::assertSame('allow_sending_without_reply', $rp->allowSendingWithoutReply->name);
+    self::assertInstanceOf(BotDefault::class, $rp->quoteParseMode);
+    self::assertSame('parse_mode', $rp->quoteParseMode->name);
     self::assertNull($rp->quote);
     self::assertNull($rp->quoteEntities);
     self::assertNull($rp->quotePosition);
   }
 
   /**
-   * Cycle 2 review fix: `allowSendingWithoutReply` must also resolve via
-   * `DefaultBotProperties` when the Message is bound to a Bot — the
-   * widening adds a second `BotDefault` slot alongside the existing
-   * `quoteParseMode` resolution path. This test stubs a bot whose
-   * default properties carry `allowSendingWithoutReply: true` and asserts
-   * the trait threads that value through to the produced
-   * `ReplyParameters`.
+   * Cycle 3 review fix: even with a bound bot whose `DefaultBotProperties`
+   * carries values for `parseMode` and `allowSendingWithoutReply`, the
+   * sentinels survive the helper — resolution is deferred to wire-encode
+   * time. This preserves aiogram parity (the upstream helper never
+   * resolves) and keeps the `ReplyParameters` value usable across
+   * differently-configured bots.
    */
-  public function testMessageBotBoundResolutionThreadsBothSentinels(): void
+  public function testMessageBotBoundDoesNotResolveSentinelsEagerly(): void
   {
     // Instantiate a real Bot (not MockedBot — its fixed signature pins the
     // default properties) so we can supply both BotDefault values via the
@@ -215,8 +221,11 @@ final class AsReplyParametersTest extends TestCase
 
     self::assertSame(7, $rp->messageId);
     self::assertSame(42, $rp->chatId);
-    // BotDefault sentinels resolved via the bot's DefaultBotProperties.
-    self::assertTrue($rp->allowSendingWithoutReply);
-    self::assertSame('HTML', $rp->quoteParseMode);
+    // Sentinels survive even when the binding bot would resolve them:
+    // deferred resolution is the contract aiogram observes.
+    self::assertInstanceOf(BotDefault::class, $rp->allowSendingWithoutReply);
+    self::assertSame('allow_sending_without_reply', $rp->allowSendingWithoutReply->name);
+    self::assertInstanceOf(BotDefault::class, $rp->quoteParseMode);
+    self::assertSame('parse_mode', $rp->quoteParseMode->name);
   }
 }

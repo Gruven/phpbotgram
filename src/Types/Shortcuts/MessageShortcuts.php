@@ -40,13 +40,14 @@ trait MessageShortcuts
    * "reply to this message" without the caller spelling out the IDs.
    *
    * Both `allowSendingWithoutReply` and `quoteParseMode` default to a
-   * `BotDefault(...)` sentinel that mirrors aiogram's `Default(...)`:
-   * when the message is bound to a Bot, the bot's `DefaultBotProperties`
-   * is consulted for the matching field; when there is no bound bot,
-   * the sentinel resolves to null and the server-side default applies.
-   * Both sentinels are resolved inside this helper because the
-   * `ReplyParameters` property types (`?string`, `?bool`) forbid holding
-   * the sentinel through to wire-encode time.
+   * `BotDefault(...)` sentinel that mirrors aiogram's `Default(...)`.
+   * The sentinels are passed through to `ReplyParameters` unchanged —
+   * `ReplyParameters` itself widens both fields to admit the sentinel,
+   * so deferred resolution happens at wire-encode time (in
+   * `BaseSession::prepareValue`) against the bot bound at the dispatch
+   * call-site. Eagerly resolving here would lose the sentinel for any
+   * caller that constructs the `ReplyParameters` ahead of time and
+   * dispatches against a separate Bot (the aiogram parity behaviour).
    *
    * @param null|list<MessageEntity> $quoteEntities
    */
@@ -57,39 +58,12 @@ trait MessageShortcuts
     ?array $quoteEntities = null,
     ?int $quotePosition = null,
   ): ReplyParameters {
-    $resolvedQuoteParseMode = $quoteParseMode;
-
-    if ($resolvedQuoteParseMode instanceof BotDefault) {
-      // The sentinel resolves against the bot's DefaultBotProperties when
-      // the message is bound to a Bot; otherwise it falls back to null so
-      // the server-side default applies. `?string` on ReplyParameters
-      // forbids holding the sentinel through to wire-encode time.
-      $resolvedQuoteParseMode = $this->bot?->getDefaultProperties()->get($resolvedQuoteParseMode->name);
-
-      if (!is_string($resolvedQuoteParseMode)) {
-        $resolvedQuoteParseMode = null;
-      }
-    }
-
-    $resolvedAllowSendingWithoutReply = $allowSendingWithoutReply;
-
-    if ($resolvedAllowSendingWithoutReply instanceof BotDefault) {
-      // Same resolution rule as `quoteParseMode`: bot-bound messages
-      // consult `DefaultBotProperties::allowSendingWithoutReply`,
-      // un-bound messages fall through to null (server-side default).
-      $resolvedAllowSendingWithoutReply = $this->bot?->getDefaultProperties()->get($resolvedAllowSendingWithoutReply->name);
-
-      if (!is_bool($resolvedAllowSendingWithoutReply)) {
-        $resolvedAllowSendingWithoutReply = null;
-      }
-    }
-
     return new ReplyParameters(
       messageId: $this->messageId,
       chatId: $this->chat->id,
-      allowSendingWithoutReply: $resolvedAllowSendingWithoutReply,
+      allowSendingWithoutReply: $allowSendingWithoutReply,
       quote: $quote,
-      quoteParseMode: $resolvedQuoteParseMode,
+      quoteParseMode: $quoteParseMode,
       quoteEntities: $quoteEntities,
       quotePosition: $quotePosition,
     );
