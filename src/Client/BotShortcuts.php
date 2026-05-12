@@ -112,10 +112,18 @@ trait BotShortcuts
     return $this->consumeStream($stream, $destination);
   }
 
-  public function download(Downloadable $object, mixed $destination = null, int $chunkSize = 65536): ?string
+  /**
+   * Mirrors aiogram's `bot.download(file: str | Downloadable, ...)`. A bare
+   * `string` is treated as a `file_id` and resolved via `getFile` before
+   * downloading; a `Downloadable` (Document/Photo/Voice/etc) is unwrapped
+   * via its `fileId()` method.
+   */
+  public function download(Downloadable|string $object, mixed $destination = null, int $chunkSize = 65536): ?string
   {
+    $fileId = $object instanceof Downloadable ? $object->fileId() : $object;
+
     /** @var File $file */
-    $file = $this(new GetFile(fileId: $object->fileId()));
+    $file = $this(new GetFile(fileId: $fileId));
 
     return $this->downloadFile($file, $destination, $chunkSize);
   }

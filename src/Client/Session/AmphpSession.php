@@ -36,9 +36,9 @@ final class AmphpSession extends BaseSession
    */
   public function __construct(
     ?TelegramApiServer $api = null,
-    float $timeout = 60.0,
     ?Closure $jsonLoads = null,
     ?Closure $jsonDumps = null,
+    float $timeout = 60.0,
   ) {
     parent::__construct(api: $api, jsonLoads: $jsonLoads, jsonDumps: $jsonDumps, timeout: $timeout);
   }

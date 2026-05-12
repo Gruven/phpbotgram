@@ -18,9 +18,21 @@ final class RequestMiddlewareManager implements ArrayAccess, Countable
   /** @var list<BaseRequestMiddleware> */
   private array $middlewares = [];
 
+  /**
+   * Cached wrapped chain — invalidated on register/unregister. Lets every
+   * request reuse the same Closure stack instead of rebuilding via
+   * array_reverse() + per-frame static fns on the hot dispatch path.
+   *
+   * Key is the terminal Closure's spl_object_id; value is the wrapped chain.
+   *
+   * @var array<int, Closure>
+   */
+  private array $chainCache = [];
+
   public function register(BaseRequestMiddleware $middleware): BaseRequestMiddleware
   {
     $this->middlewares[] = $middleware;
+    $this->chainCache = [];
 
     return $middleware;
   }
@@ -30,6 +42,7 @@ final class RequestMiddlewareManager implements ArrayAccess, Countable
     foreach ($this->middlewares as $i => $existing) {
       if ($existing === $middleware) {
         array_splice($this->middlewares, $i, 1);
+        $this->chainCache = [];
 
         return true;
       }
@@ -89,6 +102,14 @@ final class RequestMiddlewareManager implements ArrayAccess, Countable
 
   public function wrap(Closure $terminal): Closure
   {
+    if ($this->middlewares === []) {
+      return $terminal;
+    }
+    $key = spl_object_id($terminal);
+
+    if (isset($this->chainCache[$key])) {
+      return $this->chainCache[$key];
+    }
     $next = $terminal;
 
     foreach (array_reverse($this->middlewares) as $middleware) {
@@ -96,6 +117,6 @@ final class RequestMiddlewareManager implements ArrayAccess, Countable
       $next = static fn(...$args) => $middleware($current, ...$args);
     }
 
-    return $next;
+    return $this->chainCache[$key] = $next;
   }
 }

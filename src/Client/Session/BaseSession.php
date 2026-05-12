@@ -32,8 +32,8 @@ use Gruven\PhpBotGram\Methods\Response;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Types\InputFile;
 use Gruven\PhpBotGram\Types\Unspecified;
-use JsonException;
 use RuntimeException;
+use Throwable;
 
 abstract class BaseSession
 {
@@ -99,7 +99,10 @@ abstract class BaseSession
   {
     try {
       $data = ($this->jsonLoads)($content);
-    } catch (JsonException $e) {
+    } catch (Throwable $e) {
+      // Catch \Throwable not just JsonException — user-supplied jsonLoads
+      // closures may raise other exception types (UnexpectedValueException,
+      // RuntimeException etc.) that should still be wrapped as decode errors.
       throw new ClientDecodeException('Failed to decode response', $e, $content);
     }
 
@@ -113,17 +116,33 @@ abstract class BaseSession
       return $response;
     }
 
-    $description = isset($data['description']) && is_string($data['description']) ? $data['description'] : '';
-    $params = $data['parameters'] ?? null;
+    $description = $response->description ?? (isset($data['description']) && is_string($data['description']) ? $data['description'] : '');
 
-    if (is_array($params)) {
-      if (isset($params['retry_after']) && is_int($params['retry_after'])) {
-        throw new TelegramRetryAfter($method, $description, retryAfter: $params['retry_after']);
-      }
+    // Prefer the typed $response->parameters once buildResponse populates them
+    // (Phase 2). Fall back to raw $data['parameters'] for the Phase 1 stub.
+    $retryAfter = $response->parameters?->retryAfter;
+    $migrateToChatId = $response->parameters?->migrateToChatId;
 
-      if (isset($params['migrate_to_chat_id']) && is_int($params['migrate_to_chat_id'])) {
-        throw new TelegramMigrateToChat($method, $description, migrateToChatId: $params['migrate_to_chat_id']);
+    if ($retryAfter === null || $migrateToChatId === null) {
+      $params = $data['parameters'] ?? null;
+
+      if (is_array($params)) {
+        if ($retryAfter === null && isset($params['retry_after']) && is_int($params['retry_after'])) {
+          $retryAfter = $params['retry_after'];
+        }
+
+        if ($migrateToChatId === null && isset($params['migrate_to_chat_id']) && is_int($params['migrate_to_chat_id'])) {
+          $migrateToChatId = $params['migrate_to_chat_id'];
+        }
       }
+    }
+
+    if ($retryAfter !== null) {
+      throw new TelegramRetryAfter($method, $description, retryAfter: $retryAfter);
+    }
+
+    if ($migrateToChatId !== null) {
+      throw new TelegramMigrateToChat($method, $description, migrateToChatId: $migrateToChatId);
     }
 
     throw match (true) {
