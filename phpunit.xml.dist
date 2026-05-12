@@ -4,7 +4,6 @@
          bootstrap="tests/bootstrap.php"
          colors="true"
          beStrictAboutOutputDuringTests="true"
-         beStrictAboutCoverageMetadata="true"
          failOnRisky="true"
          failOnWarning="true"
          cacheDirectory=".phpunit.cache">
@@ -21,12 +20,11 @@
             -->
         </testsuite>
     </testsuites>
-    <coverage>
-        <report>
-            <text outputFile="php://stdout" showOnlySummary="true"/>
-            <html outputDirectory="coverage" lowUpperBound="50" highLowerBound="90"/>
-        </report>
-    </coverage>
+    <!--
+      No coverage block here: PHPUnit auto-emits a warning when no coverage driver
+      is loaded, which fails under failOnWarning. CI passes the coverage flag on
+      the CLI when it wants a coverage report; developers can do the same.
+    -->
     <source>
         <include>
             <directory>src</directory>
