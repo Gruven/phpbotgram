@@ -122,6 +122,25 @@ final class BaseSessionTest extends TestCase
     self::assertSame('HTML', $prepared);
   }
 
+  public function testPrepareValueElidesBotDefaultWhenPropertyMissing(): void
+  {
+    // The spec's null-filter rule: a BotDefault that resolves to null disappears
+    // from the wire entirely. Reason this regression test exists: without
+    // null-elision, an empty `parse_mode` would reach Telegram as `parse_mode=`
+    // and the API would reject the request.
+    $bot = new Bot(
+      token: '1:test',
+      session: new MockedSession(),
+      defaultProperties: new DefaultBotProperties(), // no parse_mode set
+    );
+    $session = $bot->session;
+    self::assertInstanceOf(MockedSession::class, $session);
+    $files = [];
+
+    $prepared = $session->prepareValue(new BotDefault('parse_mode'), $bot, $files, dumpsJson: false);
+    self::assertNull($prepared, 'unresolved BotDefault must produce null so AmphpSession::buildFormBody drops the field');
+  }
+
   public function testPrepareValueDumpsNestedTelegramMethod(): void
   {
     // A TelegramMethod nested inside another method's payload should be

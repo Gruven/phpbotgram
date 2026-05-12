@@ -27,10 +27,15 @@ final class DefaultBotProperties implements ArrayAccess
     public readonly ?bool $linkPreviewShowAboveText = null,
     public readonly ?bool $showCaptionAboveMedia = null,
   ) {
-    $hasAnyLinkPreview = $linkPreviewIsDisabled !== null
-        || $linkPreviewPreferSmallMedia !== null
-        || $linkPreviewPreferLargeMedia !== null
-        || $linkPreviewShowAboveText !== null;
+    // Match upstream's `any((...))` truthy check (client/default.py:67-75) —
+    // aggregation only fires when at least one link-preview hint is `true`.
+    // Explicit `false` / `null` for every slot does not synthesize a
+    // LinkPreviewOptions; users must pass `linkPreview: ...` directly if they
+    // want a default with all-false fields.
+    $hasAnyLinkPreview = $linkPreviewIsDisabled === true
+        || $linkPreviewPreferSmallMedia === true
+        || $linkPreviewPreferLargeMedia === true
+        || $linkPreviewShowAboveText === true;
 
     if ($linkPreview === null && $hasAnyLinkPreview) {
       $linkPreview = new LinkPreviewOptions(
