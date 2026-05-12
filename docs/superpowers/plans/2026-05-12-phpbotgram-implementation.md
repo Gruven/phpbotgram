@@ -100,11 +100,10 @@ phpbotgram/
 │   │   │   ├── SkipHandlerException.php
 │   │   │   └── CancelHandlerException.php
 │   │   ├── Flags/
-│   │   │   ├── Flag.php
-│   │   │   ├── FlagAttribute.php                    # #[Flag(...)] attribute class
-│   │   │   ├── FlagDecorator.php
-│   │   │   ├── FlagGenerator.php
-│   │   │   └── functions.php                        # extractFlags/getFlag/checkFlags
+│   │   │   ├── Flag.php                             # #[\Attribute(\Attribute::TARGET_METHOD|TARGET_FUNCTION)] class — IS the attribute itself, not a separate DTO. Constructor params are (name: string, value: mixed = true).
+│   │   │   ├── FlagDecorator.php                    # imperative attachment via WeakMap for closures
+│   │   │   ├── FlagGenerator.php                    # singleton with __call magic → FlagDecorator
+│   │   │   └── functions.php                        # extractFlags/extractFlagsFromObject/getFlag/checkFlags
 │   │   └── Middlewares/
 │   │       ├── BaseMiddleware.php
 │   │       ├── ErrorsMiddleware.php
@@ -254,6 +253,7 @@ Replace the existing `require` and `require-dev` blocks:
         "ext-json": "*",
         "amphp/amp": "^3",
         "amphp/byte-stream": "^2",
+        "amphp/file": "^3",
         "amphp/http-client": "^5",
         "amphp/sync": "^2",
         "revolt/event-loop": "^1"
@@ -544,9 +544,11 @@ namespace Gruven\PhpBotGram\Types;
  * Non-readonly parent for the small set of schema types whose `replace.yml`
  * carries `bases: [MutableTelegramObject]` — currently 16 entities, primarily
  * keyboard/menu/input-media builders that need post-construction mutation.
+ * Hand-authored builder classes (`Utils\Keyboard\InlineKeyboardBuilder`, etc.)
+ * also extend it directly. NOT abstract — matches upstream `aiogram/types/base.py:38-41`.
  * See spec § "Mutable type variant" and § "TypeOverrideApplier".
  */
-abstract class MutableTelegramObject extends TelegramObject
+class MutableTelegramObject extends TelegramObject
 {
 }
 ```
@@ -693,15 +695,15 @@ abstract class BotContextController
      * the active Bot into deserialized objects (mirrors upstream model_validate
      * context={"bot": bot}). The Serializer recursively rebinds bot on every
      * nested TelegramObject; this method handles the shallow rebind.
+     *
+     * Uses PHP 8.5's clone-with syntax `clone($this, [...])` which is the only
+     * way to modify a readonly property on a clone. The call must be made from
+     * within the declaring scope (i.e. inside BotContextController or a subclass);
+     * an external caller cannot use this syntax against a readonly slot.
      */
     public function withBot(?Bot $bot): static
     {
-        $clone = clone $this;
-        // BotContextController::$bot is readonly; clone allows one-time re-assignment.
-        // The Reflection cast handles the readonly-on-clone case PHP 8.3+ supports.
-        $r = new \ReflectionProperty(self::class, 'bot');
-        $r->setValue($clone, $bot);
-        return $clone;
+        return clone($this, ['bot' => $bot]);
     }
 
     /**
@@ -1591,6 +1593,7 @@ final class MockedSession extends BaseSession
 
     public function __construct()
     {
+        parent::__construct();   // initialize $api, $middleware on BaseSession
         $this->responses = new \SplDoublyLinkedList();
         $this->requests = new \SplDoublyLinkedList();
     }
@@ -1642,13 +1645,14 @@ use Gruven\PhpBotGram\Types\User;
 
 final class MockedBot extends Bot
 {
-    public MockedSession $session;
     private User $cachedMe;
 
     public function __construct(string $token = '42:TEST')
     {
-        // Bot constructor is filled in Phase 1; for now we initialize what we need.
-        $this->session = new MockedSession();
+        // Forward to parent Bot::__construct, supplying a MockedSession so the
+        // inherited readonly $session is a MockedSession at runtime. Do NOT
+        // redeclare $session — PHP fatal-errors on `readonly` redeclaration.
+        parent::__construct(token: $token, session: new MockedSession());
         $this->cachedMe = new User(
             id: 42,
             isBot: true,
@@ -1657,6 +1661,13 @@ final class MockedBot extends Bot
             username: 'tbot',
             languageCode: 'uk-UA',
         );
+    }
+
+    public function getMockedSession(): MockedSession
+    {
+        // Type-narrow at use-site; the parent declares $session: ?BaseSession.
+        assert($this->session instanceof MockedSession);
+        return $this->session;
     }
 
     /**
@@ -1680,12 +1691,12 @@ final class MockedBot extends Bot
         ?int $migrateToChatId = null,
         ?int $retryAfter = null,
     ): Response {
-        $parameters = ($migrateToChatId !== null || $retryAfter !== null)
-            ? new \Gruven\PhpBotGram\Types\ResponseParameters(
-                migrateToChatId: $migrateToChatId,
-                retryAfter: $retryAfter,
-            )
-            : null;
+        // Mirror upstream tests/mocked_bot.py:85-92: ResponseParameters is
+        // always constructed (fields default null).
+        $parameters = new \Gruven\PhpBotGram\Types\ResponseParameters(
+            migrateToChatId: $migrateToChatId,
+            retryAfter: $retryAfter,
+        );
 
         $response = new Response(
             ok: $ok,
@@ -1694,13 +1705,13 @@ final class MockedBot extends Bot
             errorCode: $errorCode,
             parameters: $parameters,
         );
-        $this->session->addResult($response);
+        $this->getMockedSession()->addResult($response);
         return $response;
     }
 
     public function getRequest(): TelegramMethod
     {
-        return $this->session->getRequest();
+        return $this->getMockedSession()->getRequest();
     }
 }
 ```
@@ -1790,10 +1801,12 @@ final class RunAsyncTraitTest extends TestCase
         self::assertSame(42, $result);
     }
 
-    public function testEventLoopDriverResetBetweenTests(): void
+    public function testResetEventLoopProducesFreshDriver(): void
     {
+        // PHPUnit's $this->tearDown() does NOT invoke #[After] hooks; we call
+        // the reset method directly to verify it produces a fresh driver.
         $driver = EventLoop::getDriver();
-        $this->tearDown();
+        $this->resetEventLoop();
         self::assertNotSame($driver, EventLoop::getDriver());
     }
 }
@@ -1831,11 +1844,15 @@ trait RunAsyncTrait
         return async($body)->await();
     }
 
+    /**
+     * Fresh driver per test — Revolt v1 has no public API to enumerate pending callbacks,
+     * so a driver reset is the simplest reliable isolation. See spec § "Test infrastructure".
+     * Callable directly from a test method that needs an explicit reset, AND fired
+     * automatically after every test via the #[After] hook.
+     */
     #[\PHPUnit\Framework\Attributes\After]
-    protected function resetEventLoop(): void
+    public function resetEventLoop(): void
     {
-        // Fresh driver per test — Revolt v1 has no public API to enumerate pending callbacks,
-        // so a driver reset is the simplest reliable isolation. See spec § "Test infrastructure".
         EventLoop::setDriver(new StreamSelectDriver());
     }
 }
@@ -1848,7 +1865,62 @@ git add tests/Support/RunAsyncTrait.php tests/Support/RunAsyncTraitTest.php
 git commit -m "feat(test): RunAsyncTrait — Fiber-aware test helper with EventLoop driver reset"
 ```
 
-### Task 0.13: Phase 0 acceptance gate
+### Task 0.13: RecordingDispatcher test fixture
+
+**Files:**
+- Create: `tests/Support/RecordingDispatcher.php`
+
+Spec § "Test infrastructure" — replaces upstream's `unittest.mock.patch("aiogram.dispatcher.dispatcher.Dispatcher.silent_call_request", new_callable=AsyncMock)` since PHP static-method mocking is awkward; making `silentCallRequest` a public instance method allows a recording subclass.
+
+- [ ] **Step 1: Implement the recording proxy as a stub that subclasses Dispatcher**
+
+Note: full `Dispatcher` lands at Task 3.10. For Phase 0, we ship the RecordingDispatcher class file with the methods that will be overridden, marked `@phpstan-ignore` until Phase 3 lands the parent.
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Gruven\PhpBotGram\Tests\Support;
+
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Methods\TelegramMethod;
+
+/**
+ * Test-only Dispatcher subclass that records every silentCallRequest invocation
+ * instead of dispatching it through the bot's session.
+ */
+final class RecordingDispatcher extends Dispatcher
+{
+    /** @var list<array{Bot, TelegramMethod}> */
+    public array $silentCalls = [];
+
+    public function silentCallRequest(Bot $bot, TelegramMethod $method): void
+    {
+        $this->silentCalls[] = [$bot, $method];
+    }
+}
+```
+
+(The class will fail to load until Task 3.10 lands `Dispatcher`; the empty file is staged for Phase 3 tests to find. PHPUnit auto-loading allows the test file to live as a class definition without a real parent class — but the `extends Dispatcher` line will error. Defer the actual write to **Task 3.13** where it's first used.)
+
+- [ ] **Step 2: Stub-only — create empty file with comment**
+
+```php
+<?php
+// Implementation lands at Task 3.13 once Dispatcher class exists.
+// See plan Task 0.13 for the full class body.
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tests/Support/RecordingDispatcher.php
+git commit -m "chore(test): RecordingDispatcher placeholder (filled in Task 3.13)"
+```
+
+### Task 0.14: Phase 0 acceptance gate
 
 - [ ] **Step 1: Full suite + static analysis**
 
@@ -1861,8 +1933,8 @@ Expected: all green; CI green. PHPStan at level 9 may flag a few advisory issues
 - [ ] **Step 2: Mark Phase 0 complete**
 
 ```bash
-git tag phase-0-complete
 git commit --allow-empty -m "chore: Phase 0 — bootstrap complete"
+git tag phase-0-complete
 ```
 
 ---
@@ -2208,11 +2280,10 @@ final class FsInputFile extends InputFile
 
 - [ ] **Step 3: Run — pass; Commit**
 
-Note: `amphp/file` is needed for `Amp\File\openFile`. Add to require-dev or require depending on whether `Amp\ByteStream` already exposes it (in amphp v3, `amphp/file` is a separate package). If FsInputFile isn't critical for Phase 1 smoke testing, defer to Phase 2.
+`amphp/file ^3` is already in Phase 0's `require` (Task 0.1).
 
 ```bash
-composer require amphp/file --no-progress
-git add src/Types/InputFile.php src/Types/BufferedInputFile.php src/Types/FsInputFile.php src/Types/UrlInputFile.php src/Types/Custom/DateTime.php tests/Types/InputFileTest.php composer.json composer.lock
+git add src/Types/InputFile.php src/Types/BufferedInputFile.php src/Types/FsInputFile.php src/Types/UrlInputFile.php src/Types/Custom/DateTime.php tests/Types/InputFileTest.php
 git commit -m "feat: InputFile abstract + BufferedInputFile + FsInputFile + DateTime"
 ```
 
@@ -2309,9 +2380,7 @@ use Gruven\PhpBotGram\Methods\TelegramMethod;
 abstract class BaseSession
 {
     public readonly TelegramApiServer $api;
-    public RequestMiddlewareManager $middleware {
-        get => $this->middleware;
-    }
+    public private(set) RequestMiddlewareManager $middleware;
 
     public function __construct(
         ?TelegramApiServer $api = null,
@@ -2626,6 +2695,24 @@ final class Serializer
             $typeName = $type->getName();
             if (is_subclass_of($typeName, TelegramObject::class) && is_array($value)) {
                 return self::load($typeName, $value, $bot);
+            }
+        }
+        // Union types — for object members, consult the discriminated union helper
+        // emitted by Task 2.6 UnionDetector (e.g. ReplyMarkupUnion::resolve($value, $bot)).
+        if ($type instanceof \ReflectionUnionType && is_array($value)) {
+            foreach ($type->getTypes() as $member) {
+                if (!$member instanceof \ReflectionNamedType || $member->isBuiltin()) continue;
+                $memberName = $member->getName();
+                // Heuristic: if any member is a TelegramObject subclass and there's a
+                // sibling *Union class with resolve(), delegate to it.
+                $unionClass = $memberName . 'Union';
+                if (class_exists($unionClass) && method_exists($unionClass, 'resolve')) {
+                    return $unionClass::resolve($value, $bot);
+                }
+                if (is_subclass_of($memberName, TelegramObject::class)) {
+                    // Fallback: first TelegramObject member wins (good enough for non-discriminated cases).
+                    return self::load($memberName, $value, $bot);
+                }
             }
         }
         return $value;
@@ -3115,8 +3202,8 @@ Skip unless test bot credentials are configured.
 - [ ] **Step 3: Tag**
 
 ```bash
-git tag phase-1-complete
 git commit --allow-empty -m "chore: Phase 1 — foundation complete"
+git tag phase-1-complete
 ```
 
 ---
@@ -3186,7 +3273,7 @@ For each stage, write the class under `tools/generator/src/` with a correspondin
 - [ ] **Task 2.8: `DefaultsResolver`** — consumes `methods/<name>/default.yml`; threads `new BotDefault(...)` defaults into method constructor parameter expressions.
 - [ ] **Task 2.9: `HandAuthoredShortcutsIntegrator`** — detects `src/Types/Shortcuts/<TypeName>Shortcuts.php` traits and emits `use <TypeName>Shortcuts;` in the generated class. Aborts on method-name collisions between alias and trait.
 - [ ] **Task 2.10: `Renderer`** — Twig-based file emission with sorted iteration + cs-fixer post-pass. Templates: `type.php.twig`, `method.php.twig`, `enum.php.twig`, `bot.php.twig`, `f-builder.php.twig`.
-- [ ] **Task 2.11: `FDslGenerator`** — emits 25 `<EventType>F.php` typed builders + nested field-builders for first-level reachable types (~50 files total). Sits on top of MagicFilter (which lands in Phase 4).
+- [ ] **Task 2.11: `FDslGenerator` (build only; do NOT emit yet)** — design the generator class and write its tests against frozen fixtures. **Do not run** it during Phase 2 because the emitted builders depend on `Utils\MagicFilter\MagicFilter` and `Filters\F\BaseField`/etc., which land in Phase 4. F-DSL emission is moved to **Phase 4 Task 4.11** (after MagicFilter + runtime field primitives exist).
 
 Each task follows the TDD pattern: write fixtures of a sample entity → expected PHP output → integration test that runs the stage and diffs.
 
@@ -3324,9 +3411,23 @@ make regenerate
 
 Verify: `ls src/Types | wc -l ≈ 341`, `ls src/Methods | wc -l ≈ 178`, `ls src/Enums | wc -l ≈ 35`, `src/Bot.php` is ~6000 lines.
 
-- [ ] **Step 2: Delete the Phase 1 hand-coded stubs that are now superseded**
+- [ ] **Step 2: Delete the Phase 1 hand-coded stubs that the generator did NOT overwrite**
 
-The generator should have overwritten `Bot.php`, `Methods/SendMessage.php`, `Methods/GetMe.php`, `Methods/GetFile.php`, `Types/Message.php`, `Types/User.php`, `Types/Chat.php`, etc. Remove only those that are pure stubs the generator didn't touch (none should remain).
+The generator overwrites in place: `src/Bot.php`, `src/Methods/SendMessage.php`, `src/Methods/GetMe.php`, `src/Methods/GetFile.php`, `src/Types/Message.php`, `src/Types/User.php`, `src/Types/File.php`, `src/Types/LinkPreviewOptions.php`, `src/Types/ResponseParameters.php` (verified — same paths). Run an automated parity check to confirm:
+
+```bash
+test -f src/Methods/SendMessage.php && grep -q 'auto-generated' src/Methods/SendMessage.php && echo "regenerated: SendMessage"
+test -f src/Types/Message.php && grep -q 'auto-generated' src/Types/Message.php && echo "regenerated: Message"
+```
+
+Any file whose Phase 1 stub had a path the generator does NOT emit (e.g. `src/Types/Downloadable.php` is an interface, not a schema type) stays as-is. **Explicit allow-list of files that survive regeneration**: `src/Types/Downloadable.php`, `src/Types/InputFile.php` (we ship the abstract from Phase 1; generator only emits the concrete Buffered/Fs/Url variants — verify).
+
+Update the Phase 1 smoke test (`tests/Bot/BotSmokeTest.php`) to instantiate the **regenerated** `Message` with the new constructor signature (`Chat $chat` typed object, not an array literal). Stub `Chat`:
+
+```php
+$chat = new \Gruven\PhpBotGram\Types\Chat(id: 42, type: \Gruven\PhpBotGram\Enums\ChatType::Private);
+$result = new \Gruven\PhpBotGram\Types\Message(messageId: 1, date: new \Gruven\PhpBotGram\Types\Custom\DateTime('@0'), chat: $chat, text: 'hi');
+```
 
 - [ ] **Step 3: Re-run full suite**
 
@@ -3337,12 +3438,14 @@ vendor/bin/phpstan analyze
 
 Expected: smoke test from Task 1.6 still passes — proves the regenerated `Bot::sendMessage` is wire-compatible.
 
-- [ ] **Step 4: Commit the generated tree**
+- [ ] **Step 4: Commit the generated tree (Types/Methods/Enums/Bot only — NO F-DSL yet)**
 
 ```bash
-git add src/Bot.php src/Types/ src/Methods/ src/Enums/ src/Filters/F/
-git commit -m "feat: regenerate full Bot/Types/Methods/Enums + F-DSL builders from .butcher"
+git add src/Bot.php src/Types/ src/Methods/ src/Enums/
+git commit -m "feat: regenerate full Bot/Types/Methods/Enums from .butcher"
 ```
+
+F-DSL builders (`src/Filters/F/*F.php`) are NOT emitted in Phase 2 — they depend on `Utils\MagicFilter\MagicFilter` and `Filters\F\BaseField`/`StringField`/etc. which land in Phase 4. They're emitted at Phase 4 Task 4.11 after their runtime dependencies exist.
 
 ### Task 2.15: Phase 2 acceptance gate
 
@@ -3403,6 +3506,7 @@ Plus all the discrete filter classes (`Command`, `CallbackData`, `StateFilter`, 
 - [ ] **Task 4.9: `StateFilter`** — accepts `State|StatesGroup|string`. Triggers `StatesGroup::bootstrapIfNeeded` defensively.
 - [ ] **Task 4.10: `ChatMemberUpdatedFilter`** — port upstream transitions DSL.
 - [ ] **Task 4.11: `ExceptionTypeFilter` + `ExceptionMessageFilter`** + `BaseFilter` `class_alias`.
+- [ ] **Task 4.11: Run F-DSL codegen (Phase 2's `FDslGenerator` was built but not run).** Once `MagicFilter`, `BaseField`/`StringField`/`IntField`/etc. land (Tasks 4.2-4.5), execute the F-DSL emission step. Verify acceptance: `ls src/Filters/F | wc -l ≈ 50` (25 event-root builders + ~25 first-level nested field-builders), PHPStan level 9 clean, smoke test instantiates `MessageF::text()->equals('hi')`.
 - [ ] **Task 4.12: Wire-up generated `Filters\F\*` builders** — verify each generated event-typed builder constructs valid MagicFilter chains against a sample payload.
 - [ ] **Task 4.13: Port `tests/test_filters/*`** — translate upstream test cases module-by-module.
 - [ ] **Task 4.14: Phase 4 acceptance gate**
