@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Types;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
 
 /**
  * Describes reply parameters for the message that is being sent.
@@ -21,9 +22,9 @@ final class ReplyParameters extends TelegramObject
   public function __construct(
     public readonly int $messageId,
     public readonly null|int|string $chatId = null,
-    public readonly ?bool $allowSendingWithoutReply = null,
+    public readonly null|bool|BotDefault $allowSendingWithoutReply = new BotDefault('allow_sending_without_reply'),
     public readonly ?string $quote = null,
-    public readonly ?string $quoteParseMode = null,
+    public readonly null|BotDefault|string $quoteParseMode = new BotDefault('parse_mode'),
     public readonly ?array $quoteEntities = null,
     public readonly ?int $quotePosition = null,
     public readonly ?int $checklistTaskId = null,

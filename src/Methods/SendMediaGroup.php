@@ -11,6 +11,7 @@ use Gruven\PhpBotGram\Types\InputMediaDocument;
 use Gruven\PhpBotGram\Types\InputMediaLivePhoto;
 use Gruven\PhpBotGram\Types\InputMediaPhoto;
 use Gruven\PhpBotGram\Types\InputMediaVideo;
+use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Types\ReplyParameters;
 
 /**
@@ -20,12 +21,12 @@ use Gruven\PhpBotGram\Types\ReplyParameters;
  *
  * @generated do not edit; regenerate via `make regenerate`
  *
- * @extends TelegramMethod<bool>
+ * @extends TelegramMethod<list<Message>>
  */
 final class SendMediaGroup extends TelegramMethod
 {
   public const string ApiMethod = 'sendMediaGroup';
-  public const string ReturnsType = 'bool';
+  public const string ReturnsType = 'list:Message';
 
   public function __construct(
     public readonly int|string $chatId,

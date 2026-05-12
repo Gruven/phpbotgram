@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Methods;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Types\StarAmount;
 
 /**
  * Returns the amount of Telegram Stars owned by a managed business account. Requires the can_view_gifts_and_stars business bot right. Returns StarAmount on success.
@@ -13,12 +14,12 @@ use Gruven\PhpBotGram\Bot;
  *
  * @generated do not edit; regenerate via `make regenerate`
  *
- * @extends TelegramMethod<bool>
+ * @extends TelegramMethod<StarAmount>
  */
 final class GetBusinessAccountStarBalance extends TelegramMethod
 {
   public const string ApiMethod = 'getBusinessAccountStarBalance';
-  public const string ReturnsType = 'bool';
+  public const string ReturnsType = StarAmount::class;
 
   public function __construct(
     public readonly string $businessConnectionId,

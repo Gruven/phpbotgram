@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Methods;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Types\File;
 use Gruven\PhpBotGram\Types\InputFile;
 
 /**
@@ -14,12 +15,12 @@ use Gruven\PhpBotGram\Types\InputFile;
  *
  * @generated do not edit; regenerate via `make regenerate`
  *
- * @extends TelegramMethod<bool>
+ * @extends TelegramMethod<File>
  */
 final class UploadStickerFile extends TelegramMethod
 {
   public const string ApiMethod = 'uploadStickerFile';
-  public const string ReturnsType = 'bool';
+  public const string ReturnsType = File::class;
 
   public function __construct(
     public readonly int $userId,

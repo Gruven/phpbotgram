@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Methods;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Types\GameHighScore;
 
 /**
  * Use this method to get data for high score tables. Will return the score of the specified user and several of their neighbors in a game. Returns an Array of GameHighScore objects.
@@ -14,12 +15,12 @@ use Gruven\PhpBotGram\Bot;
  *
  * @generated do not edit; regenerate via `make regenerate`
  *
- * @extends TelegramMethod<bool>
+ * @extends TelegramMethod<list<GameHighScore>>
  */
 final class GetGameHighScores extends TelegramMethod
 {
   public const string ApiMethod = 'getGameHighScores';
-  public const string ReturnsType = 'bool';
+  public const string ReturnsType = 'list:GameHighScore';
 
   public function __construct(
     public readonly int $userId,

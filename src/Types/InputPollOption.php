@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Types;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
 
 /**
  * This object contains information about one answer option in a poll to be sent.
@@ -20,7 +21,7 @@ final class InputPollOption extends TelegramObject
    */
   public function __construct(
     public readonly string $text,
-    public readonly ?string $textParseMode = null,
+    public readonly null|BotDefault|string $textParseMode = new BotDefault('parse_mode'),
     public readonly ?array $textEntities = null,
     public readonly ?InputPollOptionMedia $media = null,
     ?Bot $bot = null,

@@ -205,6 +205,8 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\File;
 use Gruven\PhpBotGram\Types\ForceReply;
 use Gruven\PhpBotGram\Types\ForumTopic;
+use Gruven\PhpBotGram\Types\GameHighScore;
+use Gruven\PhpBotGram\Types\Gifts;
 use Gruven\PhpBotGram\Types\InlineKeyboardMarkup;
 use Gruven\PhpBotGram\Types\InlineQueryResult;
 use Gruven\PhpBotGram\Types\InlineQueryResultsButton;
@@ -233,6 +235,7 @@ use Gruven\PhpBotGram\Types\MenuButtonWebApp;
 use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Types\MessageEntity;
 use Gruven\PhpBotGram\Types\MessageId;
+use Gruven\PhpBotGram\Types\OwnedGifts;
 use Gruven\PhpBotGram\Types\PassportElementError;
 use Gruven\PhpBotGram\Types\Poll;
 use Gruven\PhpBotGram\Types\PreparedInlineMessage;
@@ -245,6 +248,7 @@ use Gruven\PhpBotGram\Types\SentGuestMessage;
 use Gruven\PhpBotGram\Types\SentWebAppMessage;
 use Gruven\PhpBotGram\Types\ShippingOption;
 use Gruven\PhpBotGram\Types\StarAmount;
+use Gruven\PhpBotGram\Types\StarTransactions;
 use Gruven\PhpBotGram\Types\Sticker;
 use Gruven\PhpBotGram\Types\StickerSet;
 use Gruven\PhpBotGram\Types\Story;
@@ -448,6 +452,8 @@ class Bot implements BotShortcutsContract
 
   /**
    * @param list<int> $messageIds
+   *
+   * @return list<MessageId>
    */
   public function forwardMessages(
     int|string $chatId,
@@ -458,7 +464,8 @@ class Bot implements BotShortcutsContract
     ?bool $disableNotification = null,
     ?bool $protectContent = null,
     ?int $timeout = null,
-  ): bool {
+  ): array {
+    /** @var list<MessageId> */
     return $this(new ForwardMessages(
       chatId: $chatId,
       fromChatId: $fromChatId,
@@ -516,6 +523,8 @@ class Bot implements BotShortcutsContract
 
   /**
    * @param list<int> $messageIds
+   *
+   * @return list<MessageId>
    */
   public function copyMessages(
     int|string $chatId,
@@ -527,7 +536,8 @@ class Bot implements BotShortcutsContract
     ?bool $protectContent = null,
     ?bool $removeCaption = null,
     ?int $timeout = null,
-  ): bool {
+  ): array {
+    /** @var list<MessageId> */
     return $this(new CopyMessages(
       chatId: $chatId,
       fromChatId: $fromChatId,
@@ -957,6 +967,8 @@ class Bot implements BotShortcutsContract
 
   /**
    * @param list<InputMediaAudio|InputMediaDocument|InputMediaLivePhoto|InputMediaPhoto|InputMediaVideo> $media
+   *
+   * @return list<Message>
    */
   public function sendMediaGroup(
     int|string $chatId,
@@ -970,7 +982,8 @@ class Bot implements BotShortcutsContract
     ?string $messageEffectId = null,
     ?ReplyParameters $replyParameters = null,
     ?int $timeout = null,
-  ): bool {
+  ): array {
+    /** @var list<Message> */
     return $this(new SendMediaGroup(
       chatId: $chatId,
       media: $media,
@@ -1698,11 +1711,16 @@ class Bot implements BotShortcutsContract
       userId: $userId,
     ), $timeout);
   }
+
+  /**
+   * @return list<Message>
+   */
   public function getUserPersonalChatMessages(
     int $userId,
     int $limit,
     ?int $timeout = null,
-  ): bool {
+  ): array {
+    /** @var list<Message> */
     return $this(new GetUserPersonalChatMessages(
       userId: $userId,
       limit: $limit,
@@ -2086,7 +2104,7 @@ class Bot implements BotShortcutsContract
   }
   public function getAvailableGifts(
     ?int $timeout = null,
-  ): bool {
+  ): Gifts {
     return $this(new GetAvailableGifts(
     ), $timeout);
   }
@@ -2267,7 +2285,7 @@ class Bot implements BotShortcutsContract
   public function getBusinessAccountStarBalance(
     string $businessConnectionId,
     ?int $timeout = null,
-  ): bool {
+  ): StarAmount {
     return $this(new GetBusinessAccountStarBalance(
       businessConnectionId: $businessConnectionId,
     ), $timeout);
@@ -2295,7 +2313,7 @@ class Bot implements BotShortcutsContract
     ?string $offset = null,
     ?int $limit = null,
     ?int $timeout = null,
-  ): bool {
+  ): OwnedGifts {
     return $this(new GetBusinessAccountGifts(
       businessConnectionId: $businessConnectionId,
       excludeUnsaved: $excludeUnsaved,
@@ -2321,7 +2339,7 @@ class Bot implements BotShortcutsContract
     ?string $offset = null,
     ?int $limit = null,
     ?int $timeout = null,
-  ): bool {
+  ): OwnedGifts {
     return $this(new GetUserGifts(
       userId: $userId,
       excludeUnlimited: $excludeUnlimited,
@@ -2347,7 +2365,7 @@ class Bot implements BotShortcutsContract
     ?string $offset = null,
     ?int $limit = null,
     ?int $timeout = null,
-  ): bool {
+  ): OwnedGifts {
     return $this(new GetChatGifts(
       chatId: $chatId,
       excludeUnsaved: $excludeUnsaved,
@@ -2818,7 +2836,7 @@ class Bot implements BotShortcutsContract
     InputFile $sticker,
     string $stickerFormat,
     ?int $timeout = null,
-  ): bool {
+  ): File {
     return $this(new UploadStickerFile(
       userId: $userId,
       sticker: $sticker,
@@ -3161,7 +3179,7 @@ class Bot implements BotShortcutsContract
     ?int $offset = null,
     ?int $limit = null,
     ?int $timeout = null,
-  ): bool {
+  ): StarTransactions {
     return $this(new GetStarTransactions(
       offset: $offset,
       limit: $limit,
@@ -3238,7 +3256,7 @@ class Bot implements BotShortcutsContract
     ?int $messageId = null,
     ?string $inlineMessageId = null,
     ?int $timeout = null,
-  ): bool {
+  ): Message {
     return $this(new SetGameScore(
       userId: $userId,
       score: $score,
@@ -3249,13 +3267,18 @@ class Bot implements BotShortcutsContract
       inlineMessageId: $inlineMessageId,
     ), $timeout);
   }
+
+  /**
+   * @return list<GameHighScore>
+   */
   public function getGameHighScores(
     int $userId,
     ?int $chatId = null,
     ?int $messageId = null,
     ?string $inlineMessageId = null,
     ?int $timeout = null,
-  ): bool {
+  ): array {
+    /** @var list<GameHighScore> */
     return $this(new GetGameHighScores(
       userId: $userId,
       chatId: $chatId,

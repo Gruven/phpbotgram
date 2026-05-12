@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Methods;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Types\OwnedGifts;
 
 /**
  * Returns the gifts owned by a chat. Returns OwnedGifts on success.
@@ -13,12 +14,12 @@ use Gruven\PhpBotGram\Bot;
  *
  * @generated do not edit; regenerate via `make regenerate`
  *
- * @extends TelegramMethod<bool>
+ * @extends TelegramMethod<OwnedGifts>
  */
 final class GetChatGifts extends TelegramMethod
 {
   public const string ApiMethod = 'getChatGifts';
-  public const string ReturnsType = 'bool';
+  public const string ReturnsType = OwnedGifts::class;
 
   public function __construct(
     public readonly int|string $chatId,

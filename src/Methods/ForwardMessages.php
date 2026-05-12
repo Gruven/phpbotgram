@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Methods;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Types\MessageId;
 
 /**
  * Use this method to forward multiple messages of any kind. If some of the specified messages can't be found or forwarded, they are skipped. Service messages and messages with protected content can't be forwarded. Album grouping is kept for forwarded messages. On success, an array of MessageId of the sent messages is returned.
@@ -13,12 +14,12 @@ use Gruven\PhpBotGram\Bot;
  *
  * @generated do not edit; regenerate via `make regenerate`
  *
- * @extends TelegramMethod<bool>
+ * @extends TelegramMethod<list<MessageId>>
  */
 final class ForwardMessages extends TelegramMethod
 {
   public const string ApiMethod = 'forwardMessages';
-  public const string ReturnsType = 'bool';
+  public const string ReturnsType = 'list:MessageId';
 
   public function __construct(
     public readonly int|string $chatId,
