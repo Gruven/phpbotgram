@@ -20,6 +20,7 @@ jobs:
       mongo:
         image: mongo:7
         ports: ['27017:27017']
+        options: --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping').ok\"" --health-interval 10s
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
