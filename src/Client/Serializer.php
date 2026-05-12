@@ -27,13 +27,16 @@ final class Serializer
    * Dumps to snake_case keys. Skips Unspecified values; preserves nulls
    * (BaseSession::prepareValue strips them downstream per the null-filter rule).
    *
+   * Accepts any BotContextController (TelegramObject or TelegramMethod) so that
+   * AmphpSession can serialise method parameters without a separate code path.
+   *
    * Per-class WireNames const overrides the default camelToSnake mapping:
    *   public const array WireNames = ['fromUser' => 'from'];
    * lets the property $fromUser serialize as wire key `from`.
    *
    * @return array<string, mixed>
    */
-  public static function dump(TelegramObject $object): array
+  public static function dump(BotContextController $object): array
   {
     $r = new ReflectionClass($object);
     $aliases = $r->hasConstant('WireNames') ? (array)$r->getConstant('WireNames') : [];
