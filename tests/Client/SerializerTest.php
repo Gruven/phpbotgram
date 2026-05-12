@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Tests\Client;
 
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
+use Gruven\PhpBotGram\Tests\Support\MockedSession;
 use Gruven\PhpBotGram\Types\Unspecified;
 use Gruven\PhpBotGram\Types\User;
 use PHPUnit\Framework\TestCase;
@@ -31,7 +32,7 @@ final class SerializerTest extends TestCase
 
   public function testLoadConstructsTypeWithBot(): void
   {
-    $bot = new Bot();
+    $bot = new Bot(token: '1:test', session: new MockedSession());
     $user = Serializer::load(User::class, ['id' => 5, 'is_bot' => true, 'first_name' => 'B'], $bot);
     self::assertSame(5, $user->id);
     self::assertSame($bot, $user->bot);

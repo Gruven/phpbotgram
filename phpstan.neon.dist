@@ -4,11 +4,14 @@ parameters:
         - src
         - tests
         - tools/generator/src
+    # The "(?)" suffix is PHPStan's "optional path" marker; it tells the analyser
+    # the path may not yet exist on disk. tests/data is created on demand by
+    # individual test cases; the generated src/Types/Methods/Enums directories
+    # are populated in Phase 2 by the codegen pipeline.
     excludePaths:
-        - tests/data (?)   # PHPStan "optional path" syntax — directory may not exist
-        - src/Types/*.php   # generated; rules relaxed during Phase 2
-        - src/Methods/*.php # generated
-        - src/Enums/*.php   # generated
-        # src/Bot.php excluded here when Phase 2 codegen takes over; hand-authored in Phase 1
+        - tests/data (?)
+        - src/Types/*.php
+        - src/Methods/*.php
+        - src/Enums/*.php
     treatPhpDocTypesAsCertain: false
     reportUnmatchedIgnoredErrors: false

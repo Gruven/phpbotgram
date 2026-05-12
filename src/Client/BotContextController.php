@@ -11,21 +11,25 @@ abstract class BotContextController
   public function __construct(public readonly ?Bot $bot = null) {}
 
   /**
-   * Returns a clone of $this with $bot rebound. **Shallow by contract** —
-   * does not walk nested TelegramObject properties. Deep rebinding is the
-   * Serializer's responsibility during deserialization: Serializer::load
-   * recurses into every nested TelegramObject and calls withBot on each
-   * leaf, mirroring upstream pydantic `model_validate context={"bot": bot}`.
+   * Returns a clone of $this with $bot rebound. The base implementation only
+   * rebinds the controller's own `$bot` slot — it does not walk nested
+   * TelegramObject properties.
    *
-   * Callers who already hold a fully-formed object graph (e.g. constructed
-   * by hand in user code) and want to attach a bot to all of it should pass
-   * the graph through Serializer::dump+load with $bot in context, or rebind
-   * only the leaves they actually dispatch from.
+   * Deep rebinding is per-class by necessity: PHP 8.5's `clone($this, [...])`
+   * scope check requires writes to a readonly property happen from inside the
+   * declaring class. So a single base override cannot rewrite a subclass's
+   * readonly `Chat $chat` slot — the subclass itself has to do that.
    *
-   * Uses PHP 8.5's `clone($this, [...])` clone-with syntax (a function-call form
-   * that resolves the readonly write inside the declaring scope's protection).
-   * The call must be made from within `BotContextController` or a subclass —
-   * an external caller cannot use this syntax against a readonly slot.
+   * The Phase 2 codegen emits a `withBot` override on every generated
+   * TelegramObject that carries nested TelegramObject fields. Each override
+   * calls `parent::withBot($bot)` to get the base clone and then layers its
+   * own per-property rebinds via clone-with inside the subclass scope.
+   *
+   * Until Phase 2 lands, callers who build a deep graph by hand and need a
+   * rebound copy should round-trip through `Serializer::dump`/`::load` with
+   * `$bot` in context — `Serializer::load` does walk recursively and applies
+   * per-leaf `withBot`, mirroring upstream pydantic
+   * `model_validate(context={"bot": bot})`.
    */
   public function withBot(?Bot $bot): static
   {

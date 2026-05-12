@@ -22,14 +22,15 @@ class Bot implements BotShortcutsContract
 {
   use BotShortcuts;
 
+  public readonly BaseSession $session;
+
   public function __construct(
-    public readonly string $token = '',
-    public readonly ?BaseSession $session = null,
+    public readonly string $token,
+    ?BaseSession $session = null,
     public readonly ?DefaultBotProperties $defaultProperties = null,
   ) {
-    if ($token !== '') {
-      Token::validate($token);
-    }
+    Token::validate($token);
+    $this->session = $session ?? new AmphpSession();
   }
 
   public function getDefaultProperties(): DefaultBotProperties
@@ -50,9 +51,7 @@ class Bot implements BotShortcutsContract
    */
   public function __invoke(TelegramMethod $method, ?int $timeout = null): mixed
   {
-    $session = $this->session ?? new AmphpSession();
-
-    return $session($this, $method, $timeout);
+    return ($this->session)($this, $method, $timeout);
   }
 
   // Hand-coded for Phase 1 smoke test; replaced in Phase 2 with the full 176-method facade.

@@ -16,6 +16,7 @@ use Gruven\PhpBotGram\Utils\Token;
 use InvalidArgumentException;
 use LogicException;
 use Revolt\EventLoop\FiberLocal;
+use RuntimeException;
 
 trait BotShortcuts
 {
@@ -35,7 +36,7 @@ trait BotShortcuts
         return $body();
       } finally {
         if ($autoClose) {
-          $this->session?->close();
+          $this->session->close();
         }
       }
     };
@@ -71,6 +72,17 @@ trait BotShortcuts
     self::botLocal()->set($bot);
   }
 
+  /**
+   * Test/teardown helper — clears the FiberLocal storage so the next test
+   * starts with a clean current bot. Production code should not call this;
+   * use setCurrent(null) instead, which keeps the FiberLocal slot but resets
+   * the stored Bot for the current fiber.
+   */
+  public static function resetCurrentBot(): void
+  {
+    self::$currentBotLocal = null;
+  }
+
   public function me(): User
   {
     if ($this->cachedMe !== null) {
@@ -89,9 +101,8 @@ trait BotShortcuts
     $path = $fileOrPath instanceof File
         ? ($fileOrPath->filePath ?? throw new LogicException('File has no filePath'))
         : $fileOrPath;
-    $session = $this->session ?? throw new LogicException('Bot has no session');
-    $url = $session->api->fileUrl($this->token, $path);
-    $stream = $session->streamContent($url, chunkSize: $chunkSize);
+    $url = $this->session->api->fileUrl($this->token, $path);
+    $stream = $this->session->streamContent($url, chunkSize: $chunkSize);
 
     return $this->consumeStream($stream, $destination);
   }
@@ -123,7 +134,16 @@ trait BotShortcuts
     }
 
     while (($chunk = $stream->read()) !== null) {
-      fwrite($handle, $chunk);
+      $expected = strlen($chunk);
+      $written = fwrite($handle, $chunk);
+
+      if ($written === false || $written !== $expected) {
+        if (is_string($destination)) {
+          fclose($handle);
+        }
+
+        throw new RuntimeException("Failed to write {$expected} bytes to destination (wrote: " . ($written === false ? 'false' : (string)$written) . ')');
+      }
     }
 
     if (is_string($destination)) {

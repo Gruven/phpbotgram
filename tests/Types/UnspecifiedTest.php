@@ -9,8 +9,8 @@ use PHPUnit\Framework\TestCase;
 
 final class UnspecifiedTest extends TestCase
 {
-    public function testInstanceIsSingleton(): void
-    {
-        self::assertSame(Unspecified::instance(), Unspecified::instance());
-    }
+  public function testInstanceIsSingleton(): void
+  {
+    self::assertSame(Unspecified::instance(), Unspecified::instance());
+  }
 }

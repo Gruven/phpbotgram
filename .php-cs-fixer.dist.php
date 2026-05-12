@@ -7,6 +7,8 @@ use PhpCsFixer\Runner\Parallel\ParallelConfigFactory;
 $finder = new Finder()
   ->in([
     __DIR__ . '/src',
+    __DIR__ . '/tests',
+    __DIR__ . '/tools/generator/src',
   ]);
 
 return new Config()

@@ -11,45 +11,46 @@ use Gruven\PhpBotGram\Exceptions\TelegramMigrateToChat;
 use Gruven\PhpBotGram\Exceptions\TelegramRetryAfter;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 
 final class ExceptionHierarchyTest extends TestCase
 {
-    public function testApiInheritsFromBase(): void
-    {
-        $e = new TelegramApiException($this->anonymousMethod(), 'test');
-        self::assertInstanceOf(PhpBotGramException::class, $e);
-    }
+  public function testApiInheritsFromBase(): void
+  {
+    $e = new TelegramApiException($this->anonymousMethod(), 'test');
+    self::assertInstanceOf(PhpBotGramException::class, $e);
+  }
 
-    public function testRetryAfterCarriesPayload(): void
-    {
-        $method = $this->anonymousMethod();
-        $e = new TelegramRetryAfter($method, 'Flood control', retryAfter: 30);
-        self::assertSame(30, $e->retryAfter);
-        self::assertSame($method, $e->method);
-    }
+  public function testRetryAfterCarriesPayload(): void
+  {
+    $method = $this->anonymousMethod();
+    $e = new TelegramRetryAfter($method, 'Flood control', retryAfter: 30);
+    self::assertSame(30, $e->retryAfter);
+    self::assertSame($method, $e->method);
+  }
 
-    public function testMigrateToChatPayload(): void
-    {
-        $method = $this->anonymousMethod();
-        $e = new TelegramMigrateToChat($method, 'Migrated', migrateToChatId: -100123);
-        self::assertSame(-100123, $e->migrateToChatId);
-    }
+  public function testMigrateToChatPayload(): void
+  {
+    $method = $this->anonymousMethod();
+    $e = new TelegramMigrateToChat($method, 'Migrated', migrateToChatId: -100123);
+    self::assertSame(-100123, $e->migrateToChatId);
+  }
 
-    public function testBadRequestInheritsFromApiException(): void
-    {
-        $e = new TelegramBadRequestException($this->anonymousMethod(), 'test');
-        self::assertInstanceOf(TelegramApiException::class, $e);
-    }
+  public function testBadRequestInheritsFromApiException(): void
+  {
+    $e = new TelegramBadRequestException($this->anonymousMethod(), 'test');
+    self::assertInstanceOf(TelegramApiException::class, $e);
+  }
 
-    /**
-     * @return TelegramMethod<mixed>
-     */
-    private function anonymousMethod(): TelegramMethod
-    {
-        /** @extends TelegramMethod<mixed> */
-        return new class extends TelegramMethod {
-            public const string ApiMethod = 'x';
-            public const string ReturnsType = \stdClass::class;
-        };
-    }
+  /**
+   * @return TelegramMethod<mixed>
+   */
+  private function anonymousMethod(): TelegramMethod
+  {
+    // @extends TelegramMethod<mixed>
+    return new class extends TelegramMethod {
+      public const string ApiMethod = 'x';
+      public const string ReturnsType = stdClass::class;
+    };
+  }
 }

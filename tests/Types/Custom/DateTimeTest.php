@@ -9,11 +9,11 @@ use PHPUnit\Framework\TestCase;
 
 final class DateTimeTest extends TestCase
 {
-    public function testRoundTrip(): void
-    {
-        $ts = 1700000000;
-        $dt = DateTime::fromTimestamp($ts);
-        self::assertInstanceOf(DateTime::class, $dt);
-        self::assertSame($ts, $dt->toTimestamp());
-    }
+  public function testRoundTrip(): void
+  {
+    $ts = 1700000000;
+    $dt = DateTime::fromTimestamp($ts);
+    self::assertInstanceOf(DateTime::class, $dt);
+    self::assertSame($ts, $dt->toTimestamp());
+  }
 }
