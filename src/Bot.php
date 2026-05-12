@@ -308,6 +308,8 @@ class Bot implements BotShortcutsContract
   }
 
   /**
+   * Note: $timeout is the long-poll timeout (seconds) carried on the wire to Telegram; $apiTimeout is the HTTP transport timeout for the underlying request.
+   *
    * @param null|list<string> $allowedUpdates
    *
    * @return list<Update>

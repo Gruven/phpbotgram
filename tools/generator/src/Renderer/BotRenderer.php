@@ -86,6 +86,7 @@ final class BotRenderer
      *   phpdocReturn: ?string,
      *   description: string,
      *   timeoutParamName: string,
+     *   timeoutDocLines: list<string>,
      * }> $wrappers */
     $wrappers = [];
 
@@ -136,6 +137,7 @@ final class BotRenderer
    *   phpdocReturn: ?string,
    *   description: string,
    *   timeoutParamName: string,
+   *   timeoutDocLines: list<string>,
    * }
    */
   private function buildWrapper(MethodEntity $method, array &$imports): array
@@ -168,6 +170,20 @@ final class BotRenderer
       }
     }
 
+    // When the wrapper collision-renames the facade-side timeout to
+    // `$apiTimeout` (so both the wire `timeout` parameter AND the HTTP
+    // transport timeout remain addressable), the docblock spells out the
+    // distinction so IDE hovers don't conflate the two slots. The note
+    // sits between the @param block and the @return line in `bot.php.twig`.
+    /** @var list<string> $timeoutDocLines */
+    $timeoutDocLines = [];
+
+    if ($timeoutParamName === 'apiTimeout') {
+      $timeoutDocLines = [
+        'Note: $timeout is the long-poll timeout (seconds) carried on the wire to Telegram; $apiTimeout is the HTTP transport timeout for the underlying request.',
+      ];
+    }
+
     return [
       'name' => $this->names->method($method->name),
       'parameters' => $parameters,
@@ -176,6 +192,7 @@ final class BotRenderer
       'phpdocReturn' => $phpdocReturn,
       'description' => $description,
       'timeoutParamName' => $timeoutParamName,
+      'timeoutDocLines' => $timeoutDocLines,
     ];
   }
 

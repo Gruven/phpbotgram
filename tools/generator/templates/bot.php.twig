@@ -82,8 +82,17 @@ class Bot implements BotShortcutsContract
   }
 {% for w in wrappers %}
 {% set has_phpdoc_params = false %}{% for p in w.parameters %}{% if p.phpdocType is not null %}{% set has_phpdoc_params = true %}{% endif %}{% endfor -%}
-{% if has_phpdoc_params or w.phpdocReturn is not null -%}
+{% set has_timeout_note = w.timeoutDocLines is not empty -%}
+{% if has_phpdoc_params or w.phpdocReturn is not null or has_timeout_note -%}
   /**
+{% if has_timeout_note -%}
+{% for line in w.timeoutDocLines -%}
+   * {{ line }}
+{% endfor -%}
+{% if has_phpdoc_params or w.phpdocReturn is not null -%}
+   *
+{% endif -%}
+{% endif -%}
 {% for p in w.parameters -%}
 {% if p.phpdocType is not null -%}
    * @param {{ p.phpdocType }} ${{ p.phpName }}

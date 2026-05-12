@@ -135,6 +135,36 @@ final class BotRendererTest extends TestCase
     );
   }
 
+  /**
+   * Cycle 3 review fix: `getUpdates` is the only method in the vendored
+   * 10.0 schema whose wire signature already includes a `timeout` parameter,
+   * which the wrapper collision-renames to `$apiTimeout` to keep both the
+   * long-poll timeout (the wire field) and the HTTP transport timeout (the
+   * facade-side trailing slot) addressable. The wrapper docblock must spell
+   * out the distinction so callers don't conflate the two.
+   */
+  public function testGetUpdatesWrapperDocBlockExplainsRenamedTimeout(): void
+  {
+    $out = $this->rendered();
+
+    // Slice out the wrapper so we look at the right docblock, not e.g.
+    // another method's docblock that happens to mention "timeout".
+    $matches = [];
+    $matched = preg_match(
+      '/(\\/\\*\\*(?:[^*]|\\*(?!\\/))*\\*\\/)\\s*public function getUpdates\\(/s',
+      $out,
+      $matches,
+    );
+
+    self::assertSame(1, $matched, 'getUpdates wrapper must have a preceding docblock');
+    $doc = $matches[1];
+
+    self::assertStringContainsString('$timeout', $doc, 'docblock must reference $timeout');
+    self::assertStringContainsString('$apiTimeout', $doc, 'docblock must reference $apiTimeout');
+    self::assertStringContainsString('long-poll', $doc, 'docblock must call out the long-poll role of $timeout');
+    self::assertStringContainsString('HTTP transport', $doc, 'docblock must call out the HTTP transport role of $apiTimeout');
+  }
+
   public function testLogOutWrapperReturnsBool(): void
   {
     $out = $this->rendered();
