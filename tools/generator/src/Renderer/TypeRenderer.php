@@ -411,7 +411,21 @@ final class TypeRenderer
       }
     }
 
-    foreach ($type->annotations as $a) {
+    /** @var list<array{
+     *   phpName: string,
+     *   wireName: string,
+     *   phpType: string,
+     *   phpdocType: ?string,
+     *   default: ?string,
+     *   description: string,
+     *   rendererRenamed: bool,
+     *   inheritedFromParent: bool,
+     *   originalOrder: int,
+     *   sortRank: int,
+     * }> $staged */
+    $staged = [];
+
+    foreach ($type->annotations as $i => $a) {
       $resolved = $this->types->resolve($a);
       $this->collectImportsForType($resolved, $imports);
 
@@ -444,7 +458,25 @@ final class TypeRenderer
         $declType = $this->widenNullable($declType);
       }
 
-      $out[] = [
+      // Sort rank for the constructor signature:
+      //   0 — required-no-default (e.g. `int $messageId`)
+      //   1 — required-with-default (e.g. discriminator `string $type = 'solid'`)
+      //   2 — optional-with-default `= null` (e.g. `?int $messageThreadId = null`)
+      //
+      // Mirrors `MethodRenderer::buildParameters`. The reorder is mandatory
+      // because cs-fixer's `no_unreachable_default_argument_value` rule strips
+      // `= null` defaults from any optional param that precedes a required one
+      // in raw schema order — making the resulting class impossible to
+      // instantiate via named-only arguments.
+      if ($default === null) {
+        $sortRank = 0;
+      } elseif ($default === 'null') {
+        $sortRank = 2;
+      } else {
+        $sortRank = 1;
+      }
+
+      $staged[] = [
         'phpName' => $phpName,
         'wireName' => $a->name,
         'phpType' => $declType,
@@ -453,6 +485,32 @@ final class TypeRenderer
         'description' => $a->description,
         'rendererRenamed' => $rendererRenamed,
         'inheritedFromParent' => isset($parentAnnotationNames[$a->name]),
+        'originalOrder' => $i,
+        'sortRank' => $sortRank,
+      ];
+    }
+
+    // Stable sort by (sortRank, originalOrder) — keeps schema order within
+    // each rank bucket so the regenerated diff remains stable when the
+    // vendored schema reshuffles bullet positions of same-rank fields.
+    usort($staged, static function (array $a, array $b): int {
+      if ($a['sortRank'] !== $b['sortRank']) {
+        return $a['sortRank'] <=> $b['sortRank'];
+      }
+
+      return $a['originalOrder'] <=> $b['originalOrder'];
+    });
+
+    foreach ($staged as $p) {
+      $out[] = [
+        'phpName' => $p['phpName'],
+        'wireName' => $p['wireName'],
+        'phpType' => $p['phpType'],
+        'phpdocType' => $p['phpdocType'],
+        'default' => $p['default'],
+        'description' => $p['description'],
+        'rendererRenamed' => $p['rendererRenamed'],
+        'inheritedFromParent' => $p['inheritedFromParent'],
       ];
     }
 

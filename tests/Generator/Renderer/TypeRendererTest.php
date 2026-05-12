@@ -139,6 +139,142 @@ final class TypeRendererTest extends TestCase
     self::assertMatchesRegularExpression('/final\s+class\s+Message\s+extends\s+MaybeInaccessibleMessage/', $out);
   }
 
+  /**
+   * Cycle 1 review fix: TypeRenderer must emit constructor parameters in the
+   * canonical order (required-no-default → required-with-default → optional-
+   * with-default) so cs-fixer's `no_unreachable_default_argument_value` rule
+   * does not strip `= null` defaults from optional params that would otherwise
+   * precede required ones in raw schema order.
+   *
+   * Concrete reproducer: in the raw `Message` schema, `message_thread_id`
+   * (optional) appears before `date` (required). Naively emitting the
+   * constructor in schema order yields
+   *
+   *     public readonly ?int $messageThreadId = null,    // optional
+   *     ...
+   *     public readonly DateTime $date,                  // required
+   *
+   * which cs-fixer rewrites to drop every `= null` clause before `$date`,
+   * forcing callers to pass `null` positionally for each preceding optional.
+   * The renderer must reorder so all required-no-default params come first.
+   */
+  public function testMessageConstructorReordersRequiredBeforeOptional(): void
+  {
+    $out = $this->render('Message');
+
+    // Locate the constructor signature so we can scan it linearly.
+    $start = strpos($out, 'public function __construct(');
+    self::assertNotFalse($start, 'Constructor not found in Message render');
+
+    $bodyOpen = strpos($out, ') {', $start);
+    self::assertNotFalse($bodyOpen, 'Constructor signature has no closing `) {`');
+
+    $sig = substr($out, $start, $bodyOpen - $start);
+
+    // Extract per-param lines (skip the empty signature-open line).
+    /** @var list<array{name: string, hasDefault: bool, required: bool}> $params */
+    $params = [];
+
+    foreach (preg_split("/\r?\n/", $sig) ?: [] as $line) {
+      $line = trim($line);
+
+      if ($line === '' || $line === 'public function __construct(') {
+        continue;
+      }
+
+      // Match: [public readonly ]<type> $name[ = <default>],
+      if (preg_match('/\$([A-Za-z0-9_]+)(\s*=\s*(.+))?,?$/', $line, $m) !== 1) {
+        continue;
+      }
+
+      $name = $m[1];
+
+      if ($name === 'bot') {
+        continue; // Trailing `?Bot $bot = null` is always last; ignore.
+      }
+
+      $hasDefault = isset($m[2]) && $m[2] !== '';
+      $params[] = [
+        'name' => $name,
+        'hasDefault' => $hasDefault,
+      ];
+    }
+
+    self::assertNotEmpty($params, 'Failed to extract any constructor parameters');
+
+    // Sanity: every required (no-default) param must precede every param with a default.
+    $seenWithDefault = false;
+
+    foreach ($params as $p) {
+      if (!$p['hasDefault']) {
+        self::assertFalse(
+          $seenWithDefault,
+          "Constructor param order violation: required-no-default param \${$p['name']} appears after a param with a default. Order: " . implode(
+            ', ',
+            array_map(static fn(array $q): string => '$' . $q['name'] . ($q['hasDefault'] ? '=' : ''), $params),
+          ),
+        );
+
+        continue;
+      }
+
+      $seenWithDefault = true;
+    }
+
+    // Concrete waypoint asserts — these would all fail under the unfixed
+    // renderer because `messageThreadId` (optional) currently precedes
+    // `messageId`/`date`/`chat` (required).
+    $names = array_column($params, 'name');
+    $messageIdIdx = array_search('messageId', $names, true);
+    $dateIdx = array_search('date', $names, true);
+    $chatIdx = array_search('chat', $names, true);
+    $threadIdx = array_search('messageThreadId', $names, true);
+
+    self::assertNotFalse($messageIdIdx, '$messageId missing');
+    self::assertNotFalse($dateIdx, '$date missing');
+    self::assertNotFalse($chatIdx, '$chat missing');
+    self::assertNotFalse($threadIdx, '$messageThreadId missing');
+
+    self::assertLessThan($threadIdx, $messageIdIdx, '$messageId must precede $messageThreadId');
+    self::assertLessThan($threadIdx, $dateIdx, '$date must precede $messageThreadId');
+    self::assertLessThan($threadIdx, $chatIdx, '$chat must precede $messageThreadId');
+  }
+
+  /**
+   * Cycle 1 review fix: union children with a discriminator carry a
+   * `required-with-default` parameter (`public readonly string $type =
+   * 'solid'`). Such params must sort between required-no-default and
+   * optional-with-default — they are required by schema (no `null` accepted)
+   * but the default exists to pin the literal wire value. Mirrors
+   * `MethodRenderer::buildParameters` ordering.
+   */
+  public function testBackgroundFillSolidConstructorOrdersDiscriminatorBeforeOptional(): void
+  {
+    $out = $this->render('BackgroundFillSolid');
+
+    // The discriminator default must still be present (the regression was
+    // cs-fixer stripping it because an optional preceded it).
+    self::assertMatchesRegularExpression(
+      "/public readonly string \\\$type\\s*=\\s*'solid'/",
+      $out,
+    );
+
+    // And the `color` required-no-default param must precede the
+    // `$type = 'solid'` default-bearing one.
+    $sigStart = strpos($out, 'public function __construct(');
+    self::assertNotFalse($sigStart);
+    $sigEnd = strpos($out, ') {', $sigStart);
+    self::assertNotFalse($sigEnd);
+    $sig = substr($out, $sigStart, $sigEnd - $sigStart);
+
+    $colorPos = strpos($sig, '$color');
+    $typePos = strpos($sig, '$type');
+
+    self::assertNotFalse($colorPos, '$color missing from BackgroundFillSolid ctor');
+    self::assertNotFalse($typePos, '$type missing from BackgroundFillSolid ctor');
+    self::assertLessThan($typePos, $colorPos, '$color (required-no-default) must precede $type (required-with-default)');
+  }
+
   public function testRendersUnionParentAsAbstract(): void
   {
     $out = $this->render('BackgroundFill');
