@@ -18,12 +18,12 @@ use Gruven\PhpBotGram\Types\MessageEntity;
  *
  * @generated do not edit; regenerate via `make regenerate`
  *
- * @extends TelegramMethod<Message>
+ * @extends TelegramMethod<bool|Message>
  */
 final class EditMessageText extends TelegramMethod
 {
   public const string ApiMethod = 'editMessageText';
-  public const string ReturnsType = Message::class;
+  public const string ReturnsType = 'union:Message|bool';
 
   public function __construct(
     public readonly string $text,

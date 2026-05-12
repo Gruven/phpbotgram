@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Types;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Types\Shortcuts\UpdateShortcuts;
 
 /**
  * This object represents an incoming update.
@@ -16,6 +17,8 @@ use Gruven\PhpBotGram\Bot;
  */
 final class Update extends TelegramObject
 {
+  use UpdateShortcuts;
+
   public function __construct(
     public readonly int $updateId,
     public readonly ?Message $message = null,

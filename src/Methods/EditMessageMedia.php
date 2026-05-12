@@ -16,12 +16,12 @@ use Gruven\PhpBotGram\Types\Message;
  *
  * @generated do not edit; regenerate via `make regenerate`
  *
- * @extends TelegramMethod<Message>
+ * @extends TelegramMethod<bool|Message>
  */
 final class EditMessageMedia extends TelegramMethod
 {
   public const string ApiMethod = 'editMessageMedia';
-  public const string ReturnsType = Message::class;
+  public const string ReturnsType = 'union:Message|bool';
 
   public function __construct(
     public readonly InputMedia $media,

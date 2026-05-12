@@ -7,6 +7,7 @@ namespace Gruven\PhpBotGram\Types;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Methods\GetUserProfileAudios;
 use Gruven\PhpBotGram\Methods\GetUserProfilePhotos;
+use Gruven\PhpBotGram\Types\Shortcuts\UserShortcuts;
 
 /**
  * This object represents a Telegram user or bot.
@@ -17,6 +18,8 @@ use Gruven\PhpBotGram\Methods\GetUserProfilePhotos;
  */
 final class User extends TelegramObject
 {
+  use UserShortcuts;
+
   public function __construct(
     public readonly int $id,
     public readonly bool $isBot,

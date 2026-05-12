@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Types;
 
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Methods\AnswerCallbackQuery;
+use Gruven\PhpBotGram\Types\Shortcuts\CallbackQueryShortcuts;
 
 /**
  * This object represents an incoming callback query from a callback button in an inline keyboard. If the button that originated the query was attached to a message sent by the bot, the field message will be present. If the button was attached to a message sent via the bot (in inline mode), the field inline_message_id will be present. Exactly one of the fields data or game_short_name will be present.
@@ -17,6 +18,8 @@ use Gruven\PhpBotGram\Methods\AnswerCallbackQuery;
  */
 final class CallbackQuery extends TelegramObject
 {
+  use CallbackQueryShortcuts;
+
   /** @var array<string, string> */
   public const array WireNames = [
     'fromUser' => 'from',

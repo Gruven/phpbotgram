@@ -36,6 +36,7 @@ use Gruven\PhpBotGram\Methods\UnpinAllChatMessages;
 use Gruven\PhpBotGram\Methods\UnpinAllGeneralForumTopicMessages;
 use Gruven\PhpBotGram\Methods\UnpinChatMessage;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
+use Gruven\PhpBotGram\Types\Shortcuts\ChatShortcuts;
 
 /**
  * This object represents a chat.
@@ -46,6 +47,8 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
  */
 class Chat extends TelegramObject
 {
+  use ChatShortcuts;
+
   public function __construct(
     public readonly int $id,
     public readonly string $type,

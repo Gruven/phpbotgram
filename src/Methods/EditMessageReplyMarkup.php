@@ -15,12 +15,12 @@ use Gruven\PhpBotGram\Types\Message;
  *
  * @generated do not edit; regenerate via `make regenerate`
  *
- * @extends TelegramMethod<Message>
+ * @extends TelegramMethod<bool|Message>
  */
 final class EditMessageReplyMarkup extends TelegramMethod
 {
   public const string ApiMethod = 'editMessageReplyMarkup';
-  public const string ReturnsType = Message::class;
+  public const string ReturnsType = 'union:Message|bool';
 
   public function __construct(
     public readonly ?string $businessConnectionId = null,

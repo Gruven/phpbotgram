@@ -2555,7 +2555,7 @@ class Bot implements BotShortcutsContract
     null|BotDefault|LinkPreviewOptions $linkPreviewOptions = new BotDefault('link_preview'),
     ?InlineKeyboardMarkup $replyMarkup = null,
     ?int $timeout = null,
-  ): Message {
+  ): bool|Message {
     return $this(new EditMessageText(
       text: $text,
       businessConnectionId: $businessConnectionId,
@@ -2583,7 +2583,7 @@ class Bot implements BotShortcutsContract
     null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     ?InlineKeyboardMarkup $replyMarkup = null,
     ?int $timeout = null,
-  ): Message {
+  ): bool|Message {
     return $this(new EditMessageCaption(
       businessConnectionId: $businessConnectionId,
       chatId: $chatId,
@@ -2604,7 +2604,7 @@ class Bot implements BotShortcutsContract
     ?string $inlineMessageId = null,
     ?InlineKeyboardMarkup $replyMarkup = null,
     ?int $timeout = null,
-  ): Message {
+  ): bool|Message {
     return $this(new EditMessageMedia(
       media: $media,
       businessConnectionId: $businessConnectionId,
@@ -2627,7 +2627,7 @@ class Bot implements BotShortcutsContract
     ?int $proximityAlertRadius = null,
     ?InlineKeyboardMarkup $replyMarkup = null,
     ?int $timeout = null,
-  ): Message {
+  ): bool|Message {
     return $this(new EditMessageLiveLocation(
       latitude: $latitude,
       longitude: $longitude,
@@ -2649,7 +2649,7 @@ class Bot implements BotShortcutsContract
     ?string $inlineMessageId = null,
     ?InlineKeyboardMarkup $replyMarkup = null,
     ?int $timeout = null,
-  ): Message {
+  ): bool|Message {
     return $this(new StopMessageLiveLocation(
       businessConnectionId: $businessConnectionId,
       chatId: $chatId,
@@ -2681,7 +2681,7 @@ class Bot implements BotShortcutsContract
     ?string $inlineMessageId = null,
     ?InlineKeyboardMarkup $replyMarkup = null,
     ?int $timeout = null,
-  ): Message {
+  ): bool|Message {
     return $this(new EditMessageReplyMarkup(
       businessConnectionId: $businessConnectionId,
       chatId: $chatId,
@@ -3258,7 +3258,7 @@ class Bot implements BotShortcutsContract
     ?int $messageId = null,
     ?string $inlineMessageId = null,
     ?int $timeout = null,
-  ): Message {
+  ): bool|Message {
     return $this(new SetGameScore(
       userId: $userId,
       score: $score,
