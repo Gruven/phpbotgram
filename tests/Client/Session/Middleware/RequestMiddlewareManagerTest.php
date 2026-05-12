@@ -149,16 +149,7 @@ final class RequestMiddlewareManagerTest extends TestCase
 
     $payload = new Message(
       messageId: 1,
-      messageThreadId: null,
-      directMessagesTopic: null,
-      fromUser: null,
-      senderChat: null,
-      senderBoostCount: null,
-      senderBusinessBot: null,
-      senderTag: null,
       date: new DateTime('@0'),
-      guestQueryId: null,
-      businessConnectionId: null,
       chat: new Chat(id: 1, type: 'private'),
     );
     $bot->addResultFor(SendMessage::class, ok: true, result: $payload);

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Types\Shortcuts;
 
+use Gruven\PhpBotGram\Client\BotDefault;
 use Gruven\PhpBotGram\Types\Chat;
+use Gruven\PhpBotGram\Types\MessageEntity;
 use Gruven\PhpBotGram\Types\ReplyParameters;
 
 /**
@@ -29,16 +31,53 @@ trait MessageShortcuts
   /**
    * Build a `ReplyParameters` referencing this message.
    *
-   * Mirrors aiogram's `Message.as_reply_parameters()`: produces a
-   * `ReplyParameters` payload pinned to `(message_id, chat_id)` so the
-   * generated `reply_*` shortcuts can default `reply_parameters` to "reply
-   * to this message" without the caller spelling out the IDs.
+   * Mirrors aiogram's `Message.as_reply_parameters(...)` (full upstream
+   * signature): produces a `ReplyParameters` payload pinned to
+   * `(message_id, chat_id)` plus the optional quote-formatting controls
+   * that aiogram exposes — `allow_sending_without_reply`, `quote`,
+   * `quote_parse_mode`, `quote_entities`, `quote_position` — so the
+   * generated `reply_*` shortcuts can default `reply_parameters` to
+   * "reply to this message" without the caller spelling out the IDs.
+   *
+   * The `quoteParseMode` parameter defaults to a `BotDefault('parse_mode')`
+   * sentinel that mirrors aiogram's `Default("parse_mode")`: when the
+   * message is bound to a Bot, the bot's `DefaultBotProperties.parseMode`
+   * is consulted; when there is no bound bot, the sentinel resolves to
+   * null and the server-side default applies. The sentinel is resolved
+   * inside this helper because `ReplyParameters::$quoteParseMode` is
+   * typed `?string` and PHP rejects assigning a `BotDefault` to it.
+   *
+   * @param null|list<MessageEntity> $quoteEntities
    */
-  public function asReplyParameters(): ReplyParameters
-  {
+  public function asReplyParameters(
+    ?bool $allowSendingWithoutReply = null,
+    ?string $quote = null,
+    null|BotDefault|string $quoteParseMode = new BotDefault('parse_mode'),
+    ?array $quoteEntities = null,
+    ?int $quotePosition = null,
+  ): ReplyParameters {
+    $resolvedQuoteParseMode = $quoteParseMode;
+
+    if ($resolvedQuoteParseMode instanceof BotDefault) {
+      // The sentinel resolves against the bot's DefaultBotProperties when
+      // the message is bound to a Bot; otherwise it falls back to null so
+      // the server-side default applies. `?string` on ReplyParameters
+      // forbids holding the sentinel through to wire-encode time.
+      $resolvedQuoteParseMode = $this->bot?->getDefaultProperties()->get($resolvedQuoteParseMode->name);
+
+      if (!is_string($resolvedQuoteParseMode)) {
+        $resolvedQuoteParseMode = null;
+      }
+    }
+
     return new ReplyParameters(
       messageId: $this->messageId,
       chatId: $this->chat->id,
+      allowSendingWithoutReply: $allowSendingWithoutReply,
+      quote: $quote,
+      quoteParseMode: $resolvedQuoteParseMode,
+      quoteEntities: $quoteEntities,
+      quotePosition: $quotePosition,
     );
   }
 }

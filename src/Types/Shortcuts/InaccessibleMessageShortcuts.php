@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Types\Shortcuts;
 
+use Gruven\PhpBotGram\Client\BotDefault;
 use Gruven\PhpBotGram\Types\Chat;
+use Gruven\PhpBotGram\Types\MessageEntity;
 use Gruven\PhpBotGram\Types\ReplyParameters;
 
 /**
@@ -26,16 +28,47 @@ trait InaccessibleMessageShortcuts
   /**
    * Build a `ReplyParameters` referencing this inaccessible-message stub.
    *
-   * For a deleted/inaccessible message the runtime API still accepts a
+   * Mirrors aiogram's `Message.as_reply_parameters(...)`. For a deleted /
+   * inaccessible message the runtime API still accepts a
    * `reply_parameters` payload — the resulting send will fail server-side
    * if the underlying message is truly unreachable, but the construction
    * path stays uniform across `Message` and `InaccessibleMessage`.
+   *
+   * The `quoteParseMode` parameter defaults to a `BotDefault('parse_mode')`
+   * sentinel that mirrors aiogram's `Default("parse_mode")`: when the
+   * message is bound to a Bot, the bot's `DefaultBotProperties.parseMode`
+   * is consulted; when there is no bound bot, the sentinel resolves to
+   * null and the server-side default applies. The sentinel is resolved
+   * inside this helper because `ReplyParameters::$quoteParseMode` is
+   * typed `?string` and PHP rejects assigning a `BotDefault` to it.
+   *
+   * @param null|list<MessageEntity> $quoteEntities
    */
-  public function asReplyParameters(): ReplyParameters
-  {
+  public function asReplyParameters(
+    ?bool $allowSendingWithoutReply = null,
+    ?string $quote = null,
+    null|BotDefault|string $quoteParseMode = new BotDefault('parse_mode'),
+    ?array $quoteEntities = null,
+    ?int $quotePosition = null,
+  ): ReplyParameters {
+    $resolvedQuoteParseMode = $quoteParseMode;
+
+    if ($resolvedQuoteParseMode instanceof BotDefault) {
+      $resolvedQuoteParseMode = $this->bot?->getDefaultProperties()->get($resolvedQuoteParseMode->name);
+
+      if (!is_string($resolvedQuoteParseMode)) {
+        $resolvedQuoteParseMode = null;
+      }
+    }
+
     return new ReplyParameters(
       messageId: $this->messageId,
       chatId: $this->chat->id,
+      allowSendingWithoutReply: $allowSendingWithoutReply,
+      quote: $quote,
+      quoteParseMode: $resolvedQuoteParseMode,
+      quoteEntities: $quoteEntities,
+      quotePosition: $quotePosition,
     );
   }
 }
