@@ -68,8 +68,42 @@ final class MockedSession extends BaseSession
     if ($this->responses->isEmpty()) {
       throw new RuntimeException('No canned responses left');
     }
+    $response = $this->responses->pop();
 
-    return $this->responses->pop()->result;
+    // Mirror aiogram's MockedBot.make_request: error responses (ok=false) get
+    // routed through checkResponse so the typed exception mapping is exercised
+    // even against canned data. Happy-path responses short-circuit because
+    // BaseSession::buildResponse is a Phase 1 stub that hard-codes result=null
+    // — going through checkResponse would lose the user-supplied result.
+    if (!$response->ok) {
+      $statusCode = $response->errorCode ?? 500;
+      $payload = [
+        'ok' => false,
+        'description' => $response->description ?? '',
+        'error_code' => $statusCode,
+      ];
+
+      if ($response->parameters !== null) {
+        $params = [];
+
+        if ($response->parameters->retryAfter !== null) {
+          $params['retry_after'] = $response->parameters->retryAfter;
+        }
+
+        if ($response->parameters->migrateToChatId !== null) {
+          $params['migrate_to_chat_id'] = $response->parameters->migrateToChatId;
+        }
+
+        if ($params !== []) {
+          $payload['parameters'] = $params;
+        }
+      }
+      $this->checkResponse($bot, $method, $statusCode, (string)json_encode($payload, JSON_THROW_ON_ERROR));
+
+      throw new RuntimeException('checkResponse did not raise on non-ok response — should be unreachable');
+    }
+
+    return $response->result;
   }
 
   public function close(): void

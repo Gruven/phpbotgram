@@ -75,6 +75,55 @@ final class RequestMiddlewareManagerTest extends TestCase
     self::assertSame(['A-before', 'B-before', 'terminal', 'B-after', 'A-after'], $log);
   }
 
+  public function testUnregisterRemovesMiddleware(): void
+  {
+    $manager = new RequestMiddlewareManager();
+    $mw = new class extends BaseRequestMiddleware {
+      public function __invoke(Closure $next, Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
+      {
+        return $next($bot, $method, $timeout);
+      }
+    };
+    $manager->register($mw);
+    self::assertCount(1, $manager);
+    self::assertTrue($manager->unregister($mw));
+    self::assertCount(0, $manager);
+    self::assertFalse($manager->unregister($mw), 'unregister of an absent middleware returns false');
+  }
+
+  public function testInvokeAsDecoratorFactory(): void
+  {
+    $manager = new RequestMiddlewareManager();
+    $mw = new class extends BaseRequestMiddleware {
+      public function __invoke(Closure $next, Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
+      {
+        return $next($bot, $method, $timeout);
+      }
+    };
+    // Inline registration
+    $returned = $manager($mw);
+    self::assertSame($mw, $returned);
+    self::assertCount(1, $manager);
+    // Decorator factory (no arg)
+    $registrar = $manager();
+    self::assertInstanceOf(Closure::class, $registrar);
+  }
+
+  public function testArrayAccessReadsRegisteredMiddleware(): void
+  {
+    $manager = new RequestMiddlewareManager();
+    $mw = new class extends BaseRequestMiddleware {
+      public function __invoke(Closure $next, Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
+      {
+        return $next($bot, $method, $timeout);
+      }
+    };
+    $manager->register($mw);
+    self::assertTrue(isset($manager[0]));
+    self::assertSame($mw, $manager[0]);
+    self::assertFalse(isset($manager[1]));
+  }
+
   public function testBaseSessionInvokeRunsMiddlewareChain(): void
   {
     $bot = new MockedBot();

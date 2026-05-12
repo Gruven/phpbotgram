@@ -47,6 +47,30 @@ final class BaseSessionTest extends TestCase
     );
   }
 
+  public function testMockedSessionRoutesErrorResponsesThroughCheckResponse(): void
+  {
+    $bot = new MockedBot();
+    $bot->addResultFor(SendMessage::class, ok: false, description: 'chat not found', errorCode: 400);
+
+    $this->expectException(TelegramBadRequestException::class);
+    $bot->sendMessage(chatId: 1, text: 'hi');
+  }
+
+  public function testMockedSessionMapsRetryAfterFromQueuedResponse(): void
+  {
+    $bot = new MockedBot();
+    $bot->addResultFor(
+      SendMessage::class,
+      ok: false,
+      description: 'Too Many Requests',
+      errorCode: 429,
+      retryAfter: 5,
+    );
+
+    $this->expectException(TelegramRetryAfter::class);
+    $bot->sendMessage(chatId: 1, text: 'hi');
+  }
+
   public function testPrepareValueRoundtripsListThroughFormBody(): void
   {
     $bot = new MockedBot();

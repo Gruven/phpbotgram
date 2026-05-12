@@ -30,8 +30,8 @@ final class AmphpSession extends BaseSession
   private ?HttpClient $client = null;
 
   public function __construct(
-    public readonly int $limit = 100,
     ?TelegramApiServer $api = null,
+    public readonly int $limit = 100,
     float $timeout = 60.0,
   ) {
     parent::__construct(api: $api, timeout: $timeout);

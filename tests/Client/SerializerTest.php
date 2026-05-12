@@ -18,12 +18,22 @@ final class SerializerTestAliasFixture extends TelegramObject
 {
   public const array WireNames = ['fromUser' => 'from'];
 
-  public function __construct(public readonly string $fromUser) {}
+  public function __construct(
+    public readonly string $fromUser,
+    ?Bot $bot = null,
+  ) {
+    parent::__construct($bot);
+  }
 }
 
 final class SerializerTestDateFixture extends TelegramObject
 {
-  public function __construct(public readonly DateTimeImmutable $stamp) {}
+  public function __construct(
+    public readonly DateTimeImmutable $stamp,
+    ?Bot $bot = null,
+  ) {
+    parent::__construct($bot);
+  }
 }
 
 final class SerializerTest extends TestCase
