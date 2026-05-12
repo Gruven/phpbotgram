@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Types;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
 
 /**
  * Represents the content of a text message to be sent as the result of an inline query.
@@ -20,9 +21,9 @@ final class InputTextMessageContent extends InputMessageContent
    */
   public function __construct(
     public readonly string $messageText,
-    public readonly ?string $parseMode = null,
+    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $entities = null,
-    public readonly ?LinkPreviewOptions $linkPreviewOptions = null,
+    public readonly null|BotDefault|LinkPreviewOptions $linkPreviewOptions = new BotDefault('link_preview'),
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

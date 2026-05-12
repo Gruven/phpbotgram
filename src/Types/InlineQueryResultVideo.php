@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Types;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
 
 /**
  * Represents a link to a page containing an embedded video player or a video file. By default, this video file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the video.
@@ -27,9 +28,9 @@ final class InlineQueryResultVideo extends InlineQueryResult
     public readonly string $title,
     public readonly string $type = 'video',
     public readonly ?string $caption = null,
-    public readonly ?string $parseMode = null,
+    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
-    public readonly ?bool $showCaptionAboveMedia = null,
+    public readonly null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     public readonly ?int $videoWidth = null,
     public readonly ?int $videoHeight = null,
     public readonly ?int $videoDuration = null,

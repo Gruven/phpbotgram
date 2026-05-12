@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Types;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
 
 /**
  * Represents a link to an MP3 audio file. By default, this audio file will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the audio.
@@ -24,7 +25,7 @@ final class InlineQueryResultAudio extends InlineQueryResult
     public readonly string $title,
     public readonly string $type = 'audio',
     public readonly ?string $caption = null,
-    public readonly ?string $parseMode = null,
+    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
     public readonly ?string $performer = null,
     public readonly ?int $audioDuration = null,

@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Types;
 
 use DateInterval;
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
 
 /**
@@ -27,9 +28,9 @@ final class InputMediaVideo extends InputMedia
     public readonly null|InputFile|string $cover = null,
     public readonly null|DateInterval|DateTime|int $startTimestamp = null,
     public readonly ?string $caption = null,
-    public readonly ?string $parseMode = null,
+    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
-    public readonly ?bool $showCaptionAboveMedia = null,
+    public readonly null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     public readonly ?int $width = null,
     public readonly ?int $height = null,
     public readonly ?int $duration = null,

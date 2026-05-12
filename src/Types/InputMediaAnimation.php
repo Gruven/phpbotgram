@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Types;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
 
 /**
  * Represents an animation file (GIF or H.264/MPEG-4 AVC video without sound) to be sent.
@@ -23,9 +24,9 @@ final class InputMediaAnimation extends InputMedia
     public readonly string $type = 'animation',
     public readonly ?InputFile $thumbnail = null,
     public readonly ?string $caption = null,
-    public readonly ?string $parseMode = null,
+    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
-    public readonly ?bool $showCaptionAboveMedia = null,
+    public readonly null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     public readonly ?int $width = null,
     public readonly ?int $height = null,
     public readonly ?int $duration = null,

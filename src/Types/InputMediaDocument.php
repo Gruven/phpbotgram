@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Types;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
 
 /**
  * Represents a general file to be sent.
@@ -23,7 +24,7 @@ final class InputMediaDocument extends InputMedia
     public readonly string $type = 'document',
     public readonly ?InputFile $thumbnail = null,
     public readonly ?string $caption = null,
-    public readonly ?string $parseMode = null,
+    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
     public readonly ?bool $disableContentTypeDetection = null,
     ?Bot $bot = null,

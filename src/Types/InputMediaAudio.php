@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Types;
 
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
 
 /**
  * Represents an audio file to be treated as music to be sent.
@@ -23,7 +24,7 @@ final class InputMediaAudio extends InputMedia
     public readonly string $type = 'audio',
     public readonly ?InputFile $thumbnail = null,
     public readonly ?string $caption = null,
-    public readonly ?string $parseMode = null,
+    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
     public readonly ?int $duration = null,
     public readonly ?string $performer = null,
