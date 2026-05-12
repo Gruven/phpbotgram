@@ -213,6 +213,62 @@ final class MethodRendererTest extends TestCase
     self::assertStringContainsString($extendsGeneric, $out, "{$name}: @extends generic must match the ReturnsType");
   }
 
+  /**
+   * Cycle 4 C1 fix: seven `Edit*` / `setGameScore` methods return either a
+   * `Message` (when the edit targets a chat message) or `bool` (when it
+   * targets an inline message). The prior `ReturnsType = Message::class`
+   * blew up at `BaseSession::deserializeResult` for every successful
+   * inline-message edit. The renderer now emits a `'union:Message|bool'`
+   * sentinel that the runtime dispatches by checking the raw response
+   * value's PHP type at decode time.
+   *
+   * Each method gets a `returning.parsed_type` patch in `replace.yml`
+   * declaring the union, plus a sorted import set so both `Message` and
+   * the union members reference compile.
+   *
+   * @return list<array{0: string}>
+   */
+  public static function cycle4PolymorphicReturnMethods(): array
+  {
+    return [
+      ['editMessageText'],
+      ['editMessageCaption'],
+      ['editMessageMedia'],
+      ['editMessageReplyMarkup'],
+      ['editMessageLiveLocation'],
+      ['stopMessageLiveLocation'],
+      ['setGameScore'],
+    ];
+  }
+
+  #[DataProvider('cycle4PolymorphicReturnMethods')]
+  public function testCycle4PolymorphicMessageBoolReturn(string $name): void
+  {
+    $out = $this->render($name);
+
+    // The sentinel format `'union:Message|bool'` is consumed by
+    // `BaseSession::deserializeResult` — see the dispatch table there.
+    // Members are alphabetically sorted (`Message` < `bool` per PHP's
+    // default `ksort` against the resolved-union member map) so the
+    // sentinel is byte-stable across regenerations.
+    //
+    // Renderer-emitted source is *pre-cs-fixer*. The PHPDoc `@extends`
+    // generic is `Message|bool` here; cs-fixer re-sorts it to
+    // `bool|Message` in the on-disk file but the const string literal
+    // (opaque to cs-fixer) keeps the runtime dispatch order.
+    self::assertStringContainsString(
+      "public const string ReturnsType = 'union:Message|bool';",
+      $out,
+      "{$name}: ReturnsType const must declare the Message|bool polymorphic union",
+    );
+    self::assertStringContainsString(
+      '@extends TelegramMethod<Message|bool>',
+      $out,
+      "{$name}: @extends generic must declare the Message|bool union (pre-cs-fixer order)",
+    );
+    self::assertStringContainsString('use Gruven\\PhpBotGram\\Types\\Message;', $out);
+  }
+
   public function testSendPhotoUsesInputFileStringUnion(): void
   {
     $out = $this->render('sendPhoto');

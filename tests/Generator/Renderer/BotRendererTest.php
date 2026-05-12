@@ -218,6 +218,40 @@ final class BotRendererTest extends TestCase
     }
   }
 
+  /**
+   * Cycle 4 C1 fix: the Bot facade wrappers for the seven `Edit*` /
+   * `setGameScore` methods declare `Message|bool` returns, matching the
+   * Method class's `'union:Message|bool'` sentinel and the runtime
+   * `BaseSession::deserializeResult` polymorphic-dispatch contract.
+   *
+   * @return list<array{0: string}>
+   */
+  public static function cycle4PolymorphicWrappers(): array
+  {
+    return [
+      ['editMessageText'],
+      ['editMessageCaption'],
+      ['editMessageMedia'],
+      ['editMessageReplyMarkup'],
+      ['editMessageLiveLocation'],
+      ['stopMessageLiveLocation'],
+      ['setGameScore'],
+    ];
+  }
+
+  #[DataProvider('cycle4PolymorphicWrappers')]
+  public function testCycle4PolymorphicWrapperReturn(string $name): void
+  {
+    $out = $this->rendered();
+
+    // The wrapper return is declared `Message|bool`, mirroring the
+    // resolved-union shape from `TypeResolver::resolveParsedUnion`.
+    // Bot.php is a PHP class so the runtime declaration carries the full
+    // union shape directly — no PHPDoc fallback needed.
+    $pattern = '/public function ' . preg_quote($name, '/') . '\\(.*?\\): Message\|bool\s*\{/s';
+    self::assertMatchesRegularExpression($pattern, $out, "{$name}: wrapper return must be Message|bool");
+  }
+
   public function testInvokeAndConstructorPreserved(): void
   {
     $out = $this->rendered();

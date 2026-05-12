@@ -400,31 +400,21 @@ final class MethodRenderer
           ];
         }
 
-        // No covering parent — emit the raw union as the PHPStan generic but
-        // pin the const to the first class member's class-string. Imports for
-        // every member are added so the file references compile.
+        // No covering parent — the union represents a genuinely polymorphic
+        // return type the runtime must dispatch by raw-value PHP type. The
+        // canonical case is `Message|bool` (seven `Edit*` / `setGameScore`
+        // methods return the edited `Message` for chat-message targets and
+        // `True` for inline-message targets). Emit a `'union:<phpType>'`
+        // sentinel so `BaseSession::deserializeResult` can split on `|` and
+        // dispatch each member by `is_bool` / `is_int` / `is_array` / etc.
         foreach ($resolved->unionMembers as $m) {
           if ($m->importFqcn !== null) {
             $imports[$m->importFqcn] = true;
           }
         }
 
-        $firstClass = null;
-
-        foreach ($resolved->unionMembers as $m) {
-          if ($m->kind === PhpTypeKind::ClassName) {
-            $firstClass = $m;
-
-            break;
-          }
-        }
-
-        if ($firstClass === null) {
-          return $this->returnFromScalar('bool');
-        }
-
         return [
-          'returnsExpr' => $firstClass->phpType . '::class',
+          'returnsExpr' => "'union:" . $resolved->phpType . "'",
           'extendsGeneric' => $resolved->phpType,
         ];
     }
