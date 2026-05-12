@@ -22,8 +22,8 @@ use Symfony\Component\Yaml\Yaml;
  * remaining raw YAML (aliases) for later passes to consume.
  *
  * @phpstan-type SchemaApi array{version: string, release_date: string}
- * @phpstan-type SchemaAnnotation array{name: string, type: string, description?: string, required?: bool}
- * @phpstan-type SchemaChild array{name: string, anchor?: string, category: string, description?: string, annotations?: list<SchemaAnnotation>}
+ * @phpstan-type SchemaAnnotation array{name: string, type: string, description?: string, html_description?: string, rst_description?: string, required?: bool}
+ * @phpstan-type SchemaChild array{name: string, anchor?: string, category: string, description?: string, html_description?: string, rst_description?: string, annotations?: list<SchemaAnnotation>}
  * @phpstan-type SchemaItem array{title?: string, anchor?: string, children?: list<SchemaChild>}
  * @phpstan-type SchemaRoot array{api: SchemaApi, items: list<SchemaItem>}
  */
@@ -348,6 +348,8 @@ final class SchemaLoader
         type: $a['type'],
         required: $required,
         parsedType: $parsedType,
+        htmlDescription: $a['html_description'] ?? '',
+        rstDescription: $a['rst_description'] ?? '',
       );
     }
 

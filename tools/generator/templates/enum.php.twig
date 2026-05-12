@@ -1,0 +1,32 @@
+{#-
+  Enum class template.
+
+  Variables provided by `EnumRenderer::render()`:
+    - class_name        : string  — short PHP enum name (e.g. "ChatType")
+    - namespace         : string  — namespace the enum lives in
+    - backing_type      : string  — "string" or "int"
+    - description_lines : list<string>  — docblock summary lines
+    - cases             : list<{name: string, value: string}>  — PascalCase
+                          case names with their already-encoded PHP literal
+                          (single-quoted string or raw integer literal)
+
+  The template intentionally pre-processes nothing structural — the renderer
+  lowers cases into ready-to-emit form. cs-fixer (run by the pipeline
+  orchestrator at Task 2.12) polishes the final whitespace; this template
+  prioritises emitting valid PHP over pixel-perfect formatting.
+-#}
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+/**
+{% for line in description_lines %} * {{ line }}
+{% endfor %} *
+ * @generated do not edit; regenerate via `make regenerate`
+ */
+enum {{ class_name }}: {{ backing_type }}
+{
+{% for c in cases %}  case {{ c.name }} = {{ c.value }};
+{% endfor %}}
