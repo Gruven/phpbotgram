@@ -10,7 +10,6 @@ use Gruven\PhpBotGram\Dispatcher\Event\RejectedSentinel;
 use Gruven\PhpBotGram\Dispatcher\Event\SkipHandlerException;
 use Gruven\PhpBotGram\Dispatcher\Event\UnhandledSentinel;
 use Gruven\PhpBotGram\Types\ErrorEvent;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Update;
 use Throwable;
 
@@ -66,10 +65,10 @@ final class ErrorsMiddleware extends BaseMiddleware
   ) {}
 
   /**
-   * @param Closure(TelegramObject, array<string, mixed>): mixed $handler
+   * @param Closure(object, array<string, mixed>): mixed $handler
    * @param array<string, mixed> $data
    */
-  public function __invoke(Closure $handler, TelegramObject $event, array $data): mixed
+  public function __invoke(Closure $handler, object $event, array $data): mixed
   {
     try {
       return $handler($event, $data);

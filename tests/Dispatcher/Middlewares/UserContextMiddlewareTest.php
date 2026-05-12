@@ -30,7 +30,6 @@ use Gruven\PhpBotGram\Types\PollAnswer;
 use Gruven\PhpBotGram\Types\PreCheckoutQuery;
 use Gruven\PhpBotGram\Types\ShippingAddress;
 use Gruven\PhpBotGram\Types\ShippingQuery;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Update;
 use Gruven\PhpBotGram\Types\User;
 use PHPUnit\Framework\TestCase;
@@ -461,7 +460,7 @@ final class UserContextMiddlewareTest extends TestCase
     $update = new Update(updateId: 1, message: $message);
 
     $captured = null;
-    $handler = static function (TelegramObject $event, array $data) use (&$captured): string {
+    $handler = static function (object $event, array $data) use (&$captured): string {
       $captured = ['event' => $event, 'data' => $data];
 
       return 'OK';
@@ -501,7 +500,7 @@ final class UserContextMiddlewareTest extends TestCase
     // rely on `array_key_exists` instead of `isset` checks.
     $update = new Update(updateId: 0);
     $captured = null;
-    $handler = static function (TelegramObject $event, array $data) use (&$captured): void {
+    $handler = static function (object $event, array $data) use (&$captured): void {
       $captured = $data;
     };
 

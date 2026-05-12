@@ -14,7 +14,6 @@ use Gruven\PhpBotGram\Types\Chat;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\ErrorEvent;
 use Gruven\PhpBotGram\Types\Message;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Update;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -59,7 +58,7 @@ final class ErrorsMiddlewareTest extends TestCase
   {
     $middleware = new ErrorsMiddleware();
     $event = new Chat(id: 1, type: 'private');
-    $handler = static fn(TelegramObject $e, array $d): string => 'ok';
+    $handler = static fn(object $e, array $d): string => 'ok';
 
     self::assertSame('ok', $middleware($handler, $event, []));
   }
@@ -68,7 +67,7 @@ final class ErrorsMiddlewareTest extends TestCase
   {
     $middleware = new ErrorsMiddleware();
     $event = new Chat(id: 1, type: 'private');
-    $handler = static function (TelegramObject $e, array $d): never {
+    $handler = static function (object $e, array $d): never {
       throw new SkipHandlerException('skip');
     };
 
@@ -79,7 +78,7 @@ final class ErrorsMiddlewareTest extends TestCase
   {
     $middleware = new ErrorsMiddleware();
     $event = new Chat(id: 1, type: 'private');
-    $handler = static function (TelegramObject $e, array $d): never {
+    $handler = static function (object $e, array $d): never {
       throw new CancelHandlerException('cancel');
     };
 
@@ -94,7 +93,7 @@ final class ErrorsMiddlewareTest extends TestCase
     $middleware = new ErrorsMiddleware();
     $event = new Chat(id: 1, type: 'private');
     $exception = new RuntimeException('boom');
-    $handler = static function (TelegramObject $e, array $d) use ($exception): never {
+    $handler = static function (object $e, array $d) use ($exception): never {
       throw $exception;
     };
 
@@ -121,7 +120,7 @@ final class ErrorsMiddlewareTest extends TestCase
     $middleware = new ErrorsMiddleware($trigger);
     $event = new Chat(id: 1, type: 'private');
     $exception = new RuntimeException('boom');
-    $handler = static function (TelegramObject $e, array $d) use ($exception): never {
+    $handler = static function (object $e, array $d) use ($exception): never {
       throw $exception;
     };
 
@@ -149,7 +148,7 @@ final class ErrorsMiddlewareTest extends TestCase
 
     $middleware = new ErrorsMiddleware($trigger);
     $event = new Chat(id: 1, type: 'private');
-    $handler = static function (TelegramObject $e, array $d) use ($exception): never {
+    $handler = static function (object $e, array $d) use ($exception): never {
       throw $exception;
     };
 
@@ -185,7 +184,7 @@ final class ErrorsMiddlewareTest extends TestCase
     $trigger = static fn(string $type, ErrorEvent $event, array $data): mixed => RejectedSentinel::instance();
     $middleware = new ErrorsMiddleware($trigger);
     $event = new Chat(id: 1, type: 'private');
-    $handler = static function (TelegramObject $e, array $d): never {
+    $handler = static function (object $e, array $d): never {
       throw new RuntimeException('boom');
     };
 
@@ -202,7 +201,7 @@ final class ErrorsMiddlewareTest extends TestCase
     $trigger = static fn(string $type, ErrorEvent $event, array $data): mixed => UnhandledSentinel::instance();
     $middleware = new ErrorsMiddleware($trigger);
     $event = new Chat(id: 1, type: 'private');
-    $handler = static function (TelegramObject $e, array $d) use ($exception): never {
+    $handler = static function (object $e, array $d) use ($exception): never {
       throw $exception;
     };
 
@@ -223,7 +222,7 @@ final class ErrorsMiddlewareTest extends TestCase
     $trigger = static fn(string $type, ErrorEvent $event, array $data): mixed => null;
     $middleware = new ErrorsMiddleware($trigger);
     $event = new Chat(id: 1, type: 'private');
-    $handler = static function (TelegramObject $e, array $d) use ($exception): never {
+    $handler = static function (object $e, array $d) use ($exception): never {
       throw $exception;
     };
 
@@ -246,7 +245,7 @@ final class ErrorsMiddlewareTest extends TestCase
     $trigger = static fn(string $type, ErrorEvent $event, array $data): mixed => $payload;
     $middleware = new ErrorsMiddleware($trigger);
     $event = new Chat(id: 1, type: 'private');
-    $handler = static function (TelegramObject $e, array $d): never {
+    $handler = static function (object $e, array $d): never {
       throw new RuntimeException('boom');
     };
 
@@ -268,7 +267,7 @@ final class ErrorsMiddlewareTest extends TestCase
     $middleware = new ErrorsMiddleware($trigger);
     $event = new Chat(id: 1, type: 'private');
     $exception = new RuntimeException('boom');
-    $handler = static function (TelegramObject $e, array $d) use ($exception): never {
+    $handler = static function (object $e, array $d) use ($exception): never {
       throw $exception;
     };
 

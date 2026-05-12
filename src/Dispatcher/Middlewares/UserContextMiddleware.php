@@ -56,7 +56,7 @@ final class UserContextMiddleware extends BaseMiddleware
   public const string EVENT_CHAT_KEY = 'event_chat';
   public const string EVENT_THREAD_ID_KEY = 'event_thread_id';
 
-  public function __invoke(Closure $handler, TelegramObject $event, array $data): mixed
+  public function __invoke(Closure $handler, object $event, array $data): mixed
   {
     $context = self::resolveContext($event);
 
@@ -76,11 +76,15 @@ final class UserContextMiddleware extends BaseMiddleware
    * child event. When given an `Update`, the first non-null child slot wins
    * (matching `UpdateShortcuts::eventType()`'s declaration-order tie-break).
    *
+   * Non-`TelegramObject` payloads (e.g. `ErrorEvent`) carry no user/chat
+   * context themselves; the function returns an empty `EventContext` for
+   * those so the keys still exist in `$data` with documented null defaults.
+   *
    * Returns an empty `EventContext` for events that don't carry any
    * recognised context (e.g. `Poll`, unrecognised types, or a bare `Update`
    * with every slot null).
    */
-  public static function resolveContext(TelegramObject $event): EventContext
+  public static function resolveContext(object $event): EventContext
   {
     if ($event instanceof Update) {
       $child = self::unwrapUpdate($event);

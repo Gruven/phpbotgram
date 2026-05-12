@@ -8,7 +8,6 @@ use Closure;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager;
 use Gruven\PhpBotGram\Types\Chat;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use OutOfBoundsException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -21,7 +20,7 @@ final class MiddlewareManagerTest extends TestCase
     $manager = new MiddlewareManager();
     self::assertCount(0, $manager);
 
-    $terminal = static fn(TelegramObject $e, array $d): string => 'terminal';
+    $terminal = static fn(object $e, array $d): string => 'terminal';
     self::assertSame($terminal, $manager->wrap($terminal));
   }
 
@@ -36,7 +35,7 @@ final class MiddlewareManagerTest extends TestCase
     self::assertSame($mw, $manager[0]);
     self::assertFalse(isset($manager[1]));
 
-    $terminal = static fn(TelegramObject $e, array $d): string => 'terminal';
+    $terminal = static fn(object $e, array $d): string => 'terminal';
     self::assertNotSame($terminal, $manager->wrap($terminal));
   }
 
@@ -48,7 +47,7 @@ final class MiddlewareManagerTest extends TestCase
     $manager->register(new class ($log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
-      public function __invoke(Closure $handler, TelegramObject $event, array $data): mixed
+      public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = 'before';
         $result = $handler($event, $data);
@@ -58,7 +57,7 @@ final class MiddlewareManagerTest extends TestCase
       }
     });
 
-    $terminal = static function (TelegramObject $e, array $d) use (&$log): string {
+    $terminal = static function (object $e, array $d) use (&$log): string {
       $log[] = 'terminal';
 
       return 'done';
@@ -80,7 +79,7 @@ final class MiddlewareManagerTest extends TestCase
     $manager->register(self::loggingMiddleware('B', $log));
     $manager->register(self::loggingMiddleware('C', $log));
 
-    $terminal = static function (TelegramObject $e, array $d) use (&$log): string {
+    $terminal = static function (object $e, array $d) use (&$log): string {
       $log[] = 'terminal';
 
       return 'done';
@@ -166,7 +165,7 @@ final class MiddlewareManagerTest extends TestCase
     $manager = new MiddlewareManager();
 
     $manager->register(new class extends BaseMiddleware {
-      public function __invoke(Closure $handler, TelegramObject $event, array $data): mixed
+      public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $data['mw_key'] = 'mw_value';
 
@@ -175,7 +174,7 @@ final class MiddlewareManagerTest extends TestCase
     });
 
     $observed = null;
-    $terminal = static function (TelegramObject $e, array $d) use (&$observed): array {
+    $terminal = static function (object $e, array $d) use (&$observed): array {
       $observed = $d;
 
       return $d;
@@ -198,13 +197,13 @@ final class MiddlewareManagerTest extends TestCase
     $handlerCalled = false;
     $manager->register(new class ($sentinel) extends BaseMiddleware {
       public function __construct(public stdClass $sentinel) {}
-      public function __invoke(Closure $handler, TelegramObject $event, array $data): mixed
+      public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         return $this->sentinel;
       }
     });
 
-    $terminal = static function (TelegramObject $e, array $d) use (&$handlerCalled): string {
+    $terminal = static function (object $e, array $d) use (&$handlerCalled): string {
       $handlerCalled = true;
 
       return 'should-not-be-reached';
@@ -220,7 +219,7 @@ final class MiddlewareManagerTest extends TestCase
   private static function passthroughMiddleware(): BaseMiddleware
   {
     return new class extends BaseMiddleware {
-      public function __invoke(Closure $handler, TelegramObject $event, array $data): mixed
+      public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         return $handler($event, $data);
       }
@@ -235,7 +234,7 @@ final class MiddlewareManagerTest extends TestCase
     return new class ($name, $log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public string $name, public array &$log) {}
-      public function __invoke(Closure $handler, TelegramObject $event, array $data): mixed
+      public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = $this->name . '-before';
         $result = $handler($event, $data);

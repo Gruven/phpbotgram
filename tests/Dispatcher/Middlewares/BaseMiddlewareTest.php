@@ -8,7 +8,6 @@ use Closure;
 use Error;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Types\Chat;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -27,7 +26,7 @@ final class BaseMiddlewareTest extends TestCase
   public function testConcreteSubclassExecutesAndCallsInnerHandler(): void
   {
     $middleware = new class extends BaseMiddleware {
-      public function __invoke(Closure $handler, TelegramObject $event, array $data): mixed
+      public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $data['mw_touched'] = true;
 
@@ -37,7 +36,7 @@ final class BaseMiddlewareTest extends TestCase
 
     $event = new Chat(id: 42, type: 'private');
     $captured = null;
-    $handler = static function (TelegramObject $e, array $d) use (&$captured): string {
+    $handler = static function (object $e, array $d) use (&$captured): string {
       $captured = ['event' => $e, 'data' => $d];
 
       return 'handler-result';

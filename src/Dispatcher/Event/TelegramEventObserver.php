@@ -6,7 +6,8 @@ namespace Gruven\PhpBotGram\Dispatcher\Event;
 
 use Closure;
 use Gruven\PhpBotGram\Dispatcher\Flags\Flags;
-use Gruven\PhpBotGram\Types\TelegramObject;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager;
 
 /**
  * Routing observer for a single Telegram update type — port of
@@ -41,8 +42,24 @@ use Gruven\PhpBotGram\Types\TelegramObject;
  * attribute / WeakMap-attached flags are merged in first, then the manual
  * `$flags` argument overlays them last (manual wins on key collision).
  *
- * Middleware chains land in Task 3.10 (Dispatcher wiring) — this observer
- * is the dispatch primitive they wrap around.
+ * **Middleware integration** — the observer owns two `MiddlewareManager`
+ * collections that compose around the dispatch primitive:
+ *
+ * - `$outerMiddleware` wraps the **entire observer** (global filter chain
+ *   plus the handler iteration). This is where `UserContextMiddleware` /
+ *   `ErrorsMiddleware` land — they need to inject context / catch
+ *   exceptions across all handlers, including the global-filter rejection
+ *   short-circuit.
+ * - `$innerMiddleware` wraps **each individual handler invocation**
+ *   (`HandlerObject::call`). This is where per-handler concerns like
+ *   throttling, auth gates, and cache hits attach.
+ *
+ * The split mirrors upstream's `outer_middlewares` / `middlewares` lists on
+ * `TelegramEventObserver` at `aiogram/dispatcher/event/telegram.py:23-31`.
+ * The two managers are independent — registering on one does NOT register
+ * on the other — and the outer chain has access to the kwargs the global
+ * filters would see, while the inner chain runs only after the per-handler
+ * filter check accepts.
  */
 final class TelegramEventObserver
 {
@@ -65,11 +82,52 @@ final class TelegramEventObserver
   public private(set) array $filters = [];
 
   /**
+   * Outer middleware chain — wraps the entire observer (global filters +
+   * handler iteration). Registered via `outerMiddleware()`. The Dispatcher
+   * attaches `UserContextMiddleware` and `ErrorsMiddleware` here at
+   * construction time so error catch / context injection cover every
+   * dispatch path including rejection short-circuits.
+   */
+  public readonly MiddlewareManager $outerMiddleware;
+
+  /**
+   * Inner middleware chain — wraps each individual handler invocation.
+   * Registered via `innerMiddleware()`. Per-handler concerns (throttling,
+   * cache lookup, auth gates) attach here so the rest of the observer
+   * (global filter chain, per-handler filter pipeline) runs first.
+   */
+  public readonly MiddlewareManager $innerMiddleware;
+
+  /**
    * @param string $eventName Wire-level Bot API key this observer routes
    *                          for (`message`, `callback_query`, …). The dispatcher uses this
    *                          when injecting the `event_name` kwarg into middleware data.
    */
-  public function __construct(public readonly string $eventName) {}
+  public function __construct(public readonly string $eventName)
+  {
+    $this->outerMiddleware = new MiddlewareManager();
+    $this->innerMiddleware = new MiddlewareManager();
+  }
+
+  /**
+   * Append a middleware to the **outer** chain (wraps the whole observer).
+   * Thin wrapper around `$outerMiddleware->register()` that exists so
+   * Dispatcher's setup code reads `$observer->outerMiddleware(new …)` —
+   * matching upstream's `observer.outer_middleware(...)` call site.
+   */
+  public function outerMiddleware(BaseMiddleware $middleware): BaseMiddleware
+  {
+    return $this->outerMiddleware->register($middleware);
+  }
+
+  /**
+   * Append a middleware to the **inner** chain (wraps each handler call).
+   * Mirror of `outerMiddleware()` for the per-handler chain.
+   */
+  public function innerMiddleware(BaseMiddleware $middleware): BaseMiddleware
+  {
+    return $this->innerMiddleware->register($middleware);
+  }
 
   /**
    * Append global filters that gate every handler on this observer.
@@ -169,7 +227,36 @@ final class TelegramEventObserver
   }
 
   /**
-   * Route an event through global filters then the handler chain.
+   * Route an event through the outer-middleware chain, then through global
+   * filters and the handler chain (the dispatch primitive lives in
+   * `triggerCore()`).
+   *
+   * `$event` is typed `object` because dispatcher-synthetic events (notably
+   * `ErrorEvent`, which deliberately does not extend `TelegramObject`) flow
+   * through the same dispatch primitive. Handler-declared parameter types
+   * are checked by `CallableObject`'s reflection adapter when binding the
+   * `event` kwarg.
+   *
+   * @param array<string, mixed> $kwargs Dispatcher context (bot,
+   *                                     event_context, state, …) merged with filter-result injections
+   *                                     before reaching each handler.
+   *
+   * @return mixed The first claiming handler's return value, or
+   *               `UnhandledSentinel::instance()` if every handler passed, or
+   *               `RejectedSentinel::instance()` if a global filter rejected.
+   */
+  public function trigger(object $event, array $kwargs = []): mixed
+  {
+    $terminal = fn(object $e, array $k): mixed => $this->triggerCore($e, $k);
+    $chain = $this->outerMiddleware->wrap($terminal);
+
+    return $chain($event, $kwargs);
+  }
+
+  /**
+   * The actual dispatch primitive (post-outer-middleware): runs global
+   * filters then iterates handlers with per-handler filter check and
+   * inner-middleware wrapping.
    *
    * Sequence — matches upstream `TelegramEventObserver.trigger`:
    *
@@ -182,34 +269,26 @@ final class TelegramEventObserver
    *       contract — handlers can declare `HandlerObject $handler`).
    *    b. Run the handler's filter pipeline via `HandlerObject::check`.
    *       Failure: `continue` to the next handler.
-   *    c. Success: invoke the handler. If it returns `UnhandledSentinel`
-   *       it explicitly opts out and we `continue`; otherwise its return
-   *       value is the trigger result.
+   *    c. Success: invoke the handler via the inner-middleware chain.
+   *       If the result is `UnhandledSentinel` the handler explicitly opts
+   *       out and we `continue`; otherwise its return value is the trigger
+   *       result.
    * 3. If no handler claimed the event, return `UnhandledSentinel`.
    *
    * The `event` kwarg is injected before filters run so filter and handler
-   * signatures can declare `TelegramObject $event` and receive the payload
-   * by named parameter. Deviation from upstream's `handler.call(event, **kwargs)`:
-   * we pass `event` **only** as a kwarg, never positional. The PHP kwarg-
-   * binding model uses parameter names, and forwarding `event` positionally
-   * AND as a kwarg collides with PHP 8.1+ "Named parameter overwrites
-   * previous argument" guard. Handlers naturally declare
-   * `function (TelegramObject $event, ...)` and the reflection adapter
-   * binds the named kwarg.
+   * signatures can declare the event as a named parameter. Deviation from
+   * upstream's `handler.call(event, **kwargs)`: we pass `event` **only** as
+   * a kwarg, never positional. The PHP kwarg-binding model uses parameter
+   * names, and forwarding `event` positionally AND as a kwarg collides
+   * with PHP 8.1+ "Named parameter overwrites previous argument" guard.
    *
    * Sentinel return values are intentionally distinct objects (compared by
    * identity via `===`) so a handler that legitimately returns `null` is
    * not confused with "no handler ran".
    *
-   * @param array<string, mixed> $kwargs Dispatcher context (bot,
-   *                                     event_context, state, …) merged with filter-result injections
-   *                                     before reaching each handler.
-   *
-   * @return mixed The first claiming handler's return value, or
-   *               `UnhandledSentinel::instance()` if every handler passed, or
-   *               `RejectedSentinel::instance()` if a global filter rejected.
+   * @param array<string, mixed> $kwargs
    */
-  public function trigger(TelegramObject $event, array $kwargs = []): mixed
+  private function triggerCore(object $event, array $kwargs): mixed
   {
     foreach ($this->filters as $globalFilter) {
       $result = $globalFilter->call([], ['event' => $event, ...$kwargs]);
@@ -243,11 +322,14 @@ final class TelegramEventObserver
         continue;
       }
 
-      // Pass `event` only as a kwarg — `$handlerKwargs` already carries it
-      // via the merge above. Forwarding it positionally too would trigger
-      // PHP 8.1+'s "Named parameter overwrites previous argument" error
-      // when the handler declares `TelegramObject $event` as a named param.
-      $response = $handler->call([], $handlerKwargs);
+      // Inner middleware wraps the handler's `call()`. The terminal step
+      // ignores the closure's `$event` (positional) argument and forwards
+      // only kwargs — the kwarg merge above already carries `event` so
+      // forwarding it positionally would collide with PHP's "named
+      // parameter overwrites previous argument" guard.
+      $terminal = static fn(object $e, array $k): mixed => $handler->call([], $k);
+      $wrappedHandler = $this->innerMiddleware->wrap($terminal);
+      $response = $wrappedHandler($event, $handlerKwargs);
 
       if ($response === UnhandledSentinel::instance()) {
         // Handler ran but voluntarily passed. Continue to the next.

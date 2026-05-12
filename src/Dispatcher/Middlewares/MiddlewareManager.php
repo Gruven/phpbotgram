@@ -7,7 +7,6 @@ namespace Gruven\PhpBotGram\Dispatcher\Middlewares;
 use ArrayAccess;
 use Closure;
 use Countable;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use OutOfBoundsException;
 use RuntimeException;
 use WeakMap;
@@ -143,13 +142,17 @@ final class MiddlewareManager implements ArrayAccess, Countable
    * for `[A, B, C]` and terminal `T` the call order is
    * `A.before → B.before → C.before → T → C.after → B.after → A.after`.
    *
+   * The terminal and intermediate closures accept `object $event` (not
+   * `TelegramObject`) so the same manager can transport synthetic events
+   * such as `ErrorEvent` through the dispatcher's error channel.
+   *
    * If no middlewares are registered, the terminal is returned unchanged
    * (zero-allocation fast path). Repeated `wrap()` calls with the same
    * terminal hit the WeakMap cache.
    *
-   * @param Closure(TelegramObject, array<string, mixed>): mixed $terminal
+   * @param Closure(object, array<string, mixed>): mixed $terminal
    *
-   * @return Closure(TelegramObject, array<string, mixed>): mixed
+   * @return Closure(object, array<string, mixed>): mixed
    */
   public function wrap(Closure $terminal): Closure
   {
@@ -164,7 +167,7 @@ final class MiddlewareManager implements ArrayAccess, Countable
 
     foreach (array_reverse($this->middlewares) as $middleware) {
       $current = $next;
-      $next = static fn(TelegramObject $event, array $data): mixed => $middleware($current, $event, $data);
+      $next = static fn(object $event, array $data): mixed => $middleware($current, $event, $data);
     }
 
     return $this->chainCache[$terminal] = $next;

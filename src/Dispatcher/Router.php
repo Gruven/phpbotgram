@@ -7,7 +7,6 @@ namespace Gruven\PhpBotGram\Dispatcher;
 use Gruven\PhpBotGram\Dispatcher\Event\EventObserver;
 use Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver;
 use Gruven\PhpBotGram\Dispatcher\Event\UnhandledSentinel;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use LogicException;
 
 /**
@@ -381,17 +380,22 @@ class Router
    *    to return non-UNHANDLED wins. Pure UNHANDLED across the whole
    *    tree returns `UnhandledSentinel::instance()`.
    *
-   * **Middleware integration is deferred**: upstream wraps the per-
-   * type observer call in `wrap_outer_middleware` (`router.py:165`),
-   * which the Phase 3 middleware stack (Task 3.10 + 3.11) will plug
-   * into. For now propagation goes straight through `trigger`.
+   * **Middleware integration**: each `TelegramEventObserver::trigger` call
+   * runs through the observer's outer-middleware chain (Task 3.10). The
+   * Dispatcher subclass attaches `UserContextMiddleware` and
+   * `ErrorsMiddleware` at construction so error catch / context injection
+   * cover every observer transparently.
+   *
+   * `$event` is typed `object` (not `TelegramObject`) because the same
+   * propagation primitive carries synthetic dispatcher events such as
+   * `ErrorEvent`, which deliberately do not extend `TelegramObject`.
    *
    * @param array<string, mixed> $kwargs Dispatcher context bag (bot,
    *                                     event_context, …) merged into the handler invocation.
    */
   public function propagateEvent(
     string $updateType,
-    TelegramObject $event,
+    object $event,
     array $kwargs = [],
   ): mixed {
     if (!isset($this->observers[$updateType])) {

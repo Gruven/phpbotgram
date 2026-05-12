@@ -12,6 +12,8 @@ use Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver;
 use Gruven\PhpBotGram\Dispatcher\Event\UnhandledSentinel;
 use Gruven\PhpBotGram\Dispatcher\Flags\Flag;
 use Gruven\PhpBotGram\Dispatcher\Flags\FlagDecorator;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager;
 use Gruven\PhpBotGram\Types\Chat;
 use Gruven\PhpBotGram\Types\TelegramObject;
 use PHPUnit\Framework\TestCase;
@@ -338,5 +340,222 @@ final class TelegramEventObserverTest extends TestCase
     $observer->trigger(new Chat(id: 1, type: 'private'), ['bot' => 'fake_bot']);
 
     self::assertSame('fake_bot', $observed);
+  }
+
+  public function testConstructionExposesEmptyOuterAndInnerMiddlewareManagers(): void
+  {
+    // Spec § "Dispatcher" requires every TelegramEventObserver to own two
+    // independent MiddlewareManagers: outer (wraps the whole observer) and
+    // inner (wraps each handler call). Both start empty.
+    $observer = new TelegramEventObserver('message');
+
+    self::assertInstanceOf(MiddlewareManager::class, $observer->outerMiddleware);
+    self::assertInstanceOf(MiddlewareManager::class, $observer->innerMiddleware);
+    self::assertCount(0, $observer->outerMiddleware);
+    self::assertCount(0, $observer->innerMiddleware);
+    self::assertNotSame(
+      $observer->outerMiddleware,
+      $observer->innerMiddleware,
+      'Outer and inner managers must be distinct instances.',
+    );
+  }
+
+  public function testOuterMiddlewareHelperAppendsToOuterManager(): void
+  {
+    // The helper exists so Dispatcher's setup code reads
+    // `$observer->outerMiddleware(new …)` (matching upstream's call site)
+    // rather than threading through ->outerMiddleware->register(...).
+    $observer = new TelegramEventObserver('message');
+    $mw = self::passthroughMiddleware();
+
+    $returned = $observer->outerMiddleware($mw);
+
+    self::assertSame($mw, $returned);
+    self::assertCount(1, $observer->outerMiddleware);
+    self::assertSame($mw, $observer->outerMiddleware[0]);
+    self::assertCount(0, $observer->innerMiddleware, 'inner manager must not be touched.');
+  }
+
+  public function testInnerMiddlewareHelperAppendsToInnerManager(): void
+  {
+    // Mirror of outerMiddleware() for the per-handler chain.
+    $observer = new TelegramEventObserver('message');
+    $mw = self::passthroughMiddleware();
+
+    $returned = $observer->innerMiddleware($mw);
+
+    self::assertSame($mw, $returned);
+    self::assertCount(1, $observer->innerMiddleware);
+    self::assertSame($mw, $observer->innerMiddleware[0]);
+    self::assertCount(0, $observer->outerMiddleware, 'outer manager must not be touched.');
+  }
+
+  public function testOuterMiddlewareWrapsEntireObserverIncludingGlobalFilters(): void
+  {
+    // Outer middleware wraps the *entire* observer: filter chain + handler
+    // iteration. The middleware sees the event before the global filters
+    // even run, and can short-circuit the whole thing. Verified by
+    // recording the order of operations.
+    $observer = new TelegramEventObserver('message');
+    $log = [];
+    $observer->outerMiddleware(new class ($log) extends BaseMiddleware {
+      /** @param list<string> $log */
+      public function __construct(public array &$log) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        $this->log[] = 'outer-before';
+        $result = $handler($event, $data);
+        $this->log[] = 'outer-after';
+
+        return $result;
+      }
+    });
+    $observer->filter(static function () use (&$log): bool {
+      $log[] = 'global-filter';
+
+      return true;
+    });
+    $observer->register(static function () use (&$log): string {
+      $log[] = 'handler';
+
+      return 'ok';
+    });
+
+    $result = $observer->trigger(new Chat(id: 1, type: 'private'));
+
+    self::assertSame('ok', $result);
+    self::assertSame(
+      ['outer-before', 'global-filter', 'handler', 'outer-after'],
+      $log,
+    );
+  }
+
+  public function testOuterMiddlewareCanShortCircuitWithoutInvokingObserver(): void
+  {
+    // An outer middleware that doesn't call $handler skips global filters,
+    // per-handler checks, and the handler itself. Useful for global
+    // throttling / auth gates that should reject before any observer work.
+    $observer = new TelegramEventObserver('message');
+    $observer->outerMiddleware(new class extends BaseMiddleware {
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        return 'short_circuited';
+      }
+    });
+    $observer->register(static fn(): string => 'unreachable');
+
+    $result = $observer->trigger(new Chat(id: 1, type: 'private'));
+
+    self::assertSame('short_circuited', $result);
+  }
+
+  public function testInnerMiddlewareWrapsEachIndividualHandlerCall(): void
+  {
+    // Inner middleware runs once **per claiming handler invocation** — it
+    // sits between the per-handler filter check and the actual call. The
+    // global filter chain runs once before any handler is considered, so
+    // an inner middleware that records the order shows
+    // "global → check → inner-before → handler → inner-after".
+    $observer = new TelegramEventObserver('message');
+    $log = [];
+    $observer->innerMiddleware(new class ($log) extends BaseMiddleware {
+      /** @param list<string> $log */
+      public function __construct(public array &$log) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        $this->log[] = 'inner-before';
+        $result = $handler($event, $data);
+        $this->log[] = 'inner-after';
+
+        return $result;
+      }
+    });
+    $observer->filter(static function () use (&$log): bool {
+      $log[] = 'global';
+
+      return true;
+    });
+    $observer->register(
+      static function () use (&$log): string {
+        $log[] = 'handler';
+
+        return 'ok';
+      },
+      [static function () use (&$log): bool {
+        $log[] = 'check';
+
+        return true;
+      }],
+    );
+
+    $observer->trigger(new Chat(id: 1, type: 'private'));
+
+    self::assertSame(
+      ['global', 'check', 'inner-before', 'handler', 'inner-after'],
+      $log,
+    );
+  }
+
+  public function testInnerMiddlewareDoesNotRunWhenHandlerFilterRejects(): void
+  {
+    // Inner middleware runs only AFTER the per-handler filter check accepts.
+    // A filter-rejected handler must not see the inner chain — otherwise a
+    // logging middleware would emit noise for handlers that didn't actually
+    // run.
+    $observer = new TelegramEventObserver('message');
+    $innerCalled = false;
+    $observer->innerMiddleware(new class ($innerCalled) extends BaseMiddleware {
+      public function __construct(public bool &$called) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        $this->called = true;
+
+        return $handler($event, $data);
+      }
+    });
+    $observer->register(
+      static fn(): string => 'unreachable',
+      [static fn(): bool => false],
+    );
+
+    $result = $observer->trigger(new Chat(id: 1, type: 'private'));
+
+    self::assertSame(UnhandledSentinel::instance(), $result);
+    self::assertFalse($innerCalled, 'Inner middleware must not run when handler filter rejects.');
+  }
+
+  public function testInnerMiddlewareRunsOncePerCandidateHandler(): void
+  {
+    // When the first handler returns UNHANDLED and dispatch falls through
+    // to the next handler, the inner middleware runs again for the second
+    // call — once per claiming candidate. Verifies the chain isn't cached
+    // across handlers.
+    $observer = new TelegramEventObserver('message');
+    $count = 0;
+    $observer->innerMiddleware(new class ($count) extends BaseMiddleware {
+      public function __construct(public int &$count) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        ++$this->count;
+
+        return $handler($event, $data);
+      }
+    });
+    $observer->register(static fn(): UnhandledSentinel => UnhandledSentinel::instance());
+    $observer->register(static fn(): string => 'second');
+
+    $observer->trigger(new Chat(id: 1, type: 'private'));
+
+    self::assertSame(2, $count);
+  }
+
+  private static function passthroughMiddleware(): BaseMiddleware
+  {
+    return new class extends BaseMiddleware {
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        return $handler($event, $data);
+      }
+    };
   }
 }
