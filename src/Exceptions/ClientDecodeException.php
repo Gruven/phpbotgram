@@ -6,12 +6,17 @@ namespace Gruven\PhpBotGram\Exceptions;
 
 final class ClientDecodeException extends PhpBotGramException
 {
+    public readonly \Throwable $original;
+    public readonly mixed $data;
+
     public function __construct(
-        public readonly string $message,
-        public readonly \Throwable $original,
-        public readonly mixed $data,
+        string $message,
+        \Throwable $original,
+        mixed $data,
     ) {
         $origType = $original::class;
         parent::__construct("{$message}\nCaused by: {$origType}: {$original->getMessage()}\nContent: " . print_r($data, true));
+        $this->original = $original;
+        $this->data = $data;
     }
 }
