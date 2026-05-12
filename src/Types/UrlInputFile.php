@@ -25,7 +25,8 @@ final class UrlInputFile extends InputFile
 
   public function read(Bot $bot): ReadableStream
   {
-    // Full implementation lands in Task 1.5 once AmphpSession exposes streamContent.
-    throw new RuntimeException('UrlInputFile::read is not yet implemented (Task 1.5)');
+    // Full implementation lands in Phase 6 (multipart upload / webhook plumbing)
+    // once $bot->session->streamContent is exercised end-to-end with retries.
+    throw new RuntimeException('UrlInputFile::read is not yet implemented (Phase 6)');
   }
 }

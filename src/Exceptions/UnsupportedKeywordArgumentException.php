@@ -8,6 +8,7 @@ final class UnsupportedKeywordArgumentException extends DetailedPhpBotGramExcept
 {
   public function __construct(public readonly string $argName, string $message)
   {
+    $this->url = 'https://docs.aiogram.dev/en/latest/migration_2_to_3.html#unsupported-keyword-arguments';
     parent::__construct($message);
   }
 }

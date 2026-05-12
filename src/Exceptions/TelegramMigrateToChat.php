@@ -17,6 +17,7 @@ final class TelegramMigrateToChat extends TelegramApiException
     string $message,
     public readonly int $migrateToChatId,
   ) {
+    $this->url = 'https://core.telegram.org/bots/api#responseparameters';
     $reflect = new ReflectionClass($method);
     $chatId = $reflect->hasProperty('chatId') ? $reflect->getProperty('chatId')->getValue($method) : null;
     $from = is_scalar($chatId) ? " from chat {$chatId}" : '';

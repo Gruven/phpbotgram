@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Utils;
 
-use Gruven\PhpBotGram\Exceptions\PhpBotGramException;
+use Gruven\PhpBotGram\Exceptions\TokenValidationException;
 use Gruven\PhpBotGram\Utils\Token;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -38,12 +38,18 @@ final class TokenTest extends TestCase
     yield 'embedded tab' => ["42:\tTEST"];
 
     yield 'embedded space' => ['42:TE ST'];
+
+    yield 'path traversal' => ['42:foo/../bar'];
+
+    yield 'forward slash' => ['42:abc/xyz'];
+
+    yield 'percent encoded' => ['42:abc%2F'];
   }
 
   #[DataProvider('invalidTokens')]
   public function testValidateRejects(string $token): void
   {
-    $this->expectException(PhpBotGramException::class);
+    $this->expectException(TokenValidationException::class);
     Token::validate($token);
   }
 

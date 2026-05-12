@@ -17,6 +17,7 @@ final class TelegramRetryAfter extends TelegramApiException
     string $message,
     public readonly int $retryAfter,
   ) {
+    $this->url = 'https://core.telegram.org/bots/faq#my-bot-is-hitting-limits-how-do-i-avoid-this';
     $reflect = new ReflectionClass($method);
     $methodName = $reflect->getShortName();
     $chatId = $reflect->hasProperty('chatId') ? $reflect->getProperty('chatId')->getValue($method) : null;

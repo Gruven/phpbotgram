@@ -22,6 +22,8 @@ class TelegramApiException extends DetailedPhpBotGramException
 
   public function __toString(): string
   {
-    return "{$this->label} - {$this->detail}";
+    // Chain to DetailedPhpBotGramException so the docs URL is appended when set
+    // by a subclass (mirrors aiogram's `super().__str__()` in TelegramAPIError).
+    return "{$this->label} - " . parent::__toString();
   }
 }

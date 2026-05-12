@@ -15,7 +15,8 @@ abstract class BotContextController
   /**
    * Returns a clone of $this with $bot rebound recursively. Walks every public
    * property; nested `BotContextController` instances are rebound via their
-   * own `withBot`, arrays/lists of them are walked element-wise. Plain values
+   * own `withBot`, arrays (including nested arrays of arbitrary depth — e.g.
+   * `list<list<KeyboardButton>>`) are walked element-wise. Plain values
    * (scalars, DateTime, enums, InputFile etc.) pass through untouched.
    *
    * Mirrors upstream pydantic `model_validate(context={"bot": bot})` (aiogram
@@ -30,11 +31,6 @@ abstract class BotContextController
    * `clone($this, [...])` call legally rewrites subclass-declared readonly
    * slots like `Message::$chat`. External callers cannot use the same syntax
    * — they must funnel through this method.
-   *
-   * Limitation: arrays of arrays of controllers (`list<list<TelegramObject>>`)
-   * are NOT walked recursively into the nested arrays; only the first array
-   * dimension is. Telegram's wire format rarely emits such shapes, but if a
-   * future generated type needs deep array rebinding it must override this.
    */
   public function withBot(?Bot $bot): static
   {
@@ -55,17 +51,7 @@ abstract class BotContextController
       }
 
       if (is_array($value)) {
-        $rebound = [];
-        $touched = false;
-
-        foreach ($value as $k => $item) {
-          if ($item instanceof self) {
-            $rebound[$k] = $item->withBot($bot);
-            $touched = true;
-          } else {
-            $rebound[$k] = $item;
-          }
-        }
+        [$rebound, $touched] = self::rebindArray($value, $bot);
 
         if ($touched) {
           $overrides[$name] = $rebound;
@@ -74,6 +60,36 @@ abstract class BotContextController
     }
 
     return clone ($this, $overrides);
+  }
+
+  /**
+   * Walks an array recursively, rebinding every `BotContextController` leaf to $bot.
+   * Returns the (possibly) new array and a flag indicating whether any leaf was rebound,
+   * so the caller can skip the override when the array contains no controllers.
+   *
+   * @param array<array-key, mixed> $value
+   *
+   * @return array{0: array<array-key, mixed>, 1: bool}
+   */
+  private static function rebindArray(array $value, ?Bot $bot): array
+  {
+    $rebound = [];
+    $touched = false;
+
+    foreach ($value as $k => $item) {
+      if ($item instanceof self) {
+        $rebound[$k] = $item->withBot($bot);
+        $touched = true;
+      } elseif (is_array($item)) {
+        [$inner, $innerTouched] = self::rebindArray($item, $bot);
+        $rebound[$k] = $inner;
+        $touched = $touched || $innerTouched;
+      } else {
+        $rebound[$k] = $item;
+      }
+    }
+
+    return [$rebound, $touched];
   }
 
   /**

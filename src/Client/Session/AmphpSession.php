@@ -7,6 +7,7 @@ namespace Gruven\PhpBotGram\Client\Session;
 use Amp\ByteStream\ReadableStream;
 use Amp\Http\Client\HttpClient;
 use Amp\Http\Client\HttpClientBuilder;
+use Amp\Http\Client\HttpException;
 use Amp\Http\Client\Request;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
@@ -16,7 +17,6 @@ use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Types\InputFile;
 use LogicException;
 use RuntimeException;
-use Throwable;
 
 /**
  * Production session backed by amphp/http-client (Fiber-aware HTTP/1.1).
@@ -73,7 +73,11 @@ final class AmphpSession extends BaseSession
     try {
       $response = $this->client()->request($request);
       $content = $response->getBody()->buffer();
-    } catch (Throwable $e) {
+    } catch (HttpException $e) {
+      // Only wrap transport-level failures. HttpException is amphp/http-client's
+      // shared base for SocketException, TimeoutException, ParseException, TlsException,
+      // TooManyRedirectsException etc. LogicException/TypeError from user code or
+      // internal contracts should propagate as-is so genuine bugs aren't masked.
       throw new TelegramNetworkException($method, $e::class . ': ' . $e->getMessage());
     }
 

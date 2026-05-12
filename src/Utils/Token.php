@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Utils;
 
-use Gruven\PhpBotGram\Exceptions\PhpBotGramException;
+use Gruven\PhpBotGram\Exceptions\TokenValidationException;
 
 final class Token
 {
@@ -17,12 +17,15 @@ final class Token
       || !str_contains($token, ':')
       || preg_match('/\s/', $token) === 1
     ) {
-      throw new PhpBotGramException("Invalid token format: '{$token}'");
+      throw new TokenValidationException("Invalid token format: '{$token}'");
     }
     [$left, $right] = explode(':', $token, 2);
 
-    if (!ctype_digit($left) || $right === '') {
-      throw new PhpBotGramException("Invalid token format: '{$token}'");
+    // Telegram-issued bot tokens use only `[A-Za-z0-9_-]` after the colon —
+    // pinning the regex blocks path-traversal style payloads from slash-injecting
+    // into URLs constructed by TelegramApiServer::apiUrl.
+    if (!ctype_digit($left) || $right === '' || preg_match('/^[A-Za-z0-9_-]+$/', $right) !== 1) {
+      throw new TokenValidationException("Invalid token format: '{$token}'");
     }
   }
 

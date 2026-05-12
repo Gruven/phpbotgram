@@ -54,6 +54,37 @@ final class BotContextControllerTest extends TestCase
     self::assertNull($outer->child->bot, 'original inner bot must remain null');
   }
 
+  public function testWithBotWalksNestedArrays(): void
+  {
+    $bot = new Bot(token: '1:test', session: new MockedSession());
+    $leaf = new class extends BotContextController {};
+    // list<list<BotContextController>> — mirrors InlineKeyboardMarkup::inlineKeyboard.
+    $owner = new class ([[$leaf, $leaf], [$leaf]]) extends BotContextController {
+      /** @param list<list<BotContextController>> $matrix */
+      public function __construct(public readonly array $matrix)
+      {
+        parent::__construct();
+      }
+    };
+
+    $rebound = $owner->withBot($bot);
+
+    self::assertSame($bot, $rebound->bot);
+    self::assertCount(2, $rebound->matrix);
+
+    foreach ($rebound->matrix as $row) {
+      foreach ($row as $cell) {
+        self::assertSame($bot, $cell->bot);
+      }
+    }
+
+    foreach ($owner->matrix as $row) {
+      foreach ($row as $cell) {
+        self::assertNull($cell->bot);
+      }
+    }
+  }
+
   public function testWithBotWalksArraysOfControllers(): void
   {
     $bot = new Bot(token: '1:test', session: new MockedSession());

@@ -42,6 +42,16 @@ final class ExceptionHierarchyTest extends TestCase
     self::assertInstanceOf(TelegramApiException::class, $e);
   }
 
+  public function testRetryAfterAppendsDocsUrlOnStringify(): void
+  {
+    $e = new TelegramRetryAfter($this->anonymousMethod(), 'Flood control', retryAfter: 5);
+    $rendered = (string)$e;
+    self::assertStringContainsString('Telegram server says', $rendered);
+    self::assertStringContainsString('Flood control exceeded', $rendered);
+    self::assertStringContainsString('(background on this error at: https://core.telegram.org', $rendered);
+    self::assertStringNotContainsString('background on this error', $e->getMessage());
+  }
+
   /**
    * @return TelegramMethod<mixed>
    */
