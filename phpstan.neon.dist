@@ -9,6 +9,6 @@ parameters:
         - src/Types/*.php   # generated; rules relaxed during Phase 2
         - src/Methods/*.php # generated
         - src/Enums/*.php   # generated
-        - src/Bot.php (?)   # generated
+        # src/Bot.php excluded here when Phase 2 codegen takes over; hand-authored in Phase 1
     treatPhpDocTypesAsCertain: false
     reportUnmatchedIgnoredErrors: false
