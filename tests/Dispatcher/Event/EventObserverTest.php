@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Dispatcher\Event;
 
+use Gruven\PhpBotGram\Dispatcher\Event\CallableObject;
 use Gruven\PhpBotGram\Dispatcher\Event\EventObserver;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -16,7 +17,18 @@ final class EventObserverTest extends TestCase
     $callback = static function (): void {};
 
     self::assertSame($callback, $observer->register($callback));
-    self::assertSame([$callback], $observer->handlers());
+  }
+
+  public function testRegisterWrapsTheCallbackInACallableObject(): void
+  {
+    $observer = new EventObserver();
+    $callback = static function (): void {};
+    $observer->register($callback);
+
+    $handlers = $observer->handlers();
+    self::assertCount(1, $handlers);
+    self::assertInstanceOf(CallableObject::class, $handlers[0]);
+    self::assertSame($callback, $handlers[0]->callback);
   }
 
   public function testTriggerInvokesHandlersInRegistrationOrder(): void
@@ -46,7 +58,7 @@ final class EventObserverTest extends TestCase
       $received = $args;
     });
 
-    $observer->trigger('a', 'b', 42);
+    $observer->trigger(['a', 'b', 42]);
 
     self::assertSame(['a', 'b', 42], $received);
   }
@@ -59,9 +71,45 @@ final class EventObserverTest extends TestCase
       $received = $name;
     });
 
-    $observer->trigger(name: 'value');
+    $observer->trigger([], ['name' => 'value']);
 
     self::assertSame('value', $received);
+  }
+
+  public function testTriggerFiltersKwargsByEachHandlerDeclaredParameters(): void
+  {
+    $observer = new EventObserver();
+    $captured = ['a' => null, 'has_b' => null];
+
+    // This handler declares only $a — the dispatcher-style "$b" kwarg
+    // must be silently dropped by CallableObject, not forwarded.
+    $observer->register(static function (string $a) use (&$captured): void {
+      $captured['a'] = $a;
+      $captured['has_b'] = func_num_args() === 2;
+    });
+
+    $observer->trigger([], ['a' => 'hello', 'b' => 'wrong']);
+
+    self::assertSame('hello', $captured['a']);
+    self::assertFalse($captured['has_b'], 'Undeclared `b` kwarg must be dropped, not forwarded.');
+  }
+
+  public function testTriggerKwargsAreFilteredPerHandlerIndependently(): void
+  {
+    $observer = new EventObserver();
+    $observedA = null;
+    $observedB = null;
+    $observer->register(static function (string $a) use (&$observedA): void {
+      $observedA = $a;
+    });
+    $observer->register(static function (string $b) use (&$observedB): void {
+      $observedB = $b;
+    });
+
+    $observer->trigger([], ['a' => 'alpha', 'b' => 'beta', 'unused' => 'noise']);
+
+    self::assertSame('alpha', $observedA);
+    self::assertSame('beta', $observedB);
   }
 
   public function testClearEmptiesHandlersAndTriggerIsANoOp(): void
@@ -124,7 +172,7 @@ final class EventObserverTest extends TestCase
     );
   }
 
-  public function testHandlersAccessorReturnsTheRegisteredClosuresInOrder(): void
+  public function testHandlersAccessorReturnsTheRegisteredCallableObjectsInOrder(): void
   {
     $observer = new EventObserver();
     $a = static function (): void {};
@@ -132,14 +180,17 @@ final class EventObserverTest extends TestCase
     $observer->register($a);
     $observer->register($b);
 
-    self::assertSame([$a, $b], $observer->handlers());
+    $handlers = $observer->handlers();
+    self::assertCount(2, $handlers);
+    self::assertSame($a, $handlers[0]->callback);
+    self::assertSame($b, $handlers[1]->callback);
   }
 
   public function testTriggerWithNoHandlersIsANoOp(): void
   {
     $observer = new EventObserver();
 
-    $observer->trigger('anything', key: 'value');
+    $observer->trigger(['anything'], ['key' => 'value']);
 
     self::assertSame([], $observer->handlers());
   }
