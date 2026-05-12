@@ -12,6 +12,8 @@ use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
 use Gruven\PhpBotGram\Tests\Support\MockedSession;
+use Gruven\PhpBotGram\Types\Chat;
+use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\Message;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -145,7 +147,20 @@ final class RequestMiddlewareManagerTest extends TestCase
       }
     });
 
-    $payload = new Message(messageId: 1, date: 0, chat: ['id' => 1]);
+    $payload = new Message(
+      messageId: 1,
+      messageThreadId: null,
+      directMessagesTopic: null,
+      fromUser: null,
+      senderChat: null,
+      senderBoostCount: null,
+      senderBusinessBot: null,
+      senderTag: null,
+      date: new DateTime('@0'),
+      guestQueryId: null,
+      businessConnectionId: null,
+      chat: new Chat(id: 1, type: 'private'),
+    );
     $bot->addResultFor(SendMessage::class, ok: true, result: $payload);
 
     $method = new SendMessage(chatId: 1, text: 'hi');

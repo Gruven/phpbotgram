@@ -15,7 +15,7 @@ final class BotDownloadTest extends TestCase
   public function testDownloadFileReturnsBufferedBody(): void
   {
     $bot = new MockedBot();
-    $file = new File(fileId: 'abc', filePath: 'photos/file_1.jpg');
+    $file = new File(fileId: 'abc', fileUniqueId: 'abc-u', filePath: 'photos/file_1.jpg');
     $url = $bot->session->api->fileUrl($bot->token, 'photos/file_1.jpg');
     $session = $bot->getMockedSession();
     $session->cannedStreamBodies[$url] = 'hello';
@@ -28,7 +28,7 @@ final class BotDownloadTest extends TestCase
   public function testDownloadFileWritesToPath(): void
   {
     $bot = new MockedBot();
-    $file = new File(fileId: 'abc', filePath: 'photos/file_2.jpg');
+    $file = new File(fileId: 'abc', fileUniqueId: 'abc-u', filePath: 'photos/file_2.jpg');
     $url = $bot->session->api->fileUrl($bot->token, 'photos/file_2.jpg');
     $bot->getMockedSession()->cannedStreamBodies[$url] = 'contents';
 
@@ -46,7 +46,7 @@ final class BotDownloadTest extends TestCase
   public function testDownloadFileThrowsOnUnopenableDestination(): void
   {
     $bot = new MockedBot();
-    $file = new File(fileId: 'abc', filePath: 'photos/file_3.jpg');
+    $file = new File(fileId: 'abc', fileUniqueId: 'abc-u', filePath: 'photos/file_3.jpg');
     $url = $bot->session->api->fileUrl($bot->token, 'photos/file_3.jpg');
     $bot->getMockedSession()->cannedStreamBodies[$url] = 'data';
 
@@ -58,7 +58,7 @@ final class BotDownloadTest extends TestCase
   {
     $bot = new MockedBot();
     // Queue the response for GetFile.
-    $file = new File(fileId: 'fid-1', filePath: 'photos/x.jpg');
+    $file = new File(fileId: 'fid-1', fileUniqueId: 'fid-1-u', filePath: 'photos/x.jpg');
     $bot->addResultFor(GetFile::class, ok: true, result: $file);
     $url = $bot->session->api->fileUrl($bot->token, 'photos/x.jpg');
     $bot->getMockedSession()->cannedStreamBodies[$url] = 'BODY';

@@ -36,11 +36,24 @@ final class SerializerTestDateFixture extends TelegramObject
   }
 }
 
+final class SerializerTestUnspecifiedFixture extends TelegramObject
+{
+  public function __construct(
+    public readonly int $id,
+    public readonly bool $isBot,
+    public readonly string $firstName,
+    public readonly null|string|Unspecified $lastName = null,
+    ?Bot $bot = null,
+  ) {
+    parent::__construct($bot);
+  }
+}
+
 final class SerializerTest extends TestCase
 {
   public function testDumpStripsUnspecified(): void
   {
-    $user = new User(id: 1, isBot: false, firstName: 'A', lastName: Unspecified::instance());
+    $user = new SerializerTestUnspecifiedFixture(id: 1, isBot: false, firstName: 'A', lastName: Unspecified::instance());
     $dumped = Serializer::dump($user);
     self::assertArrayNotHasKey('last_name', $dumped);
     self::assertSame(1, $dumped['id']);
