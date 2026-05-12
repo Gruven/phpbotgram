@@ -74,8 +74,8 @@ trait BotShortcuts
   }
 
   /**
-   * Test/teardown helper — clears the FiberLocal storage so the next test
-   * starts with a clean current bot. Production code should not call this;
+   * @internal Test/teardown helper — clears the FiberLocal storage so the next
+   * test starts with a clean current bot. Production code should not call this;
    * use setCurrent(null) instead, which keeps the FiberLocal slot but resets
    * the stored Bot for the current fiber.
    */

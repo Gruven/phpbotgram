@@ -133,7 +133,7 @@ abstract class BaseSession
    */
   public function prepareValue(mixed $value, Bot $bot, array &$files, bool $dumpsJson = true): mixed
   {
-    if ($value === null) {
+    if ($value === null || $value === Unspecified::instance()) {
       return null;
     }
 
@@ -197,10 +197,6 @@ abstract class BaseSession
       $dumped = Serializer::dump($value);
 
       return $this->prepareValue($dumped, $bot, $files, dumpsJson: $dumpsJson);
-    }
-
-    if ($value === Unspecified::instance()) {
-      return null;
     }
 
     if ($dumpsJson) {

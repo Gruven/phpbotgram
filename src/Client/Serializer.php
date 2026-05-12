@@ -66,7 +66,23 @@ final class Serializer
     }
 
     if (is_array($value)) {
-      return array_map([self::class, 'dumpValue'], $value);
+      $result = [];
+      $isList = array_is_list($value);
+
+      foreach ($value as $k => $item) {
+        if ($item === Unspecified::instance()) {
+          continue;
+        }
+        $dumped = self::dumpValue($item);
+
+        if ($isList) {
+          $result[] = $dumped;
+        } else {
+          $result[$k] = $dumped;
+        }
+      }
+
+      return $result;
     }
 
     return $value;
@@ -177,8 +193,11 @@ final class Serializer
     return $result;
   }
 
+  /** @var array<string, string> */
+  private static array $camelToSnakeCache = [];
+
   private static function camelToSnake(string $camel): string
   {
-    return strtolower((string)preg_replace('/(?<!^)[A-Z]/', '_$0', $camel));
+    return self::$camelToSnakeCache[$camel] ??= strtolower((string)preg_replace('/(?<!^)[A-Z]/', '_$0', $camel));
   }
 }

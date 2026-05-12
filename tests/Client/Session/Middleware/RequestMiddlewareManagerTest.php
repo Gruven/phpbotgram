@@ -8,7 +8,9 @@ use Closure;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Session\Middleware\BaseRequestMiddleware;
 use Gruven\PhpBotGram\Client\Session\Middleware\RequestMiddlewareManager;
+use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
+use Gruven\PhpBotGram\Tests\Support\MockedBot;
 use Gruven\PhpBotGram\Tests\Support\MockedSession;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -71,5 +73,34 @@ final class RequestMiddlewareManagerTest extends TestCase
 
     self::assertSame('done', $result);
     self::assertSame(['A-before', 'B-before', 'terminal', 'B-after', 'A-after'], $log);
+  }
+
+  public function testBaseSessionInvokeRunsMiddlewareChain(): void
+  {
+    $bot = new MockedBot();
+    $session = $bot->getMockedSession();
+    $log = [];
+
+    $session->middleware->register(new class ($log) extends BaseRequestMiddleware {
+      /** @param list<string> $log */
+      public function __construct(public array &$log) {}
+
+      public function __invoke(Closure $next, Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
+      {
+        $this->log[] = 'mw-before';
+        $result = $next($bot, $method, $timeout);
+        $this->log[] = 'mw-after';
+
+        return $result;
+      }
+    });
+
+    $bot->addResultFor(SendMessage::class, ok: true, result: 'ok-payload');
+
+    $method = new SendMessage(chatId: 1, text: 'hi');
+    $returned = $session($bot, $method);
+
+    self::assertSame('ok-payload', $returned);
+    self::assertSame(['mw-before', 'mw-after'], $log);
   }
 }
