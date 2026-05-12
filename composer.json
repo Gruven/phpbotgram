@@ -27,6 +27,7 @@
 		"mongodb/mongodb": "^2",
 		"phpstan/phpstan": "^2.1",
 		"phpunit/phpunit": "^13.1",
+		"symfony/yaml": "^7.3",
 		"twig/twig": "^3.10"
 	},
 	"suggest" : {
