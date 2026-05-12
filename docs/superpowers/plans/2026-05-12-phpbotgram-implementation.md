@@ -698,9 +698,9 @@ abstract class BotContextController
      * context={"bot": bot}). The Serializer recursively rebinds bot on every
      * nested TelegramObject; this method handles the shallow rebind.
      *
-     * Uses PHP 8.5's clone-with syntax `clone($this, [...])` which is the only
-     * way to modify a readonly property on a clone. The call must be made from
-     * within the declaring scope (i.e. inside BotContextController or a subclass);
+     * Uses PHP 8.5's `clone($this, [...])` clone-with syntax (a function-call form
+     * that resolves the readonly write inside the declaring scope's protection).
+     * The call must be made from within `BotContextController` or a subclass —
      * an external caller cannot use this syntax against a readonly slot.
      */
     public function withBot(?Bot $bot): static
@@ -2390,7 +2390,12 @@ abstract class BaseSession
         return $middleware($bot, $method, $timeout);
     }
 
-    /** Override in Phase 2 — current shim builds a Response with a null result. */
+    /**
+     * Phase 1 shim — builds a Response with `result: null`. The exception-path
+     * branches of checkResponse don't need a real result, so this is enough for
+     * Task 1.7's tests. Phase 2 codegen wires this through Serializer::load
+     * against `$method::ReturnsType` so the result becomes a typed TelegramObject.
+     */
     protected function buildResponse(Bot $bot, TelegramMethod $method, array $data): Response
     {
         return new Response(
