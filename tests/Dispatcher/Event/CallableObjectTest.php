@@ -6,11 +6,21 @@ namespace Gruven\PhpBotGram\Tests\Dispatcher\Event;
 
 use Gruven\PhpBotGram\Dispatcher\Event\CallableObject;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 use RuntimeException;
 use stdClass;
 
 final class CallableObjectTest extends TestCase
 {
+  public function testCallableObjectIsNotFinalSoFilterAndHandlerCanExtend(): void
+  {
+    // `final` was deliberately dropped so `FilterObject` and `HandlerObject`
+    // can extend this class, mirroring the upstream `event/handler.py`
+    // inheritance shape. If you re-add `final`, the dispatcher's filter
+    // pipeline stops compiling.
+    self::assertFalse(new ReflectionClass(CallableObject::class)->isFinal());
+  }
+
   public function testParamsExposesDeclaredParameterNamesInOrder(): void
   {
     $callable = new CallableObject(static fn(string $a, int $b): string => $a . $b);

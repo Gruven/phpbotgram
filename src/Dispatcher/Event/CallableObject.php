@@ -28,8 +28,14 @@ use ReflectionFunction;
  *   semantics — when present we forward every kwarg without filtering. PHP
  *   8.1+ `func(...$assoc)` treats string keys as named arguments, so a
  *   variadic closure receives them as its variadic array.
+ *
+ * Subclassed by `FilterObject` and `HandlerObject` to add filter-result
+ * interpretation + per-handler metadata, mirroring aiogram's
+ * `event/handler.py` inheritance shape. PHP convention usually marks leaf
+ * classes `final`; this class is intentionally left open for that subclass
+ * chain only — no other extensions are expected.
  */
-final class CallableObject
+class CallableObject
 {
   /**
    * Parameter names the closure declares, in declaration order, mapped to
