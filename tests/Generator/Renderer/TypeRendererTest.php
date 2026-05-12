@@ -338,6 +338,30 @@ final class TypeRendererTest extends TestCase
     );
   }
 
+  /**
+   * Union-child types (`InlineQueryResultPhoto`, `InputMediaPhoto`, …)
+   * pass through `TypeOverrideApplier` which rebuilds the TypeEntity
+   * to propagate the parent's `bases:` declaration onto the child.
+   * The rebuild must preserve the child's own `$defaults` map — Cycle 2
+   * review observed the applier was silently dropping it, so every
+   * InlineQueryResult* / InputMedia* child kept its raw `?string = null`
+   * defaults instead of the upstream `BotDefault('parse_mode')` form.
+   */
+  public function testUnionChildPreservesTypeLevelBotDefaults(): void
+  {
+    $out = $this->render('InlineQueryResultPhoto');
+
+    self::assertStringContainsString('use Gruven\\PhpBotGram\\Client\\BotDefault;', $out);
+    self::assertStringContainsString(
+      "public readonly null|BotDefault|string \$parseMode = new BotDefault('parse_mode'),",
+      $out,
+    );
+    self::assertStringContainsString(
+      "public readonly null|BotDefault|bool \$showCaptionAboveMedia = new BotDefault('show_caption_above_media'),",
+      $out,
+    );
+  }
+
   public function testRendersUnionParentAsAbstract(): void
   {
     $out = $this->render('BackgroundFill');

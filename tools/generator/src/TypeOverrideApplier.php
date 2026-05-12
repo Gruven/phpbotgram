@@ -100,6 +100,7 @@ final class TypeOverrideApplier
       subtypes: $t->subtypes,
       subtypeOf: $t->subtypeOf,
       discriminator: $t->discriminator,
+      defaults: $t->defaults,
     );
   }
 }
