@@ -1,0 +1,10 @@
+returning:
+  parsed_type:
+    type: union
+    items:
+      - type: entity
+        references:
+          category: types
+          name: Message
+      - type: std
+        name: bool
