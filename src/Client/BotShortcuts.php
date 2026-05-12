@@ -36,11 +36,16 @@ trait BotShortcuts
     return $this->cachedId ??= Token::extractBotId($this->token);
   }
 
+  /**
+   * `($bot->context())(function (Bot $bot) { … })` — the body closure receives
+   * `$this` as its single argument so callers can avoid `use ($bot)` clutter.
+   * Mirrors upstream's `async with bot.context() as bot:` binding.
+   */
   public function context(bool $autoClose = true): Closure
   {
     return function (Closure $body) use ($autoClose): mixed {
       try {
-        return $body();
+        return $body($this);
       } finally {
         if ($autoClose) {
           $this->session->close();

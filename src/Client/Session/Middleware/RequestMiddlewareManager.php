@@ -9,6 +9,7 @@ use Closure;
 use Countable;
 use OutOfBoundsException;
 use RuntimeException;
+use WeakMap;
 
 /**
  * @implements ArrayAccess<int, BaseRequestMiddleware>
@@ -19,20 +20,24 @@ final class RequestMiddlewareManager implements ArrayAccess, Countable
   private array $middlewares = [];
 
   /**
-   * Cached wrapped chain — invalidated on register/unregister. Lets every
-   * request reuse the same Closure stack instead of rebuilding via
-   * array_reverse() + per-frame static fns on the hot dispatch path.
+   * Cached wrapped chain — invalidated on register/unregister. WeakMap keyed
+   * by terminal closure: spl_object_id collisions after GC are a real risk if
+   * an ephemeral closure is wrapped, so WeakMap (PHP 8+) gives identity-keyed
+   * lookup that auto-evicts when the terminal closure is collected.
    *
-   * Key is the terminal Closure's spl_object_id; value is the wrapped chain.
-   *
-   * @var array<int, Closure>
+   * @var WeakMap<Closure, Closure>
    */
-  private array $chainCache = [];
+  private WeakMap $chainCache;
+
+  public function __construct()
+  {
+    $this->chainCache = new WeakMap();
+  }
 
   public function register(BaseRequestMiddleware $middleware): BaseRequestMiddleware
   {
     $this->middlewares[] = $middleware;
-    $this->chainCache = [];
+    $this->chainCache = new WeakMap();
 
     return $middleware;
   }
@@ -42,7 +47,7 @@ final class RequestMiddlewareManager implements ArrayAccess, Countable
     foreach ($this->middlewares as $i => $existing) {
       if ($existing === $middleware) {
         array_splice($this->middlewares, $i, 1);
-        $this->chainCache = [];
+        $this->chainCache = new WeakMap();
 
         return true;
       }
@@ -105,10 +110,9 @@ final class RequestMiddlewareManager implements ArrayAccess, Countable
     if ($this->middlewares === []) {
       return $terminal;
     }
-    $key = spl_object_id($terminal);
 
-    if (isset($this->chainCache[$key])) {
-      return $this->chainCache[$key];
+    if ($this->chainCache->offsetExists($terminal)) {
+      return $this->chainCache[$terminal];
     }
     $next = $terminal;
 
@@ -117,6 +121,6 @@ final class RequestMiddlewareManager implements ArrayAccess, Countable
       $next = static fn(...$args) => $middleware($current, ...$args);
     }
 
-    return $this->chainCache[$key] = $next;
+    return $this->chainCache[$terminal] = $next;
   }
 }

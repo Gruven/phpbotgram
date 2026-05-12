@@ -18,7 +18,7 @@ final class TelegramMigrateToChat extends TelegramApiException
   ) {
     $this->url = 'https://core.telegram.org/bots/api#responseparameters';
     $chatId = property_exists($method, 'chatId') ? $method->chatId : null;
-    $from = is_scalar($chatId) ? " from chat {$chatId}" : '';
-    parent::__construct($method, "The group has been migrated{$from} to a supergroup with id {$migrateToChatId}\nOriginal description: {$message}");
+    $from = is_scalar($chatId) ? " from {$chatId}" : '';
+    parent::__construct($method, "The group has been migrated to a supergroup with id {$migrateToChatId}{$from}\nOriginal description: {$message}");
   }
 }
