@@ -9,6 +9,7 @@ use Gruven\PhpBotGram\Methods\Response;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Types\ResponseParameters;
 use Gruven\PhpBotGram\Types\User;
+use Gruven\PhpBotGram\Utils\Token;
 use LogicException;
 
 final class MockedBot extends Bot
@@ -18,8 +19,9 @@ final class MockedBot extends Bot
   public function __construct(string $token = '42:TEST')
   {
     parent::__construct(token: $token, session: new MockedSession());
+    // Stub id derived from token so $bot->me()->id === $bot->getId() stays consistent.
     $this->cachedMeStub = new User(
-      id: 42,
+      id: Token::extractBotId($token),
       isBot: true,
       firstName: 'FirstName',
       lastName: 'LastName',
