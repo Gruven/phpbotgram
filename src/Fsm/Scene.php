@@ -16,10 +16,6 @@ use ReflectionClass;
  * handlers via the `#[On*]` method attributes (`OnMessage`, `OnCallbackQuery`,
  * etc. in `Scene/Attribute/`).
  *
- * **Task 5.8 shell:** This class carries the abstract lifecycle method stubs
- * and the `sceneState()` reflection helper. Full wiring of `$wizard`,
- * `add_to_router`, `as_handler` etc. lands in Tasks 5.9–5.12.
- *
  * Mirrors `Scene` (`aiogram/fsm/scene.py:297-441`).
  *
  * ## Usage
@@ -54,30 +50,22 @@ use ReflectionClass;
  *
  * ## SceneWizard
  *
- * The `$wizard` property will be typed as `SceneWizard` once Task 5.9 lands.
- * For Task 5.8 it is typed as `object` to avoid a forward-reference compile
- * error. Task 5.9 will replace the `object` type hint with
- * `Gruven\PhpBotGram\Fsm\SceneWizard`.
- *
- * @todo Task 5.9: Replace `object $wizard` with `SceneWizard $wizard`.
+ * The `$wizard` property is typed as `SceneWizard` (Task 5.9). Subclasses
+ * receive a fully initialised wizard instance from the framework.
  */
 abstract class Scene
 {
   /**
    * The wizard that manages scene transitions for this instance.
-   *
-   * @todo Task 5.9: tighten to `SceneWizard` once that class exists.
    */
-  public object $wizard;
+  public SceneWizard $wizard;
 
   /**
    * Construct a scene instance.
    *
-   * @param object $wizard Scene wizard (Task 5.9 will tighten the type).
-   *
-   * @todo Task 5.9: Replace `object` with `SceneWizard`.
+   * @param SceneWizard $wizard Scene wizard that drives transitions.
    */
-  public function __construct(object $wizard)
+  public function __construct(SceneWizard $wizard)
   {
     $this->wizard = $wizard;
   }

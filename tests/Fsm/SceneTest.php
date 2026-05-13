@@ -4,8 +4,16 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Fsm;
 
+use Gruven\PhpBotGram\Fsm\FsmContext;
 use Gruven\PhpBotGram\Fsm\Scene;
 use Gruven\PhpBotGram\Fsm\Scene\Attribute\SceneState;
+use Gruven\PhpBotGram\Fsm\Scene\HistoryManagerInterface;
+use Gruven\PhpBotGram\Fsm\Scene\SceneConfig;
+use Gruven\PhpBotGram\Fsm\Scene\SceneManagerInterface;
+use Gruven\PhpBotGram\Fsm\SceneWizard;
+use Gruven\PhpBotGram\Fsm\State;
+use Gruven\PhpBotGram\Fsm\Storage\MemoryStorage;
+use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use stdClass;
@@ -62,7 +70,8 @@ final class SceneTest extends TestCase
    */
   public function testNoAttributeDefaultsToLowercaseClassName(): void
   {
-    $scene = new class (new stdClass()) extends Scene {};
+    $wizard = $this->makeWizard();
+    $scene = new class ($wizard) extends Scene {};
     $ref = new ReflectionClass($scene);
 
     $expected = strtolower($ref->getShortName());
@@ -134,7 +143,7 @@ final class SceneTest extends TestCase
    */
   public function testWizardIsAccessible(): void
   {
-    $wizard = new stdClass();
+    $wizard = $this->makeWizard();
     $scene = new class ($wizard) extends Scene {};
 
     self::assertSame($wizard, $scene->wizard);
@@ -149,7 +158,9 @@ final class SceneTest extends TestCase
    */
   private function makeScene(string $state): string
   {
-    return new class (new stdClass()) extends Scene {
+    $wizard = $this->makeWizard();
+
+    return new class ($wizard) extends Scene {
       public static function sceneState(): string
       {
         return 'greeting';
@@ -162,15 +173,64 @@ final class SceneTest extends TestCase
    */
   private function makeNamedScene(?string $state): string
   {
+    $wizard = $this->makeWizard();
     $scene = new
       #[SceneState]
-      class (new stdClass()) extends Scene {};
+      class ($wizard) extends Scene {};
 
     return $scene::class;
   }
 
   private function instantiateMinimalScene(): Scene
   {
-    return new class (new stdClass()) extends Scene {};
+    return new class ($this->makeWizard()) extends Scene {};
+  }
+
+  /**
+   * Build a minimal `SceneWizard` suitable for passing to `Scene::__construct`.
+   *
+   * The wizard is intentionally not bound to a scene (scene=null) since these
+   * tests only exercise `Scene` lifecycle stubs and reflection, not wizard
+   * dispatch logic.
+   */
+  private function makeWizard(): SceneWizard
+  {
+    $history = new class implements HistoryManagerInterface {
+      public function clear(): void {}
+
+      public function snapshot(): void {}
+
+      public function rollback(): ?string
+      {
+        return null;
+      }
+    };
+
+    $manager = new class ($history) implements SceneManagerInterface {
+      public function __construct(private HistoryManagerInterface $h) {}
+
+      public function history(): HistoryManagerInterface
+      {
+        return $this->h;
+      }
+
+      public function enter(null|State|string $scene, bool $checkActive = true, mixed ...$kwargs): void {}
+    };
+
+    $ctx = new FsmContext(
+      new MemoryStorage(),
+      new StorageKey(botId: 1, chatId: 1, userId: 1),
+    );
+
+    $config = new SceneConfig(state: 'test', handlers: [], actions: []);
+
+    return new SceneWizard(
+      sceneConfig: $config,
+      manager: $manager,
+      state: $ctx,
+      updateType: 'message',
+      event: new stdClass(),
+      data: [],
+    );
   }
 }
