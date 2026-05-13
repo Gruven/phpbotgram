@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Fsm\Storage;
 
+use Gruven\PhpBotGram\Fsm\State;
 use Gruven\PhpBotGram\Fsm\Storage\BaseStorage;
 use Gruven\PhpBotGram\Fsm\Storage\MemoryStorage;
 use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
@@ -80,21 +81,26 @@ final class MemoryStorageTest extends TestCase
   }
 
   /**
-   * `setState` with an object that has a public `state` property stores
-   * the property value (future `State` contract, Task 5.5).
+   * `setState` with a real `State` instance stores the instance's qualified
+   * state name (returned by `$state->state()`).
    *
-   * @todo Task 5.5: Replace the anonymous object with `instanceof State` once
-   *       `Gruven\PhpBotGram\Fsm\State` exists.
+   * This is the Critical #2 contract: `State` exposes `state()` as a method,
+   * not a public property — so the old `property_exists($state, 'state')`
+   * check silently fell through, causing a `TypeError` when the `State` object
+   * was assigned to the `?string`-typed `MemoryStorageRecord::$state`.
+   *
+   * Mirrors upstream `MemoryStorage.set_state`:
+   * ```python
+   * self.storage[key].state = state.state if isinstance(state, State) else state
+   * ```
    */
-  public function testSetStateWithStateObjectExtractsStateProperty(): void
+  public function testSetStateWithRealStateInstance(): void
   {
-    $stateObj = new class {
-      public string $state = 'MyGroup:step_one';
-    };
+    $state = new State('idle', 'Wizard');
 
-    $this->storage->setState($this->key, $stateObj);
+    $this->storage->setState($this->key, $state);
 
-    self::assertSame('MyGroup:step_one', $this->storage->getState($this->key));
+    self::assertSame('Wizard:idle', $this->storage->getState($this->key));
   }
 
   // ------------------------------------------------------------------ //

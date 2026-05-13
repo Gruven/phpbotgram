@@ -96,9 +96,9 @@ final class RedisStorage extends BaseStorage
    * - `$state` is a plain string  → store as-is.
    *
    * @param StorageKey $key Storage address.
-   * @param null|object|string $state New state value.
+   * @param null|State|string $state New state value.
    */
-  public function setState(StorageKey $key, null|object|string $state = null): void
+  public function setState(StorageKey $key, null|State|string $state = null): void
   {
     $redisKey = $this->keyBuilder->build($key, StoragePart::State);
 
@@ -110,12 +110,7 @@ final class RedisStorage extends BaseStorage
 
     if ($state instanceof State) {
       $value = $state->state() ?? '';
-    } elseif (is_object($state) && property_exists($state, 'state')) {
-      // Forward-compat shim: accept any object carrying a public `state` property.
-      /** @var object{state: string} $state */
-      $value = (string)$state->state;
     } else {
-      /** @var string $state */
       $value = $state;
     }
 

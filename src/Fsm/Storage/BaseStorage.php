@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Fsm\Storage;
 
+use Gruven\PhpBotGram\Fsm\State;
+
 /**
  * Abstract base for all FSM storage backends.
  *
@@ -15,13 +17,6 @@ namespace Gruven\PhpBotGram\Fsm\Storage;
  * concrete values, not `Future<>` / `Promise<>`. Implementations may suspend
  * internally via Amp (Revolt event loop) but must never leak async primitives
  * through this interface.
- *
- * State type note: the upstream Python type alias is `str | State | None`. PHP
- * does not yet have `State` (lands in Task 5.5). Until then, the second arm is
- * widened to `object` so the signature remains valid at PHPStan level 9.
- *
- * @todo Task 5.5: tighten `string|object|null` to `string|State|null` once
- *       `Gruven\PhpBotGram\Fsm\State` is in place.
  */
 abstract class BaseStorage
 {
@@ -29,15 +24,15 @@ abstract class BaseStorage
    * Persist the FSM state for the given key.
    *
    * @param StorageKey $key Storage address.
-   * @param null|object|string $state New state value.
-   *                                  `string` — a raw state name already serialised.
-   *                                  `object` — a `State` instance (Task 5.5, second arm tightens to
-   *                                  `Gruven\PhpBotGram\Fsm\State`).
-   *                                  `null`   — clears the state.
+   * @param null|State|string $state New state value.
+   *                                 `string` — a raw state name already serialised.
+   *                                 `State`  — a `State` instance; implementations call
+   *                                 `$state->state()` to obtain the qualified name.
+   *                                 `null`   — clears the state.
    *
    * Mirrors `BaseStorage.set_state` (`base.py:127-130`).
    */
-  abstract public function setState(StorageKey $key, null|object|string $state = null): void;
+  abstract public function setState(StorageKey $key, null|State|string $state = null): void;
 
   /**
    * Retrieve the FSM state for the given key.

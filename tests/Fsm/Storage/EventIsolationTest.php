@@ -7,12 +7,14 @@ namespace Gruven\PhpBotGram\Tests\Fsm\Storage;
 use function Amp\async;
 
 use Amp\Future;
+use Amp\Sync\LocalMutex;
 use Gruven\PhpBotGram\Fsm\Storage\BaseEventIsolation;
 use Gruven\PhpBotGram\Fsm\Storage\DisabledEventIsolation;
 use Gruven\PhpBotGram\Fsm\Storage\Lock;
 use Gruven\PhpBotGram\Fsm\Storage\SimpleEventIsolation;
 use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use Gruven\PhpBotGram\Tests\Support\RunAsyncTrait;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Revolt\EventLoop;
@@ -72,6 +74,34 @@ final class EventIsolationTest extends TestCase
   public function testSimpleEventIsolationExtendsBase(): void
   {
     self::assertInstanceOf(BaseEventIsolation::class, new SimpleEventIsolation());
+  }
+
+  // ------------------------------------------------------------------ //
+  // Lock — construction guards
+  // ------------------------------------------------------------------ //
+
+  /**
+   * Constructing a `Lock` with both `$inner` and `$releaseFn` is a
+   * programming error — the constructor must throw `InvalidArgumentException`
+   * immediately rather than silently leaking the Amp lock unreleased.
+   */
+  public function testLockRejectsDualModeConstruction(): void
+  {
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessage('Lock accepts either an Amp\Sync\Lock or a releaseFn, not both.');
+
+    $this->runAsync(static function (): void {
+      // Acquire an uncontested Amp\Sync\Lock from a fresh LocalMutex.
+      $ampLock = (new LocalMutex())->acquire();
+
+      try {
+        new Lock(inner: $ampLock, releaseFn: static fn() => null);
+      } finally {
+        // Release the Amp lock unconditionally so the mutex is not leaked
+        // if the InvalidArgumentException is somehow not thrown.
+        $ampLock->release();
+      }
+    });
   }
 
   // ------------------------------------------------------------------ //
