@@ -244,6 +244,47 @@ final class WebhookContractTest extends TestCase
     self::assertNull($result);
   }
 
+  public function testFeedWebhookUpdateSwallowsUpdateTypeLookupExceptionWithWarning(): void
+  {
+    // Fix I1: a forward-compat update kind (Telegram adds a new wire field
+    // before the schema is regenerated) surfaces as `UpdateTypeLookupException`
+    // inside `feedUpdate`. The webhook adapter must NOT propagate that as a
+    // 500 — instead `feedWebhookUpdate` swallows it, emits an `E_USER_WARNING`
+    // (parity with upstream's `_listen_update` → `SkipHandler` + RuntimeWarning
+    // at `dispatcher.py:267-279`), and returns null so the HTTP adapter writes
+    // an empty body.
+    //
+    // Synthesising the "unknown update type" case: an Update with every
+    // optional event slot null causes `Update::eventType()` to return null,
+    // which `feedUpdate` translates to `UpdateTypeLookupException`. That's
+    // the same error path the framework would hit on a forward-compat type.
+    $dispatcher = new Dispatcher();
+    $update = new Update(updateId: 99);
+
+    $captured = $this->captureWarnings(function () use ($dispatcher, $update): mixed {
+      return $this->runAsync(static fn(): mixed => $dispatcher->feedWebhookUpdate(
+        new MockedBot(),
+        $update,
+      ));
+    });
+
+    self::assertNull(
+      $captured['result'],
+      'feedWebhookUpdate must collapse an UpdateTypeLookupException to null.',
+    );
+    self::assertNotSame([], $captured['warnings'], 'Unknown update type must trigger a warning.');
+    self::assertStringContainsString(
+      'feedWebhookUpdate',
+      $captured['warnings'][0],
+      'Warning must identify the entry point (feedWebhookUpdate).',
+    );
+    self::assertStringContainsString(
+      'unknown update type',
+      $captured['warnings'][0],
+      'Warning must explain the swallow reason.',
+    );
+  }
+
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------

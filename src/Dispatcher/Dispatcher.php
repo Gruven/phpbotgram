@@ -490,14 +490,46 @@ class Dispatcher extends Router
     // we want the dispatch task's exceptions to propagate to the caller
     // when it wins, and we tolerate the timer task's never-throws
     // contract.
-    awaitFirst([$dispatchTask, $timeoutTask]);
+    //
+    // The race itself ignores the winning future's resolved value /
+    // exception — we re-inspect `$dispatchTask` afterwards. Suppressing
+    // any throw from `awaitFirst` here avoids a brittle re-raise pattern
+    // when the inspection below is going to look at `$dispatchTask` state
+    // anyway. The timer task `->ignore()`s its own future contract, so
+    // the only re-raise source is the dispatch task; we let `await()`
+    // surface it under the typed handling below.
+    try {
+      awaitFirst([$dispatchTask, $timeoutTask]);
+    } catch (Throwable) {
+      // Swallowed; the typed handling lives in the `isComplete()` branch
+      // below so the dispatch-failed path goes through a single re-raise
+      // site (which we wrap in a try/catch for the `UpdateTypeLookupException`
+      // swallow Fix I1 demands).
+    }
 
     if ($dispatchTask->isComplete()) {
-      // Dispatch won. `await()` re-raises any exception the handler
-      // chain produced (ErrorsMiddleware should already have absorbed
-      // user-level errors; anything left here is a framework bug worth
-      // surfacing to the webhook adapter).
-      $result = $dispatchTask->await();
+      // Dispatch won (resolved or failed). `await()` re-raises the
+      // failure if any. ErrorsMiddleware should already have absorbed
+      // user-level handler errors; the typed catch below covers Fix I1
+      // (`UpdateTypeLookupException` from a forward-compat Telegram update
+      // kind) — anything else is a framework bug we let surface to the
+      // webhook adapter.
+      try {
+        $result = $dispatchTask->await();
+      } catch (UpdateTypeLookupException $e) {
+        // Fix I1: forward-compat Telegram update kinds (no schema entry
+        // yet) surface as `UpdateTypeLookupException` from `feedUpdate`.
+        // Upstream's `_listen_update` swallows the typed error and raises
+        // `SkipHandler` + `RuntimeWarning` (`dispatcher.py:267-279`); the
+        // port emits an `E_USER_WARNING` and returns null so the webhook
+        // adapter writes an empty body instead of a 500.
+        trigger_error(
+          sprintf('feedWebhookUpdate: skipped unknown update type — %s', $e->getMessage()),
+          \E_USER_WARNING,
+        );
+
+        return null;
+      }
 
       return $result instanceof TelegramMethod ? $result : null;
     }
@@ -517,14 +549,32 @@ class Dispatcher extends Router
     // The map's return value is ignored — we just need the side effect
     // of invoking silentCallRequest at completion time.
     //
-    // `ignore()` on the resulting future suppresses the unhandled-future
-    // warning if the dispatch eventually errors (the inner async caller
-    // won't be around to await this leg).
-    $dispatchTask->map(function (mixed $result) use ($bot): void {
-      if ($result instanceof TelegramMethod) {
-        $this->silentCallRequest($bot, $result);
-      }
-    })->ignore();
+    // Fix I1 (deferred path): `catch(UpdateTypeLookupException)` swallows
+    // the typed error if the late dispatch completes with one. `map()`'s
+    // callback only fires on success; without the `catch()` hook the
+    // failure would survive only as a "future errored, ignored" state. The
+    // catch returns null so the downstream future settles cleanly. The
+    // outer `ignore()` covers any *other* exception type the late dispatch
+    // might raise (framework bugs we don't want surfacing at GC time).
+    $dispatchTask
+      ->map(function (mixed $result) use ($bot): void {
+        if ($result instanceof TelegramMethod) {
+          $this->silentCallRequest($bot, $result);
+        }
+      })
+      ->catch(static function (Throwable $error): ?bool {
+        if ($error instanceof UpdateTypeLookupException) {
+          trigger_error(
+            sprintf('feedWebhookUpdate: skipped unknown update type — %s', $error->getMessage()),
+            \E_USER_WARNING,
+          );
+
+          return null;
+        }
+
+        throw $error;
+      })
+      ->ignore();
 
     return null;
   }
