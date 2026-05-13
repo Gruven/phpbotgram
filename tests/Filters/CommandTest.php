@@ -26,11 +26,15 @@ use PHPUnit\Framework\TestCase;
  * - `TestCommand::test_resolve_bot_command` — no `BotCommand` type in the PHP port; `BotCommand`
  *   is a generated `Types\BotCommand` that is not yet generated; the filter accepts plain strings.
  * - `TestCommand::test_init_casefold` `BotCommand` rows — same reason as `test_resolve_bot_command`.
- * - `TestCommand::test_parse_command` regex rows (e.g. `re.compile(r"test(\d+)")`) — regex-as-command
- *   is not implemented; would require widening `commands` to `list<string|callable>`; deferred.
- * - `TestCommand::test_parse_command` magic rows (`magic=F.args == "some args"`) — magic-kwarg
- *   conditional is not in the PHP `Command` constructor; deferred.
- * - `TestCommand::test_command_magic_result` — magic-kwarg deferred.
+ * - `TestCommand::test_parse_command` regex rows (e.g. `Command(commands=[re.compile(r"test(\d+)")])`) —
+ *   scope deferral: regex commands not in Phase 4 Command port; PHP `Command` accepts only string
+ *   literals (widening `commands` to `list<string|callable>` is deferred to a later revision).
+ * - `TestCommand::test_init_casefold` mixed regex+string row (`(re.compile(r"test(\d+)"), "TeSt")`) —
+ *   scope deferral (same reason as the regex-command rows above): regex commands not in Phase 4
+ *   Command port.
+ * - `TestCommand::test_parse_command` magic-kwarg rows (`Command(commands=…, magic=F.args == "x")`)
+ *   and `TestCommand::test_command_magic_result` — scope deferral: `magic` kwarg on `Command` not
+ *   implemented in Phase 4 port.
  * - `TestCommand::test_str` — `Filter` and DTOs have no `__str__` / `__repr__` equivalents
  *   in the PHP port (reason 5).
  *

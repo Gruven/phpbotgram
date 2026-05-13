@@ -85,6 +85,34 @@ final class OrFilterTest extends TestCase
     self::assertFalse($secondRan, 'OrFilter must short-circuit after the first accept.');
   }
 
+  public function testSecondTrueWinsWhenFirstReturnsFalse(): void
+  {
+    // Upstream parametrize row: `or_f(lambda t: t is False, lambda t: t is True)` → True.
+    // When the first OR target rejects (returns false), the combinator must
+    // continue to the second target; if that one returns true, the OrFilter
+    // short-circuits with true.
+    $filter = new OrFilter(
+      $this->filter(static fn(): bool => false),
+      $this->filter(static fn(): bool => true),
+    );
+
+    self::assertTrue($filter($this->event()));
+  }
+
+  public function testSecondArrayWinsWhenFirstReturnsFalse(): void
+  {
+    // Upstream parametrize row:
+    //   `or_f(lambda t: t is False, lambda t: {"t": t})` → `{"t": True}`.
+    // When the first target rejects and the second returns a truthy array,
+    // OrFilter forwards that array unchanged as the accept-with-kwargs result.
+    $filter = new OrFilter(
+      $this->filter(static fn(): bool => false),
+      $this->filter(static fn(): array => ['cmd' => 'start']),
+    );
+
+    self::assertSame(['cmd' => 'start'], $filter($this->event()));
+  }
+
   public function testEachFilterReceivesIdenticalKwargsWithoutCascade(): void
   {
     // Unlike AndFilter, OrFilter does NOT thread filter N-1's return into

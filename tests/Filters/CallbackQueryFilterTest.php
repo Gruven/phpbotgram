@@ -19,7 +19,11 @@ use PHPUnit\Framework\TestCase;
  * Upstream `tests/test_filters/test_callback_data.py` cases deliberately not ported:
  *
  * - `TestCallbackQueryFilter::test_str` — `Filter` and DTOs have no `__str__` / `__repr__`
- *   equivalents in the PHP port (reason 5).
+ *   equivalents in the PHP port (API divergence: no PHP `__str__`/`__repr__` on filters/DTOs).
+ * - `TestCallbackDataFilter::test_call` rows where `rule` is non-None (rows 1, 2, 3, 7) —
+ *   scope deferral: PHP `CallbackQueryFilter` does not yet implement the post-unpack
+ *   rule-evaluation parameter (see /src/Filters/CallbackQueryFilter.php:35-38). The
+ *   rule-None rows (4, 5, 6, 8) are covered by tests in this file.
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
