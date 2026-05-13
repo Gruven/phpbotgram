@@ -428,6 +428,54 @@ final class ChatMemberUpdatedFilterTest extends TestCase
   }
 
   // -------------------------------------------------------------------------
+  // newStatus() factory — upstream _MemberStatusMarker single-axis rule shape
+  // -------------------------------------------------------------------------
+
+  public function testNewStatusFactoryMatchesAnyOldChatMember(): void
+  {
+    // `newStatus()` constrains ONLY the new side — `oldStatuses = []` is the
+    // "match any" sentinel. Mirrors upstream's `_MemberStatusMarker` /
+    // `_MemberStatusGroupMarker` single-axis rule shape that the constructor's
+    // mandatory `oldStatuses` previously made inexpressible.
+    //
+    // Two transitions both become ADMINISTRATOR:
+    //   - member → administrator   (old is in IS_MEMBER)
+    //   - left   → administrator   (old is in IS_NOT_MEMBER)
+    // Both must match because the old side is wildcarded.
+    $filter = ChatMemberUpdatedFilter::newStatus(ChatMemberUpdatedFilter::ADMINISTRATOR);
+
+    self::assertTrue(
+      $filter($this->chatMemberUpdated(old: $this->member(), new: $this->administrator())),
+      'newStatus(ADMINISTRATOR) must accept member → administrator',
+    );
+
+    self::assertTrue(
+      $filter($this->chatMemberUpdated(old: $this->left(), new: $this->administrator())),
+      'newStatus(ADMINISTRATOR) must accept left → administrator (wildcard old side)',
+    );
+  }
+
+  public function testNewStatusFactoryStoresEmptyOldStatuses(): void
+  {
+    // Verify the factory shape: `oldStatuses` is `[]`, `newStatuses` is set.
+    $filter = ChatMemberUpdatedFilter::newStatus(ChatMemberUpdatedFilter::MEMBER);
+
+    self::assertSame([], $filter->oldStatuses);
+    self::assertSame(['member'], $filter->newStatuses);
+  }
+
+  public function testNewStatusFactoryRejectsNonMatchingNewStatus(): void
+  {
+    // Even with a wildcarded old side, a mismatched new status must reject.
+    $filter = ChatMemberUpdatedFilter::newStatus(ChatMemberUpdatedFilter::ADMINISTRATOR);
+
+    self::assertFalse(
+      $filter($this->chatMemberUpdated(old: $this->left(), new: $this->member())),
+      'newStatus(ADMINISTRATOR) must reject transitions whose new status is not administrator',
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // A6 — upstream row 7: restricted(is_member=False) → member under IS_MEMBER filter
   // -------------------------------------------------------------------------
 
