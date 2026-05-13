@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Fsm;
 
+use Closure;
+use Gruven\PhpBotGram\Dispatcher\Router;
 use Gruven\PhpBotGram\Fsm\Exception\SceneException;
 use Gruven\PhpBotGram\Fsm\Scene\Attribute\SceneState;
 use Gruven\PhpBotGram\Fsm\Scene\SceneConfig;
@@ -130,6 +132,48 @@ abstract class Scene
   public function retake(mixed ...$kwargs): mixed
   {
     return null;
+  }
+
+  // ------------------------------------------------------------------ //
+  // Router / handler stubs — replaced by Task 5.12
+  // ------------------------------------------------------------------ //
+
+  /**
+   * Return a `Router` sub-tree that registers this scene's handlers.
+   *
+   * **Stub implementation** — Task 5.12 will replace this with the full
+   * reflection-driven build. For now, returns a fresh empty `Router` keyed
+   * by the scene class name so `SceneRegistry::add()` can call
+   * `$parent->includeRouter(scene::asRouter())` without crashing.
+   *
+   * @param ?string $name Optional router name override. Defaults to the
+   *                      fully-qualified scene class name.
+   *
+   * @todo Task 5.12: build the real handler-wired router.
+   */
+  public static function asRouter(?string $name = null): Router
+  {
+    return new Router($name ?? static::class);
+  }
+
+  /**
+   * Return a callable that dispatches this scene as a handler.
+   *
+   * **Stub implementation** — Task 5.12 will replace this with a proper
+   * dispatch closure. The stub throws `SceneException` at call time to
+   * surface a clear error if the scene is invoked before Task 5.12 lands.
+   *
+   * @todo Task 5.12: build the real dispatch handler.
+   *
+   * @return Closure(): never
+   */
+  public static function asHandler(): Closure
+  {
+    return static function (): never {
+      throw new SceneException(
+        static::class . '::asHandler() — stub; Task 5.12 will implement.',
+      );
+    };
   }
 
   // ------------------------------------------------------------------ //
