@@ -153,9 +153,9 @@ final class MongoStorage extends BaseStorage
    * event loop is not stalled.
    *
    * @param StorageKey $key Storage address.
-   * @param null|object|string $state New state value.
+   * @param null|State|string $state New state value.
    */
-  public function setState(StorageKey $key, null|object|string $state = null): void
+  public function setState(StorageKey $key, null|State|string $state = null): void
   {
     $documentId = $this->keyBuilder->build($key);
 
@@ -168,11 +168,7 @@ final class MongoStorage extends BaseStorage
 
       if ($state instanceof State) {
         $stateString = $state->state() ?? '';
-      } elseif (is_object($state) && property_exists($state, 'state')) {
-        /** @var object{state: string} $state */
-        $stateString = (string)$state->state;
       } else {
-        /** @var string $state */
         $stateString = $state;
       }
 
@@ -265,6 +261,48 @@ final class MongoStorage extends BaseStorage
     })->await();
 
     return $result;
+  }
+
+  /**
+   * Merge `$data` into the existing FSM data payload for `$key` atomically.
+   *
+   * Unlike the default `BaseStorage::updateData` (read-merge-write, racy
+   * under concurrency), this override uses a single `updateOne` with
+   * dot-notation `$set` — matching upstream's atomic
+   * `findOneAndUpdate($set: {data.field: value, ...}, upsert=True)` pattern
+   * (`aiogram/fsm/storage/mongo.py:133-146`).
+   *
+   * When `$data` is empty the operation is skipped and the current data is
+   * returned unchanged.
+   *
+   * @param StorageKey $key Storage address.
+   * @param array<string, mixed> $data Partial data map to merge in.
+   *
+   * @return array<string, mixed> The merged data map as it now exists in the document.
+   */
+  public function updateData(StorageKey $key, array $data): array
+  {
+    if ($data === []) {
+      return $this->getData($key);
+    }
+
+    $documentId = $this->keyBuilder->build($key);
+
+    $setDoc = [];
+
+    foreach ($data as $field => $value) {
+      $setDoc["data.{$field}"] = $value;
+    }
+
+    async(function () use ($documentId, $setDoc): void {
+      $this->collection->updateOne(
+        ['_id' => $documentId],
+        ['$set' => $setDoc],
+        ['upsert' => true],
+      );
+    })->await();
+
+    return $this->getData($key);
   }
 
   /**

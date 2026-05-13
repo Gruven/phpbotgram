@@ -267,6 +267,46 @@ final class MongoStorageTest extends TestCase
   // ------------------------------------------------------------------ //
 
   /**
+   * `updateData` issues a single atomic `updateOne` using dot-notation `$set`
+   * and returns the merged document from storage.
+   *
+   * Mirrors upstream `MongoStorage.update_data` (`mongo.py:133-146`) which
+   * uses `findOneAndUpdate($set: {"data.field": value}, upsert=True)`.
+   *
+   * Verifies the call shape via the `MongoCollectionSpy` and that the
+   * spy's simulated `$set` produces the correct merged result.
+   */
+  public function testUpdateDataUsesAtomicDotNotationSet(): void
+  {
+    $documentId = (new DefaultKeyBuilder())->build($this->key);
+    $collection = $this->makeCollection([$documentId => ['data' => ['foo' => 'bar']]]);
+    $storage = $this->makeStorage($collection);
+
+    $result = $storage->updateData($this->key, ['baz' => 'qux']);
+
+    // Verify the call shape: a single updateOne with dot-notation $set.
+    /** @var list<array{method: string, filter: array<string, mixed>, update: array<string, mixed>, options: array<string, mixed>}> $updateCalls */
+    $updateCalls = array_values(array_filter(
+      $collection->calls,
+      static fn(array $c): bool => $c['method'] === 'updateOne',
+    ));
+    self::assertGreaterThanOrEqual(1, count($updateCalls), 'updateData must call updateOne');
+
+    // The update in the first updateOne (the atomic patch) must use dot-notation.
+    $atomicCall = $updateCalls[0];
+    self::assertArrayHasKey('$set', $atomicCall['update']);
+
+    /** @var array<string, mixed> $setMap */
+    $setMap = $atomicCall['update']['$set'];
+    self::assertArrayHasKey('data.baz', $setMap, 'updateData must use dot-notation key "data.baz"');
+    self::assertSame('qux', $setMap['data.baz']);
+
+    // The spy applies $set in-place; getData returns the merged result.
+    self::assertSame('bar', $result['foo'], 'Pre-existing key must be preserved');
+    self::assertSame('qux', $result['baz'], 'Patched key must appear in returned data');
+  }
+
+  /**
    * `updateData` merges the patch and returns the merged dict from the document.
    *
    * Mirrors `TestMongoStorageMock::test_update_data_returns_data`.
@@ -280,7 +320,7 @@ final class MongoStorageTest extends TestCase
 
     $result = $storage->updateData($this->key, ['baz' => 'qux']);
 
-    // BaseStorage::updateData merges existing + patch and returns the result.
+    // Atomic updateData uses dot-notation $set (applied in spy); both keys present.
     self::assertSame('bar', $result['foo']);
     self::assertSame('qux', $result['baz']);
   }
@@ -438,6 +478,10 @@ final class MongoStorageTest extends TestCase
  * reason about the concrete type — avoiding the `property.notFound` errors
  * that arise when accessing `->calls` through an intersection type.
  *
+ * The spy maintains a mutable in-memory document store so that `$set`
+ * operations applied by `updateOne` are reflected in subsequent `findOne`
+ * reads — needed to verify `MongoStorage::updateData`'s atomic path.
+ *
  * @internal
  */
 final class MongoCollectionSpy implements MongoCollectionInterface
@@ -447,8 +491,21 @@ final class MongoCollectionSpy implements MongoCollectionInterface
    */
   public array $calls = [];
 
+  /**
+   * Mutable document store (keyed by `_id`). Starts from the initial set
+   * supplied to the constructor; `updateOne` with `$set` writes back here.
+   *
+   * @var array<string, array<string, mixed>>
+   */
+  private array $store = [];
+
   /** @param array<string, null|array<string, mixed>> $documents */
-  public function __construct(private readonly array $documents = []) {}
+  public function __construct(array $documents = [])
+  {
+    foreach ($documents as $id => $doc) {
+      $this->store[$id] = $doc ?? [];
+    }
+  }
 
   /** @param array<string, mixed> $filter */
   public function findOne(array $filter, array $options = []): ?object
@@ -456,12 +513,15 @@ final class MongoCollectionSpy implements MongoCollectionInterface
     $this->calls[] = ['method' => 'findOne', 'filter' => $filter, 'options' => $options];
     $rawId = $filter['_id'] ?? null;
     $id    = is_string($rawId) ? $rawId : '';
-    $doc   = $this->documents[$id] ?? null;
+    $doc   = $this->store[$id] ?? null;
 
     return $doc === null ? null : (object)$doc;
   }
 
   /**
+   * Records the call and simulates `$set` and `$unset` on the in-memory store.
+   * When `upsert: true` is set, creates the document if absent.
+   *
    * @param array<string, mixed> $filter
    * @param array<string, mixed> $update
    * @param array<string, mixed> $options
@@ -474,6 +534,44 @@ final class MongoCollectionSpy implements MongoCollectionInterface
       'update'  => $update,
       'options' => $options,
     ];
+
+    $rawId = $filter['_id'] ?? null;
+    $id    = is_string($rawId) ? $rawId : '';
+    $upsert = (bool)($options['upsert'] ?? false);
+
+    if (!isset($this->store[$id])) {
+      if (!$upsert) {
+        return;
+      }
+
+      $this->store[$id] = [];
+    }
+
+    // Apply $set with dot-notation support.
+    if (isset($update['$set']) && is_array($update['$set'])) {
+      /** @var array<string, mixed> $setMap */
+      $setMap = $update['$set'];
+
+      foreach ($setMap as $dotKey => $value) {
+        $parts = explode('.', (string)$dotKey, 2);
+
+        if (count($parts) === 2) {
+          // Two-level dot-path: e.g. "data.fieldName"
+          [$top, $sub] = $parts;
+
+          if (!isset($this->store[$id][$top]) || !is_array($this->store[$id][$top])) {
+            $this->store[$id][$top] = [];
+          }
+
+          /** @var array<string, mixed> $nested */
+          $nested = $this->store[$id][$top];
+          $nested[$sub] = $value;
+          $this->store[$id][$top] = $nested;
+        } else {
+          $this->store[$id][$dotKey] = $value;
+        }
+      }
+    }
   }
 
   /**
@@ -500,7 +598,7 @@ final class MongoCollectionSpy implements MongoCollectionInterface
     ];
     $rawId = $filter['_id'] ?? null;
     $id    = is_string($rawId) ? $rawId : '';
-    $doc   = $this->documents[$id] ?? null;
+    $doc   = $this->store[$id] ?? null;
 
     if ($doc === null) {
       return null;
