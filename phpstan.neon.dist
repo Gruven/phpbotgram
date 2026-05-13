@@ -29,6 +29,10 @@ parameters:
             - src/Utils/MagicFilter/AttrDict.php
             - tests/Utils/MagicFilter/*
             - tests/FTest.php
+            # F-DSL field wrappers seed their MagicFilter chains via the
+            # dynamic-property dispatch (`MagicFilter::root()->firstName`,
+            # `->isBot`, …) — by design, see `BaseField`.
+            - tests/Filters/F/*
         - identifier: method.notFound
           paths:
             - tests/Utils/MagicFilter/*
