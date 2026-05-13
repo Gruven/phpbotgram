@@ -17,3 +17,23 @@ parameters:
         - src/Enums/Generated/*.php (?)
     treatPhpDocTypesAsCertain: false
     reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # MagicFilter is, by design, a dynamic-property + method DSL. Its
+        # __get / __call accept any name (the chain builders); listing
+        # every Telegram field as @property/@method would be brittle.
+        # AttrDict mirrors the same shape for the MagicData filter's
+        # data dict.
+        - identifier: property.notFound
+          paths:
+            - src/Utils/MagicFilter/MagicFilter.php
+            - src/Utils/MagicFilter/AttrDict.php
+            - tests/Utils/MagicFilter/*
+        - identifier: method.notFound
+          paths:
+            - tests/Utils/MagicFilter/*
+        # The exception hierarchy assertion test deliberately calls
+        # is_subclass_of against literal class names; the analyser
+        # "narrows" these too aggressively at level 9.
+        - identifier: function.alreadyNarrowedType
+          paths:
+            - tests/Utils/MagicFilter/Exception/*
