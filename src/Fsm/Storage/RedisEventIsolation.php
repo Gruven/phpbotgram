@@ -71,14 +71,35 @@ LUA;
    * @param KeyBuilder $keyBuilder Key-builder strategy; defaults to `DefaultKeyBuilder`.
    * @param int $lockTtlSeconds Lock TTL in seconds. After this duration the lock
    *                            auto-expires so a crashed holder cannot block others
-   *                            forever.  Also used as the maximum wait time before
-   *                            the acquire loop gives up.
+   *                            forever.
+   * @param null|int $acquireTimeoutSeconds Maximum wall-clock seconds the acquire
+   *                                        loop will spin before giving up with a
+   *                                        `RuntimeException`. Defaults to
+   *                                        `$lockTtlSeconds * 2` so that a slow
+   *                                        holder (still within its TTL) does not
+   *                                        starve waiting callers.
    */
   public function __construct(
     private readonly RedisClient $redis,
     private readonly KeyBuilder $keyBuilder = new DefaultKeyBuilder(),
     private readonly int $lockTtlSeconds = 60,
+    private readonly ?int $acquireTimeoutSeconds = null,
   ) {}
+
+  // ------------------------------------------------------------------ //
+  // Helpers
+  // ------------------------------------------------------------------ //
+
+  /**
+   * Resolve the effective acquire-timeout budget in seconds.
+   *
+   * When `$acquireTimeoutSeconds` is `null` (the default), falls back to
+   * `$lockTtlSeconds * 2` so that waiting callers outlast the holder's TTL.
+   */
+  private function acquireTimeout(): int
+  {
+    return $this->acquireTimeoutSeconds ?? ($this->lockTtlSeconds * 2);
+  }
 
   // ------------------------------------------------------------------ //
   // BaseEventIsolation implementation
@@ -87,14 +108,15 @@ LUA;
   /**
    * Acquire a distributed lock for `$key`.
    *
-   * Spins until `SET NX PX` succeeds or the TTL budget is exhausted.
+   * Spins until `SET NX PX` succeeds or the acquire-timeout budget is exhausted.
    * Returns a `Lock` whose `release()` executes the safe Lua unlock script.
    *
    * @param StorageKey $key Storage address to lock.
    *
    * @return Lock Acquired lock; call `release()` in a `finally` block.
    *
-   * @throws RuntimeException When the lock cannot be acquired within `$lockTtlSeconds`.
+   * @throws RuntimeException When the lock cannot be acquired within `$acquireTimeoutSeconds`
+   *                          (or `$lockTtlSeconds * 2` when the former is `null`).
    */
   public function lock(StorageKey $key): Lock
   {
@@ -102,7 +124,8 @@ LUA;
     $token = bin2hex(random_bytes(16));
     $ttlMs = $this->lockTtlSeconds * 1000;
 
-    $deadline = microtime(true) + $this->lockTtlSeconds;
+    $acquireTimeout = $this->acquireTimeout();
+    $deadline = microtime(true) + $acquireTimeout;
 
     // SET key token NX PX ttlMs — returns true when the key was newly set,
     // false when the key already exists (NX = set only if Not eXists).
@@ -116,7 +139,7 @@ LUA;
           sprintf(
             'Failed to acquire Redis lock for key "%s" within %d seconds.',
             $lockKey,
-            $this->lockTtlSeconds,
+            $acquireTimeout,
           )
         );
       }

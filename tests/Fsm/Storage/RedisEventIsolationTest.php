@@ -18,6 +18,8 @@ use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use Gruven\PhpBotGram\Fsm\Storage\StoragePart;
 use Gruven\PhpBotGram\Tests\Support\RunAsyncTrait;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
+use RuntimeException;
 
 /**
  * Upstream `tests/test_fsm/storage/test_isolation.py` and
@@ -218,6 +220,60 @@ final class RedisEventIsolationTest extends TestCase
     self::assertSame(30_000, $args[(int)$pxIdx + 1], 'PX value must be lockTtlSeconds * 1000');
 
     $lock->release();
+  }
+
+  /**
+   * When `$acquireTimeoutSeconds` is not provided, the default acquire timeout
+   * must be `$lockTtlSeconds * 2`.
+   *
+   * We verify this via the exception message: the acquire loop gives up with an
+   * error containing the resolved timeout value. Using `lockTtlSeconds: 5` and
+   * `acquireTimeoutSeconds: 0` isolates which parameter drives the message — the
+   * message must say "within 10 seconds" (5 * 2), proving the default formula
+   * applies when the parameter is omitted.
+   *
+   * We use a separate isolation instance with `acquireTimeoutSeconds: 0` to keep
+   * the test near-instant (deadline is in the past on the first retry after one
+   * 50 ms delay).
+   */
+  public function testAcquireTimeoutDefaultsToDoubleLockTtl(): void
+  {
+    // Verify the formula via reflection — no spinning needed.
+    $isolation = new RedisEventIsolation(
+      $this->makeRedis(),
+      lockTtlSeconds: 5,
+      // acquireTimeoutSeconds deliberately omitted
+    );
+
+    $ref = new ReflectionClass($isolation);
+    $method = $ref->getMethod('acquireTimeout');
+    $method->setAccessible(true);
+
+    self::assertSame(10, $method->invoke($isolation), 'Default acquireTimeout must be lockTtlSeconds * 2');
+  }
+
+  /**
+   * When `$acquireTimeoutSeconds` is supplied explicitly it overrides the
+   * `lockTtlSeconds * 2` default, both for the deadline and for the exception
+   * message when the budget is exhausted.
+   *
+   * The spy always returns `null` for SET NX (contended lock), so the loop
+   * exhausts the budget after at most one `delay(0.05)` iteration.
+   */
+  public function testAcquireTimeoutExplicitOverride(): void
+  {
+    $isolation = new RedisEventIsolation(
+      $this->makeRedis(setNxResult: false),
+      lockTtlSeconds: 60,
+      acquireTimeoutSeconds: 0,
+    );
+
+    $this->expectException(RuntimeException::class);
+    $this->expectExceptionMessage('within 0 seconds');
+
+    $this->runAsync(function () use ($isolation): void {
+      $isolation->lock($this->key);
+    });
   }
 
   // ------------------------------------------------------------------ //
