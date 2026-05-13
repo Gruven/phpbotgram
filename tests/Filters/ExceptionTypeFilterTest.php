@@ -18,16 +18,6 @@ use Throwable;
 use TypeError;
 
 /**
- * Upstream `tests/test_filters/test_exception.py` cases deliberately not ported:
- *
- * - `TestDispatchException::test_handle_exception` — dispatcher integration test; requires a
- *   fully wired Dispatcher instance. This is a phase boundary (reason 8).
- *
- * All other upstream cases are either ported below or covered behaviorally
- * by other test methods in this file.
- */
-
-/**
  * Coverage for `ExceptionTypeFilter` — port of
  * `aiogram.filters.exception.ExceptionTypeFilter`
  * (`aiogram/filters/exception.py:10-27`).
@@ -36,6 +26,14 @@ use TypeError;
  * an `ErrorEvent` whose `->exception` is an instance of one of the
  * registered class-strings. Mirrors upstream's `isinstance(event.exception,
  * self.exceptions)` check.
+ *
+ * Upstream `tests/test_filters/test_exception.py` cases deliberately not ported:
+ *
+ * - `TestDispatchException::test_handle_exception` — dispatcher integration test; requires a
+ *   fully wired Dispatcher instance. This is a phase boundary (reason 8).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  *
  * @internal
  *

@@ -8,17 +8,6 @@ use Gruven\PhpBotGram\Filters\CommandObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Upstream `tests/test_filters/test_command.py` cases deliberately not ported:
- *
- * - `TestCommandObject::test_update_handler_flags` — `update_handler_flags()` is a
- *   dispatcher-integration method that inspects the router's handler registry; not present
- *   in the PHP port (reason 8 — phase boundary).
- *
- * All other upstream cases are either ported below or covered behaviorally
- * by other test methods in this file.
- */
-
-/**
  * Coverage for `CommandObject` — readonly DTO carrying the parsed parts of a
  * Telegram slash-command ("/cmd@mention args").
  *
@@ -37,6 +26,15 @@ use PHPUnit\Framework\TestCase;
  * the `Command` filter that produces them lives one class up, and the
  * regex-aware / magic-aware branches arrive in Phase 4.5+. For now we just
  * check the property is reachable and defaults to `null`/`null`.
+ *
+ * Upstream `tests/test_filters/test_command.py` cases deliberately not ported:
+ *
+ * - `TestCommandObject::test_update_handler_flags` — `update_handler_flags()` is a
+ *   dispatcher-integration method that inspects the router's handler registry; not present
+ *   in the PHP port (reason 8 — phase boundary).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class CommandObjectTest extends TestCase
 {

@@ -26,6 +26,12 @@ use Stringable;
  * - `TestCallbackData::test_pack_uuid` — UUID is `\Stringable`; the pack path is already covered
  *   behaviorally by `testEncodingHandlesStringableViaCast`. Documented skip: "covered behaviorally
  *   via Stringable test".
+ * - `TestCallbackData::test_encode_value_negative` rows for Python `...` (Ellipsis) and bare
+ *   `object` class reference — API divergence: no PHP equivalent; the contract is covered
+ *   behaviorally by `testEncodingRejectsUnsupportedTypes`.
+ * - `TestCallbackData::test_unpack_optional_wo_default_union_type` — API divergence: Python
+ *   3.10 `int | None` and `Optional[int]` collapse to a single `?int` syntax in PHP; the
+ *   behavior is covered by `testUnpackOptionalIntWithoutDefaultDecodesEmptyToNull`.
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
@@ -343,12 +349,10 @@ final class CallbackDataTest extends TestCase
     self::assertSame(42, $decoded->bar);
   }
 
-  public function testUnpackOptionalWithDefaultEmptyUsesDefault(): void
+  public function testUnpackOptionalWithNonNullDefaultAndMatchingWireValueDecodes(): void
   {
-    // Upstream `test_unpack_optional` row: `MyCallback3.unpack("test3:experiment:42") == MyCallback3(bar=42)`.
-    // Empty segment for nullable field with non-null default returns the default value.
-    // Note: PHP's reflection returns the default value when the wire segment is empty and the
-    // parameter has a default — this mirrors the Python branch in the decoder.
+    // Upstream `test_unpack_optional` row: wire segment value matches the default —
+    // decoded `$foo` equals the default string `'experiment'`.
     $decoded = CbDataOptionalWithDefault::unpack('opt3:experiment:42');
 
     self::assertSame('experiment', $decoded->foo);

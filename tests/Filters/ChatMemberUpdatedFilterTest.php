@@ -21,22 +21,6 @@ use Gruven\PhpBotGram\Types\User;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Upstream `tests/test_filters/test_chat_member_updated.py` cases deliberately not ported:
- *
- * - Entire `TestMemberStatusMarker` class (`test_str`, `test_pos`, `test_neg`, `test_or`,
- *   `test_rshift`, `test_lshift`, `test_hash`, `test_check`) — the Python marker/operator
- *   DSL (`+`, `-`, `|`, `>>`, `<<`) on `_MemberStatusMarker` instances cannot be
- *   expressed in PHP (reason 3).
- * - Entire `TestMemberStatusGroupMarker` class — same operator-DSL limitation (reason 3).
- * - Entire `TestMemberStatusTransition` class (`test_invert`, `test_check`) — same (reason 3).
- * - `TestChatMemberUpdatedStatusFilter::test_str` — `Filter` and DTOs have no `__str__` /
- *   `__repr__` equivalents in the PHP port (reason 5).
- *
- * All other upstream cases are either ported below or covered behaviorally
- * by other test methods in this file.
- */
-
-/**
  * Coverage for `ChatMemberUpdatedFilter` — the old/new chat-member status
  * transition matcher. Port of
  * `aiogram.filters.chat_member_updated.ChatMemberUpdatedFilter`
@@ -55,6 +39,20 @@ use PHPUnit\Framework\TestCase;
  * `'restricted'`, `'left'`, `'kicked'`). The abstract `ChatMember` parent
  * does NOT declare `status` — the filter therefore reads it via a static
  * `match`-on-class helper rather than a parent accessor.
+ *
+ * Upstream `tests/test_filters/test_chat_member_updated.py` cases deliberately not ported:
+ *
+ * - Entire `TestMemberStatusMarker` class (`test_str`, `test_pos`, `test_neg`, `test_or`,
+ *   `test_rshift`, `test_lshift`, `test_hash`, `test_check`) — the Python marker/operator
+ *   DSL (`+`, `-`, `|`, `>>`, `<<`) on `_MemberStatusMarker` instances cannot be
+ *   expressed in PHP (reason 3).
+ * - Entire `TestMemberStatusGroupMarker` class — same operator-DSL limitation (reason 3).
+ * - Entire `TestMemberStatusTransition` class (`test_invert`, `test_check`) — same (reason 3).
+ * - `TestChatMemberUpdatedStatusFilter::test_str` — `Filter` and DTOs have no `__str__` /
+ *   `__repr__` equivalents in the PHP port (reason 5).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class ChatMemberUpdatedFilterTest extends TestCase
 {
@@ -415,9 +413,12 @@ final class ChatMemberUpdatedFilterTest extends TestCase
   {
     // Upstream `TestChatMemberUpdatedStatusFilter::test_call` row 6:
     //   ADMINISTRATOR (status filter), member → administrator → True.
-    // The upstream `ADMINISTRATOR` marker filters on new-status == administrator.
-    // The PHP equivalent: a transition filter requiring old in IS_MEMBER and new == administrator.
-    // We use `promotion()` which targets MEMBER → IS_ADMIN (administrator or creator).
+    // Upstream uses the single-axis `ADMINISTRATOR` marker (new == administrator,
+    // old unconstrained). PHP's `promotion()` is stricter (requires old in MEMBER,
+    // new in IS_ADMIN). This specific row (`member → administrator`) satisfies both,
+    // so `promotion()` accepts it. Other upstream rows that pass under `ADMINISTRATOR`
+    // without an old-status constraint would require a transition built via the
+    // `transition()` factory; those are not part of this row.
     $filter = ChatMemberUpdatedFilter::promotion();
 
     self::assertTrue($filter($this->chatMemberUpdated(

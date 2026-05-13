@@ -16,6 +16,16 @@ use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
+ * Coverage for `Command` — port of `aiogram.filters.command.Command`. Matches
+ * `tests/test_filters/test_command.py` row-by-row where the upstream rows
+ * cover features supported by Task 4.7 (strings only — regex / magic / deep
+ * link variations live in later tasks but get scaffolded here).
+ *
+ * Spec deviation acknowledged inline: PHP forbids parameters after a
+ * variadic, so the constructor takes `string|list<string> $commands`
+ * positionally and exposes `Command::of(...$cmds)` as a variadic-friendly
+ * factory. See § "Filters in detail" / "Command" in the design doc.
+ *
  * Upstream `tests/test_filters/test_command.py` cases deliberately not ported:
  *
  * - `TestCommand::test_commands_not_iterable` — PHP's type system prevents passing an `int`
@@ -43,18 +53,6 @@ use PHPUnit\Framework\TestCase;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
- */
-
-/**
- * Coverage for `Command` — port of `aiogram.filters.command.Command`. Matches
- * `tests/test_filters/test_command.py` row-by-row where the upstream rows
- * cover features supported by Task 4.7 (strings only — regex / magic / deep
- * link variations live in later tasks but get scaffolded here).
- *
- * Spec deviation acknowledged inline: PHP forbids parameters after a
- * variadic, so the constructor takes `string|list<string> $commands`
- * positionally and exposes `Command::of(...$cmds)` as a variadic-friendly
- * factory. See § "Filters in detail" / "Command" in the design doc.
  */
 final class CommandTest extends TestCase
 {

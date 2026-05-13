@@ -14,6 +14,16 @@ use Gruven\PhpBotGram\Types\Message;
 use PHPUnit\Framework\TestCase;
 
 /**
+ * Coverage for `CommandStart` — convenience subclass that pins the command
+ * name to `start` and adds `deep_link` semantics. Port of
+ * `aiogram.filters.command.CommandStart` (`aiogram/filters/command.py:240-303`).
+ *
+ * Spec deviation: Task 4.7 does not implement `deep_link_encoded` (Base64
+ * payload decoding via `aiogram.utils.deep_linking.decode_payload`); that
+ * lands in a later task alongside the deep-linking utility port. The
+ * `deepLinkEncoded` flag is therefore not exposed yet. See § "Filters in
+ * detail" / `CommandStart` for the full signature.
+ *
  * Upstream `tests/test_filters/test_command.py` cases deliberately not ported:
  *
  * - `TestCommandStart::test_parse_command` `deep_link_encoded` rows — Base64 deep-link
@@ -24,18 +34,6 @@ use PHPUnit\Framework\TestCase;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
- */
-
-/**
- * Coverage for `CommandStart` — convenience subclass that pins the command
- * name to `start` and adds `deep_link` semantics. Port of
- * `aiogram.filters.command.CommandStart` (`aiogram/filters/command.py:240-303`).
- *
- * Spec deviation: Task 4.7 does not implement `deep_link_encoded` (Base64
- * payload decoding via `aiogram.utils.deep_linking.decode_payload`); that
- * lands in a later task alongside the deep-linking utility port. The
- * `deepLinkEncoded` flag is therefore not exposed yet. See § "Filters in
- * detail" / `CommandStart` for the full signature.
  */
 final class CommandStartTest extends TestCase
 {

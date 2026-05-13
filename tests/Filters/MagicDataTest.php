@@ -22,8 +22,7 @@ use PHPUnit\Framework\TestCase;
  * in an `AttrDict` so chains like `F->event->text->equals('hi')`,
  * `F->state->equals(...)`, and `F->config->key->equals(...)` all reach the
  * value via attribute-style access.
- */
-/**
+ *
  * Upstream `tests/test_filters/test_magic_data.py` cases deliberately not ported:
  *
  * - `TestMagicData::test_call` integer-keyed positional kwargs row — Python's `AttrDict`
