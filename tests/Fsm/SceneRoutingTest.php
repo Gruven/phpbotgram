@@ -8,7 +8,7 @@ use Closure;
 use Gruven\PhpBotGram\Dispatcher\Router;
 use Gruven\PhpBotGram\Filters\StateFilter;
 use Gruven\PhpBotGram\Fsm\After;
-use Gruven\PhpBotGram\Fsm\Exception\SceneException;
+use Gruven\PhpBotGram\Exceptions\SceneException;
 use Gruven\PhpBotGram\Fsm\FsmContext;
 use Gruven\PhpBotGram\Fsm\Scene;
 use Gruven\PhpBotGram\Fsm\Scene\Attribute\OnCallbackQuery;

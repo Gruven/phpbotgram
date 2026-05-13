@@ -8,7 +8,7 @@ use Closure;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Router;
-use Gruven\PhpBotGram\Fsm\Exception\SceneException;
+use Gruven\PhpBotGram\Exceptions\SceneException;
 use Gruven\PhpBotGram\Fsm\FsmContext;
 use Gruven\PhpBotGram\Fsm\Scene;
 use Gruven\PhpBotGram\Fsm\State;

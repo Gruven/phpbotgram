@@ -90,12 +90,17 @@ final class DispatcherTest extends TestCase
     // wrap each invocation again when `propagateEvent` recurses through
     // sub-routers, doubling `UserContextMiddleware::resolveContext()` runs
     // and duplicating exception handling in `ErrorsMiddleware`.
-    $dispatcher = new Dispatcher();
+    //
+    // disableFsm: true so the assertion reads the baseline without the
+    // Phase 5 FsmContextMiddleware (which is correctly placed on per-observer
+    // outer middleware chains — tested separately in FsmIntegrationTest).
+    $dispatcher = new Dispatcher(disableFsm: true);
 
     foreach ($dispatcher->observers as $name => $observer) {
       // After the fix, observers do NOT carry the dispatcher-level chain
       // themselves — neither the 25 update observers nor the errors
-      // observer should have anything pre-installed at construction time.
+      // observer should have anything pre-installed at construction time
+      // when FSM is disabled.
       self::assertCount(
         0,
         $observer->outerMiddleware,

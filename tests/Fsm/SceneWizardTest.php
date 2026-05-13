@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Fsm;
 
-use Gruven\PhpBotGram\Fsm\Exception\SceneException;
+use Gruven\PhpBotGram\Exceptions\SceneException;
 use Gruven\PhpBotGram\Fsm\FsmContext;
 use Gruven\PhpBotGram\Fsm\Scene;
 use Gruven\PhpBotGram\Fsm\Scene\HandlerContainer;

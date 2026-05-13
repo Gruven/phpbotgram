@@ -7,7 +7,7 @@ namespace Gruven\PhpBotGram\Tests\Fsm\Scene;
 use Closure;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
 use Gruven\PhpBotGram\Dispatcher\Router;
-use Gruven\PhpBotGram\Fsm\Exception\SceneException;
+use Gruven\PhpBotGram\Exceptions\SceneException;
 use Gruven\PhpBotGram\Fsm\FsmContext;
 use Gruven\PhpBotGram\Fsm\Scene;
 use Gruven\PhpBotGram\Fsm\Scene\SceneConfig;
@@ -46,7 +46,9 @@ final class SceneRegistryTest extends TestCase
 
   private function makeDispatcher(): Dispatcher
   {
-    return new Dispatcher('test_dp');
+    // disableFsm: true so the test baseline has 0 outer middlewares and
+    // SceneRegistry is the only middleware adder under test.
+    return new Dispatcher('test_dp', disableFsm: true);
   }
 
   private function makeContext(): FsmContext
