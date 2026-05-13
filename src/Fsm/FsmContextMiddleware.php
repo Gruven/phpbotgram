@@ -38,7 +38,7 @@ final class FsmContextMiddleware extends BaseMiddleware
   public const string FSM_STORAGE_KEY = 'fsm_storage';
 
   public function __construct(
-    private readonly BaseStorage $storage,
+    public readonly BaseStorage $storage,
     private readonly BaseEventIsolation $eventsIsolation,
     private readonly FsmStrategy $strategy = FsmStrategy::UserInChat,
   ) {}

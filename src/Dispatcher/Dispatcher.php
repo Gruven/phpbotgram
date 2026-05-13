@@ -28,6 +28,12 @@ use Gruven\PhpBotGram\Exceptions\TelegramApiException;
 use Gruven\PhpBotGram\Exceptions\TelegramNetworkException;
 use Gruven\PhpBotGram\Exceptions\TelegramRetryAfter;
 use Gruven\PhpBotGram\Exceptions\UpdateTypeLookupException;
+use Gruven\PhpBotGram\Fsm\FsmContextMiddleware;
+use Gruven\PhpBotGram\Fsm\FsmStrategy;
+use Gruven\PhpBotGram\Fsm\Storage\BaseEventIsolation;
+use Gruven\PhpBotGram\Fsm\Storage\BaseStorage;
+use Gruven\PhpBotGram\Fsm\Storage\MemoryStorage;
+use Gruven\PhpBotGram\Fsm\Storage\SimpleEventIsolation;
 use Gruven\PhpBotGram\Methods\GetUpdates;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Types\TelegramObject;
@@ -86,9 +92,12 @@ use Throwable;
  *   `$dispatcherMiddlewares` list and wraps it around `propagateEvent`
  *   inside `feedUpdate`, achieving the same wire shape (middleware wraps
  *   the whole tree exactly once) without an extra synthetic observer.
- * - **No FSM / storage / events_isolation / disable_fsm parameters.** Those
- *   are Phase 5 territory and will be added when `FSMContextMiddleware`
- *   lands. The constructor takes only `$name` for now.
+ * - **FSM auto-wiring.** When `$disableFsm` is `false` (the default) the
+ *   constructor builds a `FsmContextMiddleware` from the supplied (or
+ *   defaulted) `$storage` / `$fsmStrategy` / `$eventsIsolation` parameters
+ *   and registers it as an outer middleware on every Telegram observer
+ *   except `error`. Pass `disableFsm: true` to skip this wiring entirely
+ *   (useful for bots that have no state-gated handlers).
  * - **`Bot::setCurrent` instead of `with bot.context():`.** PHP's FiberLocal
  *   (via `Revolt\EventLoop\FiberLocal`) is the closest analogue to Python's
  *   `contextvars`. The try/finally guard ensures the binding is unset even
@@ -311,8 +320,27 @@ class Dispatcher extends Router
    */
   private array $dispatcherMiddlewares;
 
-  public function __construct(?string $name = null, ?float $webhookTimeoutSeconds = null)
-  {
+  /**
+   * The FSM context middleware auto-wired at construction time.
+   *
+   * Set when FSM is enabled (`$disableFsm = false`); left unset when FSM
+   * is disabled. Exposed so callers can call `$dispatcher->fsm->close()`
+   * directly (or read FSM options in tests). Mirrors upstream's
+   * `self.fsm: FSMContextMiddleware` property at `dispatcher.py:105`.
+   *
+   * Use `$dispatcher->storage()` as a shorthand for the storage accessor.
+   */
+  public readonly FsmContextMiddleware $fsm;
+
+  public function __construct(
+    ?string $name = null,
+    ?float $webhookTimeoutSeconds = null,
+    // FSM wiring (Phase 5):
+    ?BaseStorage $storage = null,
+    FsmStrategy $fsmStrategy = FsmStrategy::UserInChat,
+    ?BaseEventIsolation $eventsIsolation = null,
+    bool $disableFsm = false,
+  ) {
     parent::__construct($name);
     $this->runningLock = new LocalMutex();
     $this->webhookTimeoutSeconds = $webhookTimeoutSeconds ?? self::WEBHOOK_TIMEOUT_SECONDS;
@@ -336,6 +364,59 @@ class Dispatcher extends Router
       new UserContextMiddleware(),
       new ErrorsMiddleware($errorsTrigger),
     ];
+
+    // FSM auto-wiring. When FSM is enabled, build a FsmContextMiddleware
+    // (defaulting to MemoryStorage + SimpleEventIsolation) and register it
+    // as outer middleware on every Telegram observer except `error`.
+    //
+    // Mirrors upstream `Dispatcher.__init__` at `dispatcher.py:58-76`
+    // which attaches FSMContextMiddleware to `self.update` observer.
+    // The port attaches to each concrete Telegram observer (not a synthetic
+    // `update` observer) to match SceneRegistry's per-observer wiring
+    // pattern (`SceneRegistry::setupMiddleware`). The `error` observer is
+    // excluded — it carries `ErrorEvent`, not a Telegram update, and the
+    // FSM context keys it would inject are meaningless there.
+    if (!$disableFsm) {
+      $storage ??= new MemoryStorage();
+      $eventsIsolation ??= new SimpleEventIsolation();
+      $this->fsm = new FsmContextMiddleware(
+        storage: $storage,
+        eventsIsolation: $eventsIsolation,
+        strategy: $fsmStrategy,
+      );
+
+      foreach ($this->observers as $observerName => $observer) {
+        if ($observerName === 'error') {
+          continue;
+        }
+
+        $observer->outerMiddleware($this->fsm);
+      }
+
+      // Close storage + event-isolation on dispatcher shutdown so pooled
+      // connections (Redis, Mongo) are released cleanly. Mirrors upstream
+      // `dispatcher.py:76` `on_shutdown(fsm.close)`.
+      $fsmMiddleware = $this->fsm;
+      $this->shutdown->register(static function () use ($fsmMiddleware): void {
+        $fsmMiddleware->close();
+      });
+    }
+  }
+
+  /**
+   * Return the FSM storage instance.
+   *
+   * Mirrors upstream `Dispatcher.storage` property (`dispatcher.py:108`).
+   *
+   * @throws \BadMethodCallException When FSM is disabled (`disableFsm: true`).
+   */
+  public function storage(): BaseStorage
+  {
+    if (!isset($this->fsm)) {
+      throw new \BadMethodCallException('FSM is disabled on this Dispatcher (disableFsm: true).');
+    }
+
+    return $this->fsm->storage;
   }
 
   /**

@@ -17,6 +17,7 @@ use Gruven\PhpBotGram\Fsm\Storage\DisabledEventIsolation;
 use Gruven\PhpBotGram\Fsm\Storage\MemoryStorage;
 use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
+use Gruven\PhpBotGram\Types\CallbackQuery;
 use Gruven\PhpBotGram\Types\Chat;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\Message;
@@ -29,11 +30,9 @@ use PHPUnit\Framework\TestCase;
  * `FsmContextMiddleware` and assert that `StateFilter` receives the
  * `raw_state` kwarg injected by the middleware.
  *
- * Critical #1 regression guard: before the fix, `FsmContextMiddleware` wrote
- * `raw_state` (snake_case) but `StateFilter`, `State::__invoke`, and
- * `StatesGroup::match` read `rawState` (camelCase) — meaning every
- * scene-state-gated handler silently fell through even when the FSM state
- * matched.
+ * Critical #1 regression guard: the Dispatcher constructor auto-wires
+ * `FsmContextMiddleware` on every Telegram observer when FSM is enabled
+ * (the default). Users no longer need to call `outerMiddleware()` manually.
  */
 
 // ---------------------------------------------------------------------------
@@ -95,27 +94,35 @@ final class FsmIntegrationTest extends TestCase
   }
 
   /**
-   * Build a Dispatcher with `FsmContextMiddleware` wired as an outer
-   * middleware on the `message` observer.
+   * Build a minimal Update carrying a CallbackQuery from the canonical test user.
+   */
+  private function makeCallbackQueryUpdate(string $callbackData = 'btn'): Update
+  {
+    $user = new User(id: self::USER_ID, isBot: false, firstName: 'Tester');
+    $callbackQuery = new CallbackQuery(
+      id: 'cq-1',
+      fromUser: $user,
+      chatInstance: 'ci',
+      data: $callbackData,
+    );
+
+    return new Update(updateId: 2, callbackQuery: $callbackQuery);
+  }
+
+  /**
+   * Build a Dispatcher with FSM auto-wired by the constructor.
    *
-   * The dispatcher-level chain (UserContextMiddleware → ErrorsMiddleware)
-   * runs first (injecting `event_context`), and the per-observer outer
-   * middleware runs inside `propagateEvent`, so `FsmContextMiddleware`
-   * sees the fully populated `event_context` from `UserContextMiddleware`.
+   * The constructor now accepts `storage:` directly and attaches
+   * `FsmContextMiddleware` to every Telegram observer, so callers no longer
+   * need to call `$observer->outerMiddleware(...)` manually.
    */
   private function makeDispatcher(): Dispatcher
   {
-    $dispatcher = new Dispatcher();
-
-    $fsmMiddleware = new FsmContextMiddleware(
+    return new Dispatcher(
       storage: $this->storage,
+      fsmStrategy: FsmStrategy::UserInChat,
       eventsIsolation: new DisabledEventIsolation(),
-      strategy: FsmStrategy::UserInChat,
     );
-
-    $dispatcher->message->outerMiddleware($fsmMiddleware);
-
-    return $dispatcher;
   }
 
   /**
@@ -129,6 +136,71 @@ final class FsmIntegrationTest extends TestCase
       chatId: self::CHAT_ID,
       userId: self::USER_ID,
     );
+  }
+
+  // ------------------------------------------------------------------ //
+  // Auto-wiring: constructor injects FSM globally
+  // ------------------------------------------------------------------ //
+
+  /**
+   * `new Dispatcher(storage: $storage)` wires FSM globally — the returned
+   * dispatcher exposes `$dispatcher->storage()` returning the same storage
+   * instance.
+   */
+  public function testDispatcherConstructorExposesStorageAccessor(): void
+  {
+    $storage = new MemoryStorage();
+    $dispatcher = new Dispatcher(storage: $storage);
+
+    self::assertSame($storage, $dispatcher->storage());
+  }
+
+  /**
+   * `new Dispatcher(disableFsm: true)` does NOT wire FSM — `$dispatcher->storage()`
+   * throws and handlers do NOT see `raw_state` / `state` in kwargs.
+   */
+  public function testDispatcherWithDisableFsmDoesNotInjectRawState(): void
+  {
+    $dispatcher = new Dispatcher(disableFsm: true);
+
+    $this->expectException(\BadMethodCallException::class);
+    $dispatcher->storage();
+  }
+
+  /**
+   * A handler registered on `callback_query` also benefits from FSM auto-wiring
+   * (not just `message`). Proves the middleware is registered on every observer.
+   */
+  public function testFsmIsWiredOnCallbackQueryObserverToo(): void
+  {
+    $storage = new MemoryStorage();
+    $dispatcher = new Dispatcher(
+      storage: $storage,
+      fsmStrategy: FsmStrategy::UserInChat,
+      eventsIsolation: new DisabledEventIsolation(),
+    );
+
+    // Use the same user/bot key shape that UserInChat derives for a callback_query
+    // (no chat_id on a bare CallbackQuery, so chatId falls back to userId).
+    $key = new StorageKey(
+      botId: self::BOT_ID,
+      chatId: self::USER_ID,
+      userId: self::USER_ID,
+    );
+    $storage->setState($key, 'cb:active');
+
+    $capturedRawState = null;
+    $dispatcher->callbackQuery->register(
+      static function (mixed $raw_state = null) use (&$capturedRawState): string {
+        $capturedRawState = $raw_state;
+
+        return 'callback-fsm';
+      },
+    );
+
+    $dispatcher->feedUpdate($this->bot, $this->makeCallbackQueryUpdate());
+
+    self::assertSame('cb:active', $capturedRawState, 'FSM must be wired on callback_query observer too.');
   }
 
   // ------------------------------------------------------------------ //
