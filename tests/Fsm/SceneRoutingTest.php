@@ -235,6 +235,62 @@ final class SceneRoutingTest extends TestCase
     $handler(new stdClass());
   }
 
+  /**
+   * `asHandler(checkActive: false)` passes `false` positionally to
+   * `ScenesManager::enter`, so the active-scene-exit step is skipped.
+   *
+   * Regression: before the fix, `checkActive` had no dedicated parameter;
+   * passing it as a named kwarg would either be silently ignored (wrong
+   * semantics) or cause a PHP duplicate-named-arg Error (crash).
+   */
+  public function testAsHandlerAcceptsExplicitCheckActiveFalse(): void
+  {
+    $entered = [];
+    $fakeScenes = $this->makeFakeScenesManager($entered);
+
+    // Pass checkActive: false via the dedicated top-level parameter.
+    $handler = SimpleMessageScene::asHandler(checkActive: false);
+
+    try {
+      $handler(new stdClass(), scenes: $fakeScenes);
+    } catch (SceneException $e) {
+      // The spy registry throws after recording — expected.
+      self::assertStringStartsWith('spy:', $e->getMessage());
+    }
+
+    // The scene must still be entered (checkActive only affects exit, not entry).
+    self::assertCount(1, $entered, 'scenes->enter() must be called exactly once');
+    self::assertSame(SimpleMessageScene::class, $entered[0]);
+  }
+
+  /**
+   * When the middleware bag contains a `checkActive` key, no Error is thrown.
+   *
+   * Regression: before the fix, a kwarg named `checkActive` from the
+   * middleware bag would duplicate-bind to `ScenesManager::enter`'s
+   * `$checkActive` parameter and PHP would throw an Error (duplicate named
+   * argument). The defensive `unset($mergedKwargs['checkActive'])` silently
+   * strips it so the explicit `$checkActive` value always wins.
+   */
+  public function testAsHandlerSilentlyStripsCheckActiveFromKwargBag(): void
+  {
+    $entered = [];
+    $fakeScenes = $this->makeFakeScenesManager($entered);
+
+    $handler = SimpleMessageScene::asHandler();
+
+    // Inject `checkActive` into the middleware bag — must NOT throw an Error.
+    try {
+      $handler(new stdClass(), scenes: $fakeScenes, checkActive: false);
+    } catch (SceneException $e) {
+      // The spy registry throws after recording — expected.
+      self::assertStringStartsWith('spy:', $e->getMessage());
+    }
+
+    // Scene must still be entered despite the checkActive kwarg collision.
+    self::assertCount(1, $entered, 'scenes->enter() must be called exactly once');
+  }
+
   // ------------------------------------------------------------------ //
   // 4. SceneHandlerWrapper — handler invocation
   // ------------------------------------------------------------------ //

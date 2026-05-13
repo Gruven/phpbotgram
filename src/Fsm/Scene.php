@@ -257,24 +257,43 @@ abstract class Scene
    * Return a callable that enters this scene when invoked.
    *
    * The returned closure is suitable for registering as a handler on any
-   * observer.  When invoked it calls `$scenes->enter(static::class)` where
-   * `$scenes` is the `ScenesManager` injected by `SceneRegistry` middleware.
+   * observer.  When invoked it calls `$scenes->enter(static::class, $checkActive)`
+   * where `$scenes` is the `ScenesManager` injected by `SceneRegistry` middleware.
    *
-   * Mirrors `Scene.as_handler()` (`aiogram/fsm/scene.py:423-438`), passing
-   * the full merged kwargs to `scenes->enter()` without stripping any keys:
+   * Mirrors `Scene.as_handler()` (`aiogram/fsm/scene.py:423-438`).
    *
-   *   async def enter_to_scene_handler(event, scenes, **middleware_kwargs):
-   *       await scenes.enter(cls, **{**handler_kwargs, **middleware_kwargs})
+   * ## `$checkActive` — top-level parameter, not a kwarg
    *
+   * `$checkActive` is declared as an explicit typed parameter rather than
+   * flowing through `...$handlerKwargs`.  This avoids a PHP duplicate-named-arg
+   * error that would crash production when a middleware-injected kwarg named
+   * `checkActive` collides with the same-named key being forwarded positionally
+   * to `ScenesManager::enter`.
+   *
+   *   // Correct — uses the dedicated parameter:
+   *   MyScene::asHandler(checkActive: false)
+   *
+   * ## `checkActive` in the merged kwargs bag — silently dropped
+   *
+   * Any kwarg literally named `checkActive` that arrives via `$handlerKwargs`
+   * or the middleware bag is removed from the merged array before the `enter()`
+   * call.  This prevents the duplicate-named-arg crash for callers that
+   * inadvertently include a `checkActive` key in their own kwargs payload.
+   * The safety property from Cycle 1 is preserved: any *other* duplicate key
+   * collision still produces a PHP Error at the `enter()` call site.
+   *
+   * @param bool $checkActive When `true` (default) the currently active scene
+   *                          is exited before entering this one.  Pass `false`
+   *                          to skip that step (e.g. for chained transitions).
    * @param mixed ...$handlerKwargs Extra kwargs merged into the `enter()` call.
    *
    * @return Closure(object, mixed...): void
    */
-  public static function asHandler(mixed ...$handlerKwargs): Closure
+  public static function asHandler(bool $checkActive = true, mixed ...$handlerKwargs): Closure
   {
     $sceneClass = static::class;
 
-    return static function (object $event, mixed ...$middlewareKwargs) use ($sceneClass, $handlerKwargs): void {
+    return static function (object $event, mixed ...$middlewareKwargs) use ($sceneClass, $checkActive, $handlerKwargs): void {
       $scenes = $middlewareKwargs['scenes'] ?? null;
 
       if (!$scenes instanceof ScenesManager) {
@@ -286,10 +305,14 @@ abstract class Scene
 
       // Merge handler_kwargs into middleware_kwargs (middleware_kwargs wins
       // on key collision — mirrors Python's `{**handler_kwargs, **middleware_kwargs}`).
-      // Retain only string-keyed entries as named kwargs so they flow into the
-      // variadic `...$kwargs` parameter of `enter()`.  Integer keys are stripped
-      // to prevent positional conflicts; all string-keyed entries (including
-      // `checkActive`) are forwarded, matching upstream's full-kwargs pass-through.
+      // Retain only string-keyed entries so they flow into the variadic
+      // `...$kwargs` parameter of `enter()`. Integer keys are stripped to
+      // prevent positional conflicts.
+      //
+      // Defensive: strip `checkActive` from the merged bag — it is already
+      // bound positionally to the `$checkActive` parameter above. A kwarg
+      // literally named `checkActive` would otherwise duplicate-bind and PHP
+      // would throw an Error.
       /** @var array<string, mixed> $mergedKwargs */
       $mergedKwargs = [];
 
@@ -299,7 +322,9 @@ abstract class Scene
         }
       }
 
-      $scenes->enter($sceneClass, true, ...$mergedKwargs);
+      unset($mergedKwargs['checkActive']);
+
+      $scenes->enter($sceneClass, $checkActive, ...$mergedKwargs);
     };
   }
 
