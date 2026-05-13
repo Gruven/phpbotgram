@@ -10,7 +10,6 @@ use LogicException;
 use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionParameter;
-use ReflectionProperty;
 use Stringable;
 use UnitEnum;
 
@@ -34,17 +33,19 @@ use UnitEnum;
  *     ) {}
  *   }
  *
- * The wire form is `prefix:val1:val2:...`. `pack()` walks the public
- * properties via reflection (preserving constructor declaration order)
- * and encodes each via the type-encoding table below. `unpack()` reads
- * back into the constructor by parameter name.
+ * The wire form is `prefix:val1:val2:...`. Both `pack()` and `unpack()`
+ * iterate the **constructor parameter list** to determine which fields to
+ * serialise and in what order. This guarantees:
  *
- * Constraint: **constructor parameter order MUST match the public
- * property declaration order.** With promoted properties this is the
- * natural shape — the two orders are necessarily identical — so the
- * constraint only bites if a subclass mixes promoted and explicit
- * properties. Subclasses that need that pattern should override
- * `pack()`/`unpack()` themselves.
+ * - Field order is always the constructor declaration order for both
+ *   directions.
+ * - Non-promoted `public readonly` properties assigned in the constructor
+ *   body (derived/computed fields) are excluded from the wire form, just as
+ *   Pydantic's `model_dump()` only includes model *fields* (declared in
+ *   `__init__`), not arbitrary attributes set inside the body.
+ *
+ * The standard subclass shape remains constructor-promoted properties only,
+ * which satisfies both constraints automatically.
  *
  * # Type-encoding table
  *
@@ -83,9 +84,22 @@ abstract class CallbackData
   /**
    * Encode `$this` into the wire form `prefix:val1:val2:...`.
    *
+   * Iterates the constructor's parameter list (the same source `unpack()`
+   * uses) rather than `getProperties(IS_PUBLIC)`. This guarantees:
+   *
+   * 1. Field order is always the constructor declaration order, matching
+   *    `unpack()`'s iteration order exactly.
+   * 2. Non-promoted `public readonly` properties that are computed inside
+   *    the constructor body are excluded from the wire form — only
+   *    constructor parameters are serialised, mirroring upstream's
+   *    `model_dump()` which iterates Pydantic model *fields* (declared in
+   *    the model's `__init__` signature), not arbitrary attributes set in
+   *    the body.
+   *
    * @throws LogicException If the subclass is missing the
-   *                        `#[CallbackPrefix]` attribute, contains an unencodable property
-   *                        value, or the result exceeds 64 bytes.
+   *                        `#[CallbackPrefix]` attribute, has no constructor,
+   *                        contains an unencodable property value, or the
+   *                        result exceeds 64 bytes.
    */
   public function pack(): string
   {
@@ -93,15 +107,17 @@ abstract class CallbackData
     $parts = [$meta->prefix];
 
     $refl = new ReflectionClass(static::class);
+    $ctor = $refl->getConstructor();
 
-    foreach ($refl->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
-      if ($prop->isStatic()) {
-        // Skip class-level constants/static helpers — only instance
-        // properties carry payload data. Matches upstream's
-        // `model_dump` which iterates fields, not class vars.
-        continue;
-      }
+    if ($ctor === null) {
+      throw new LogicException(sprintf(
+        'CallbackData subclass %s has no constructor; cannot pack',
+        static::class,
+      ));
+    }
 
+    foreach ($ctor->getParameters() as $param) {
+      $prop = $refl->getProperty($param->getName());
       $encoded = self::encodeValue($prop->getValue($this));
 
       if (str_contains($encoded, $meta->sep)) {
@@ -111,7 +127,7 @@ abstract class CallbackData
         // is bad input, not a structural defect.
         throw new InvalidArgumentException(sprintf(
           'CallbackData value for "%s" contains separator "%s": %s',
-          $prop->getName(),
+          $param->getName(),
           $meta->sep,
           $encoded,
         ));

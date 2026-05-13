@@ -448,6 +448,28 @@ final class CallbackDataTest extends TestCase
     self::assertSame('x', $decoded->a);
     self::assertSame('y', $decoded->b);
   }
+
+  public function testPackOmitsNonConstructorPublicProperties(): void
+  {
+    // `pack()` must iterate the constructor parameter list, not ALL public
+    // properties. A non-promoted `public readonly` property assigned inside
+    // the constructor body is a derived/computed field and must be excluded
+    // from the wire form — mirroring upstream's `model_dump()` which only
+    // serialises Pydantic model fields (constructor parameters), not
+    // arbitrary attributes set in the body.
+    //
+    // Round-trip: `pack()` produces `'prefix:hi'` (only $foo; $derived is
+    // excluded). `unpack('prefix:hi')` reconstructs the object and the
+    // constructor re-derives `$derived = strtoupper($foo) = 'HI'`.
+    $packed = (new CbDataWithDerivedProp('hi'))->pack();
+
+    self::assertSame('drvd:hi', $packed, 'derived prop must not appear on the wire');
+
+    $decoded = CbDataWithDerivedProp::unpack('drvd:hi');
+
+    self::assertSame('hi', $decoded->foo);
+    self::assertSame('HI', $decoded->derived, 'derived prop must be re-computed by the constructor on unpack');
+  }
 }
 
 // -------------------------------------------------------------------------
@@ -709,4 +731,25 @@ final class CbDataNullableIntNoDefault extends CallbackData
     public readonly int $chatId,
     public readonly ?int $threadId,
   ) {}
+}
+
+/**
+ * Fixture for Issue 7: has a non-promoted `public readonly string $derived`
+ * assigned in the constructor body. `pack()` must serialise only `$foo`
+ * (the constructor parameter); `$derived` must be excluded from the wire
+ * form and re-computed on `unpack()`.
+ *
+ * @internal
+ */
+#[CallbackPrefix('drvd')]
+final class CbDataWithDerivedProp extends CallbackData
+{
+  /** Derived / computed field — set in body, NOT a constructor parameter. */
+  public readonly string $derived;
+
+  public function __construct(
+    public readonly string $foo,
+  ) {
+    $this->derived = strtoupper($foo);
+  }
 }
