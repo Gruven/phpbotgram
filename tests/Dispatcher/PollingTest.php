@@ -588,6 +588,69 @@ final class PollingTest extends TestCase
     self::assertStringContainsString('unknown update type', strtolower((string)$warning));
   }
 
+  public function testPollingForConcurrentSwallowsUnknownUpdateTypeWithWarning(): void
+  {
+    // Fix I1: in concurrent mode (`handleAsTasks` non-null) the per-update
+    // dispatch runs inside `async(...)`, so an `UpdateTypeLookupException`
+    // thrown by `feedUpdate` lands on the spawned Future — NOT the
+    // synchronous call stack `pollingFor`'s outer catch can see. Without
+    // the in-async catch the failure would surface as an "unhandled future"
+    // warning at GC and the polling loop would continue blindly.
+    //
+    // The fix mirrors Fix C2 by moving the typed catch INSIDE the async
+    // closure, swallowing with an `E_USER_WARNING` so the polling loop
+    // keeps processing subsequent updates. We assert both effects: the
+    // next (known) update is handled AND a warning fired.
+    $dispatcher = new Dispatcher();
+    $bot = new MockedBot();
+    $handled = [];
+    $dispatcher->message->register(static function (Update $event_update) use (
+      &$handled,
+      $dispatcher,
+    ): void {
+      $handled[] = $event_update->updateId;
+      $dispatcher->stopPolling();
+    });
+
+    $unknown = new Update(updateId: 9001); // No event slot populated.
+    $bot->addResultFor(GetUpdates::class, ok: true, result: [
+      $unknown,
+      self::makeMessageUpdate(9002, 'after unknown'),
+    ]);
+    // Round 2 empty — the polling loop needs at least one more poll round
+    // available so the concurrent-dispatch back-pressure doesn't stall on
+    // a missing canned response while the second update's fiber finishes.
+    $bot->addResultFor(GetUpdates::class, ok: true, result: []);
+
+    $warning = null;
+    set_error_handler(static function (int $errno, string $errstr) use (&$warning): bool {
+      if ($errno === \E_USER_WARNING && $warning === null) {
+        $warning = $errstr;
+      }
+
+      return true;
+    });
+
+    try {
+      $this->runAsync(static function () use ($dispatcher, $bot): void {
+        $dispatcher->startPolling(new PollingOptions(handleAsTasks: 2), $bot)->await();
+      });
+    } finally {
+      restore_error_handler();
+    }
+
+    self::assertSame(
+      [9002],
+      $handled,
+      'Concurrent polling must skip the unknown update and dispatch the next one.',
+    );
+    self::assertNotNull(
+      $warning,
+      'Concurrent polling must emit a RuntimeWarning-equivalent on unknown update types.',
+    );
+    self::assertStringContainsString('unknown update type', strtolower((string)$warning));
+  }
+
   public function testListenUpdatesPropagatesRequestTimeoutOverPollingBudget(): void
   {
     // Fix I5: `Bot::__invoke($method, $timeout)`'s second arg is the HTTP

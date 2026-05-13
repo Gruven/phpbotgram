@@ -655,6 +655,19 @@ class Dispatcher extends Router
       : $options->allowedUpdates;
 
     while ($this->stopSignal === null || !$this->stopSignal->isComplete()) {
+      // Yield to the event loop once per round so any pending fibers
+      // (e.g. concurrent per-update tasks spawned in `pollingFor`, or
+      // a SIGTERM handler waiting to fire `stopPolling`) get a chance
+      // to run before we re-enter `getUpdates`. In real polling the
+      // HTTP transport's `getUpdates` call itself yields on the network
+      // socket, so this explicit `delay(0)` is the mock-test equivalent
+      // — it costs one event-loop tick per round, which is negligible
+      // compared to the round-trip time of an actual Telegram poll
+      // (median ~50ms on long-poll). Without this, the polling fiber
+      // would spin through canned responses synchronously in mocks and
+      // never let signal-setters or per-update fibers actually run.
+      delay(0);
+
       // Fix I5: pass `$bot->session->timeout + $options->pollingTimeout`
       // as the HTTP transport timeout to `Bot::__invoke($method,
       // $timeout)`. Without this floor a mid-long-poll HTTP timeout
@@ -749,6 +762,12 @@ class Dispatcher extends Router
       // (`dispatcher.py:267-279`); the port catches the typed exception at
       // the dispatch entry-point instead since we don't run the synthetic
       // `update` observer.
+      //
+      // Fix I1: in the CONCURRENT branch the typed catch lives INSIDE the
+      // async() closure — exceptions thrown by `feedUpdate` running inside
+      // the spawned Future would otherwise land on the future state, not
+      // this synchronous frame, and surface as an "unhandled future" warning
+      // at GC time.
       try {
         if ($semaphore === null) {
           // Serial dispatch: every handler runs to completion before the
@@ -768,6 +787,19 @@ class Dispatcher extends Router
         $task = async(function () use ($bot, $update, $lock): void {
           try {
             $this->feedUpdate($bot, $update);
+          } catch (UpdateTypeLookupException $e) {
+            // Fix I1: swallow forward-compat unknown update types from
+            // the spawned future. Without this catch the exception would
+            // become an "unhandled future" warning at GC time and the
+            // polling loop would continue blindly. Mirrors the outer
+            // serial-branch catch (above) with the same warning shape.
+            trigger_error(
+              sprintf(
+                'Detected unknown update type, skipping: %s. Telegram may have introduced new update kinds; consider syncing the schema.',
+                $e->getMessage(),
+              ),
+              \E_USER_WARNING,
+            );
           } finally {
             $lock->release();
           }
