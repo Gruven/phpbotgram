@@ -15,7 +15,6 @@ use Gruven\PhpBotGram\Fsm\State;
 use Gruven\PhpBotGram\Fsm\Storage\MemoryStorage;
 use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 use stdClass;
 
 /**
@@ -57,42 +56,28 @@ final class SceneTest extends TestCase
   }
 
   /**
-   * A subclass with `#[SceneState]` (null state) derives the state from
-   * the class's short name in lowercase.
+   * A subclass with `#[SceneState]` (no argument, state = null) returns null
+   * from `sceneState()`, mirroring upstream's `state=None` default.
    */
-  public function testNullStateDefaultsToLowercaseClassName(): void
+  public function testNullStateAttributeReturnsNull(): void
   {
-    // Anonymous class short name starts with "class@anonymous" — we test
-    // that the explicit null path calls strtolower(shortName).
-    // Because anonymous classes have dynamic names, we use a named approach
-    // via a local named class registered at test-time.
-
-    // Create a named subclass in the test namespace.
     /** @var class-string<Scene> $class */
     $class = $this->makeNamedScene(null);
 
-    $state = $class::sceneState();
-
-    // The short name is the anonymous class short name; we just check it's
-    // a non-empty string (the exact value depends on the anonymous class name).
-    self::assertIsString($state);
-    self::assertNotEmpty($state);
+    self::assertNull($class::sceneState());
   }
 
   /**
-   * A subclass without any `#[SceneState]` attribute still returns the
-   * lowercase short class name as the default state.
+   * A subclass without any `#[SceneState]` attribute returns `null` from
+   * `sceneState()`, mirroring upstream `Scene.__init_subclass__` which
+   * defaults `state` to `None` when the kwarg is absent.
    */
-  public function testNoAttributeDefaultsToLowercaseClassName(): void
+  public function testSceneStateReturnsNullWhenAttributeAbsent(): void
   {
     $wizard = $this->makeWizard();
     $scene = new class ($wizard) extends Scene {};
-    $ref = new ReflectionClass($scene);
 
-    $expected = strtolower($ref->getShortName());
-    $actual = $scene::sceneState();
-
-    self::assertSame($expected, $actual);
+    self::assertNull($scene::sceneState());
   }
 
   // ------------------------------------------------------------------ //

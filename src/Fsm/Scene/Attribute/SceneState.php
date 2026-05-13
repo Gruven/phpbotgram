@@ -15,16 +15,14 @@ use Attribute;
  * PHP has no `__init_subclass__` equivalent, so the state is declared via a
  * class-level attribute that `Scene::sceneState()` resolves via reflection.
  *
- * When `$state` is `null` (or the attribute is omitted entirely), callers
- * **should** derive the state name from the class's short name (lowercase).
- * That defaulting logic lives in `Scene::sceneState()` rather than here so
- * this attribute stays a pure data carrier.
+ * When `$state` is `null` or the attribute is omitted entirely,
+ * `Scene::sceneState()` returns `null`, mirroring upstream's `state=None`
+ * default.  Users who want a named FSM state must supply an explicit value:
  *
  *   #[SceneState('greeting')]
  *   final class GreetingScene extends Scene { ... }
  *
- *   // Implicit state defaults to lowercase short class name → 'welcome'
- *   #[SceneState]
+ *   // No attribute (or #[SceneState] with no argument) → sceneState() === null
  *   final class WelcomeScene extends Scene { ... }
  *
  * Constraints:
@@ -35,9 +33,9 @@ use Attribute;
 final readonly class SceneState
 {
   /**
-   * @param null|string $state Explicit FSM state string. Pass `null` (or
-   *                           omit the argument) to signal that the `Scene` base class should
-   *                           derive the state from the subclass's short class name.
+   * @param null|string $state Explicit FSM state string. When `null` (or
+   *                           omitted), `Scene::sceneState()` returns `null`,
+   *                           mirroring upstream's `state=None` default.
    */
   public function __construct(
     public ?string $state = null,

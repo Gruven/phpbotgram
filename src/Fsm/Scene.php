@@ -361,21 +361,20 @@ abstract class Scene
 
   /**
    * Return the FSM state string declared by the `#[SceneState]` attribute on
-   * this class (or a subclass), or derive a default from the class short name.
+   * this class (or a subclass), or `null` when no attribute is present.
    *
    * Resolution order:
    * 1. The `#[SceneState('explicit_state')]` attribute value (non-null).
-   * 2. If the attribute is present but `$state` is `null`, fall back to the
-   *    lowercase short class name (mirrors upstream's default where the state
-   *    name equals the class name in snake_case).
-   * 3. If the attribute is absent entirely, also fall back to the lowercase
-   *    short class name.
+   * 2. If the attribute is absent, or present with `$state = null`, return
+   *    `null`. Upstream `Scene.__init_subclass__` defaults `state` to `None`
+   *    when the `state=` kwarg is omitted; this port mirrors that behaviour.
+   *    Users who want a named state must supply `#[SceneState('mystate')]`.
    *
    * Mirrors the state-name resolution in `Scene.__init_subclass__`
    * (`aiogram/fsm/scene.py:318-322`).
    *
-   * @return null|string The resolved FSM state string, or `null` if the
-   *                     class has no short name (anonymous classes).
+   * @return null|string The resolved FSM state string, or `null` when no
+   *                     explicit state has been declared.
    */
   public static function sceneState(): ?string
   {
@@ -387,15 +386,10 @@ abstract class Scene
       /** @var SceneState $inst */
       $inst = $attrs[0]->newInstance();
 
-      if ($inst->state !== null) {
-        return $inst->state;
-      }
+      return $inst->state;
     }
 
-    // Default: lowercase short class name.
-    $shortName = $ref->getShortName();
-
-    return $shortName !== '' ? strtolower($shortName) : null;
+    return null;
   }
 
   // ------------------------------------------------------------------ //
