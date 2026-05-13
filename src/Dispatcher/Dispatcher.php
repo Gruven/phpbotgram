@@ -408,6 +408,13 @@ class Dispatcher extends Router
    *   the webhook adapter doesn't keep the HTTP socket open past the
    *   deadline.
    *
+   * **Update|array overload (Fix I3)**: the `$update` parameter accepts
+   * either an already-deserialised `Update` instance or a wire-shaped
+   * associative array (the typical HTTP body decoded via
+   * `json_decode($body, true)`). The array form hydrates via
+   * `Serializer::load(Update::class, ...)` before the dispatch runs —
+   * mirrors upstream's `dispatcher.py:443-444` overload.
+   *
    * Implementation notes:
    *
    * - The race is implemented via `Amp\Future\awaitFirst` against an
@@ -431,10 +438,20 @@ class Dispatcher extends Router
    *   on the same event loop driver that's hosting the dispatch fiber,
    *   so no cross-thread synchronisation is needed.
    *
+   * @param array<string, mixed>|Update $update Already-deserialised
+   *                                            `Update` or a wire-shaped (snake_case) associative array.
    * @param array<string, mixed> $kwargs
    */
-  public function feedWebhookUpdate(Bot $bot, Update $update, array $kwargs = []): mixed
+  public function feedWebhookUpdate(Bot $bot, array|Update $update, array $kwargs = []): mixed
   {
+    if (is_array($update)) {
+      // Wire-shape: snake_case associative array. Hydrate via the
+      // serializer with bot context so every nested TelegramObject
+      // sees `$bot` (parity with upstream's `Update.model_validate(...,
+      // context={"bot": bot})`).
+      /** @var Update $update */
+      $update = Serializer::load(Update::class, $update, $bot);
+    }
     $start = hrtime(true);
 
     /** @var Future<mixed> $dispatchTask */
@@ -510,7 +527,19 @@ class Dispatcher extends Router
    * cleanly to PHP. See spec § "Webhook response contract" for the
    * rationale.
    *
+   * **Return type deviation from spec**: the port returns `mixed`, not
+   * `void`. Upstream's `silent_call_request` returns whatever
+   * `await bot(result)` resolves to (the `TelegramMethod`'s
+   * `ReturnsType`), so a typed `mixed` is faithful to upstream — the
+   * spec's `void` was incorrect. Subclasses such as `RecordingDispatcher`
+   * lean on the `mixed` to return a sentinel (`null`) without driving the
+   * real bot call.
+   *
    * @param TelegramMethod<mixed> $method
+   *
+   * @return mixed Whatever `$bot($method)` resolves to (the method's
+   *               declared `ReturnsType`). Subclass overrides may return
+   *               any value, including `null` to suppress side effects.
    */
   public function silentCallRequest(Bot $bot, TelegramMethod $method): mixed
   {

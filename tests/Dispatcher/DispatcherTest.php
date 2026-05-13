@@ -15,7 +15,9 @@ use Gruven\PhpBotGram\Dispatcher\Middlewares\UserContextMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Router;
 use Gruven\PhpBotGram\Exceptions\UpdateTypeLookupException;
 use Gruven\PhpBotGram\Methods\GetMe;
+use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
+use Gruven\PhpBotGram\Tests\Support\RunAsyncTrait;
 use Gruven\PhpBotGram\Types\CallbackQuery;
 use Gruven\PhpBotGram\Types\Chat;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
@@ -43,6 +45,8 @@ use RuntimeException;
  */
 final class DispatcherTest extends TestCase
 {
+  use RunAsyncTrait;
+
   protected function tearDown(): void
   {
     // Defensively clear the FiberLocal `current bot` slot between tests so a
@@ -478,6 +482,40 @@ final class DispatcherTest extends TestCase
     $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
 
     self::assertSame(UnhandledSentinel::instance(), $result);
+  }
+
+  public function testFeedWebhookUpdateAcceptsRawArrayUpdate(): void
+  {
+    // Fix I3: feedWebhookUpdate's first positional `update` parameter accepts
+    // either an `Update` instance or a wire-shaped associative array. The
+    // array form is the canonical webhook adapter input (the HTTP body decoded
+    // with json_decode($body, true)). When given an array, the dispatcher
+    // hydrates it via `Serializer::load(Update::class, ...)` before running
+    // the dispatch chain. Mirrors upstream's `feed_webhook_update` overload
+    // at `dispatcher.py:436-444`.
+    $dispatcher = new Dispatcher();
+    $observed = null;
+    $dispatcher->message->register(static function (Update $event_update) use (&$observed): SendMessage {
+      $observed = $event_update;
+
+      return new SendMessage(chatId: $event_update->message?->chat->id ?? 0, text: 'echo');
+    });
+    $rawUpdate = [
+      'update_id' => 77,
+      'message' => [
+        'message_id' => 1,
+        'date' => 0,
+        'chat' => ['id' => 11, 'type' => 'private'],
+        'text' => 'hi raw',
+      ],
+    ];
+
+    $result = $this->runAsync(static fn() => $dispatcher->feedWebhookUpdate(new MockedBot(), $rawUpdate));
+
+    self::assertInstanceOf(SendMessage::class, $result);
+    self::assertInstanceOf(Update::class, $observed);
+    self::assertSame(77, $observed->updateId);
+    self::assertSame('hi raw', $observed->message?->text);
   }
 
   // -------------------------------------------------------------------------
