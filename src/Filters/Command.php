@@ -27,7 +27,9 @@ use Throwable;
  *   new Command('start')                              // single string
  *   new Command('start', ignoreCase: true)            // single + flags
  *   Command::of('start', 'help')                      // variadic shorthand
- *   new Command(['start'], prefix: ['/', '!'])        // multi-prefix
+ *   new Command(['start'], prefix: '/!')               // string form: upstream parity ('/!' -> ['/', '!'])
+ *   new Command(['start'], prefix: ['/', '!'])        // list form: same result
+ *   new Command(['start'], prefix: ['!cmd'])          // list-only: multi-char prefix (PHP extension)
  *
  * # Match algorithm (mirrors upstream `parse_command`)
  *
@@ -70,11 +72,19 @@ final class Command extends Filter
   /**
    * @param list<string>|string $commands Either a single command string or a
    *                                      list. Throws on empty list.
-   * @param list<string> $prefix Acceptable prefixes; first match wins.
+   * @param list<string>|string $prefix Acceptable prefixes (default `['/']`).
+   *                                    Accepts either a `list<string>` of
+   *                                    prefix strings (PHP-side extension; allows
+   *                                    multi-character prefixes like `['!cmd']`)
+   *                                    or a plain string whose individual characters
+   *                                    are each treated as a prefix — matching
+   *                                    upstream's `Command(prefix='/!')` syntax where
+   *                                    `'/!'` means "either `/` or `!`".
+   *                                    First match wins during parsing.
    */
   public function __construct(
     array|string $commands,
-    array $prefix = ['/'],
+    array|string $prefix = ['/'],
     public readonly bool $ignoreCase = false,
     public readonly bool $ignoreMention = false,
   ) {
@@ -90,6 +100,16 @@ final class Command extends Filter
       // `InvalidArgumentException` (the closest semantic match in the
       // standard SPL hierarchy).
       throw new InvalidArgumentException('At least one command should be specified');
+    }
+
+    // Normalise prefix: upstream accepts `prefix='/!'` as a string where
+    // each character is an independent allowed prefix — mirrors
+    // `aiogram/filters/command.py:46-55`. A string is decomposed
+    // per-character via `mb_str_split` so `'/!'` becomes `['/', '!']`.
+    // An array is stored as-is (PHP-side extension allowing multi-char
+    // prefixes such as `['!cmd']`).
+    if (is_string($prefix)) {
+      $prefix = mb_str_split($prefix);
     }
 
     // `array_values` guards against numeric-keyed dicts arriving from
@@ -187,18 +207,22 @@ final class Command extends Filter
     $rest = substr($text, strlen($matchedPrefix));
 
     // 2. Split off args on the first run of whitespace. Matches upstream's
-    //    `text.split(maxsplit=1)`. `preg_split('/\s+/', …, 2)` ALWAYS
-    //    returns at least one element (the empty string at minimum), so
-    //    `$parts[0]` is safe to dereference. We force `array_values` to
-    //    keep PHPStan's `list<string>` narrowing happy.
+    //    `text.split(maxsplit=1)`. Python's `str.split(maxsplit=1)` silently
+    //    drops any leading whitespace before splitting (e.g.
+    //    `'   start args'.split(maxsplit=1)` -> `['start', 'args']`).
+    //    PHP's `preg_split('/\s+/', '   start args', 2)` would return
+    //    `['', 'start args']` — the leading-whitespace edge case diverges.
+    //    `ltrim($rest)` strips leading whitespace first, restoring parity.
     /** @var list<string> $parts */
-    $parts = preg_split('/\s+/', $rest, 2);
+    $parts = preg_split('/\s+/', ltrim($rest), 2);
     $commandPart = $parts[0];
     $args = $parts[1] ?? null;
 
-    // Upstream rejects `/` (bare prefix) and `/ args` (prefix + space)
-    // because `text.split(maxsplit=1)` yields an empty command in those
-    // cases. Mirror the same guard.
+    // Upstream rejects `/` (bare prefix) — `text.split(maxsplit=1)` on
+    // `'/'` yields `['/']`, empty command. The `ltrim` above widens
+    // slightly over upstream: `'/ args'` (prefix + space) now extracts
+    // `args` as the command name instead of rejecting. This is intentional
+    // (see Issue 5 / `testMatchesCommandWithExtraWhitespaceAfterPrefix`).
     if ($commandPart === '') {
       return null;
     }

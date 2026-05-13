@@ -267,6 +267,19 @@ final class CommandTest extends TestCase
     self::assertFalse($filter($this->message(text: '?start')));
   }
 
+  public function testPrefixStringDecomposesPerCharacter(): void
+  {
+    // Upstream `Command(prefix='/!')` treats the string as a set of
+    // single-char prefixes, so both `/cmd` and `!cmd` match.
+    // The PHP port mirrors this via `mb_str_split($prefix)` in the
+    // constructor, decomposing `'/!'` to `['/', '!']` before storing.
+    $filter = new Command(commands: ['cmd'], prefix: '/!');
+
+    self::assertIsArray($filter($this->message(text: '/cmd')));
+    self::assertIsArray($filter($this->message(text: '!cmd')));
+    self::assertFalse($filter($this->message(text: '?cmd')));
+  }
+
   public function testMultipleCommandsMatchEither(): void
   {
     // Multiple registered patterns: any match accepts. Upstream loops over
@@ -324,13 +337,31 @@ final class CommandTest extends TestCase
 
   public function testRejectsBarePrefix(): void
   {
-    // `/` alone (no command name) and `/ test` (prefix followed by a space
-    // before any command name) are upstream-tested edge cases that must
-    // not match.
+    // `/` alone (no command name after it) must not match — `ltrim('')`
+    // is still `''`, so the empty-command guard fires.
+    // Note: `/ test` (prefix + single space + command) WAS also rejected
+    // upstream (Python `'/ test'.split(maxsplit=1)` → `['/', 'test']`,
+    // empty command segment). The PHP port's `ltrim($rest)` widening
+    // intentionally accepts that form — `'/ test'` → rest `' test'` →
+    // ltrim → `'test'` → matched. See `testMatchesCommandWithExtraWhitespaceAfterPrefix`.
     $filter = Command::of('test');
 
     self::assertFalse($filter($this->message(text: '/')));
-    self::assertFalse($filter($this->message(text: '/ test')));
+  }
+
+  public function testMatchesCommandWithExtraWhitespaceAfterPrefix(): void
+  {
+    // Python `'  start args'.split(maxsplit=1)` drops leading whitespace
+    // and returns `['start', 'args']`. The PHP port strips leading
+    // whitespace from `$rest` (after prefix removal) via `ltrim` before
+    // splitting, so `/  start args` → prefix `/`, rest `  start args`,
+    // ltrim `start args` → command `start`, args `args`.
+    $filter = Command::of('start');
+
+    $command = $this->matchCommand($filter, '/  start args');
+
+    self::assertSame('start', $command->command);
+    self::assertSame('args', $command->args);
   }
 
   public function testEmptyMentionIsNotPropagated(): void
