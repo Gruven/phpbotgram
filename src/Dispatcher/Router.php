@@ -380,18 +380,26 @@ class Router
    *    keys; the port is strict because our observer map is
    *    schema-derived and a missing key is unambiguously a bug
    *    (typo'd literal, stale code after a Phase 2 regen, …).
-   * 3. Run the local observer's `trigger`. Non-UNHANDLED return short-
-   *    circuits and is returned verbatim — including `null`, `false`,
-   *    `TelegramMethod` instances, etc.
-   * 4. On UNHANDLED, iterate `subRouters` depth-first; first child
-   *    to return non-UNHANDLED wins. Pure UNHANDLED across the whole
-   *    tree returns `UnhandledSentinel::instance()`.
+   * 3. Compose the local observer's outer middleware ONCE around an
+   *    inner closure that runs the local observer's raw `trigger()`
+   *    AND, on UNHANDLED, the depth-first sub-router walk. This is the
+   *    Fix I2 shape — the parent observer's outer middleware covers
+   *    sub-router handlers too. Mirrors upstream
+   *    `Router.propagate_event` (`router.py:152-166`) which wraps
+   *    `_wrapped` (containing the sub-router walk inside
+   *    `_propagate_event`) with `observer.wrap_outer_middleware(...)`.
+   * 4. Non-UNHANDLED return short-circuits and is returned verbatim —
+   *    including `null`, `false`, `TelegramMethod` instances, etc.
    *
-   * **Middleware integration**: each `TelegramEventObserver::trigger` call
-   * runs through the observer's outer-middleware chain (Task 3.10). The
-   * Dispatcher subclass attaches `UserContextMiddleware` and
-   * `ErrorsMiddleware` at construction so error catch / context injection
-   * cover every observer transparently.
+   * **Middleware integration**: outer middleware on a router observer
+   * wraps the entire local dispatch *plus* the sub-router walk. The
+   * Dispatcher subclass wires `UserContextMiddleware` /
+   * `ErrorsMiddleware` at the `feedUpdate` ingress layer (above
+   * `propagateEvent`), so those middlewares run once per ingress
+   * regardless of where the claiming handler lives. Per-observer outer
+   * middleware registered via `$observer->outerMiddleware(...)` runs
+   * once per `propagateEvent` call on the owning router (so a parent's
+   * outer middleware wraps a child router's claiming handler too).
    *
    * `$event` is typed `object` (not `TelegramObject`) because the same
    * propagation primitive carries synthetic dispatcher events such as
@@ -414,41 +422,60 @@ class Router
     // event_router be overridden — matches upstream's `kwargs.update(...)`.
     $kwargs = [...$kwargs, 'event_router' => $this];
 
-    $response = $this->observers[$updateType]->trigger($event, $kwargs);
+    $observer = $this->observers[$updateType];
+    $subRouters = $this->subRouters;
 
-    // Fix I6: collapse `RejectedSentinel` to `UnhandledSentinel` at the
-    // Router boundary so external callers don't need to know about the
-    // internal REJECTED sentinel. Mirrors upstream
-    // `aiogram/dispatcher/router.py`'s `propagate_event` REJECTED-collapse:
-    // when a handler raised `CancelHandler` (or a global filter returned
-    // a falsy value) the observer returns REJECTED; the router treats
-    // that as "no observer in this tree claimed the event" for fall-through
-    // purposes.
-    if ($response === RejectedSentinel::instance()) {
-      return UnhandledSentinel::instance();
-    }
+    // Build the "inner" callable: local observer dispatch first, sub-
+    // router fall-through second. Mirrors upstream `_propagate_event`'s
+    // body (`router.py:168-197`) — the raw `trigger()` runs without
+    // outer-middleware wrap, and the sub-router walk happens inside the
+    // same closure so the OUTER wrap covers it.
+    $inner = static function (object $e, array $data) use ($observer, $subRouters, $updateType): mixed {
+      $response = $observer->trigger($e, $data);
 
-    if ($response !== UnhandledSentinel::instance()) {
-      return $response;
-    }
-
-    foreach ($this->subRouters as $child) {
-      $response = $child->propagateEvent($updateType, $event, $kwargs);
-
-      // Same collapse for the sub-router recursion: a child's REJECTED
-      // surfaces here as UNHANDLED so we keep walking siblings instead
-      // of short-circuiting on an internal sentinel the outer caller
-      // doesn't recognise.
+      // Fix I6: collapse `RejectedSentinel` to `UnhandledSentinel` at the
+      // Router boundary so external callers don't need to know about the
+      // internal REJECTED sentinel. A handler that raised `CancelHandler`
+      // (or a global filter that rejected) surfaces here as REJECTED;
+      // the router treats that as "no observer in this tree claimed the
+      // event" for fall-through purposes.
       if ($response === RejectedSentinel::instance()) {
-        continue;
+        $response = UnhandledSentinel::instance();
       }
 
       if ($response !== UnhandledSentinel::instance()) {
         return $response;
       }
-    }
 
-    return UnhandledSentinel::instance();
+      foreach ($subRouters as $child) {
+        $r = $child->propagateEvent($updateType, $e, $data);
+
+        // Same collapse for the sub-router recursion: a child's REJECTED
+        // surfaces here as UNHANDLED so we keep walking siblings instead
+        // of short-circuiting on an internal sentinel the outer caller
+        // doesn't recognise. (Note: `propagateEvent` already collapses
+        // its own observer's REJECTED before returning, so a child can
+        // only return UNHANDLED or a concrete value here — but keep the
+        // guard for defence-in-depth against future refactors.)
+        if ($r === RejectedSentinel::instance()) {
+          continue;
+        }
+
+        if ($r !== UnhandledSentinel::instance()) {
+          return $r;
+        }
+      }
+
+      return UnhandledSentinel::instance();
+    };
+
+    // Compose the local observer's outer middleware around the inner
+    // dispatch. `MiddlewareManager::wrap` short-circuits to the terminal
+    // when no middlewares are registered (zero-allocation fast path), so
+    // the wrap is cheap on routers without per-observer outer middleware.
+    $wrapped = $observer->outerMiddleware->wrap($inner);
+
+    return $wrapped($event, $kwargs);
   }
 
   /**

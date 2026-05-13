@@ -603,6 +603,51 @@ final class DispatcherTest extends TestCase
     self::assertSame(UnhandledSentinel::instance(), $result);
   }
 
+  public function testParentObserverOuterMiddlewareWrapsChildRouterHandler(): void
+  {
+    // Fix I2: per-observer outer middleware wraps the ENTIRE local dispatch
+    // (local observer + sub-router recursion), mirroring upstream's
+    // `propagate_event(...)` which composes
+    // `observer.wrap_outer_middleware(_wrapped, ...)` once around
+    // `_propagate_event` (which itself walks sub-routers). Concretely:
+    // an outer middleware on the parent dispatcher's `message` observer
+    // wraps a `message` handler registered on a child router too.
+    //
+    // The spy records `before`/`after` markers around the `$handler()`
+    // delegation; the handler markers must sit *inside* the spy's pair.
+    $dispatcher = new Dispatcher();
+    $child = new Router('child');
+    $dispatcher->includeRouter($child);
+
+    $log = [];
+    $dispatcher->message->outerMiddleware(new class ($log) extends BaseMiddleware {
+      /** @param list<string> $log */
+      public function __construct(public array &$log) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        $this->log[] = 'parent-outer-before';
+        $result = $handler($event, $data);
+        $this->log[] = 'parent-outer-after';
+
+        return $result;
+      }
+    });
+    $child->message->register(static function () use (&$log): string {
+      $log[] = 'child-handler';
+
+      return 'child-claims';
+    });
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+
+    self::assertSame('child-claims', $result);
+    self::assertSame(
+      ['parent-outer-before', 'child-handler', 'parent-outer-after'],
+      $log,
+      'Parent observer outer middleware must wrap the child router handler invocation.',
+    );
+  }
+
   public function testFeedWebhookUpdateAcceptsRawArrayUpdate(): void
   {
     // Fix I3: feedWebhookUpdate's first positional `update` parameter accepts

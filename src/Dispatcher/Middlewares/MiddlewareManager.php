@@ -134,12 +134,13 @@ final class MiddlewareManager implements ArrayAccess, Countable, IteratorAggrega
    * (zero-allocation fast path).
    *
    * **No cache (Fix I10)**: the WeakMap-backed wrap cache was removed
-   * because every caller — `TelegramEventObserver::trigger` (outer chain)
-   * and `triggerCore` (inner chain) — allocates a **fresh** terminal
-   * closure on each invocation, so the cache never hit. The overhead of
-   * maintaining the WeakMap (one allocation per register/unregister, the
-   * lookup miss per `wrap()` call) was pure deadweight. Profiling can
-   * re-add the cache if a real hit scenario emerges.
+   * because every caller — `Router::propagateEvent` (outer chain, post Fix
+   * I2) and `TelegramEventObserver::triggerCore` (inner chain) — allocates
+   * a **fresh** terminal closure on each invocation, so the cache never
+   * hit. The overhead of maintaining the WeakMap (one allocation per
+   * register/unregister, the lookup miss per `wrap()` call) was pure
+   * deadweight. Profiling can re-add the cache if a real hit scenario
+   * emerges.
    *
    * @param Closure(object, array<string, mixed>): mixed $terminal
    *

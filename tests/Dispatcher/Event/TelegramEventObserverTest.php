@@ -394,11 +394,18 @@ final class TelegramEventObserverTest extends TestCase
 
   public function testOuterMiddlewareWrapsEntireObserverIncludingGlobalFilters(): void
   {
-    // Outer middleware wraps the *entire* observer: filter chain + handler
-    // iteration. The middleware sees the event before the global filters
-    // even run, and can short-circuit the whole thing. Verified by
-    // recording the order of operations.
-    $observer = new TelegramEventObserver('message');
+    // Outer middleware wraps the *entire* observer dispatch (filter chain
+    // + handler iteration) PLUS, when invoked through `Router::propagateEvent`,
+    // the depth-first sub-router walk. The middleware sees the event before
+    // the global filters even run, and can short-circuit the whole thing.
+    //
+    // Fix I2: outer middleware composition lives on `Router::propagateEvent`
+    // (mirrors upstream's `wrap_outer_middleware(_wrapped, ...)` shape) — a
+    // bare `$observer->trigger()` call is the "raw" path that skips the
+    // outer wrap entirely. Verifying the wrap shape therefore goes through
+    // a Router.
+    $router = new Router();
+    $observer = $router->message;
     $log = [];
     $observer->outerMiddleware(new class ($log) extends BaseMiddleware {
       /** @param list<string> $log */
@@ -423,7 +430,7 @@ final class TelegramEventObserverTest extends TestCase
       return 'ok';
     });
 
-    $result = $observer->trigger(new Chat(id: 1, type: 'private'));
+    $result = $router->propagateEvent('message', new Chat(id: 1, type: 'private'));
 
     self::assertSame('ok', $result);
     self::assertSame(
@@ -437,7 +444,11 @@ final class TelegramEventObserverTest extends TestCase
     // An outer middleware that doesn't call $handler skips global filters,
     // per-handler checks, and the handler itself. Useful for global
     // throttling / auth gates that should reject before any observer work.
-    $observer = new TelegramEventObserver('message');
+    // Driven through `Router::propagateEvent` because that's where the
+    // outer wrap lives after Fix I2 (raw `trigger()` is outer-middleware-
+    // free for upstream parity).
+    $router = new Router();
+    $observer = $router->message;
     $observer->outerMiddleware(new class extends BaseMiddleware {
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
@@ -446,9 +457,45 @@ final class TelegramEventObserverTest extends TestCase
     });
     $observer->register(static fn(): string => 'unreachable');
 
-    $result = $observer->trigger(new Chat(id: 1, type: 'private'));
+    $result = $router->propagateEvent('message', new Chat(id: 1, type: 'private'));
 
     self::assertSame('short_circuited', $result);
+  }
+
+  public function testRawTriggerSkipsOuterMiddleware(): void
+  {
+    // Fix I2 parity check: `TelegramEventObserver::trigger()` is the "raw"
+    // dispatch primitive — global filters + handler iteration + inner
+    // middleware, but NO outer middleware. Upstream's
+    // `TelegramEventObserver.trigger` (`telegram.py:111-130`) has the
+    // same shape; outer middleware is composed by `Router.propagate_event`
+    // (`router.py:152-166`) via `observer.wrap_outer_middleware(...)`.
+    //
+    // The bug this guards against: re-introducing outer-middleware wrapping
+    // into `trigger()` would cause double-wrapping in a multi-router tree
+    // (parent outer + child trigger's outer = two firings of the same
+    // middleware when the dispatch recurses into a child observer that
+    // shares a middleware instance through `chain_head` inheritance).
+    $observer = new TelegramEventObserver('message');
+    $outerCalled = false;
+    $observer->outerMiddleware(new class ($outerCalled) extends BaseMiddleware {
+      public function __construct(public bool &$called) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        $this->called = true;
+
+        return $handler($event, $data);
+      }
+    });
+    $observer->register(static fn(): string => 'handler-result');
+
+    $result = $observer->trigger(new Chat(id: 1, type: 'private'));
+
+    self::assertSame('handler-result', $result);
+    self::assertFalse(
+      $outerCalled,
+      'Raw trigger() must not apply outer middleware (Fix I2: wrapping lives in Router::propagateEvent).',
+    );
   }
 
   public function testInnerMiddlewareWrapsEachIndividualHandlerCall(): void

@@ -47,10 +47,10 @@ use Gruven\PhpBotGram\Dispatcher\Router;
  * collections that compose around the dispatch primitive:
  *
  * - `$outerMiddleware` wraps the **entire observer** (global filter chain
- *   plus the handler iteration). This is where `UserContextMiddleware` /
- *   `ErrorsMiddleware` land — they need to inject context / catch
- *   exceptions across all handlers, including the global-filter rejection
- *   short-circuit.
+ *   plus the handler iteration) AND, when the observer is owned by a
+ *   `Router`, the sub-router walk too — wrapping lives in
+ *   `Router::propagateEvent` (Fix I2). A bare `$observer->trigger()` call
+ *   skips the outer wrap (matches upstream `TelegramEventObserver.trigger`).
  * - `$innerMiddleware` wraps **each individual handler invocation**
  *   (`HandlerObject::call`). This is where per-handler concerns like
  *   throttling, auth gates, and cache hits attach.
@@ -84,10 +84,11 @@ final class TelegramEventObserver
 
   /**
    * Outer middleware chain — wraps the entire observer (global filters +
-   * handler iteration). Registered via `outerMiddleware()`. The Dispatcher
-   * attaches `UserContextMiddleware` and `ErrorsMiddleware` here at
-   * construction time so error catch / context injection cover every
-   * dispatch path including rejection short-circuits.
+   * handler iteration) AND, when this observer is owned by a `Router`, the
+   * `Router::propagateEvent` sub-router walk (Fix I2). Registered via
+   * `outerMiddleware()`. Note: the chain is applied by
+   * `Router::propagateEvent`, NOT by `trigger()` — `trigger()` is the raw
+   * dispatch primitive (upstream parity).
    */
   public readonly MiddlewareManager $outerMiddleware;
 
@@ -313,9 +314,25 @@ final class TelegramEventObserver
   }
 
   /**
-   * Route an event through the outer-middleware chain, then through global
-   * filters and the handler chain (the dispatch primitive lives in
-   * `triggerCore()`).
+   * Raw dispatch entry: runs global filters then iterates handlers (with
+   * per-handler filter check and inner-middleware wrapping). Does NOT
+   * apply outer middleware — that responsibility lives in
+   * `Router::propagateEvent`, which wraps the full local-observer + sub-
+   * router dispatch with `outerMiddleware->wrap()` once per propagation.
+   *
+   * Mirrors upstream's `TelegramEventObserver.trigger` (`telegram.py:111-130`),
+   * which is also outer-middleware-free; upstream's `Router.propagate_event`
+   * (`router.py:152-166`) composes
+   * `observer.wrap_outer_middleware(_wrapped, ...)` once around
+   * `_propagate_event`'s full body — so the parent observer's outer
+   * middleware covers child router handlers too (Fix I2).
+   *
+   * The split exists because outer middleware must NOT wrap individual
+   * observer triggers in a multi-router tree (that would skip sub-router
+   * handlers from the outer-middleware scope and re-wrap each ancestor
+   * trigger when sub-router recursion bubbles back up). Anything wanting
+   * to drive this observer through the outer chain should call
+   * `Router::propagateEvent` instead.
    *
    * `$event` is typed `object` because dispatcher-synthetic events (notably
    * `ErrorEvent`, which deliberately does not extend `TelegramObject`) flow
@@ -333,10 +350,7 @@ final class TelegramEventObserver
    */
   public function trigger(object $event, array $kwargs = []): mixed
   {
-    $terminal = fn(object $e, array $k): mixed => $this->triggerCore($e, $k);
-    $chain = $this->outerMiddleware->wrap($terminal);
-
-    return $chain($event, $kwargs);
+    return $this->triggerCore($event, $kwargs);
   }
 
   /**

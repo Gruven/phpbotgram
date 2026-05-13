@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Dispatcher;
 
+use Closure;
 use Gruven\PhpBotGram\Dispatcher\Event\EventObserver;
 use Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver;
 use Gruven\PhpBotGram\Dispatcher\Event\UnhandledSentinel;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Router;
 use Gruven\PhpBotGram\Types\Chat;
 use LogicException;
@@ -539,5 +541,93 @@ final class RouterTest extends TestCase
     $reflection = new ReflectionClass(Router::class);
 
     self::assertFalse($reflection->isFinal(), 'Router must be subclass-able (Dispatcher extends it).');
+  }
+
+  public function testPropagateEventOuterMiddlewareWrapsSubRouterDispatch(): void
+  {
+    // Fix I2: the local observer's outer middleware must wrap the ENTIRE
+    // dispatch (local observer + sub-router recursion). Upstream's
+    // `propagate_event` calls `observer.wrap_outer_middleware(_wrapped, ...)`
+    // where `_wrapped` invokes `_propagate_event` which contains the
+    // sub-router walk (`router.py:152-166`). The port mirrors this by
+    // wrapping `Router::propagateEvent`'s entire body with the local
+    // observer's outer chain — so an outer middleware on the parent's
+    // `message` observer wraps the child router's claiming handler too.
+    //
+    // Before the fix the outer chain wrapped only `TelegramEventObserver::trigger`
+    // (the local-observer dispatch), meaning a parent's outer middleware
+    // fired BEFORE the sub-router walk and unwound BEFORE the child's
+    // handler ran. The child-handler marker must sit between the spy's
+    // before/after markers to prove the spy's scope.
+    $root = new Router('root');
+    $child = new Router('child');
+    $root->includeRouter($child);
+
+    $log = [];
+
+    // Only the child registers a handler — the local observer on root
+    // returns UNHANDLED so the sub-router recursion is the only path.
+    $child->message->register(static function () use (&$log): string {
+      $log[] = 'child-handler';
+
+      return 'claimed-by-child';
+    });
+
+    $spy = new class ($log) extends BaseMiddleware {
+      /** @param list<string> $log */
+      public function __construct(public array &$log) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        $this->log[] = 'parent-outer-before';
+        $result = $handler($event, $data);
+        $this->log[] = 'parent-outer-after';
+
+        return $result;
+      }
+    };
+    $root->message->outerMiddleware($spy);
+
+    $result = $root->propagateEvent('message', new Chat(id: 1, type: 'private'));
+
+    self::assertSame('claimed-by-child', $result);
+    self::assertSame(
+      ['parent-outer-before', 'child-handler', 'parent-outer-after'],
+      $log,
+      'Parent observer outer middleware must wrap the full dispatch including sub-routers.',
+    );
+  }
+
+  public function testPropagateEventOuterMiddlewareCanShortCircuitSubRouters(): void
+  {
+    // Parity guard with the upstream wrap shape: an outer middleware that
+    // does NOT call $handler MUST short-circuit the entire dispatch
+    // (local observer AND sub-routers). This proves the outer middleware
+    // wraps the whole `_wrapped` callable, not just the local observer's
+    // trigger.
+    $root = new Router('root');
+    $child = new Router('child');
+    $root->includeRouter($child);
+
+    $childCalled = false;
+    $child->message->register(static function () use (&$childCalled): string {
+      $childCalled = true;
+
+      return 'unreachable';
+    });
+
+    $root->message->outerMiddleware(new class extends BaseMiddleware {
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        return 'short_circuit';
+      }
+    });
+
+    $result = $root->propagateEvent('message', new Chat(id: 1, type: 'private'));
+
+    self::assertSame('short_circuit', $result);
+    self::assertFalse(
+      $childCalled,
+      'Outer middleware short-circuit must prevent the sub-router walk too.',
+    );
   }
 }
