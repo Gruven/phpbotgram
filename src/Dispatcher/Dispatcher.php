@@ -768,12 +768,24 @@ class Dispatcher extends Router
       // the spawned Future would otherwise land on the future state, not
       // this synchronous frame, and surface as an "unhandled future" warning
       // at GC time.
+      //
+      // Fix I2: capture `feedUpdate`'s return value in BOTH branches. If
+      // the handler returned a `TelegramMethod` (the polling-side analogue
+      // of webhook's inline response), route it through `silentCallRequest`
+      // so the side effect still reaches Telegram. Mirrors upstream
+      // `_process_update`'s "if call_answer and isinstance(response,
+      // TelegramMethod): await self.silent_call_request(...)" at
+      // `dispatcher.py:321-322`.
       try {
         if ($semaphore === null) {
           // Serial dispatch: every handler runs to completion before the
           // next Update is consumed. Exceptions terminate the polling loop;
           // upstream's catch-and-log lives in ErrorsMiddleware, not here.
-          $this->feedUpdate($bot, $update);
+          $result = $this->feedUpdate($bot, $update);
+
+          if ($result instanceof TelegramMethod) {
+            $this->silentCallRequest($bot, $result);
+          }
 
           continue;
         }
@@ -786,7 +798,11 @@ class Dispatcher extends Router
 
         $task = async(function () use ($bot, $update, $lock): void {
           try {
-            $this->feedUpdate($bot, $update);
+            $result = $this->feedUpdate($bot, $update);
+
+            if ($result instanceof TelegramMethod) {
+              $this->silentCallRequest($bot, $result);
+            }
           } catch (UpdateTypeLookupException $e) {
             // Fix I1: swallow forward-compat unknown update types from
             // the spawned future. Without this catch the exception would

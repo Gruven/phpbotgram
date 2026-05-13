@@ -12,7 +12,9 @@ use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
 use Gruven\PhpBotGram\Dispatcher\PollingOptions;
 use Gruven\PhpBotGram\Methods\GetUpdates;
+use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
+use Gruven\PhpBotGram\Tests\Support\RecordingDispatcher;
 use Gruven\PhpBotGram\Tests\Support\RunAsyncTrait;
 use Gruven\PhpBotGram\Types\Chat;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
@@ -754,6 +756,78 @@ final class PollingTest extends TestCase
     $request = $bot->getRequest();
     self::assertInstanceOf(GetUpdates::class, $request);
     self::assertSame(['inline_query'], $request->allowedUpdates);
+  }
+
+  public function testPollingForSerialAutoDispatchesTelegramMethodViaSilentCallRequest(): void
+  {
+    // Fix I2: a handler that returns a `TelegramMethod` (the polling-side
+    // analogue of webhook's inline response) must have that method
+    // auto-dispatched via `silentCallRequest`. Upstream's `_process_update`
+    // does the same when `call_answer=True` (`dispatcher.py:321-322`):
+    // "if call_answer and isinstance(response, TelegramMethod): await
+    // self.silent_call_request(bot=bot, result=response)".
+    //
+    // The port mirrors via `silentCallRequest` so test harnesses can
+    // record the invocation. We use `RecordingDispatcher` to capture the
+    // routing without driving a real network call.
+    $dispatcher = new RecordingDispatcher();
+    $bot = new MockedBot();
+    $method = new SendMessage(chatId: 1, text: 'polling reply');
+    $dispatcher->message->register(static function (Update $event_update) use (
+      $method,
+      $dispatcher,
+    ): SendMessage {
+      $dispatcher->stopPolling();
+
+      return $method;
+    });
+    $bot->addResultFor(GetUpdates::class, ok: true, result: [self::makeMessageUpdate(1, 'a')]);
+
+    $this->runAsync(static function () use ($dispatcher, $bot): void {
+      $dispatcher->startPolling(new PollingOptions(handleAsTasks: null), $bot)->await();
+    });
+
+    self::assertCount(
+      1,
+      $dispatcher->silentCalls,
+      'Serial polling must route the handler return value through silentCallRequest.',
+    );
+    self::assertSame($bot, $dispatcher->silentCalls[0][0]);
+    self::assertSame($method, $dispatcher->silentCalls[0][1]);
+  }
+
+  public function testPollingForConcurrentAutoDispatchesTelegramMethodViaSilentCallRequest(): void
+  {
+    // Fix I2 (concurrent branch): same contract as the serial variant, but
+    // the `silentCallRequest` invocation lives inside the spawned async()
+    // closure. The test queues a single update so the recording subclass
+    // can capture the routing through the in-async dispatch path.
+    $dispatcher = new RecordingDispatcher();
+    $bot = new MockedBot();
+    $method = new SendMessage(chatId: 1, text: 'concurrent reply');
+    $dispatcher->message->register(static function (Update $event_update) use (
+      $method,
+      $dispatcher,
+    ): SendMessage {
+      $dispatcher->stopPolling();
+
+      return $method;
+    });
+    $bot->addResultFor(GetUpdates::class, ok: true, result: [self::makeMessageUpdate(1, 'a')]);
+    // Round 2 empty — same back-pressure note as the I1 test.
+    $bot->addResultFor(GetUpdates::class, ok: true, result: []);
+
+    $this->runAsync(static function () use ($dispatcher, $bot): void {
+      $dispatcher->startPolling(new PollingOptions(handleAsTasks: 2), $bot)->await();
+    });
+
+    self::assertCount(
+      1,
+      $dispatcher->silentCalls,
+      'Concurrent polling must route the handler return value through silentCallRequest.',
+    );
+    self::assertSame($bot, $dispatcher->silentCalls[0][0]);
+    self::assertSame($method, $dispatcher->silentCalls[0][1]);
   }
 
   /**
