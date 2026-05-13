@@ -51,4 +51,31 @@ final readonly class StorageKey
     public ?string $businessConnectionId = null,
     public string $destiny = self::DEFAULT_DESTINY,
   ) {}
+
+  /**
+   * Return a new `StorageKey` identical to this one but with a different destiny.
+   *
+   * Because `StorageKey` is `final readonly`, mutation is impossible — this
+   * factory method produces a fresh instance with all fields copied and only
+   * `$destiny` replaced. Used by `HistoryManager` to derive a separate storage
+   * slot for the history stack without affecting the main FSM slot.
+   *
+   * Mirrors the `replace(state.key, destiny=destiny)` call in
+   * `aiogram/fsm/scene.py:52` (Python's `dataclasses.replace` equivalent).
+   *
+   * @param string $destiny The new destiny tag for the returned key.
+   *
+   * @return self A new instance with the replaced destiny.
+   */
+  public function withDestiny(string $destiny): self
+  {
+    return new self(
+      botId: $this->botId,
+      chatId: $this->chatId,
+      userId: $this->userId,
+      threadId: $this->threadId,
+      businessConnectionId: $this->businessConnectionId,
+      destiny: $destiny,
+    );
+  }
 }

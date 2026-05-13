@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Fsm;
 
+use Gruven\PhpBotGram\Fsm\Exception\SceneException;
 use Gruven\PhpBotGram\Fsm\Scene\Attribute\SceneState;
+use Gruven\PhpBotGram\Fsm\Scene\SceneConfig;
 use ReflectionClass;
 
 /**
@@ -128,6 +130,31 @@ abstract class Scene
   public function retake(mixed ...$kwargs): mixed
   {
     return null;
+  }
+
+  // ------------------------------------------------------------------ //
+  // SceneConfig accessor — overridden by registered subclasses
+  // ------------------------------------------------------------------ //
+
+  /**
+   * Return the `SceneConfig` for this scene class.
+   *
+   * Subclasses that are registered via `SceneRegistry` override this method to
+   * return the registry-supplied `SceneConfig` instance.  The default
+   * implementation throws `SceneException` to surface a clear error message
+   * when a scene class is used without being registered.
+   *
+   * Mirrors the `__scene_config__` class attribute populated by
+   * `SceneRegistry.__init_subclass__` (`aiogram/fsm/scene.py:316-325`).
+   *
+   * @throws SceneException When the scene class has not been registered via
+   *                        `SceneRegistry` and therefore has no config.
+   */
+  public static function sceneConfig(): SceneConfig
+  {
+    throw new SceneException(
+      static::class . ' has no SceneConfig — register the scene via SceneRegistry before use.',
+    );
   }
 
   // ------------------------------------------------------------------ //
