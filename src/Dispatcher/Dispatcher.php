@@ -13,6 +13,7 @@ use function Amp\delay;
 use Amp\Future;
 
 use function Amp\Future\await;
+use function Amp\Future\awaitFirst;
 
 use Amp\Sync\LocalMutex;
 use Amp\Sync\LocalSemaphore;
@@ -56,16 +57,18 @@ use Throwable;
  * 2. **Update ingress entry points**. `feedUpdate` is the canonical
  *    synchronous dispatch; `feedRawUpdate` deserialises a wire-shaped
  *    payload via `Serializer::load` first; `feedWebhookUpdate` is the
- *    HTTP-webhook variant. Task 3.13 lands the 55-second webhook deadline +
- *    slow-warning on top; in Task 3.10 it is observably identical to
- *    `feedUpdate`.
+ *    HTTP-webhook variant — it runs the dispatch chain inside a 55-second
+ *    budget (`WEBHOOK_TIMEOUT_SECONDS`), surfaces an in-time
+ *    `TelegramMethod` as the inline response, and routes a late-arriving
+ *    method through `silentCallRequest` so the bot still issues the API
+ *    call. The deadline is configurable per-instance via the constructor
+ *    for tests that need a tight value.
  *
- * 3. **Webhook fall-through stub `silentCallRequest`**. When a handler
- *    returns a `TelegramMethod` and the webhook is past its deadline, the
- *    dispatcher dispatches the method via `$bot($method)` instead of
- *    inlining it into the HTTP response. Task 3.13 adds the
- *    queue-and-skip-when-deadline-fired semantics; the Task 3.10 baseline
- *    just forwards to `$bot($method)`.
+ * 3. **Webhook fall-through `silentCallRequest`**. Public **instance**
+ *    method (deviation from upstream's `@classmethod` for testability —
+ *    see `RecordingDispatcher` in tests/Support). Default behaviour is
+ *    `$bot($method)`; subclasses override to capture invocations or
+ *    suppress side effects under test.
  *
  * Spec deviations from upstream:
  *
@@ -85,6 +88,20 @@ use Throwable;
  */
 class Dispatcher extends Router
 {
+  /**
+   * Webhook response deadline in seconds. Mirrors upstream's
+   * `feed_webhook_update(_timeout=55, ...)` default at
+   * `dispatcher.py:440`. Telegram closes the webhook connection at 60
+   * seconds, so 55s gives ~5s of headroom for the HTTP write-back.
+   *
+   * Exposed as a `public const` so subclasses, tests, and webhook
+   * adapters can read the canonical value without instantiating the
+   * Dispatcher. The per-instance constructor argument overrides this
+   * for tests that need a tight deadline; production code should use
+   * the default.
+   */
+  public const float WEBHOOK_TIMEOUT_SECONDS = 55.0;
+
   /**
    * Maps wire-name `update_type` keys to the camelCase PHP property name on
    * `Update`. Derived from `Types/Update.php` (Phase 2 codegen output);
@@ -189,10 +206,24 @@ class Dispatcher extends Router
    */
   private array $handleUpdateTasks = [];
 
-  public function __construct(?string $name = null)
+  /**
+   * Per-instance webhook deadline in seconds. Defaults to
+   * `self::WEBHOOK_TIMEOUT_SECONDS` (55.0) when the constructor argument
+   * is omitted. Tests tighten this to e.g. 0.05s so the slow-handler
+   * branch can be exercised without sleeping for nearly a minute.
+   *
+   * Stored as a positive float; the constructor accepts a nullable
+   * argument so callers that don't care can pass nothing instead of
+   * having to reference the constant. PHPStan reads the readonly modifier
+   * and enforces single-assignment in the ctor body.
+   */
+  private readonly float $webhookTimeoutSeconds;
+
+  public function __construct(?string $name = null, ?float $webhookTimeoutSeconds = null)
   {
     parent::__construct($name);
     $this->runningLock = new LocalMutex();
+    $this->webhookTimeoutSeconds = $webhookTimeoutSeconds ?? self::WEBHOOK_TIMEOUT_SECONDS;
 
     // Wire UserContextMiddleware first so subsequent middlewares (and the
     // error observer) see the canonical `event_context` keys populated.
@@ -312,29 +343,130 @@ class Dispatcher extends Router
   }
 
   /**
-   * Webhook variant — receives the Update directly from the HTTP request
-   * handler. Identical to `feedUpdate` for now; Task 3.13 wraps this with
-   * the 55-second deadline + slow-warning + `silentCallRequest` fall-through
-   * for handlers that return a `TelegramMethod`.
+   * Webhook variant — runs the dispatcher chain inside the 55-second
+   * webhook deadline (configurable per Dispatcher via the constructor)
+   * and surfaces either a `TelegramMethod` (inline response) or `null`
+   * (empty response). Port of `aiogram.Dispatcher.feed_webhook_update`
+   * (`dispatcher.py:436-493`).
+   *
+   * Two branches:
+   *
+   * - **In-time**: the chain completes within `WEBHOOK_TIMEOUT_SECONDS`.
+   *   If the result is a `TelegramMethod`, return it so the caller (the
+   *   webhook HTTP adapter) can encode it as the response body. Any
+   *   other return value (string, sentinel, null) collapses to `null` —
+   *   the adapter then writes an empty JSON `{}`.
+   * - **Deadline expired**: the chain has NOT completed by the time the
+   *   55-second timer fires. We emit `trigger_error("Detected slow
+   *   response into webhook…", E_USER_WARNING)` (parity with upstream's
+   *   `warnings.warn(..., RuntimeWarning)` at `dispatcher.py:462-468`),
+   *   attach a continuation that routes any eventual `TelegramMethod`
+   *   through `silentCallRequest` (so the side effect still reaches
+   *   Telegram via a normal API call), and return `null` immediately so
+   *   the webhook adapter doesn't keep the HTTP socket open past the
+   *   deadline.
+   *
+   * Implementation notes:
+   *
+   * - The race is implemented via `Amp\Future\awaitFirst` against an
+   *   `async(fn() => $this->feedUpdate(...))` task and an `async(delay)`
+   *   timer. Upstream uses `loop.call_later` + `loop.create_future` to
+   *   model the same primitive; awaitFirst is the canonical amphp v3
+   *   equivalent and reads cleaner than spinning a manual DeferredFuture.
+   * - We deliberately do NOT use `Amp\TimeoutCancellation` here:
+   *   cancellation would interrupt the dispatch fiber, but the spec
+   *   requires the dispatch to **continue running in the background** so
+   *   the fall-through continuation can route any eventual
+   *   `TelegramMethod`. The race-with-a-timer pattern preserves the
+   *   in-flight fiber.
+   * - The timer task uses `ignore()` so a never-awaited timeout future
+   *   (the happy path where the dispatch wins) doesn't surface an
+   *   "unhandled future" warning at GC time.
+   * - The dispatch task's `map()` callback is attached **after** the race
+   *   resolves. amphp guarantees the callback fires on completion even if
+   *   the future is already complete — but in the timeout branch the
+   *   dispatch is still in flight at attachment time. The callback runs
+   *   on the same event loop driver that's hosting the dispatch fiber,
+   *   so no cross-thread synchronisation is needed.
    *
    * @param array<string, mixed> $kwargs
    */
   public function feedWebhookUpdate(Bot $bot, Update $update, array $kwargs = []): mixed
   {
-    return $this->feedUpdate($bot, $update, $kwargs);
+    $start = hrtime(true);
+
+    /** @var Future<mixed> $dispatchTask */
+    $dispatchTask = async(fn(): mixed => $this->feedUpdate($bot, $update, $kwargs));
+
+    // `reference: false` on the inner delay is critical: a referenced
+    // delay would keep the event loop alive for the full 55-second
+    // budget even when the dispatch wins immediately, which would block
+    // the test harness's `EventLoop::run()` from returning. The timer
+    // task itself is `ignore()`'d so an unhandled-future warning at GC
+    // doesn't surface when the dispatch wins the race.
+    /** @var Future<null> $timeoutTask */
+    $timeoutTask = async(function (): ?bool {
+      delay($this->webhookTimeoutSeconds, reference: false);
+
+      return null;
+    })->ignore();
+
+    // Race: whichever future resolves first wins. awaitFirst surfaces
+    // exceptions from the winning future (and only the winning future);
+    // we want the dispatch task's exceptions to propagate to the caller
+    // when it wins, and we tolerate the timer task's never-throws
+    // contract.
+    awaitFirst([$dispatchTask, $timeoutTask]);
+
+    if ($dispatchTask->isComplete()) {
+      // Dispatch won. `await()` re-raises any exception the handler
+      // chain produced (ErrorsMiddleware should already have absorbed
+      // user-level errors; anything left here is a framework bug worth
+      // surfacing to the webhook adapter).
+      $result = $dispatchTask->await();
+
+      return $result instanceof TelegramMethod ? $result : null;
+    }
+
+    // Timeout won. Compute elapsed in seconds for the warning message
+    // (hrtime returns nanoseconds; the cast to float preserves sub-ms
+    // precision the %.2f format will round to two decimals).
+    $elapsed = (hrtime(true) - $start) / 1_000_000_000;
+    trigger_error(
+      sprintf('Detected slow response into webhook (>%.2fs)', $elapsed),
+      \E_USER_WARNING,
+    );
+
+    // Attach the fall-through continuation. When the dispatch eventually
+    // completes, if its result is a TelegramMethod, route it through
+    // silentCallRequest (overrideable in tests via RecordingDispatcher).
+    // The map's return value is ignored — we just need the side effect
+    // of invoking silentCallRequest at completion time.
+    //
+    // `ignore()` on the resulting future suppresses the unhandled-future
+    // warning if the dispatch eventually errors (the inner async caller
+    // won't be around to await this leg).
+    $dispatchTask->map(function (mixed $result) use ($bot): void {
+      if ($result instanceof TelegramMethod) {
+        $this->silentCallRequest($bot, $result);
+      }
+    })->ignore();
+
+    return null;
   }
 
   /**
    * Webhook fall-through: dispatch a method via `$bot($method)` when the
-   * webhook can no longer inline the response in the HTTP body. Task 3.13
-   * adds the deadline-aware queue-and-skip behaviour; the Task 3.10
-   * baseline is just `$bot($method)`.
+   * inline-response window has closed. Invoked by `feedWebhookUpdate`'s
+   * map continuation when the dispatch chain finishes *after* the 55-second
+   * deadline and the eventual result is a `TelegramMethod`.
    *
-   * `silentCallRequest` is a public **instance** method (deviation from
-   * upstream's `@classmethod`) so tests can mock it via a recording
-   * subclass — upstream's `unittest.mock.patch` of a class method does not
-   * translate cleanly to PHP. See spec § "Webhook response contract" for
-   * the rationale.
+   * Public **instance** method (deviation from upstream's `@classmethod`)
+   * so tests can override it via `RecordingDispatcher` to capture the
+   * fall-through invocations without driving a real network call.
+   * Upstream's `unittest.mock.patch` of a class method does not translate
+   * cleanly to PHP. See spec § "Webhook response contract" for the
+   * rationale.
    *
    * @param TelegramMethod<mixed> $method
    */

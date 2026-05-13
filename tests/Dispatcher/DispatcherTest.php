@@ -291,18 +291,11 @@ final class DispatcherTest extends TestCase
     self::assertSame('hi', $observed->message->text);
   }
 
-  public function testFeedWebhookUpdateBehavesLikeFeedUpdate(): void
-  {
-    // Task 3.10 baseline: feedWebhookUpdate is a thin alias for feedUpdate.
-    // The 55s deadline / slow-warning lands in Task 3.13; for now the two
-    // methods are observably identical.
-    $dispatcher = new Dispatcher();
-    $dispatcher->message->register(static fn(): string => 'webhook_ok');
-
-    $result = $dispatcher->feedWebhookUpdate(new MockedBot(), self::messageUpdate('hi'));
-
-    self::assertSame('webhook_ok', $result);
-  }
+  // Note: feedWebhookUpdate contract coverage lives in WebhookContractTest.
+  // The Task 3.10 baseline that treated it as a thin alias for feedUpdate
+  // was retired in Task 3.13 — feedWebhookUpdate now collapses any
+  // non-TelegramMethod return to null and additionally requires a Fiber
+  // context (the 55s deadline race uses Amp futures).
 
   public function testFeedUpdateRoutesEventContextThroughUserContextMiddleware(): void
   {
