@@ -169,22 +169,17 @@ final class BaseStorageTest extends TestCase
   }
 
   /**
-   * `getValue` can return `null` as a stored value (not confused with a missing key).
+   * `getValue` correctly returns a stored `null` rather than `$default`.
    *
-   * Note: PHP's `??` operator cannot distinguish a stored `null` from a missing
-   * key. This test documents that the concrete implementation uses `??` (matching
-   * upstream's dict `.get(key, default)` which DOES distinguish them). This is an
-   * accepted limitation — the upstream Python implementation also has a subtle
-   * difference here that the `@overload` pattern papers over. In PHP, a stored
-   * `null` will cause `getValue` to return `$default` instead. This test captures
-   * the actual (implemented) behaviour.
+   * Uses `array_key_exists` to distinguish a present-but-null value from a
+   * genuinely absent key, mirroring upstream Python's `data.get(key, default)`
+   * which also distinguishes the two cases.
    */
-  public function testGetValueWithStoredNullReturnsDefault(): void
+  public function testGetValueReturnsStoredNullNotDefault(): void
   {
     $this->storage->setData($this->key, ['nullkey' => null]);
 
-    // Because PHP `??` treats null the same as missing, default is returned.
-    self::assertSame('default_val', $this->storage->getValue($this->key, 'nullkey', 'default_val'));
+    self::assertNull($this->storage->getValue($this->key, 'nullkey', 'default_val'));
   }
 
   // ------------------------------------------------------------------ //

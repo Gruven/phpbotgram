@@ -91,7 +91,9 @@ abstract class BaseStorage
    */
   public function getValue(StorageKey $storageKey, string $dictKey, mixed $default = null): mixed
   {
-    return $this->getData($storageKey)[$dictKey] ?? $default;
+    $data = $this->getData($storageKey);
+
+    return array_key_exists($dictKey, $data) ? $data[$dictKey] : $default;
   }
 
   /**
