@@ -247,7 +247,6 @@ final class RedisEventIsolationTest extends TestCase
 
     $ref = new ReflectionClass($isolation);
     $method = $ref->getMethod('acquireTimeout');
-    $method->setAccessible(true);
 
     self::assertSame(10, $method->invoke($isolation), 'Default acquireTimeout must be lockTtlSeconds * 2');
   }
