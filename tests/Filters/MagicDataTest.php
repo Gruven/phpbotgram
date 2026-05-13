@@ -65,8 +65,10 @@ final class MagicDataTest extends TestCase
     // walks `data['state']` after we wrap kwargs in `AttrDict`.
     $filter = new MagicData(MagicFilter::root()->state->equals('active'));
 
-    self::assertTrue($filter($this->message(), ['state' => 'active']));
-    self::assertFalse($filter($this->message(), ['state' => 'inactive']));
+    // Spread `['state' => 'active']` so the named key flows into the
+    // variadic `...$kwargs` as `$kwargs['state']` rather than `$kwargs[0]`.
+    self::assertTrue($filter($this->message(), ...['state' => 'active']));
+    self::assertFalse($filter($this->message(), ...['state' => 'inactive']));
   }
 
   public function testResolvesAgainstNestedArrayKwarg(): void
@@ -77,8 +79,9 @@ final class MagicDataTest extends TestCase
     // chain traverses object-style.
     $filter = new MagicData(MagicFilter::root()->config->key->equals('value'));
 
+    // Spread so the named key `config` flows into the variadic `...$kwargs`.
     self::assertTrue(
-      $filter($this->message(), ['config' => (object)['key' => 'value']]),
+      $filter($this->message(), ...['config' => (object)['key' => 'value']]),
     );
   }
 

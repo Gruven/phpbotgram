@@ -22,9 +22,10 @@ use Gruven\PhpBotGram\Filters\Filter;
  *
  * # PHP widening: intentional kwarg cascade
  *
- * The PHP port instead passes `[...$kwargs, ...$merged]` to every child
- * (line 48), so each filter sees the original kwargs *plus* every kwarg
- * contributed by any preceding sibling in the same `AndFilter` group.
+ * The PHP port instead spreads `[...$kwargs, ...$merged]` into every child
+ * (via `$target($event, ...[...$kwargs, ...$merged])`), so each filter sees
+ * the original kwargs *plus* every kwarg contributed by any preceding sibling
+ * in the same `AndFilter` group.
  *
  * This matches the semantics of upstream's outer dispatcher loop
  * (`HandlerObject.check` in `aiogram/dispatcher/event/handler.py:114-123`),
@@ -64,7 +65,7 @@ final class AndFilter extends Filter
     $this->targets = array_values($targets);
   }
 
-  public function __invoke(object $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, mixed ...$kwargs): array|bool
   {
     $merged = [];
 
@@ -72,7 +73,11 @@ final class AndFilter extends Filter
       // Cascade: each filter sees `$kwargs` plus whatever previous
       // filters contributed. `[...$a, ...$b]` matches Python
       // `dict.update()` — later keys win on collision.
-      $result = $target($event, [...$kwargs, ...$merged]);
+      // The spread `...[...$kwargs, ...$merged]` passes string-keyed
+      // entries as named arguments so the variadic receiver re-captures
+      // them as its own `$kwargs` array. PHP 8.1+ accepts mixed-key
+      // arrays in a `...`-spread.
+      $result = $target($event, ...[...$kwargs, ...$merged]);
 
       if ($result === false) {
         // Hard reject; later filters are NOT consulted.

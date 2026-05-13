@@ -33,12 +33,12 @@ final class InvertFilter extends Filter
 {
   public function __construct(public readonly Filter $target) {}
 
-  public function __invoke(object $event, array $kwargs = []): bool
+  public function __invoke(object $event, mixed ...$kwargs): bool
   {
-    // `($this->target)($event, $kwargs)` triggers `__invoke` on the
+    // `($this->target)($event, ...$kwargs)` triggers `__invoke` on the
     // wrapped filter — the parenthesized property access disambiguates
     // from a hypothetical "call a method named `target`" interpretation.
-    $result = ($this->target)($event, $kwargs);
+    $result = ($this->target)($event, ...$kwargs);
 
     // Only an exact `false` inverts to `true`; both bare `true` and any
     // array (= accept) invert to `false`. See class docblock for why

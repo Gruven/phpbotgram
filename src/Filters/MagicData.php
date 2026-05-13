@@ -40,7 +40,7 @@ final class MagicData extends Filter
 {
   public function __construct(public readonly MagicFilter $magicData) {}
 
-  public function __invoke(object $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, mixed ...$kwargs): array|bool
   {
     // Upstream `MagicData.__call__` builds `{'event': event, **kwargs}`
     // and resolves the chain against an `AttrDict` wrapping that dict.

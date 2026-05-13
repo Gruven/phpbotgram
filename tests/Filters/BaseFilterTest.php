@@ -65,7 +65,7 @@ final class BaseFilterTest extends TestCase
     // check still passes. This is what makes the alias actually useful
     // for ported user code.
     $concrete = new class extends BaseFilter {
-      public function __invoke(object $event, array $kwargs = []): bool
+      public function __invoke(object $event, mixed ...$kwargs): bool
       {
         return true;
       }

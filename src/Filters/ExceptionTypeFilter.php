@@ -67,9 +67,11 @@ final class ExceptionTypeFilter extends Filter
   }
 
   /**
-   * @param array<string, mixed> $kwargs Unused — the filter is event-only.
+   * @param mixed ...$kwargs Dispatcher kwargs bag — captured variadically so
+   *                         the full bag passes through `CallableObject::prepareKwargs`.
+   *                         Unused by this filter (event-only decision).
    */
-  public function __invoke(object $event, array $kwargs = []): bool
+  public function __invoke(object $event, mixed ...$kwargs): bool
   {
     if (!$event instanceof ErrorEvent) {
       // Defensive type guard. A misconfigured router could wire this

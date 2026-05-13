@@ -34,14 +34,15 @@ use Gruven\PhpBotGram\Filters\Logic\OrFilter;
  * Spec note: upstream leaves the `__call__` signature unconstrained because
  * Python's `*args, **kwargs` plumbing lets every subclass declare its own
  * parameter shape and the reflection adapter binds named kwargs to the
- * declared names. The PHP port locks the abstract signature down because
- * PHP enforces signature compatibility on overrides: `__invoke(object
- * $event, array $kwargs = [])` matches how `TelegramEventObserver::triggerCore`
- * actually invokes filters — `$event` is extracted from the kwargs bag
- * upstream and passed positionally, and the rest of the bag arrives in
- * `$kwargs`. Concrete filters that need to depend on specific kwargs read
- * them out of `$kwargs` by key (see `Logic\AndFilter`'s cascade for the
- * canonical pattern).
+ * declared names. The PHP port uses a variadic tail (`mixed ...$kwargs`) so
+ * that `CallableObject::prepareKwargs()` detects the variadic and passes
+ * through the ENTIRE dispatcher kwargs bag without filtering it down to just
+ * the named `kwargs` key. Without the variadic, `prepareKwargs()` would
+ * intersect the bag against the parameter names (`event`, `kwargs`) and drop
+ * everything else — `bot`, `state`, `event_context`, etc. would silently
+ * disappear. Concrete filters access the bag as `$kwargs['bot']`,
+ * `$kwargs['state']`, etc. — variadic capture delivers a regular PHP array
+ * with string keys (see `Logic\AndFilter`'s cascade for the canonical pattern).
  *
  * The `$event` parameter is typed as `object` rather than `TelegramObject`
  * because dispatcher-synthetic events such as `ErrorEvent` deliberately do
@@ -58,14 +59,17 @@ abstract class Filter
   /**
    * Evaluate the filter against an update.
    *
-   * @param array<string, mixed> $kwargs Dispatcher context for this filter
-   *                                     call: `bot`, `event_context`, FSM `state`, plus any kwargs that
-   *                                     previous filters in the chain accumulated.
+   * `$kwargs` is captured variadically so that `CallableObject::prepareKwargs`
+   * detects the variadic tail and passes through the ENTIRE dispatcher kwargs
+   * bag (`bot`, `event_context`, `state`, …) rather than intersecting it down
+   * to only the parameter names literally declared here. The variadic capture
+   * produces a regular `array<string, mixed>` inside the method body, so
+   * existing accesses like `$kwargs['bot'] ?? null` continue to work unchanged.
    *
    * @return array<string, mixed>|bool See class docblock for the
    *                                   interpretation contract.
    */
-  abstract public function __invoke(object $event, array $kwargs = []): array|bool;
+  abstract public function __invoke(object $event, mixed ...$kwargs): array|bool;
 
   /**
    * Compose an AND across filters: every child must accept, kwargs

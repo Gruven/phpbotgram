@@ -52,11 +52,9 @@ final class CallbackQueryFilter extends Filter
   ) {}
 
   /**
-   * @param array<string, mixed> $kwargs
-   *
    * @return array<string, mixed>|false
    */
-  public function __invoke(object $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, mixed ...$kwargs): array|bool
   {
     if (!$event instanceof CallbackQuery) {
       // Mirror upstream's type guard. A misconfigured observer could

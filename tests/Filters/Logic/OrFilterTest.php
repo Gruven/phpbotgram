@@ -130,7 +130,10 @@ final class OrFilterTest extends TestCase
       $this->filter($vote),
     );
 
-    $filter($this->event(), ['original' => 'value']);
+    // Spread `['original' => 'value']` so the string key becomes a named
+    // argument captured by the variadic `...$kwargs` in each child's
+    // `__invoke` as `$kwargs['original']` rather than `$kwargs[0]`.
+    $filter($this->event(), ...['original' => 'value']);
 
     self::assertSame(
       [['original' => 'value'], ['original' => 'value']],
@@ -140,15 +143,15 @@ final class OrFilterTest extends TestCase
   }
 
   /**
-   * @param Closure(object, array<string, mixed>): (array<string, mixed>|bool) $vote
+   * @param Closure(object, array<int|string, mixed>): (array<string, mixed>|bool) $vote
    */
   private function filter(Closure $vote): Filter
   {
     return new class ($vote) extends Filter {
-      /** @param Closure(object, array<string, mixed>): (array<string, mixed>|bool) $vote */
+      /** @param Closure(object, array<int|string, mixed>): (array<string, mixed>|bool) $vote */
       public function __construct(private readonly Closure $vote) {}
 
-      public function __invoke(object $event, array $kwargs = []): array|bool
+      public function __invoke(object $event, mixed ...$kwargs): array|bool
       {
         return ($this->vote)($event, $kwargs);
       }

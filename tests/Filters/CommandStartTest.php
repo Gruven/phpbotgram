@@ -102,7 +102,8 @@ final class CommandStartTest extends TestCase
     $bot = new MockedBot();
 
     self::assertIsArray($filter($this->message(text: '/Start')));
-    self::assertIsArray($filter($this->message(text: '/start@anybot'), ['bot' => $bot]));
+    // Spread so the named `bot` key flows into the variadic `...$kwargs`.
+    self::assertIsArray($filter($this->message(text: '/start@anybot'), ...['bot' => $bot]));
   }
 
   public function testNonStartCommandRejected(): void
@@ -135,7 +136,8 @@ final class CommandStartTest extends TestCase
   private function matchStart(CommandStart $filter, string $text, ?MockedBot $bot = null): CommandObject
   {
     $kwargs = $bot !== null ? ['bot' => $bot] : [];
-    $result = $filter($this->message(text: $text), $kwargs);
+    // Spread so named-key entries flow into the variadic `...$kwargs`.
+    $result = $filter($this->message(text: $text), ...$kwargs);
 
     self::assertIsArray($result);
     self::assertArrayHasKey('command', $result);

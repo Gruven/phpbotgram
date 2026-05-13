@@ -33,10 +33,10 @@ final class OrFilter extends Filter
     $this->targets = array_values($targets);
   }
 
-  public function __invoke(object $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, mixed ...$kwargs): array|bool
   {
     foreach ($this->targets as $target) {
-      $result = $target($event, $kwargs);
+      $result = $target($event, ...$kwargs);
 
       if ($result !== false) {
         // First accept (true or array) wins outright; later targets

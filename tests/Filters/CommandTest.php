@@ -216,7 +216,9 @@ final class CommandTest extends TestCase
     $filter = Command::of('start');
     $bot = new MockedBot();
 
-    self::assertFalse($filter($this->message(text: '/start@otherbot'), ['bot' => $bot]));
+    // Spread `['bot' => $bot]` so the named key flows into the variadic
+    // `...$kwargs` as `$kwargs['bot']` rather than `$kwargs[0]`.
+    self::assertFalse($filter($this->message(text: '/start@otherbot'), ...['bot' => $bot]));
   }
 
   public function testIgnoreMentionSkipsBotUsernameCheck(): void
@@ -398,7 +400,9 @@ final class CommandTest extends TestCase
   private function matchCommand(Command $filter, string $text, ?MockedBot $bot = null): CommandObject
   {
     $kwargs = $bot !== null ? ['bot' => $bot] : [];
-    $result = $filter($this->message(text: $text), $kwargs);
+    // Spread `$kwargs` so string-keyed entries flow into the variadic
+    // `...$kwargs` as named arguments rather than a positional array.
+    $result = $filter($this->message(text: $text), ...$kwargs);
 
     self::assertIsArray($result);
     self::assertArrayHasKey('command', $result);

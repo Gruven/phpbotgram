@@ -33,12 +33,19 @@ use LogicException;
  *
  * PHP can't reuse `|` / `>>` / `~` between class instances (operator
  * overloading is limited to a handful of arithmetic methods on numeric
- * objects via `Pure\Math`). The port replaces the operator DSL with two
- * surfaces:
+ * objects via `Pure\Math`). The port replaces the operator DSL with THREE
+ * factory shapes matching upstream's three rule shapes:
  *
- *   1. Direct constructor / `transition()`: explicit `oldStatuses` and
- *      `newStatuses` arrays of wire-level status strings.
- *   2. Named pre-built factories — `join()`, `leave()`, `promotion()`,
+ *   1. `newStatus(array $statuses)` — constrain only the NEW status (wildcard
+ *      old side). Mirrors upstream's `_MemberStatusMarker` /
+ *      `_MemberStatusGroupMarker` single-axis rule. Internally stored as
+ *      `new self([], $statuses)` where `oldStatuses = []` signals "match any".
+ *
+ *   2. `transition(array $from, array $to)` / direct constructor: explicit
+ *      `oldStatuses` AND `newStatuses`. Mirrors upstream's
+ *      `_MemberStatusTransition` old/new rule.
+ *
+ *   3. Named pre-built factories — `join()`, `leave()`, `promotion()`,
  *      `demotion()` — mirroring upstream's `JOIN_TRANSITION` /
  *      `LEAVE_TRANSITION` / `PROMOTED_TRANSITION` constants and a
  *      reverse-promotion pre-built. The `+`/`-` `is_member` modifier on
@@ -146,6 +153,24 @@ final class ChatMemberUpdatedFilter extends Filter
   }
 
   /**
+   * Constrain only the NEW status (wildcard old side). Mirrors upstream's
+   * `_MemberStatusMarker` / `_MemberStatusGroupMarker` single-axis rule
+   * shape — the first of upstream's three rule shapes. Passing
+   * `oldStatuses = []` signals "match any old status" inside `__invoke`.
+   *
+   * Example — match any member who becomes an administrator, regardless of
+   * their previous status:
+   *
+   *   ChatMemberUpdatedFilter::newStatus(ChatMemberUpdatedFilter::ADMINISTRATOR)
+   *
+   * @param list<string> $statuses The accepted statuses for `new_chat_member`.
+   */
+  public static function newStatus(array $statuses): self
+  {
+    return new self([], $statuses);
+  }
+
+  /**
    * Pre-built `IS_NOT_MEMBER → IS_MEMBER`. Mirrors upstream's
    * `JOIN_TRANSITION` constant at `chat_member_updated.py:187`. Matches
    * a user (re)joining the chat — left/kicked → creator/administrator/
@@ -189,9 +214,11 @@ final class ChatMemberUpdatedFilter extends Filter
   }
 
   /**
-   * @param array<string, mixed> $kwargs Unused — the filter is event-only.
+   * @param mixed ...$kwargs Dispatcher kwargs bag — captured variadically so
+   *                         the full bag passes through `CallableObject::prepareKwargs`.
+   *                         Unused by this filter (event-only decision).
    */
-  public function __invoke(object $event, array $kwargs = []): bool
+  public function __invoke(object $event, mixed ...$kwargs): bool
   {
     if (!$event instanceof ChatMemberUpdated) {
       // Type guard — the dispatcher might have wired this filter onto a
@@ -203,8 +230,13 @@ final class ChatMemberUpdatedFilter extends Filter
     $old = self::statusOf($event->oldChatMember);
     $new = self::statusOf($event->newChatMember);
 
-    return in_array($old, $this->oldStatuses, true)
-      && in_array($new, $this->newStatuses, true);
+    // An empty `oldStatuses` list is the "match any" sentinel used by
+    // `newStatus()` — skip the old-side check entirely when it is empty.
+    // `newStatuses` always has entries (every factory provides at least one);
+    // an empty `newStatuses` would match nothing, so we check unconditionally.
+    $oldOk = $this->oldStatuses === [] || in_array($old, $this->oldStatuses, true);
+
+    return $oldOk && in_array($new, $this->newStatuses, true);
   }
 
   /**

@@ -42,13 +42,13 @@ final class FilterTest extends TestCase
     // operator — composes targets under an AndFilter. Verify the produced
     // combinator preserves both child filters in declaration order.
     $left = new class extends Filter {
-      public function __invoke(object $event, array $kwargs = []): array|bool
+      public function __invoke(object $event, mixed ...$kwargs): array|bool
       {
         return true;
       }
     };
     $right = new class extends Filter {
-      public function __invoke(object $event, array $kwargs = []): array|bool
+      public function __invoke(object $event, mixed ...$kwargs): array|bool
       {
         return true;
       }
@@ -66,13 +66,13 @@ final class FilterTest extends TestCase
     // forwarded (verified in OrFilterTest); here we only check the factory
     // shape — class, parameter order — to keep this test isolated.
     $left = new class extends Filter {
-      public function __invoke(object $event, array $kwargs = []): array|bool
+      public function __invoke(object $event, mixed ...$kwargs): array|bool
       {
         return false;
       }
     };
     $right = new class extends Filter {
-      public function __invoke(object $event, array $kwargs = []): array|bool
+      public function __invoke(object $event, mixed ...$kwargs): array|bool
       {
         return true;
       }
@@ -90,7 +90,7 @@ final class FilterTest extends TestCase
     // helper and a planned instance-side `$filter->not()` under the same
     // name — spec note in the design doc.
     $target = new class extends Filter {
-      public function __invoke(object $event, array $kwargs = []): array|bool
+      public function __invoke(object $event, mixed ...$kwargs): array|bool
       {
         return true;
       }

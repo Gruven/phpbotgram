@@ -139,7 +139,7 @@ final class Command extends Filter
    *
    * @return array<string, mixed>|false
    */
-  public function __invoke(object $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, mixed ...$kwargs): array|bool
   {
     if (!$event instanceof Message) {
       // Mirror upstream's defensive type guard. A misconfigured router

@@ -71,13 +71,15 @@ final class ExceptionMessageFilter extends Filter
   /**
    * Match the registered pattern against `event->exception->getMessage()`.
    *
-   * @param array<string, mixed> $kwargs Unused — the filter is event-only.
+   * @param mixed ...$kwargs Dispatcher kwargs bag — captured variadically so
+   *                         the full bag passes through `CallableObject::prepareKwargs`.
+   *                         Unused by this filter (event-only decision).
    *
    * @return array{match: string, groups: list<string>}|false On match,
    *                                                          a kwargs dict for the dispatcher to merge. On miss or
    *                                                          non-`ErrorEvent` event, `false`.
    */
-  public function __invoke(object $event, array $kwargs = []): array|false
+  public function __invoke(object $event, mixed ...$kwargs): array|false
   {
     if (!$event instanceof ErrorEvent) {
       // Defensive type guard. A misconfigured router could wire this

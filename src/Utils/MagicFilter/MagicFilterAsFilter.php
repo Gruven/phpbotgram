@@ -33,7 +33,7 @@ final class MagicFilterAsFilter extends Filter
 {
   public function __construct(public readonly MagicFilter $magic) {}
 
-  public function __invoke(object $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, mixed ...$kwargs): array|bool
   {
     try {
       $result = $this->magic->resolve($event);
