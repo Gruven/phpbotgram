@@ -22,8 +22,8 @@ use Gruven\PhpBotGram\Utils\MagicFilter\Operation\FunctionOperation;
 use Gruven\PhpBotGram\Utils\MagicFilter\Operation\GetAttributeOperation;
 use Gruven\PhpBotGram\Utils\MagicFilter\Operation\GetItemOperation;
 use Gruven\PhpBotGram\Utils\MagicFilter\Operation\ImportantCombinationOperation;
-use Gruven\PhpBotGram\Utils\MagicFilter\Operation\ImportantFunctionOperation;
 use Gruven\PhpBotGram\Utils\MagicFilter\Operation\MethodCallOperation;
+use Gruven\PhpBotGram\Utils\MagicFilter\Operation\NotOperation;
 use Gruven\PhpBotGram\Utils\MagicFilter\Operation\SelectorOperation;
 use Stringable;
 use TypeError;
@@ -803,12 +803,13 @@ final class MagicFilter
   }
 
   /**
-   * Negate the chain so far: `$f->not()` flips the verdict. Implemented
-   * via an `ImportantFunctionOperation` wrapping logical NOT so even a
-   * rejected chain (null value) inverts to `true`.
+   * Negate the chain so far: `$f->not_()` flips the verdict. Implemented
+   * via a `NotOperation` (an important function operation wrapping logical
+   * NOT) so even a rejected chain (null value) inverts to `true`.
    *
-   * `$f->not()->not()` folds back to `$f` — mirrors upstream
-   * `__invert__` (`magic.py:132-139`).
+   * `$f->not_()->not_()` folds back to `$f` — mirrors upstream
+   * `__invert__` (`magic.py:132-139`). The fold uses `instanceof NotOperation`
+   * as a typed sentinel rather than a fragile zero-arg structural check.
    *
    * Named `not_` (with trailing underscore) is the user-visible name; PHP
    * forbids a method literally named `not` because of the precedence /
@@ -818,22 +819,17 @@ final class MagicFilter
   public function not_(): self
   {
     // Fold `~~F` back to `F` — same micro-optimisation upstream applies.
+    // The `instanceof NotOperation` check is intentionally typed: using a
+    // dedicated sentinel class avoids the fragile structural check
+    // (`$tail->args === [] && $tail->kwargs === []`) that would mismatch
+    // any future zero-arg `ImportantFunctionOperation` (e.g. `is_null()`).
     $tail = end($this->operations);
 
-    if (
-      $tail instanceof ImportantFunctionOperation
-      && $tail->args === []
-      && $tail->kwargs === []
-    ) {
-      // We can't peek inside the Closure to confirm it's "not"; rely on
-      // the structural marker (no args, important) which is unique to the
-      // negation slot we constructed below.
+    if ($tail instanceof NotOperation) {
       return $this->excludeLast();
     }
 
-    return $this->extend(new ImportantFunctionOperation(
-      static fn(mixed $val): bool => !$val,
-    ));
+    return $this->extend(new NotOperation());
   }
 
   /** Alias for `not_()` to read naturally in user code. */

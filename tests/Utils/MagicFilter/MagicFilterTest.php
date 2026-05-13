@@ -398,13 +398,37 @@ final class MagicFilterTest extends TestCase
   public function testDoubleNotFoldsBackToOriginal(): void
   {
     // `~~F` ≡ `F` upstream; we replicate via `excludeLast` when the
-    // tail is an ImportantFunctionOperation matching the "no-arg
-    // negation" shape.
+    // tail is a NotOperation sentinel — the dedicated typed class avoids
+    // a fragile zero-arg structural check.
     $f = MagicFilter::root()->id->equals(7);
     $folded = $f->not_()->not_();
 
     self::assertTrue($folded->resolve(new Chat(id: 7, type: 'private')));
     self::assertFalse($folded->resolve(new Chat(id: 8, type: 'private')));
+  }
+
+  public function testNotOperationSentinelFoldIsTypeSafe(): void
+  {
+    // The `~~F → F` fold uses `instanceof NotOperation` as the sentinel
+    // check rather than the fragile structural marker
+    // (`$tail->args === [] && $tail->kwargs === []`). This test confirms
+    // that the fold works correctly for a chained attribute access, and
+    // that resolve produces the same result as the un-negated chain.
+    //
+    // `F->foo->not_()->not_()` must resolve identically to `F->foo`
+    // against a subject with a truthy `foo` property.
+    $subject = new class {
+      public bool $foo = true;
+    };
+
+    $base = MagicFilter::root()->foo;
+    $doubleNegated = $base->not_()->not_();
+
+    self::assertSame(
+      $base->resolve($subject),
+      $doubleNegated->resolve($subject),
+      'double-not fold must produce same resolve result as original chain',
+    );
   }
 
   public function testNegateIsAliasForNot(): void
