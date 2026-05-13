@@ -226,6 +226,11 @@ final class DispatcherTest extends TestCase
     // Spec § "Injected dispatcher kwargs": every handler invocation sees
     // `bot` and `event_update` injected. Verifies the merge into kwargs
     // before propagateEvent runs.
+    //
+    // Note: pre-bind the Update to the dispatching bot so the Fix C3
+    // re-mount short-circuits (identity equality). Without the pre-bind
+    // the handler observes a withBot()-cloned tree, breaking the identity
+    // assertion below.
     $dispatcher = new Dispatcher();
     $observed = [];
     $dispatcher->message->register(static function (
@@ -237,7 +242,7 @@ final class DispatcherTest extends TestCase
       return 'ok';
     });
     $bot = new MockedBot();
-    $update = self::messageUpdate('hi');
+    $update = self::messageUpdate('hi')->withBot($bot);
 
     $dispatcher->feedUpdate($bot, $update);
 
@@ -385,10 +390,21 @@ final class DispatcherTest extends TestCase
     });
 
     $bot = new MockedBot();
-    $chat = new Chat(id: 100, type: 'private');
-    $user = new User(id: 200, isBot: false, firstName: 'Tester');
-    $message = new Message(messageId: 1, date: new DateTime('@0'), chat: $chat, fromUser: $user);
-    $update = new Update(updateId: 1, message: $message);
+    // Build every nested TelegramObject pre-bound to the dispatching bot
+    // via the ctor `bot:` parameter so the Fix C3 re-mount short-circuits
+    // (identity equality on `$update->bot === $bot`). Using `withBot()`
+    // would clone leaves, breaking the chat/user identity assertions
+    // below.
+    $chat = new Chat(id: 100, type: 'private', bot: $bot);
+    $user = new User(id: 200, isBot: false, firstName: 'Tester', bot: $bot);
+    $message = new Message(
+      messageId: 1,
+      date: new DateTime('@0'),
+      chat: $chat,
+      fromUser: $user,
+      bot: $bot,
+    );
+    $update = new Update(updateId: 1, message: $message, bot: $bot);
 
     $dispatcher->feedUpdate($bot, $update);
 
@@ -431,8 +447,13 @@ final class DispatcherTest extends TestCase
       return 'recovered';
     });
 
-    $update = self::messageUpdate('hi');
-    $result = $dispatcher->feedUpdate(new MockedBot(), $update);
+    // Pre-bind the Update to the dispatching bot so the Fix C3 re-mount
+    // short-circuits (identity equality). Without the pre-bind the
+    // ErrorEvent's `update` slot would reference the withBot()-cloned
+    // tree, not our local fixture.
+    $bot = new MockedBot();
+    $update = self::messageUpdate('hi')->withBot($bot);
+    $result = $dispatcher->feedUpdate($bot, $update);
 
     self::assertSame('recovered', $result);
     self::assertInstanceOf(ErrorEvent::class, $observed);
@@ -482,6 +503,65 @@ final class DispatcherTest extends TestCase
     $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
 
     self::assertSame(UnhandledSentinel::instance(), $result);
+  }
+
+  public function testFeedUpdateReMountsUpdateOntoSuppliedBot(): void
+  {
+    // Fix C3: spec § "Dispatcher" line 628 mandates that `feedUpdate`
+    // re-mounts the supplied bot onto the Update when `$update->bot !==
+    // $bot` — including every nested TelegramObject. Mirrors upstream's
+    // `Update.model_validate(update.model_dump(), context={"bot": bot})`
+    // round-trip at `dispatcher.py:153-161`.
+    //
+    // Test shape: build an Update whose nested message has `bot=null`,
+    // pass a real Bot to `feedUpdate`, and assert the handler observes
+    // both `$event_update->bot === $bot` AND `$event_update->message->bot
+    // === $bot`. Pre-fix, the message's `bot` slot stayed `null` because
+    // we never called `withBot()` on the update tree.
+    $dispatcher = new Dispatcher();
+    $observed = null;
+    $dispatcher->message->register(static function (Update $event_update) use (&$observed): string {
+      $observed = $event_update;
+
+      return 'ok';
+    });
+    $bot = new MockedBot();
+    $update = self::messageUpdate('hi'); // Built with bot=null.
+
+    self::assertNull($update->bot, 'Sanity: fixture must start with bot=null.');
+    self::assertNull($update->message?->bot, 'Sanity: nested message must start with bot=null.');
+
+    $dispatcher->feedUpdate($bot, $update);
+
+    self::assertInstanceOf(Update::class, $observed);
+    self::assertSame($bot, $observed->bot, 'feedUpdate must rebind Update->bot to the supplied bot.');
+    self::assertSame(
+      $bot,
+      $observed->message?->bot,
+      'feedUpdate must deep-rebind nested TelegramObject->bot to the supplied bot.',
+    );
+  }
+
+  public function testFeedUpdateLeavesUpdateUnchangedWhenBotsAlreadyMatch(): void
+  {
+    // Counterpart to the re-mount test: when `$update->bot === $bot` we
+    // must NOT clone the tree. The Update instance the handler sees is
+    // the SAME instance the caller passed in (identity check via `===`).
+    // Upstream short-circuits via `if update.bot != bot: update = ...`
+    // — the equality check skips the round-trip.
+    $dispatcher = new Dispatcher();
+    $bot = new MockedBot();
+    $update = self::messageUpdate('hi')->withBot($bot);
+    $observed = null;
+    $dispatcher->message->register(static function (Update $event_update) use (&$observed): string {
+      $observed = $event_update;
+
+      return 'ok';
+    });
+
+    $dispatcher->feedUpdate($bot, $update);
+
+    self::assertSame($update, $observed, 'feedUpdate must not clone the Update when bots already match.');
   }
 
   public function testFeedWebhookUpdateAcceptsRawArrayUpdate(): void

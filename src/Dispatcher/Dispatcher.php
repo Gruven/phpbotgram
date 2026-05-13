@@ -303,6 +303,20 @@ class Dispatcher extends Router
    */
   public function feedUpdate(Bot $bot, Update $update, array $kwargs = []): mixed
   {
+    // Fix C3: re-mount the update tree onto the supplied bot when the
+    // current binding diverges. Mirrors upstream
+    // `aiogram/dispatcher/dispatcher.py:153-161`'s
+    // `Update.model_validate(update.model_dump(), context={"bot": bot})`
+    // round-trip — every nested TelegramObject's `bot` slot must reference
+    // the dispatching bot so handler shortcuts (`Message::answer`,
+    // `CallbackQuery::answer`, …) call out via the right Bot instance.
+    //
+    // Identity-skip when bots already match: callers passing a pre-bound
+    // Update (the common case from `feedRawUpdate` / `feedWebhookUpdate`)
+    // pay nothing for the check beyond a single `!==` comparison.
+    if ($update->bot !== $bot) {
+      $update = $update->withBot($bot);
+    }
     $updateType = $update->eventType();
 
     if ($updateType === null) {
