@@ -15,9 +15,11 @@ namespace Gruven\PhpBotGram\Utils\MagicFilter\Operation;
  * would have been mis-identified as the negation sentinel and incorrectly
  * folded away by the `~~F → F` optimisation.
  *
- * Inherits `important(): bool => true` from `ImportantBaseOperation` so the
+ * Overrides `important()` directly (not inherited) to return `true` so the
  * MagicFilter resolver always executes the NOT even after a prior rejection —
- * matching upstream `ImportantFunctionOperation` semantics.
+ * matching upstream `ImportantFunctionOperation` semantics. The class extends
+ * `FunctionOperation` (not `ImportantBaseOperation`), so the `important()`
+ * override is declared inline rather than inherited.
  *
  * Usage is entirely internal to `MagicFilter::not_()`. The public surface of
  * `not_()` and `negate()` is unchanged.
