@@ -205,8 +205,14 @@ class Router
     // we also stash a readonly camelCase alias property that points at
     // the same instance, so `$router->editedMessage` and
     // `$router->observers['edited_message']` are guaranteed identical.
+    //
+    // Each observer carries a back-reference to `$this` so its
+    // `resolveMiddlewares()` can walk the ancestor chain via
+    // `$router->parentRouter` at trigger time (Fix C2 — chain_head
+    // middleware inheritance). Standalone observers built without a
+    // router argument fall back to their own inner middleware only.
     foreach ([...self::UPDATE_TYPES, 'error'] as $eventName) {
-      $this->observers[$eventName] = new TelegramEventObserver($eventName);
+      $this->observers[$eventName] = new TelegramEventObserver($eventName, $this);
     }
 
     $this->message = $this->observers['message'];

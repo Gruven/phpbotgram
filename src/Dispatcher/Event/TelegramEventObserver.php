@@ -8,6 +8,7 @@ use Closure;
 use Gruven\PhpBotGram\Dispatcher\Flags\Flags;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager;
+use Gruven\PhpBotGram\Dispatcher\Router;
 
 /**
  * Routing observer for a single Telegram update type — port of
@@ -99,14 +100,113 @@ final class TelegramEventObserver
   public readonly MiddlewareManager $innerMiddleware;
 
   /**
+   * Back-reference to the owning `Router`. `null` when the observer is
+   * constructed standalone (legitimate for unit tests that don't need
+   * chain-head inheritance). Populated by `Router::__construct` for every
+   * observer in the schema-derived map so `resolveMiddlewares()` can
+   * walk the ancestor chain via `Router::$parentRouter`.
+   *
+   * Mirrors upstream's `TelegramEventObserver(router=self, event_name=...)`
+   * constructor (`telegram.py:26-28`). The reference is `?Router` not
+   * `Router` because the observer is sometimes built before its router
+   * (PHP property initializers run before the `__construct` body, but
+   * the observer's own ctor needs the router reference up-front), and
+   * `null` is the contract-safe default for unit-test instantiation.
+   */
+  public readonly ?Router $router;
+
+  /**
    * @param string $eventName Wire-level Bot API key this observer routes
    *                          for (`message`, `callback_query`, …). The dispatcher uses this
    *                          when injecting the `event_name` kwarg into middleware data.
+   * @param ?Router $router Back-reference to the owning router. Populated
+   *                        by `Router::__construct`; left `null` for tests
+   *                        that drive the observer in isolation.
    */
-  public function __construct(public readonly string $eventName)
+  public function __construct(public readonly string $eventName, ?Router $router = null)
   {
     $this->outerMiddleware = new MiddlewareManager();
     $this->innerMiddleware = new MiddlewareManager();
+    $this->router = $router;
+  }
+
+  /**
+   * Resolve every inner-middleware instance that should wrap each
+   * handler invocation on this observer — self's own plus every ancestor
+   * router's matching observer's inner middleware. Mirrors upstream's
+   * `_resolve_middlewares` (`telegram.py:49-56`):
+   *
+   *     for router in reversed(tuple(self.router.chain_head)):
+   *         observer = router.observers.get(self.event_name)
+   *         if observer:
+   *             middlewares.extend(observer.middleware)
+   *     return middlewares
+   *
+   * `chain_head` walks self → parent → root; `reversed` then yields
+   * root → … → self, so the outermost link of the composed chain is the
+   * root router's middleware. The PHP port iterates the same order: we
+   * walk from `$this->router` upward, push each ancestor's matching
+   * observer's middleware onto an in-progress list, then return that
+   * list reversed.
+   *
+   * Returns an empty list when `$this->router` is null (standalone
+   * observers used in unit tests carry their own inner middleware via
+   * `$this->innerMiddleware` only).
+   *
+   * @return list<BaseMiddleware> Composed innermost-to-outermost; callers
+   *                              pass to `MiddlewareManager::wrap` semantics
+   *                              (first element wraps outermost).
+   */
+  public function resolveMiddlewares(): array
+  {
+    if ($this->router === null) {
+      // Standalone observer (no router back-reference): only its own
+      // inner chain applies. We still return the inner-middleware list
+      // verbatim so triggerCore's single composition path doesn't have
+      // to special-case the standalone case.
+      return self::collectMiddlewares($this->innerMiddleware);
+    }
+
+    // Walk self → parent → root, pushing each ancestor's observer's
+    // inner middleware onto a flat list, then reverse so the root's
+    // middleware ends up outermost. Matches upstream's `reversed(chain_head)`
+    // walk shape.
+    $reverseChain = [];
+    $router = $this->router;
+
+    while ($router !== null) {
+      $observer = $router->observers[$this->eventName] ?? null;
+
+      if ($observer !== null) {
+        foreach (self::collectMiddlewares($observer->innerMiddleware) as $mw) {
+          $reverseChain[] = $mw;
+        }
+      }
+
+      $router = $router->parentRouter;
+    }
+
+    return array_reverse($reverseChain);
+  }
+
+  /**
+   * Extract the registered middlewares from a `MiddlewareManager` as a
+   * plain `list<BaseMiddleware>`. The manager only exposes its contents
+   * via `ArrayAccess` + `Countable` (`IteratorAggregate` is the I10
+   * follow-up); this helper provides the iteration shape we need without
+   * leaking the manager's internal storage.
+   *
+   * @return list<BaseMiddleware>
+   */
+  private static function collectMiddlewares(MiddlewareManager $manager): array
+  {
+    $out = [];
+
+    for ($i = 0, $n = count($manager); $i < $n; $i++) {
+      $out[] = $manager[$i];
+    }
+
+    return $out;
   }
 
   /**
@@ -307,6 +407,18 @@ final class TelegramEventObserver
       // merge. Drop through to the next filter.
     }
 
+    // Resolve the inner-middleware chain ONCE for this trigger: self's
+    // own middleware plus every ancestor router's matching observer's
+    // middleware. Mirrors upstream `_resolve_middlewares` walking
+    // `chain_head` (`telegram.py:49-56` + the wrap call at
+    // `telegram.py:122-126`).
+    //
+    // For standalone observers (no router back-reference, e.g. unit
+    // tests), `resolveMiddlewares` returns this observer's own
+    // `$innerMiddleware` flat — no inheritance to perform, but the
+    // composition path stays uniform.
+    $resolvedMiddlewares = $this->resolveMiddlewares();
+
     foreach ($this->handlers as $handler) {
       $kwargsWithHandler = [...$kwargs, 'handler' => $handler];
 
@@ -327,8 +439,19 @@ final class TelegramEventObserver
       // only kwargs — the kwarg merge above already carries `event` so
       // forwarding it positionally would collide with PHP's "named
       // parameter overwrites previous argument" guard.
-      $terminal = static fn(object $e, array $k): mixed => $handler->call([], $k);
-      $wrappedHandler = $this->innerMiddleware->wrap($terminal);
+      $handlerTerminal = static fn(object $e, array $k): mixed => $handler->call([], $k);
+
+      // Compose the resolved chain around the terminal. `array_reverse`
+      // so the first element of `$resolvedMiddlewares` (root-most)
+      // wraps the outermost layer. Identical semantics to
+      // `MiddlewareManager::wrap` but free of the WeakMap cache (the
+      // terminal closure is fresh per handler so the cache never hits).
+      $wrappedHandler = $handlerTerminal;
+
+      foreach (array_reverse($resolvedMiddlewares) as $middleware) {
+        $next = $wrappedHandler;
+        $wrappedHandler = static fn(object $e, array $k): mixed => $middleware($next, $e, $k);
+      }
       $response = $wrappedHandler($event, $handlerKwargs);
 
       if ($response === UnhandledSentinel::instance()) {

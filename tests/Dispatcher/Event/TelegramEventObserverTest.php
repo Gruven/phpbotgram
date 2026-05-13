@@ -14,6 +14,7 @@ use Gruven\PhpBotGram\Dispatcher\Flags\Flag;
 use Gruven\PhpBotGram\Dispatcher\Flags\FlagDecorator;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager;
+use Gruven\PhpBotGram\Dispatcher\Router;
 use Gruven\PhpBotGram\Types\Chat;
 use Gruven\PhpBotGram\Types\TelegramObject;
 use PHPUnit\Framework\TestCase;
@@ -547,6 +548,99 @@ final class TelegramEventObserverTest extends TestCase
     $observer->trigger(new Chat(id: 1, type: 'private'));
 
     self::assertSame(2, $count);
+  }
+
+  public function testInnerMiddlewareInheritedFromParentRouter(): void
+  {
+    // Fix C2 regression: inner middleware registered on a parent router's
+    // observer must wrap handlers registered on a child router's observer
+    // for the same event name. Upstream `_resolve_middlewares` walks
+    // `router.chain_head` (= router + ancestors → root) and collects every
+    // ancestor's `observers[event_name].middlewares` into one composed
+    // chain. The port mirrors that via TelegramEventObserver::$router
+    // back-reference + `resolveMiddlewares()`.
+    //
+    // Test shape: parent router has an inner middleware on its `message`
+    // observer; child router (attached via includeRouter) has a handler on
+    // its own `message` observer. When the child dispatches, the parent's
+    // middleware MUST wrap the child's handler.
+    $parent = new Router('parent');
+    $child = new Router('child');
+    $parent->includeRouter($child);
+
+    $log = [];
+    $parent->message->innerMiddleware(new class ($log) extends BaseMiddleware {
+      /** @param list<string> $log */
+      public function __construct(public array &$log) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        $this->log[] = 'parent-mw-before';
+        $result = $handler($event, $data);
+        $this->log[] = 'parent-mw-after';
+
+        return $result;
+      }
+    });
+    $child->message->register(static function () use (&$log): string {
+      $log[] = 'child-handler';
+
+      return 'claimed';
+    });
+
+    $result = $child->message->trigger(new Chat(id: 1, type: 'private'));
+
+    self::assertSame('claimed', $result);
+    self::assertSame(['parent-mw-before', 'child-handler', 'parent-mw-after'], $log);
+  }
+
+  public function testInnerMiddlewareInheritanceComposesInRegistrationOrder(): void
+  {
+    // When both parent and child have inner middleware on the same event,
+    // they compose self-first then ancestors (matching upstream's
+    // `reversed(tuple(self.router.chain_head))` walk). With the parent
+    // attached first, the resolved chain is [parent-mw, child-mw],
+    // executing parent-mw → child-mw → handler → child-mw-after → parent-mw-after.
+    $parent = new Router('parent');
+    $child = new Router('child');
+    $parent->includeRouter($child);
+
+    $log = [];
+    $parent->message->innerMiddleware(new class ($log) extends BaseMiddleware {
+      /** @param list<string> $log */
+      public function __construct(public array &$log) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        $this->log[] = 'parent-before';
+        $r = $handler($event, $data);
+        $this->log[] = 'parent-after';
+
+        return $r;
+      }
+    });
+    $child->message->innerMiddleware(new class ($log) extends BaseMiddleware {
+      /** @param list<string> $log */
+      public function __construct(public array &$log) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        $this->log[] = 'child-before';
+        $r = $handler($event, $data);
+        $this->log[] = 'child-after';
+
+        return $r;
+      }
+    });
+    $child->message->register(static function () use (&$log): string {
+      $log[] = 'handler';
+
+      return 'ok';
+    });
+
+    $child->message->trigger(new Chat(id: 1, type: 'private'));
+
+    self::assertSame(
+      ['parent-before', 'child-before', 'handler', 'child-after', 'parent-after'],
+      $log,
+    );
   }
 
   private static function passthroughMiddleware(): BaseMiddleware
