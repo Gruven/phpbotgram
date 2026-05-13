@@ -141,6 +141,20 @@ final class CallbackQueryFilterTest extends TestCase
     self::assertSame(CbqFixture::class, $filter->callbackDataClass);
   }
 
+  public function testRejectsCallbackQueryWhenDecodeThrowsTypeError(): void
+  {
+    // `CbDataIntKindCarrier` uses an int-backed enum (`CbDataIntKindForFilter`).
+    // `CallbackData::decodeComplex()` calls `BackedEnum::from($raw)` where
+    // `$raw` is a string. Under `declare(strict_types=1)` this raises
+    // `\TypeError` for int-backed enums. The filter must catch that and
+    // return `false` rather than crashing the dispatcher loop — mirrors
+    // upstream `except (TypeError, ValueError): return False`.
+    $filter = new CallbackQueryFilter(CbDataIntKindCarrier::class);
+    $query = $this->callbackQuery(data: 'iek:1');
+
+    self::assertFalse($filter($query));
+  }
+
   /**
    * Build a minimally populated `CallbackQuery` for filter exercise. Reuses
    * a shared user/chat fixture so each test case stays focused on the
@@ -170,5 +184,33 @@ final class CbqFixture extends CallbackData
     public readonly int $id,
     public readonly string $action,
     public readonly bool $deleted,
+  ) {}
+}
+
+/**
+ * Int-backed enum fixture for `testRejectsCallbackQueryWhenDecodeThrowsTypeError`.
+ * Under `declare(strict_types=1)`, `BackedEnum::from(string)` on an int-backed
+ * enum raises `\TypeError` — this is the deferred bug exercised defensively.
+ *
+ * @internal
+ */
+enum CbDataIntKindForFilter: int
+{
+  case First = 1;
+  case Second = 2;
+}
+
+/**
+ * CallbackData carrier that embeds the int-backed `CbDataIntKindForFilter`
+ * enum so `decodeComplex()` will attempt `CbDataIntKindForFilter::from('1')`
+ * (string arg) and throw `\TypeError` under strict_types.
+ *
+ * @internal
+ */
+#[CallbackPrefix('iek')]
+final class CbDataIntKindCarrier extends CallbackData
+{
+  public function __construct(
+    public readonly CbDataIntKindForFilter $kind,
   ) {}
 }

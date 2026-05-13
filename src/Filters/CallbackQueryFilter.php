@@ -7,6 +7,9 @@ namespace Gruven\PhpBotGram\Filters;
 use Gruven\PhpBotGram\Types\CallbackQuery;
 use InvalidArgumentException;
 use LogicException;
+use Throwable;
+use TypeError;
+use ValueError;
 
 /**
  * Dispatcher-side filter that bridges incoming `CallbackQuery` events to a
@@ -73,12 +76,31 @@ final class CallbackQueryFilter extends Filter
 
     try {
       $parsed = ($this->callbackDataClass)::unpack($data);
-    } catch (InvalidArgumentException|LogicException) {
-      // `InvalidArgumentException` covers prefix mismatch and
-      // separator-in-value defects; `LogicException` covers arity
-      // mismatch and undecodable target types. Both upstream
-      // ValueError-equivalents collapse to a graceful `false`.
+    } catch (InvalidArgumentException|LogicException $e) {
+      // `InvalidArgumentException`: prefix mismatch, separator-in-value.
+      // `LogicException`: arity mismatch, undecodable target types.
+      // Both upstream ValueError-equivalents collapse to a graceful `false`.
       return false;
+    } catch (Throwable $e) {
+      // Defensive broad catch for type-coercion failures that are not
+      // statically visible but occur at runtime. The canonical case is
+      // `BackedEnum::from(string)` on an int-backed enum under
+      // `declare(strict_types=1)`, which raises `\TypeError`. PHPStan
+      // cannot see this as a thrown type from the `unpack()` signature
+      // (the BackedEnum stub accepts `string|int`), so a named
+      // `catch (TypeError)` clause would be flagged as dead.
+      //
+      // Only absorb errors that are part of the expected decode-failure
+      // surface: `\TypeError` (type-coercion mismatch) and `\ValueError`
+      // (enum `::from()` with a valid-typed but unknown value). Re-throw
+      // anything else to avoid swallowing programming errors.
+      //
+      // Mirrors upstream `except (TypeError, ValueError): return False`.
+      if ($e instanceof TypeError || $e instanceof ValueError) {
+        return false;
+      }
+
+      throw $e;
     }
 
     return ['callback_data' => $parsed];
