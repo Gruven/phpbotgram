@@ -35,7 +35,9 @@ use Gruven\PhpBotGram\Types\Update;
 use Gruven\PhpBotGram\Utils\Backoff;
 use LogicException;
 use Revolt\EventLoop;
+use Revolt\EventLoop\FiberLocal;
 use Revolt\EventLoop\UnsupportedFeatureException;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -187,6 +189,47 @@ class Dispatcher extends Router
   private bool $isPolling = false;
 
   /**
+   * Sticky "polling has been started at least once" flag set inside
+   * `startPolling` (after the single-instance guard accepts) and never
+   * cleared. Lets `stopPolling` distinguish "never started → throw" from
+   * "already cleanly stopped → no-op". Mirrors upstream's reliance on
+   * `_stop_signal` and `_stopped_signal` staying non-None after the
+   * first start (`dispatcher.py:559-562`'s `if self._stop_signal is None`
+   * guard — the slots only get None'd once, at construction).
+   */
+  private bool $hasEverStarted = false;
+
+  /**
+   * Fiber-local "we're inside a polling fiber" flag. Set to `true` at the
+   * entry of `pollingFor` and inside each per-update async closure in
+   * concurrent mode; cleared via try/finally on exit. `stopPolling`
+   * inspects the flag: when `true`, the drain await is **skipped** —
+   * awaiting the drain from inside the polling fiber would deadlock
+   * because the drain only completes when the polling fiber exits.
+   *
+   * Without this signal, callers from a handler (which runs inside the
+   * polling fiber) would have to either:
+   * - Skip stopPolling entirely (breaks tests that need to terminate
+   *   the loop from a handler).
+   * - Spawn `async(static fn => $dispatcher->stopPolling())` AND ensure
+   *   the polling fiber yields before its next batch fetch (real-world
+   *   polling yields naturally on the HTTP transport; mocks don't).
+   *
+   * Upstream's `aiogram` sidesteps this differently: it uses
+   * `asyncio.wait(return_when=FIRST_COMPLETED)` on the polling tasks
+   * together with the stop signal, then **cancels** the pending polling
+   * tasks. The cancellation interrupts the handler's awaited
+   * `stop_polling()`. The amphp v3 port doesn't have native Future
+   * cancellation, so the FiberLocal pattern is the closest equivalent.
+   *
+   * Initialised once per Dispatcher instance; the `bool` default models
+   * "no value set yet" (≡ false at the call site).
+   *
+   * @var FiberLocal<bool>
+   */
+  private readonly FiberLocal $insidePollingFiber;
+
+  /**
    * Shared cancellation signal across every per-bot polling fiber. `null`
    * when no polling is in flight; replaced with a fresh DeferredFuture on
    * each `startPolling` call (so a Dispatcher can be re-started after a
@@ -199,6 +242,27 @@ class Dispatcher extends Router
    * @var ?DeferredFuture<null>
    */
   private ?DeferredFuture $stopSignal = null;
+
+  /**
+   * Drain barrier completed once the polling awaiter's finally block has
+   * fully unwound (emitShutdown + bot session close + final state reset).
+   * `stopPolling()` awaits this future OUTSIDE the runningLock so callers
+   * observe a fully-drained dispatcher on return.
+   *
+   * Mirrors upstream `self._stopped_signal: Event` at `dispatcher.py:102`;
+   * `stop_polling` calls `await self._stopped_signal.wait()` at
+   * `dispatcher.py:509` after setting `_stop_signal`. The port uses a
+   * DeferredFuture because amphp v3 has no "Event"-equivalent primitive
+   * and the carried value is unused — only the completed status matters.
+   *
+   * Lifecycle: created together with `$stopSignal` at startPolling entry;
+   * completed inside the awaiter's finally block right after the lock-
+   * protected state reset (so by the time `getFuture()->await()` resolves
+   * in another fiber, $isPolling is false and the session is closed).
+   *
+   * @var ?DeferredFuture<null>
+   */
+  private ?DeferredFuture $drainedSignal = null;
 
   /**
    * In-flight handler-dispatch fibers, keyed by `spl_object_id($future)`.
@@ -251,6 +315,11 @@ class Dispatcher extends Router
     parent::__construct($name);
     $this->runningLock = new LocalMutex();
     $this->webhookTimeoutSeconds = $webhookTimeoutSeconds ?? self::WEBHOOK_TIMEOUT_SECONDS;
+    // FiberLocal default false — `stopPolling` reads the slot to decide
+    // whether to skip the drain await. Each polling fiber sets it to true
+    // for the duration of its loop body. See `$insidePollingFiber`'s
+    // docblock for the rationale.
+    $this->insidePollingFiber = new FiberLocal(static fn(): bool => false);
 
     // ErrorsMiddleware needs a closure that re-enters `propagateEvent`
     // with the synthetic ErrorEvent so a registered error observer can
@@ -753,90 +822,113 @@ class Dispatcher extends Router
       ? new LocalSemaphore($concurrency)
       : null;
 
-    foreach ($this->listenUpdates($bot, $options) as $update) {
-      // Fix C2: swallow `UpdateTypeLookupException` with a RuntimeWarning so a
-      // single unknown update — typically caused by Telegram introducing a new
-      // update kind before the schema was regenerated — does NOT kill the
-      // long-poll loop. Upstream's `_listen_update` raises `SkipHandler`
-      // inside a `try/except UpdateTypeLookupError: warnings.warn(...)` block
-      // (`dispatcher.py:267-279`); the port catches the typed exception at
-      // the dispatch entry-point instead since we don't run the synthetic
-      // `update` observer.
-      //
-      // Fix I1: in the CONCURRENT branch the typed catch lives INSIDE the
-      // async() closure — exceptions thrown by `feedUpdate` running inside
-      // the spawned Future would otherwise land on the future state, not
-      // this synchronous frame, and surface as an "unhandled future" warning
-      // at GC time.
-      //
-      // Fix I2: capture `feedUpdate`'s return value in BOTH branches. If
-      // the handler returned a `TelegramMethod` (the polling-side analogue
-      // of webhook's inline response), route it through `silentCallRequest`
-      // so the side effect still reaches Telegram. Mirrors upstream
-      // `_process_update`'s "if call_answer and isinstance(response,
-      // TelegramMethod): await self.silent_call_request(...)" at
-      // `dispatcher.py:321-322`.
-      try {
-        if ($semaphore === null) {
-          // Serial dispatch: every handler runs to completion before the
-          // next Update is consumed. Exceptions terminate the polling loop;
-          // upstream's catch-and-log lives in ErrorsMiddleware, not here.
-          $result = $this->feedUpdate($bot, $update);
+    // Fix I3: mark this fiber as "inside the polling loop" so a nested
+    // call to `stopPolling` (typically from a handler that wants to
+    // terminate the loop) skips the drain await — awaiting drain from
+    // inside the polling fiber would deadlock since the drain only
+    // completes when the polling fiber exits. See `$insidePollingFiber`'s
+    // docblock.
+    $this->insidePollingFiber->set(true);
 
-          if ($result instanceof TelegramMethod) {
-            $this->silentCallRequest($bot, $result);
-          }
-
-          continue;
-        }
-
-        // Concurrent dispatch: the semaphore caps in-flight work at
-        // `handleAsTasks`. Acquire BEFORE spawning so back-pressure flows
-        // back to listenUpdates — the loop suspends here when the pool is
-        // saturated, which in turn delays the next getUpdates round.
-        $lock = $semaphore->acquire();
-
-        $task = async(function () use ($bot, $update, $lock): void {
-          try {
+    try {
+      foreach ($this->listenUpdates($bot, $options) as $update) {
+        // Fix C2: swallow `UpdateTypeLookupException` with a RuntimeWarning so a
+        // single unknown update — typically caused by Telegram introducing a new
+        // update kind before the schema was regenerated — does NOT kill the
+        // long-poll loop. Upstream's `_listen_update` raises `SkipHandler`
+        // inside a `try/except UpdateTypeLookupError: warnings.warn(...)` block
+        // (`dispatcher.py:267-279`); the port catches the typed exception at
+        // the dispatch entry-point instead since we don't run the synthetic
+        // `update` observer.
+        //
+        // Fix I1: in the CONCURRENT branch the typed catch lives INSIDE the
+        // async() closure — exceptions thrown by `feedUpdate` running inside
+        // the spawned Future would otherwise land on the future state, not
+        // this synchronous frame, and surface as an "unhandled future" warning
+        // at GC time.
+        //
+        // Fix I2: capture `feedUpdate`'s return value in BOTH branches. If
+        // the handler returned a `TelegramMethod` (the polling-side analogue
+        // of webhook's inline response), route it through `silentCallRequest`
+        // so the side effect still reaches Telegram. Mirrors upstream
+        // `_process_update`'s "if call_answer and isinstance(response,
+        // TelegramMethod): await self.silent_call_request(...)" at
+        // `dispatcher.py:321-322`.
+        try {
+          if ($semaphore === null) {
+            // Serial dispatch: every handler runs to completion before the
+            // next Update is consumed. Exceptions terminate the polling loop;
+            // upstream's catch-and-log lives in ErrorsMiddleware, not here.
             $result = $this->feedUpdate($bot, $update);
 
             if ($result instanceof TelegramMethod) {
               $this->silentCallRequest($bot, $result);
             }
-          } catch (UpdateTypeLookupException $e) {
-            // Fix I1: swallow forward-compat unknown update types from
-            // the spawned future. Without this catch the exception would
-            // become an "unhandled future" warning at GC time and the
-            // polling loop would continue blindly. Mirrors the outer
-            // serial-branch catch (above) with the same warning shape.
-            trigger_error(
-              sprintf(
-                'Detected unknown update type, skipping: %s. Telegram may have introduced new update kinds; consider syncing the schema.',
-                $e->getMessage(),
-              ),
-              \E_USER_WARNING,
-            );
-          } finally {
-            $lock->release();
+
+            continue;
           }
-        });
 
-        $taskId = spl_object_id($task);
-        $this->handleUpdateTasks[$taskId] = $task;
-        $task->finally(function () use ($taskId): void {
-          unset($this->handleUpdateTasks[$taskId]);
-        });
-      } catch (UpdateTypeLookupException $e) {
-        trigger_error(
-          sprintf(
-            'Detected unknown update type, skipping: %s. Telegram may have introduced new update kinds; consider syncing the schema.',
-            $e->getMessage(),
-          ),
-          \E_USER_WARNING,
-        );
+          // Concurrent dispatch: the semaphore caps in-flight work at
+          // `handleAsTasks`. Acquire BEFORE spawning so back-pressure flows
+          // back to listenUpdates — the loop suspends here when the pool is
+          // saturated, which in turn delays the next getUpdates round.
+          $lock = $semaphore->acquire();
 
-        continue;
+          $task = async(function () use ($bot, $update, $lock): void {
+            // Fix I3: each per-update fiber inherits the "inside polling"
+            // marker so a handler-side `stopPolling` from a concurrent
+            // dispatch fiber also skips the drain await. Set in the new
+            // fiber's own FiberLocal slot — Revolt's `FiberLocal` is
+            // per-fiber, so the outer `pollingFor` set doesn't propagate
+            // automatically.
+            $this->insidePollingFiber->set(true);
+
+            try {
+              $result = $this->feedUpdate($bot, $update);
+
+              if ($result instanceof TelegramMethod) {
+                $this->silentCallRequest($bot, $result);
+              }
+            } catch (UpdateTypeLookupException $e) {
+              // Fix I1: swallow forward-compat unknown update types from
+              // the spawned future. Without this catch the exception would
+              // become an "unhandled future" warning at GC time and the
+              // polling loop would continue blindly. Mirrors the outer
+              // serial-branch catch (above) with the same warning shape.
+              trigger_error(
+                sprintf(
+                  'Detected unknown update type, skipping: %s. Telegram may have introduced new update kinds; consider syncing the schema.',
+                  $e->getMessage(),
+                ),
+                \E_USER_WARNING,
+              );
+            } finally {
+              $lock->release();
+            }
+          });
+
+          $taskId = spl_object_id($task);
+          $this->handleUpdateTasks[$taskId] = $task;
+          $task->finally(function () use ($taskId): void {
+            unset($this->handleUpdateTasks[$taskId]);
+          });
+        } catch (UpdateTypeLookupException $e) {
+          trigger_error(
+            sprintf(
+              'Detected unknown update type, skipping: %s. Telegram may have introduced new update kinds; consider syncing the schema.',
+              $e->getMessage(),
+            ),
+            \E_USER_WARNING,
+          );
+
+          continue;
+        }
       }
+    } finally {
+      // Clear the FiberLocal marker so a future invocation on the same
+      // fiber (e.g. test infra reusing the main fiber across polling
+      // rounds) sees a clean default.
+      $this->insidePollingFiber->set(false);
     }
   }
 
@@ -879,7 +971,13 @@ class Dispatcher extends Router
         throw new LogicException('startPolling: polling already in progress on this Dispatcher');
       }
       $this->isPolling = true;
+      $this->hasEverStarted = true;
       $this->stopSignal = new DeferredFuture();
+      // Fix I3: track the drain barrier alongside the stop signal so
+      // `stopPolling` can block the caller until the awaiter's finally
+      // block has fully unwound. Mirrors upstream `_stopped_signal: Event`
+      // at `dispatcher.py:102`.
+      $this->drainedSignal = new DeferredFuture();
     } finally {
       $lock->release();
     }
@@ -960,14 +1058,26 @@ class Dispatcher extends Router
         // stopPolling because the stopSignal future is already complete
         // by the time we reach this finally — but we still take the
         // lock for symmetry with the entry critical section.
+        //
+        // Fix I3: complete `$drainedSignal` AFTER the state reset but
+        // BEFORE nullifying it so a parallel `stopPolling` fiber parked
+        // on the await observes a fully-drained dispatcher (isPolling
+        // false, stopSignal null, session closed) when it resumes.
         $lock = $this->runningLock->acquire();
+        $drained = null;
 
         try {
           $this->isPolling = false;
           $this->stopSignal = null;
           $this->handleUpdateTasks = [];
+          $drained = $this->drainedSignal;
+          $this->drainedSignal = null;
         } finally {
           $lock->release();
+        }
+
+        if ($drained !== null && !$drained->isComplete()) {
+          $drained->complete(null);
         }
       }
     });
@@ -1007,30 +1117,80 @@ class Dispatcher extends Router
   }
 
   /**
-   * Signal the polling loop to stop. Safe to call from any fiber, from a
-   * signal handler, or from the main thread (the latter only meaningful
-   * outside the loop — but calling it then is harmless since the
-   * stopSignal will simply be `null`).
+   * Signal the polling loop to stop, then BLOCK the caller until the
+   * polling fibers have actually drained (emitShutdown finished, every
+   * bot session closed, internal state reset). Safe to call from any
+   * fiber or from a signal handler.
+   *
+   * Fix I3: contract mirrors upstream's `stop_polling` at
+   * `dispatcher.py:497-509`:
+   *
+   * - **Never started**: no `startPolling` has been seen on this
+   *   Dispatcher (`$hasEverStarted === false`). We raise
+   *   `RuntimeException("Polling is not started")` — parity with
+   *   upstream's `if not self._running_lock.locked(): raise
+   *   RuntimeError("Polling is not started")`.
+   * - **Active polling**: `$stopSignal` is present. We complete it (if
+   *   not already complete — multi-stop is idempotent) and then await
+   *   `$drainedSignal` outside the lock so the caller observes a
+   *   fully-drained dispatcher on return.
+   * - **Already cleanly stopped**: `$hasEverStarted === true &&
+   *   $drainedSignal === null` — the dispatcher ran a polling round to
+   *   completion before. We return silently (no throw, no await), parity
+   *   with upstream's `if not self._stop_signal or not
+   *   self._stopped_signal: return` at `dispatcher.py:506-507`.
+   *
+   * **Inside the polling fiber**: calling `stopPolling` from a handler
+   * is supported via the `$insidePollingFiber` FiberLocal flag — the
+   * drain await is skipped, so the call completes the stop signal
+   * synchronously and returns immediately. The polling fiber's
+   * post-yield check then unwinds the loop. Without the flag the call
+   * would deadlock (the drain only completes when the polling fiber
+   * exits, but the polling fiber would be parked here).
    *
    * The mutex round-trip is the canonical way to read/mutate the
    * `$stopSignal` slot without a torn read between concurrent fibers
    * (e.g. a SIGTERM handler firing while a user-level `stopPolling` call
-   * is mid-flight).
+   * is mid-flight). The drain await happens OUTSIDE the lock so a stop
+   * fiber doesn't deadlock against the awaiter's finally block (which
+   * itself acquires the lock to reset state).
    *
-   * Idempotent: multiple calls collapse to a single complete() because
-   * `DeferredFuture::complete()` would otherwise throw on a second call.
+   * @throws RuntimeException when no `startPolling` has ever been called
+   *                          on this Dispatcher.
    */
   public function stopPolling(): void
   {
     $lock = $this->runningLock->acquire();
+    $drainSignal = null;
 
     try {
+      if (!$this->hasEverStarted) {
+        throw new RuntimeException('Polling is not started');
+      }
+
       if ($this->stopSignal !== null && !$this->stopSignal->isComplete()) {
         $this->stopSignal->complete(null);
       }
+      $drainSignal = $this->drainedSignal;
     } finally {
       $lock->release();
     }
+
+    // Skip the drain await when we're inside the polling fiber chain
+    // (a handler called us): the drain only completes when the polling
+    // fiber exits, but the polling fiber is the one parked here. The
+    // post-yield check in `listenUpdates` will catch the stop signal we
+    // just set and unwind the loop cleanly. External callers (different
+    // fiber) see `false` and wait for the drain normally.
+    if ($this->insidePollingFiber->get()) {
+      return;
+    }
+
+    // Wait for the polling fibers to actually finish (outside the lock
+    // to avoid a deadlock against the awaiter's finally block which also
+    // acquires the runningLock for the state reset). `null` drain signal
+    // means the polling round already drained — return silently.
+    $drainSignal?->getFuture()->await();
   }
 
   /**

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Dispatcher;
 
+use function Amp\async;
+
 use Amp\DeferredFuture;
 
 use function Amp\delay;
@@ -25,6 +27,7 @@ use Gruven\PhpBotGram\Utils\BackoffConfig;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
+use RuntimeException;
 
 /**
  * Polling-loop tests for `Dispatcher` — Task 3.12.
@@ -64,22 +67,112 @@ final class PollingTest extends TestCase
     Bot::setCurrent(null);
   }
 
-  public function testStopPollingBeforeStartIsNoop(): void
+  public function testStopPollingBeforeStartThrowsRuntimeException(): void
   {
-    // The mutex-protected stopSignal slot starts null, so a stop with no
-    // start in flight must NOT throw and must NOT corrupt later state.
-    // Mirrors upstream's `_signal_stop_polling` early-return when the
-    // running lock isn't held (`dispatcher.py:512`).
+    // Fix I3: aiogram's `stop_polling` raises `RuntimeError("Polling is
+    // not started")` when called BEFORE the first `start_polling`. The
+    // guard distinguishes "never started" (throw) from "already stopped
+    // cleanly" (no-op) by inspecting the running-lock state at
+    // `dispatcher.py:503-505`. The port mirrors by tracking the
+    // `$hasEverStarted` sticky flag: false pre-start, so the typed
+    // exception fires.
     $dispatcher = new Dispatcher();
+
+    $this->expectException(RuntimeException::class);
+    $this->expectExceptionMessage('Polling is not started');
 
     $this->runAsync(static function () use ($dispatcher): void {
       $dispatcher->stopPolling();
     });
+  }
 
-    // No assertion: the test passes if the runAsync call returns without
-    // throwing. `addToAssertionCount` registers progress for PHPUnit's
-    // failOnRisky guard without falsely claiming a real check.
-    self::assertNull($dispatcher->workflowData['stop'] ?? null);
+  public function testStopPollingAfterPollingCompletedIsNoop(): void
+  {
+    // Fix I3 part 2: aiogram allows `stop_polling` to be called twice
+    // (e.g. once from the user code, once from a SIGTERM handler). The
+    // second call after a clean shutdown must NOT throw — only "never
+    // started" raises. We drive a complete startPolling/stopPolling
+    // round, then call stopPolling AGAIN after the loop has fully
+    // drained and assert no exception.
+    //
+    // Note: stopPolling must be wrapped in `async()` from a startup
+    // handler — calling it inline would deadlock because the polling
+    // fibers haven't spawned yet, but `stopPolling` now blocks on the
+    // drain barrier. The async() spawn lets the startup handler return
+    // so the polling lifecycle can proceed.
+    $dispatcher = new Dispatcher();
+    $bot = new MockedBot();
+    $dispatcher->startup->register(static function () use ($dispatcher): void {
+      async(static fn() => $dispatcher->stopPolling())->ignore();
+    });
+
+    $this->runAsync(static function () use ($dispatcher, $bot): void {
+      $dispatcher->startPolling(new PollingOptions(handleAsTasks: null), $bot)->await();
+      // Polling has fully drained at this point — calling stopPolling
+      // again must be a clean no-op (NOT throw "Polling is not started"
+      // and NOT throw because `$stopSignal` is already complete).
+      $dispatcher->stopPolling();
+    });
+
+    self::assertTrue(
+      $bot->getMockedSession()->closed,
+      'First polling round must have completed cleanly.',
+    );
+  }
+
+  public function testStopPollingBlocksUntilDrained(): void
+  {
+    // Fix I3 part 3: aiogram's `stop_polling` awaits `_stopped_signal`
+    // so the caller blocks until the polling fibers have actually
+    // finished (`dispatcher.py:509`). The port adds a `$drainedSignal`
+    // DeferredFuture completed in the startPolling finally block; the
+    // public `stopPolling` awaits it outside the runningLock so the
+    // caller observes a fully-drained dispatcher on return.
+    //
+    // Concretely: by the time `stopPolling()` returns from a fiber that's
+    // OUTSIDE the polling chain, the bot's session MUST be closed
+    // (because session-close lives inside the same finally block that
+    // completes `$drainedSignal`).
+    //
+    // The handler uses `delay(0.005)` so the polling fiber yields,
+    // letting the test fiber call stopPolling from outside the polling
+    // chain. The drain await then suspends the test fiber, the polling
+    // fiber resumes from the delay, sees the completed stop signal in
+    // the post-yield check, exits the loop, the awaiter's finally fires
+    // (emitShutdown + session close + drain signal complete). Test fiber
+    // resumes from drain await and observes the closed session.
+    $dispatcher = new Dispatcher();
+    $bot = new MockedBot();
+    $dispatcher->message->register(static function (): void {
+      delay(0.005);
+    });
+    $bot->addResultFor(GetUpdates::class, ok: true, result: [self::makeMessageUpdate(1, 'a')]);
+
+    /** @var bool $sessionClosedWhenStopReturned */
+    $sessionClosedWhenStopReturned = false;
+
+    $this->runAsync(static function () use ($dispatcher, $bot, &$sessionClosedWhenStopReturned): void {
+      // Spawn the polling fiber.
+      $poll = async(static function () use ($dispatcher, $bot): void {
+        $dispatcher->startPolling(new PollingOptions(handleAsTasks: null), $bot)->await();
+      });
+      // Yield once so startPolling enters the polling loop, emits
+      // startup, spawns per-bot polling fibers, and reaches the
+      // handler's delay() — the natural yield point that lets the test
+      // fiber take control here.
+      delay(0.001);
+      $dispatcher->stopPolling();
+      // After stopPolling returns, the polling loop must have drained
+      // — meaning the bot session is closed inside the same finally
+      // block that completes the drain signal.
+      $sessionClosedWhenStopReturned = $bot->getMockedSession()->closed;
+      $poll->await();
+    });
+
+    self::assertTrue(
+      $sessionClosedWhenStopReturned,
+      'stopPolling must block until the polling fibers have drained.',
+    );
   }
 
   public function testStartPollingRejectsEmptyBotList(): void
@@ -119,8 +212,11 @@ final class PollingTest extends TestCase
       } catch (LogicException $e) {
         $thrown = $e;
       }
-      // Stop the first poll so the test fiber unblocks.
-      $dispatcher->stopPolling();
+      // Stop the first poll so the test fiber unblocks. Wrap in async()
+      // so stopPolling's drain-await runs in a separate fiber and doesn't
+      // block startup's return (Fix I3 — see Dispatcher::stopPolling's
+      // docblock).
+      async(static fn() => $dispatcher->stopPolling())->ignore();
     });
 
     $this->runAsync(static function () use ($dispatcher, $bot): void {
@@ -327,7 +423,9 @@ final class PollingTest extends TestCase
 
     $dispatcher->startup->register(static function (array $bots) use (&$events, $dispatcher): void {
       $events[] = ['phase' => 'startup', 'bots' => $bots];
-      $dispatcher->stopPolling();
+      // Fix I3: wrap in async() so stopPolling's drain-await runs in a
+      // separate fiber. See Dispatcher::stopPolling's docblock.
+      async(static fn() => $dispatcher->stopPolling())->ignore();
     });
     $dispatcher->shutdown->register(static function (array $bots) use (&$events): void {
       $events[] = ['phase' => 'shutdown', 'bots' => $bots];
@@ -363,7 +461,9 @@ final class PollingTest extends TestCase
       $dispatcher,
     ): void {
       $captured = ['bot' => $bot, 'bots' => $bots];
-      $dispatcher->stopPolling();
+      // Fix I3: wrap in async() so stopPolling's drain-await runs in a
+      // separate fiber. See Dispatcher::stopPolling's docblock.
+      async(static fn() => $dispatcher->stopPolling())->ignore();
     });
 
     $this->runAsync(static function () use ($dispatcher, $botA, $botB): void {
@@ -384,7 +484,11 @@ final class PollingTest extends TestCase
     $dispatcher = new Dispatcher();
     $botA = new MockedBot('1:A');
     $botB = new MockedBot('2:B');
-    $dispatcher->startup->register(static fn() => $dispatcher->stopPolling());
+    // Fix I3: wrap in async() so stopPolling's drain-await runs in a
+    // separate fiber. See Dispatcher::stopPolling's docblock.
+    $dispatcher->startup->register(static function () use ($dispatcher): void {
+      async(static fn() => $dispatcher->stopPolling())->ignore();
+    });
 
     $captured = null;
     $dispatcher->shutdown->register(static function (Bot $bot, array $bots) use (&$captured): void {
@@ -408,7 +512,11 @@ final class PollingTest extends TestCase
     // response counts.
     $dispatcher = new Dispatcher();
     $bot = new MockedBot();
-    $dispatcher->startup->register(static fn() => $dispatcher->stopPolling());
+    // Fix I3: wrap in async() so stopPolling's drain-await runs in a
+    // separate fiber. See Dispatcher::stopPolling's docblock.
+    $dispatcher->startup->register(static function () use ($dispatcher): void {
+      async(static fn() => $dispatcher->stopPolling())->ignore();
+    });
 
     $this->runAsync(static function () use ($dispatcher, $bot): void {
       $dispatcher->startPolling(new PollingOptions(handleAsTasks: null), $bot)->await();
@@ -530,7 +638,11 @@ final class PollingTest extends TestCase
     // don't need a parallel async() race.
     $dispatcher = new Dispatcher();
     $bot = new MockedBot();
-    $dispatcher->startup->register(static fn() => $dispatcher->stopPolling());
+    // Fix I3: wrap in async() so stopPolling's drain-await runs in a
+    // separate fiber. See Dispatcher::stopPolling's docblock.
+    $dispatcher->startup->register(static function () use ($dispatcher): void {
+      async(static fn() => $dispatcher->stopPolling())->ignore();
+    });
 
     $this->runAsync(static function () use ($dispatcher, $bot): void {
       $dispatcher->runPolling(new PollingOptions(handleAsTasks: null), $bot);
