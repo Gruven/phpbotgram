@@ -210,6 +210,27 @@ final class StatesGroupTest extends TestCase
   }
 
   /**
+   * `contains(State)` is true for a `State` belonging to a direct child group.
+   *
+   * Upstream parity: `__contains__` checks `__all_states__` (recursive),
+   * not `__states__` (direct only).
+   */
+  public function testContainsReturnsTrueForChildState(): void
+  {
+    self::assertTrue(FixtureForm::contains(FixtureChild::$email));
+  }
+
+  /**
+   * `contains(State)` is true for a `State` belonging to a grandchild group.
+   *
+   * Three-level nesting: Root → Child → GrandChild.
+   */
+  public function testContainsReturnsTrueForGrandChildState(): void
+  {
+    self::assertTrue(FixtureForm::contains(FixtureGrandChild::$city));
+  }
+
+  /**
    * `contains(string)` is false for an unknown state name.
    */
   public function testContainsReturnsFalseForUnknownStateName(): void

@@ -103,12 +103,13 @@ abstract class StatesGroup
    * Per-class bootstrap data store.
    *
    * Keys at the first level are concrete subclass names.  Each entry holds:
-   * - `'bootstrapped'`   → `true` (presence signals the class is done)
-   * - `'fullGroupName'`  → `string`
-   * - `'parentGroup'`    → `class-string<StatesGroup>|null`
-   * - `'allStates'`      → `array<State>`
-   * - `'allStateNames'`  → `array<string>`
-   * - `'allChildren'`    → `array<class-string<StatesGroup>>`
+   * - `'bootstrapped'`          → `true` (presence signals the class is done)
+   * - `'fullGroupName'`         → `string`
+   * - `'parentGroup'`           → `class-string<StatesGroup>|null`
+   * - `'allStates'`             → `array<State>` (direct states only)
+   * - `'allStateNames'`         → `array<string>` (direct + all nested)
+   * - `'allChildren'`           → `array<class-string<StatesGroup>>`
+   * - `'allStatesIncludingNested'` → `array<State>` (direct + all nested)
    *
    * @var array<class-string<StatesGroup>, array<string, mixed>>
    */
@@ -208,6 +209,7 @@ abstract class StatesGroup
     $childClasses = static::CHILDREN;
     $allChildClasses = [];
     $allChildStateNames = $stateNames;
+    $allNestedStates = $states;
 
     foreach ($childClasses as $childClass) {
       $childClass::bootstrap(
@@ -218,10 +220,12 @@ abstract class StatesGroup
       $allChildClasses[] = $childClass;
       $allChildClasses = array_merge($allChildClasses, $childClass::allChildren());
       $allChildStateNames = array_merge($allChildStateNames, $childClass::allStateNames());
+      $allNestedStates = array_merge($allNestedStates, $childClass::allStatesIncludingNested());
     }
 
     self::$registry[$class]['allChildren'] = $allChildClasses;
     self::$registry[$class]['allStateNames'] = $allChildStateNames;
+    self::$registry[$class]['allStatesIncludingNested'] = $allNestedStates;
   }
 
   /**
@@ -253,6 +257,20 @@ abstract class StatesGroup
   {
     /** @var array<State> */
     return self::$registry[static::class]['allStates'] ?? [];
+  }
+
+  /**
+   * Return all `State` instances belonging to this group and all nested children.
+   *
+   * Mirrors `StatesGroup.__all_states__` (`aiogram/fsm/state.py:77, 135-139`),
+   * which recursively includes states from all child groups.
+   *
+   * @return array<State>
+   */
+  public static function allStatesIncludingNested(): array
+  {
+    /** @var array<State> */
+    return self::$registry[static::class]['allStatesIncludingNested'] ?? [];
   }
 
   /**
@@ -329,7 +347,7 @@ abstract class StatesGroup
   public static function contains(State|string $item): bool
   {
     if ($item instanceof State) {
-      return in_array($item, static::allStates(), strict: true);
+      return in_array($item, static::allStatesIncludingNested(), strict: true);
     }
 
     // Could be a state-name string or a StatesGroup class-string.
