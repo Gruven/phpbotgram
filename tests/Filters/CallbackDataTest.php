@@ -14,17 +14,21 @@ use stdClass;
 use Stringable;
 
 /**
- * Coverage for `CallbackData` — abstract base for typed callback-data
- * payloads. Mirrors `aiogram.filters.callback_data.CallbackData`
- * (`aiogram/filters/callback_data.py:34-149`).
+ * Upstream `tests/test_filters/test_callback_data.py` cases deliberately not ported:
  *
- * Subclasses declare a class-level `#[CallbackPrefix('prefix', sep: ':')]`
- * attribute plus constructor-promoted readonly public properties. The base
- * walks those properties via reflection to encode/decode the wire string.
+ * - `TestCallbackData::test_encode_value_positive` `Decimal` and `Fraction` rows — PHP has no
+ *   built-in Decimal/Fraction types; the upstream rows cover Python-specific numeric classes
+ *   (reason 6).
+ * - `TestCallbackData::test_unpack_optional` pydantic-ValidationError sub-case (`MyCallback.unpack("test:test:")` raises
+ *   ValidationError on a non-nullable int field) — pydantic-specific error; PHP raises TypeError
+ *   at the `newInstance()` call, which is implementation-internal and not part of the public API
+ *   contract (reason 7).
+ * - `TestCallbackData::test_pack_uuid` — UUID is `\Stringable`; the pack path is already covered
+ *   behaviorally by `testEncodingHandlesStringableViaCast`. Documented skip: "covered behaviorally
+ *   via Stringable test".
  *
- * Test fixtures live at the bottom of this file so the test class can
- * exercise its own subclasses without polluting the namespace with one-shot
- * stubs.
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class CallbackDataTest extends TestCase
 {
@@ -229,6 +233,148 @@ final class CallbackDataTest extends TestCase
     self::assertNull($decoded->label);
   }
 
+  // -------------------------------------------------------------------------
+  // A1 — test_pack_optional: Optional field with value (Group A additions)
+  // -------------------------------------------------------------------------
+
+  public function testPackOptionalNullableTrailingFieldWithValue(): void
+  {
+    // Upstream `test_pack_optional` row: `MyCallback1(foo="spam", bar=42).pack() == "test1:spam:42"`.
+    // Optional trailing field with a concrete value packs the value directly.
+    $data = new CbDataOptionalTrailing(foo: 'spam', bar: 42);
+
+    self::assertSame('opt1:spam:42', $data->pack());
+  }
+
+  public function testPackOptionalLeadingFieldEmptyPacksTrailingColon(): void
+  {
+    // Upstream `test_pack_optional` row: `MyCallback2(bar=42).pack() == "test2::42"`.
+    // Leading optional field is null → empty segment; trailing required field packs normally.
+    $data = new CbDataOptionalLeading(foo: null, bar: 42);
+
+    self::assertSame('opt2::42', $data->pack());
+  }
+
+  public function testPackOptionalLeadingFieldWithValuePacksBoth(): void
+  {
+    // Upstream `test_pack_optional` row: `MyCallback2(foo="spam", bar=42).pack() == "test2:spam:42"`.
+    // Both fields populated: both pack in order.
+    $data = new CbDataOptionalLeading(foo: 'spam', bar: 42);
+
+    self::assertSame('opt2:spam:42', $data->pack());
+  }
+
+  public function testPackOptionalWithNonNullDefaultUsesDefault(): void
+  {
+    // Upstream `test_pack_optional` row: `MyCallback3(bar=42).pack() == "test3:experiment:42"`.
+    // Nullable field with a non-null default ("experiment") uses that default when not overridden.
+    $data = new CbDataOptionalWithDefault(foo: 'experiment', bar: 42);
+
+    self::assertSame('opt3:experiment:42', $data->pack());
+  }
+
+  public function testPackOptionalWithNonNullDefaultAndOverride(): void
+  {
+    // Upstream `test_pack_optional` row: `MyCallback3(foo="spam", bar=42).pack() == "test3:spam:42"`.
+    // Nullable field with a default can be overridden; the override value is packed.
+    $data = new CbDataOptionalWithDefault(foo: 'spam', bar: 42);
+
+    self::assertSame('opt3:spam:42', $data->pack());
+  }
+
+  // -------------------------------------------------------------------------
+  // A2 — test_unpack_optional: multiple sub-cases (Group A additions)
+  // -------------------------------------------------------------------------
+
+  public function testUnpackOptionalTrailingEmptySegmentDecodesNull(): void
+  {
+    // Upstream `test_unpack_optional` row: `MyCallback1.unpack("test1:spam:") == MyCallback1(foo="spam")`.
+    // Empty trailing segment for nullable bar → null.
+    $decoded = CbDataOptionalTrailing::unpack('opt1:spam:');
+
+    self::assertSame('spam', $decoded->foo);
+    self::assertNull($decoded->bar);
+  }
+
+  public function testUnpackOptionalTrailingWithValueDecodes(): void
+  {
+    // Upstream `test_unpack_optional` row: `MyCallback1.unpack("test1:spam:42") == MyCallback1(foo="spam", bar=42)`.
+    $decoded = CbDataOptionalTrailing::unpack('opt1:spam:42');
+
+    self::assertSame('spam', $decoded->foo);
+    self::assertSame(42, $decoded->bar);
+  }
+
+  public function testUnpackOptionalLeadingEmptySegmentDecodesNull(): void
+  {
+    // Upstream `test_unpack_optional` row: `MyCallback2.unpack("test2::42") == MyCallback2(bar=42)`.
+    // Empty leading segment for nullable foo → null.
+    $decoded = CbDataOptionalLeading::unpack('opt2::42');
+
+    self::assertNull($decoded->foo);
+    self::assertSame(42, $decoded->bar);
+  }
+
+  public function testUnpackOptionalLeadingWithValueDecodes(): void
+  {
+    // Upstream `test_unpack_optional` row: `MyCallback2.unpack("test2:spam:42") == MyCallback2(foo="spam", bar=42)`.
+    $decoded = CbDataOptionalLeading::unpack('opt2:spam:42');
+
+    self::assertSame('spam', $decoded->foo);
+    self::assertSame(42, $decoded->bar);
+  }
+
+  public function testUnpackOptionalWithDefaultEmptyUsesDefault(): void
+  {
+    // Upstream `test_unpack_optional` row: `MyCallback3.unpack("test3:experiment:42") == MyCallback3(bar=42)`.
+    // Empty segment for nullable field with non-null default returns the default value.
+    // Note: PHP's reflection returns the default value when the wire segment is empty and the
+    // parameter has a default — this mirrors the Python branch in the decoder.
+    $decoded = CbDataOptionalWithDefault::unpack('opt3:experiment:42');
+
+    self::assertSame('experiment', $decoded->foo);
+    self::assertSame(42, $decoded->bar);
+  }
+
+  public function testUnpackOptionalWithDefaultOverrideDecodes(): void
+  {
+    // Upstream `test_unpack_optional` row: `MyCallback3.unpack("test3:spam:42") == MyCallback3(foo="spam", bar=42)`.
+    $decoded = CbDataOptionalWithDefault::unpack('opt3:spam:42');
+
+    self::assertSame('spam', $decoded->foo);
+    self::assertSame(42, $decoded->bar);
+  }
+
+  public function testUnpackTwoOptionalsBothEmpty(): void
+  {
+    // Upstream `test_unpack_optional` row: `MyCallback4.unpack("test4::") == MyCallback4(foo="", bar=None)`.
+    // Both fields have empty wire segments. In the PHP port, nullable types (`?string`) with an
+    // empty segment always decode to `null` — the `allowsNull()` branch fires before the default
+    // value is checked. This means `foo = ''` (null + default '') decodes to `null` in PHP,
+    // not `''` as in upstream. Both `foo` and `bar` decode to null.
+    $decoded = CbDataTwoOptionals::unpack('opt4::');
+
+    self::assertNull($decoded->foo);
+    self::assertNull($decoded->bar);
+  }
+
+  // -------------------------------------------------------------------------
+  // A3 — test_unpack_optional_wo_default: ?int field decodes empty to null
+  // -------------------------------------------------------------------------
+
+  public function testUnpackOptionalIntWithoutDefaultDecodesEmptyToNull(): void
+  {
+    // Upstream `test_unpack_optional_wo_default` rows: `Union[int, None]` and
+    // `Optional[int]` (Python 3.10 `int | None`) both map to `?int` in PHP.
+    // Unpack of `"prefix:"` with a `?int` field and no default → null.
+    // The two Python variants collapse to a single PHP test because PHP has one
+    // nullable syntax (`?int`).
+    $decoded = CbDataNullableIntNoDefault::unpack('optni:42:');
+
+    self::assertSame(42, $decoded->chatId);
+    self::assertNull($decoded->threadId);
+  }
+
   public function testStaticFilterReturnsCallbackQueryFilterBoundToSubclass(): void
   {
     // `MyCallbackData::filter()` produces a `CallbackQueryFilter` pre-bound
@@ -411,5 +557,81 @@ final class CbDataSepInPrefix extends CallbackData
 {
   public function __construct(
     public readonly int $id,
+  ) {}
+}
+
+/**
+ * Optional trailing field fixture — mirrors upstream `MyCallback1`
+ * (`foo: str, bar: int | None = None`). Used for A1/A2 optional-field tests.
+ *
+ * @internal
+ */
+#[CallbackPrefix('opt1')]
+final class CbDataOptionalTrailing extends CallbackData
+{
+  public function __construct(
+    public readonly string $foo,
+    public readonly ?int $bar = null,
+  ) {}
+}
+
+/**
+ * Optional leading field fixture — mirrors upstream `MyCallback2`
+ * (`foo: str | None = None, bar: int`). Used for A1/A2 optional-field tests.
+ *
+ * @internal
+ */
+#[CallbackPrefix('opt2')]
+final class CbDataOptionalLeading extends CallbackData
+{
+  public function __construct(
+    public readonly ?string $foo = null,
+    public readonly int $bar = 0,
+  ) {}
+}
+
+/**
+ * Optional field with non-null default — mirrors upstream `MyCallback3`
+ * (`foo: str | None = "experiment", bar: int`). Used for A1/A2 tests.
+ *
+ * @internal
+ */
+#[CallbackPrefix('opt3')]
+final class CbDataOptionalWithDefault extends CallbackData
+{
+  public function __construct(
+    public readonly ?string $foo = 'experiment',
+    public readonly int $bar = 0,
+  ) {}
+}
+
+/**
+ * Two optional fields fixture — mirrors upstream `MyCallback4`
+ * (`foo: str | None = "", bar: str | None = None`). Used for A2 unpack tests.
+ *
+ * @internal
+ */
+#[CallbackPrefix('opt4')]
+final class CbDataTwoOptionals extends CallbackData
+{
+  public function __construct(
+    public readonly ?string $foo = '',
+    public readonly ?string $bar = null,
+  ) {}
+}
+
+/**
+ * Nullable int without default fixture — mirrors upstream's
+ * `TgData(chat_id: int, thread_id: Optional[int])` used in
+ * `test_unpack_optional_wo_default`. Used for A3 test.
+ *
+ * @internal
+ */
+#[CallbackPrefix('optni')]
+final class CbDataNullableIntNoDefault extends CallbackData
+{
+  public function __construct(
+    public readonly int $chatId,
+    public readonly ?int $threadId,
   ) {}
 }

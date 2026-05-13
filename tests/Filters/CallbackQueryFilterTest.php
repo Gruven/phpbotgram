@@ -16,6 +16,16 @@ use Gruven\PhpBotGram\Types\User;
 use PHPUnit\Framework\TestCase;
 
 /**
+ * Upstream `tests/test_filters/test_callback_data.py` cases deliberately not ported:
+ *
+ * - `TestCallbackQueryFilter::test_str` — `Filter` and DTOs have no `__str__` / `__repr__`
+ *   equivalents in the PHP port (reason 5).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ */
+
+/**
  * Coverage for `CallbackQueryFilter` — the runtime side of the
  * `CallbackData::filter()` factory. Mirrors upstream
  * `aiogram.filters.callback_data.CallbackQueryFilter`

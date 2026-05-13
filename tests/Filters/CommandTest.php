@@ -16,6 +16,29 @@ use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
+ * Upstream `tests/test_filters/test_command.py` cases deliberately not ported:
+ *
+ * - `TestCommand::test_commands_not_iterable` — PHP's type system prevents passing an `int`
+ *   as `string|list<string>` at compile time; the language raises `TypeError` before any
+ *   runtime test code executes. No runtime test needed.
+ * - `TestCommand::test_bad_type` — same as `test_commands_not_iterable` (reason: PHP static
+ *   typing enforces the contract before runtime).
+ * - `TestCommand::test_resolve_bot_command` — no `BotCommand` type in the PHP port; `BotCommand`
+ *   is a generated `Types\BotCommand` that is not yet generated; the filter accepts plain strings.
+ * - `TestCommand::test_init_casefold` `BotCommand` rows — same reason as `test_resolve_bot_command`.
+ * - `TestCommand::test_parse_command` regex rows (e.g. `re.compile(r"test(\d+)")`) — regex-as-command
+ *   is not implemented; would require widening `commands` to `list<string|callable>`; deferred.
+ * - `TestCommand::test_parse_command` magic rows (`magic=F.args == "some args"`) — magic-kwarg
+ *   conditional is not in the PHP `Command` constructor; deferred.
+ * - `TestCommand::test_command_magic_result` — magic-kwarg deferred.
+ * - `TestCommand::test_str` — `Filter` and DTOs have no `__str__` / `__repr__` equivalents
+ *   in the PHP port (reason 5).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ */
+
+/**
  * Coverage for `Command` — port of `aiogram.filters.command.Command`. Matches
  * `tests/test_filters/test_command.py` row-by-row where the upstream rows
  * cover features supported by Task 4.7 (strings only — regex / magic / deep

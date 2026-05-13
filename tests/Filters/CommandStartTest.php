@@ -14,6 +14,19 @@ use Gruven\PhpBotGram\Types\Message;
 use PHPUnit\Framework\TestCase;
 
 /**
+ * Upstream `tests/test_filters/test_command.py` cases deliberately not ported:
+ *
+ * - `TestCommandStart::test_parse_command` `deep_link_encoded` rows — Base64 deep-link
+ *   payload decoding (via `aiogram.utils.deep_linking.decode_payload`) is not yet exposed
+ *   in the PHP port; the `deepLinkEncoded` constructor flag is deferred to a later task.
+ * - `TestCommandStart::test_str` — `Filter` and DTOs have no `__str__` / `__repr__`
+ *   equivalents in the PHP port (reason 5).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ */
+
+/**
  * Coverage for `CommandStart` — convenience subclass that pins the command
  * name to `start` and adds `deep_link` semantics. Port of
  * `aiogram.filters.command.CommandStart` (`aiogram/filters/command.py:240-303`).

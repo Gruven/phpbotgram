@@ -14,6 +14,20 @@ use RuntimeException;
 use Throwable;
 
 /**
+ * Upstream `tests/test_filters/test_exception.py` cases deliberately not ported:
+ *
+ * - `TestExceptionMessageFilter::test_converter` precompiled-pattern row (`re.compile(...)`) —
+ *   Python's `re.compile` returns a precompiled pattern object; PHP has no equivalent type.
+ *   The PHP port accepts pattern strings with PCRE delimiters only (reason: no `re.compile`
+ *   equivalent in PHP).
+ * - `TestExceptionMessageFilter::test_str` — `Filter` and DTOs have no `__str__` / `__repr__`
+ *   equivalents in the PHP port (reason 5).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ */
+
+/**
  * Coverage for `ExceptionMessageFilter` — port of
  * `aiogram.filters.exception.ExceptionMessageFilter`
  * (`aiogram/filters/exception.py:30-57`).

@@ -11,6 +11,16 @@ use Gruven\PhpBotGram\Types\Chat;
 use Gruven\PhpBotGram\Types\TelegramObject;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Upstream `tests/test_filters/test_logic.py` cases deliberately not ported:
+ *
+ * - `TestOrFilter::test_dunder_methods` — Python `__or__` / `__and__` / `__invert__` operator
+ *   overloads on filter instances cannot be expressed in PHP; the port uses named factory
+ *   methods `Filter::all()`, `Filter::any()`, `Filter::invertOf()` instead (reason 3).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ */
 final class OrFilterTest extends TestCase
 {
   public function testEmptyOrFilterRejectsWithFalse(): void

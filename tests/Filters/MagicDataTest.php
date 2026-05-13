@@ -23,6 +23,18 @@ use PHPUnit\Framework\TestCase;
  * `F->state->equals(...)`, and `F->config->key->equals(...)` all reach the
  * value via attribute-style access.
  */
+/**
+ * Upstream `tests/test_filters/test_magic_data.py` cases deliberately not ported:
+ *
+ * - `TestMagicData::test_call` integer-keyed positional kwargs row — Python's `AttrDict`
+ *   supports positional numeric keys; PHP `MagicData::__invoke` accepts only named (string)
+ *   kwargs, so integer-keyed positional access is not part of the PHP contract.
+ * - `TestMagicData::test_str` — `Filter` and DTOs have no `__str__` / `__repr__` equivalents
+ *   in the PHP port (reason 5).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ */
 final class MagicDataTest extends TestCase
 {
   public function testIsAFilterSubclassAndStoresMagicFilter(): void

@@ -12,6 +12,15 @@ use Gruven\PhpBotGram\Filters\Logic\OrFilter;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
+/**
+ * Upstream `tests/test_filters/test_base.py` cases deliberately not ported:
+ *
+ * - `TestFilter::test_awaitable` — `Filter::__invoke` is synchronous in the PHP port;
+ *   Python coroutine / awaitable semantics have no PHP equivalent (reason 1).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ */
 final class FilterTest extends TestCase
 {
   public function testFilterIsAbstractAndCannotBeInstantiated(): void
