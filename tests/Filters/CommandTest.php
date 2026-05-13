@@ -102,6 +102,19 @@ final class CommandTest extends TestCase
     self::assertFalse($filter($this->message(text: null, caption: '')));
   }
 
+  public function testReturnsFalseForWhitespaceOnlyText(): void
+  {
+    // Upstream parametrize row: `[" ", Command(commands=["test"], prefix="/"),
+    // False]`. A message consisting of only a space cannot start with `/`
+    // (or any registered prefix), so `parseCommand` returns null at the
+    // prefix-matching step. The space-only string is non-empty so it won't
+    // be caught by the null/empty guard above — the prefix-check is what
+    // actually rejects it here.
+    $filter = Command::of('test');
+
+    self::assertFalse($filter($this->message(text: ' ')));
+  }
+
   public function testMatchesSimpleCommand(): void
   {
     // `/start` against `Command::of('start')` → match. Returned array is

@@ -86,6 +86,22 @@ final class AndFilterTest extends TestCase
     );
   }
 
+  public function testFirstDictSecondFalseReturnsFalse(): void
+  {
+    // Upstream parametrize row 4: `and_f(lambda t: {"t": t}, lambda t: t is
+    // False)` against `True` → `False`. When the FIRST filter accepts with a
+    // dict but the SECOND rejects (returns false), the combinator must still
+    // return false — the second filter's rejection wins regardless of any
+    // kwargs the first contributed. Mirrors upstream `if not result: return
+    // False` evaluated AFTER the first dict has been accumulated.
+    $filter = new AndFilter(
+      $this->filter(static fn(): array => ['t' => true]),
+      $this->filter(static fn(): bool => false),
+    );
+
+    self::assertFalse($filter($this->event()));
+  }
+
   public function testKwargCascadeForwardsEarlierFilterReturnsIntoLaterFilters(): void
   {
     // The hallmark AndFilter feature: filter N sees the kwargs filter

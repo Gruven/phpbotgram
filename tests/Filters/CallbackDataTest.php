@@ -168,6 +168,67 @@ final class CallbackDataTest extends TestCase
     $data->pack();
   }
 
+  public function testSeparatorInPrefixThrowsOnFirstUse(): void
+  {
+    // Upstream `test_init_subclass_sep_validation`: when the separator
+    // character appears inside the prefix string (e.g. prefix `"sp@m"` with
+    // `sep="@"`) the split on unpack cannot recover the boundary, so it is a
+    // configuration error. Mirrors
+    // `aiogram/filters/callback_data.py:59-64` where Python raises at
+    // class-definition time via `__init_subclass__`. PHP detects the error
+    // at first use of `pack()`/`unpack()` inside `reflectMeta()`.
+    $instance = new CbDataSepInPrefix(id: 1);
+
+    $this->expectException(LogicException::class);
+    $instance->pack();
+  }
+
+  public function testPackThrowsWhenValueContainsSeparator(): void
+  {
+    // Upstream `test_pack` row: `MyCallback(foo="te:st", bar=42).pack()`
+    // raises ValueError because `:` is the separator. `aiogram` raises at
+    // `aiogram/filters/callback_data.py:93-98`. PHP port raises
+    // `InvalidArgumentException` — the value is bad input, not a structural
+    // defect (the subclass itself is fine, it is the runtime value that is
+    // problematic).
+    $data = new CbDataFixture(id: 1, action: 'te:st', deleted: false);
+
+    $this->expectException(InvalidArgumentException::class);
+    $data->pack();
+  }
+
+  public function testUnpackThrowsOnArityMismatch(): void
+  {
+    // Upstream `test_unpack` row: `MyCallback.unpack("test:test:test:test")`
+    // — too many segments — raises `TypeError` (`.takes 2 arguments but 3
+    // were given`). PHP raises `LogicException` because an arity mismatch is
+    // a programming error (the caller passed a payload from the wrong class).
+    $this->expectException(LogicException::class);
+    CbDataFixture::unpack('my:5:edit:1:extra');
+  }
+
+  public function testPackOptionalNullableField(): void
+  {
+    // Upstream `test_pack_optional` row: `MyCallback1(foo="spam").pack() ==
+    // "test1:spam:"`. A nullable field with no value serialises as an empty
+    // wire segment — the `:` separator is still emitted so the segment count
+    // stays consistent for `unpack()`.
+    $data = new CbDataNullable(id: 1, label: null);
+
+    self::assertSame('nl:1:', $data->pack());
+  }
+
+  public function testUnpackOptionalNullableField(): void
+  {
+    // Upstream `test_unpack_optional` row: `MyCallback1.unpack("test1:spam:")
+    // == MyCallback1(foo="spam")`. An empty wire segment for a nullable field
+    // decodes back to `null`.
+    $decoded = CbDataNullable::unpack('nl:1:');
+
+    self::assertSame(1, $decoded->id);
+    self::assertNull($decoded->label);
+  }
+
   public function testStaticFilterReturnsCallbackQueryFilterBoundToSubclass(): void
   {
     // `MyCallbackData::filter()` produces a `CallbackQueryFilter` pre-bound
@@ -334,5 +395,21 @@ final class CbDataPipeSep extends CallbackData
   public function __construct(
     public readonly string $a,
     public readonly string $b,
+  ) {}
+}
+
+/**
+ * Malformed fixture where the separator character (`@`) appears inside
+ * the prefix (`sp@m`). Used to verify that `reflectMeta()` rejects the
+ * configuration at first use, mirroring upstream's `__init_subclass__`
+ * ValueError.
+ *
+ * @internal
+ */
+#[CallbackPrefix('sp@m', sep: '@')]
+final class CbDataSepInPrefix extends CallbackData
+{
+  public function __construct(
+    public readonly int $id,
   ) {}
 }

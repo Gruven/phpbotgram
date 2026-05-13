@@ -299,6 +299,61 @@ final class ChatMemberUpdatedFilterTest extends TestCase
     );
   }
 
+  public function testJoinRejectsRestrictedMemberToMember(): void
+  {
+    // Upstream `TestChatMemberUpdatedStatusFilter::test_call` row 2:
+    //   JOIN_TRANSITION, restricted(is_member=True) → member → False.
+    // Reasoning: a `restricted` user with `is_member=True` was ALREADY a
+    // chat member — the transition is NOT a join (it is a status change
+    // within IS_MEMBER). Our PHP implementation collapses the `+is_member`
+    // modifier: `restricted` is always in IS_MEMBER, so `restricted → member`
+    // fails the `in_array($old, IS_NOT_MEMBER)` check and returns false.
+    // The collapsed-is_member trade-off is documented in the class docblock.
+    $filter = ChatMemberUpdatedFilter::join();
+
+    self::assertFalse($filter($this->chatMemberUpdated(
+      old: $this->restricted(),
+      new: $this->member(),
+    )));
+  }
+
+  public function testJoinRejectsMemberToRestricted(): void
+  {
+    // Upstream `TestChatMemberUpdatedStatusFilter::test_call` row 4:
+    //   JOIN_TRANSITION, member → restricted(is_member=False) → False.
+    // `member` is in IS_MEMBER, which is NOT in IS_NOT_MEMBER, so
+    // `in_array('member', IS_NOT_MEMBER)` is false — join() requires the
+    // old status to be IS_NOT_MEMBER. The transition fails the old-status
+    // check immediately.
+    $filter = ChatMemberUpdatedFilter::join();
+
+    self::assertFalse($filter($this->chatMemberUpdated(
+      old: $this->member(),
+      new: $this->restricted(),
+    )));
+  }
+
+  public function testLeaveRejectsMemberToRestricted(): void
+  {
+    // Upstream `TestChatMemberUpdatedStatusFilter::test_call` row 5:
+    //   LEAVE_TRANSITION, member → restricted(is_member=False) → True upstream.
+    // PHP API divergence: our `leave()` = IS_MEMBER → IS_NOT_MEMBER. Because
+    // the PHP port collapses the `is_member` modifier on `restricted`, the
+    // `restricted` status is in IS_MEMBER (not IS_NOT_MEMBER). Therefore
+    // `member → restricted` fails the new-status check and returns false.
+    // Callers needing the finer-grained `+is_member` gate can post-filter
+    // on `ChatMemberRestricted::$isMember` via a Logic AND combinator.
+    $filter = ChatMemberUpdatedFilter::leave();
+
+    // NOTE: This intentionally diverges from upstream (upstream: True).
+    // The PHP port returns false because `restricted` is in IS_MEMBER, not
+    // IS_NOT_MEMBER. See class docblock for the workaround.
+    self::assertFalse($filter($this->chatMemberUpdated(
+      old: $this->member(),
+      new: $this->restricted(),
+    )));
+  }
+
   public function testRestrictedFixtureCarriesRestrictedStatus(): void
   {
     // Sanity-check the helper — restricted is a legitimate IS_MEMBER state
