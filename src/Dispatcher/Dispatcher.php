@@ -668,34 +668,54 @@ class Dispatcher extends Router
       : null;
 
     foreach ($this->listenUpdates($bot, $options) as $update) {
-      if ($semaphore === null) {
-        // Serial dispatch: every handler runs to completion before the
-        // next Update is consumed. Exceptions terminate the polling loop;
-        // upstream's catch-and-log lives in ErrorsMiddleware, not here.
-        $this->feedUpdate($bot, $update);
+      // Fix C2: swallow `UpdateTypeLookupException` with a RuntimeWarning so a
+      // single unknown update — typically caused by Telegram introducing a new
+      // update kind before the schema was regenerated — does NOT kill the
+      // long-poll loop. Upstream's `_listen_update` raises `SkipHandler`
+      // inside a `try/except UpdateTypeLookupError: warnings.warn(...)` block
+      // (`dispatcher.py:267-279`); the port catches the typed exception at
+      // the dispatch entry-point instead since we don't run the synthetic
+      // `update` observer.
+      try {
+        if ($semaphore === null) {
+          // Serial dispatch: every handler runs to completion before the
+          // next Update is consumed. Exceptions terminate the polling loop;
+          // upstream's catch-and-log lives in ErrorsMiddleware, not here.
+          $this->feedUpdate($bot, $update);
+
+          continue;
+        }
+
+        // Concurrent dispatch: the semaphore caps in-flight work at
+        // `handleAsTasks`. Acquire BEFORE spawning so back-pressure flows
+        // back to listenUpdates — the loop suspends here when the pool is
+        // saturated, which in turn delays the next getUpdates round.
+        $lock = $semaphore->acquire();
+
+        $task = async(function () use ($bot, $update, $lock): void {
+          try {
+            $this->feedUpdate($bot, $update);
+          } finally {
+            $lock->release();
+          }
+        });
+
+        $taskId = spl_object_id($task);
+        $this->handleUpdateTasks[$taskId] = $task;
+        $task->finally(function () use ($taskId): void {
+          unset($this->handleUpdateTasks[$taskId]);
+        });
+      } catch (UpdateTypeLookupException $e) {
+        trigger_error(
+          sprintf(
+            'Detected unknown update type, skipping: %s. Telegram may have introduced new update kinds; consider syncing the schema.',
+            $e->getMessage(),
+          ),
+          \E_USER_WARNING,
+        );
 
         continue;
       }
-
-      // Concurrent dispatch: the semaphore caps in-flight work at
-      // `handleAsTasks`. Acquire BEFORE spawning so back-pressure flows
-      // back to listenUpdates — the loop suspends here when the pool is
-      // saturated, which in turn delays the next getUpdates round.
-      $lock = $semaphore->acquire();
-
-      $task = async(function () use ($bot, $update, $lock): void {
-        try {
-          $this->feedUpdate($bot, $update);
-        } finally {
-          $lock->release();
-        }
-      });
-
-      $taskId = spl_object_id($task);
-      $this->handleUpdateTasks[$taskId] = $task;
-      $task->finally(function () use ($taskId): void {
-        unset($this->handleUpdateTasks[$taskId]);
-      });
     }
   }
 

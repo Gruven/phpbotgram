@@ -483,6 +483,55 @@ final class PollingTest extends TestCase
     self::assertTrue($bot->getMockedSession()->closed);
   }
 
+  public function testPollingForSwallowsUnknownUpdateTypeWithWarningAndContinues(): void
+  {
+    // Fix C2: an Update with no recognised event slot (every optional field
+    // null) causes `Dispatcher::feedUpdate` to throw
+    // `UpdateTypeLookupException`. Upstream's `_listen_update` swallows the
+    // matching `UpdateTypeLookupError` with a `RuntimeWarning` so a single
+    // unknown update — typically caused by Telegram introducing a new
+    // update kind before the schema was regenerated — does NOT kill the
+    // long-poll loop. The port mirrors via `trigger_error(..., E_USER_WARNING)`
+    // around a `continue` inside `pollingFor`.
+    $dispatcher = new Dispatcher();
+    $bot = new MockedBot();
+    $handled = [];
+    $dispatcher->message->register(static function (Update $event_update) use (
+      &$handled,
+      $dispatcher,
+    ): void {
+      $handled[] = $event_update->updateId;
+      $dispatcher->stopPolling();
+    });
+
+    $unknown = new Update(updateId: 999); // No event slot populated.
+    $bot->addResultFor(GetUpdates::class, ok: true, result: [
+      $unknown,
+      self::makeMessageUpdate(1000, 'after unknown'),
+    ]);
+
+    $warning = null;
+    set_error_handler(static function (int $errno, string $errstr) use (&$warning): bool {
+      if ($errno === \E_USER_WARNING && $warning === null) {
+        $warning = $errstr;
+      }
+
+      return true;
+    });
+
+    try {
+      $this->runAsync(static function () use ($dispatcher, $bot): void {
+        $dispatcher->startPolling(new PollingOptions(handleAsTasks: null), $bot)->await();
+      });
+    } finally {
+      restore_error_handler();
+    }
+
+    self::assertSame([1000], $handled, 'Polling must skip the unknown update and dispatch the next one.');
+    self::assertNotNull($warning, 'Polling must emit a RuntimeWarning-equivalent on unknown update types.');
+    self::assertStringContainsString('unknown update type', strtolower((string)$warning));
+  }
+
   public function testStartPollingAutoResolvesAllowedUpdatesWhenUnspecified(): void
   {
     // Fix I8: when PollingOptions::$allowedUpdates is left as the
