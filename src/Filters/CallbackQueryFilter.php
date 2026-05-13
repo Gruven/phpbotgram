@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Filters;
 
 use Gruven\PhpBotGram\Types\CallbackQuery;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use InvalidArgumentException;
 use LogicException;
 
@@ -54,7 +53,7 @@ final class CallbackQueryFilter extends Filter
    *
    * @return array<string, mixed>|false
    */
-  public function __invoke(TelegramObject $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, array $kwargs = []): array|bool
   {
     if (!$event instanceof CallbackQuery) {
       // Mirror upstream's type guard. A misconfigured observer could

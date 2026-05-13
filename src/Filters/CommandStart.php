@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Filters;
 
-use Gruven\PhpBotGram\Types\TelegramObject;
-
 /**
  * Convenience filter that matches the `/start` command and (optionally)
  * enforces deep-link semantics. Port of
@@ -54,7 +52,7 @@ final class CommandStart extends Filter
   /**
    * @return array<string, mixed>|false
    */
-  public function __invoke(TelegramObject $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, array $kwargs = []): array|bool
   {
     // Delegate all parsing to a fresh `Command` instance. Building per
     // call (rather than caching) keeps `CommandStart` immutable and

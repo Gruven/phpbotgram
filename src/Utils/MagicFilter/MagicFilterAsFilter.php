@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Utils\MagicFilter;
 
 use Gruven\PhpBotGram\Filters\Filter;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Utils\MagicFilter\Exception\RejectOperations;
 
 /**
@@ -14,7 +13,7 @@ use Gruven\PhpBotGram\Utils\MagicFilter\Exception\RejectOperations;
  * behaviour: aiogram passes a `MagicFilter` instance straight where a
  * `Filter` is expected and the dispatcher's `_check` wraps it via
  * `MagicFilter.resolve`. The PHP `Filter` abstract is more rigid
- * (`__invoke(TelegramObject, array)`); this bridge implements that
+ * (`__invoke(object, array)`); this bridge implements that
  * contract.
  *
  * Acceptance contract — matches the rules documented in the spec
@@ -34,7 +33,7 @@ final class MagicFilterAsFilter extends Filter
 {
   public function __construct(public readonly MagicFilter $magic) {}
 
-  public function __invoke(TelegramObject $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, array $kwargs = []): array|bool
   {
     try {
       $result = $this->magic->resolve($event);

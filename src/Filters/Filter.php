@@ -7,7 +7,6 @@ namespace Gruven\PhpBotGram\Filters;
 use Gruven\PhpBotGram\Filters\Logic\AndFilter;
 use Gruven\PhpBotGram\Filters\Logic\InvertFilter;
 use Gruven\PhpBotGram\Filters\Logic\OrFilter;
-use Gruven\PhpBotGram\Types\TelegramObject;
 
 /**
  * Abstract base for every dispatcher-side filter. Concrete subclasses
@@ -36,13 +35,21 @@ use Gruven\PhpBotGram\Types\TelegramObject;
  * Python's `*args, **kwargs` plumbing lets every subclass declare its own
  * parameter shape and the reflection adapter binds named kwargs to the
  * declared names. The PHP port locks the abstract signature down because
- * PHP enforces signature compatibility on overrides: `__invoke(TelegramObject
+ * PHP enforces signature compatibility on overrides: `__invoke(object
  * $event, array $kwargs = [])` matches how `TelegramEventObserver::triggerCore`
  * actually invokes filters — `$event` is extracted from the kwargs bag
  * upstream and passed positionally, and the rest of the bag arrives in
  * `$kwargs`. Concrete filters that need to depend on specific kwargs read
  * them out of `$kwargs` by key (see `Logic\AndFilter`'s cascade for the
  * canonical pattern).
+ *
+ * The `$event` parameter is typed as `object` rather than `TelegramObject`
+ * because dispatcher-synthetic events such as `ErrorEvent` deliberately do
+ * NOT extend `TelegramObject` (see `Types/ErrorEvent.php`). The dispatcher's
+ * `TelegramEventObserver::trigger()` accepts `object $event`, so the filter
+ * contract must too. Concrete filters that depend on a particular event shape
+ * narrow via `instanceof` at the top of `__invoke` (see `Command`, `CallbackQueryFilter`,
+ * `ExceptionTypeFilter`, …).
  *
  * @phpstan-type FilterResult bool|array<string, mixed>
  */
@@ -58,7 +65,7 @@ abstract class Filter
    * @return array<string, mixed>|bool See class docblock for the
    *                                   interpretation contract.
    */
-  abstract public function __invoke(TelegramObject $event, array $kwargs = []): array|bool;
+  abstract public function __invoke(object $event, array $kwargs = []): array|bool;
 
   /**
    * Compose an AND across filters: every child must accept, kwargs

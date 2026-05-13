@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Filters\Logic;
 
 use Gruven\PhpBotGram\Filters\Filter;
-use Gruven\PhpBotGram\Types\TelegramObject;
 
 /**
  * "At least one child must accept" combinator. Mirrors upstream
@@ -34,7 +33,7 @@ final class OrFilter extends Filter
     $this->targets = array_values($targets);
   }
 
-  public function __invoke(TelegramObject $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, array $kwargs = []): array|bool
   {
     foreach ($this->targets as $target) {
       $result = $target($event, $kwargs);

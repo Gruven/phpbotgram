@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Filters\Logic;
 
 use Gruven\PhpBotGram\Filters\Filter;
-use Gruven\PhpBotGram\Types\TelegramObject;
 
 /**
  * Negation combinator. Mirrors upstream `aiogram.filters.logic._InvertFilter`
@@ -34,7 +33,7 @@ final class InvertFilter extends Filter
 {
   public function __construct(public readonly Filter $target) {}
 
-  public function __invoke(TelegramObject $event, array $kwargs = []): bool
+  public function __invoke(object $event, array $kwargs = []): bool
   {
     // `($this->target)($event, $kwargs)` triggers `__invoke` on the
     // wrapped filter — the parenthesized property access disambiguates

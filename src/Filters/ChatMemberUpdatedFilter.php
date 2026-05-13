@@ -12,7 +12,6 @@ use Gruven\PhpBotGram\Types\ChatMemberMember;
 use Gruven\PhpBotGram\Types\ChatMemberOwner;
 use Gruven\PhpBotGram\Types\ChatMemberRestricted;
 use Gruven\PhpBotGram\Types\ChatMemberUpdated;
-use Gruven\PhpBotGram\Types\TelegramObject;
 use LogicException;
 
 /**
@@ -192,7 +191,7 @@ final class ChatMemberUpdatedFilter extends Filter
   /**
    * @param array<string, mixed> $kwargs Unused — the filter is event-only.
    */
-  public function __invoke(TelegramObject $event, array $kwargs = []): bool
+  public function __invoke(object $event, array $kwargs = []): bool
   {
     if (!$event instanceof ChatMemberUpdated) {
       // Type guard — the dispatcher might have wired this filter onto a

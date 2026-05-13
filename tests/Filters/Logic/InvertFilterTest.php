@@ -44,15 +44,15 @@ final class InvertFilterTest extends TestCase
   }
 
   /**
-   * @param Closure(TelegramObject, array<string, mixed>): (array<string, mixed>|bool) $vote
+   * @param Closure(object, array<string, mixed>): (array<string, mixed>|bool) $vote
    */
   private function filter(Closure $vote): Filter
   {
     return new class ($vote) extends Filter {
-      /** @param Closure(TelegramObject, array<string, mixed>): (array<string, mixed>|bool) $vote */
+      /** @param Closure(object, array<string, mixed>): (array<string, mixed>|bool) $vote */
       public function __construct(private readonly Closure $vote) {}
 
-      public function __invoke(TelegramObject $event, array $kwargs = []): array|bool
+      public function __invoke(object $event, array $kwargs = []): array|bool
       {
         return ($this->vote)($event, $kwargs);
       }

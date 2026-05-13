@@ -95,8 +95,8 @@ final class AndFilterTest extends TestCase
     // is preserved alongside filter 1's `cmd` injection.
     $received = null;
     $filter = new AndFilter(
-      $this->filter(static fn(TelegramObject $e, array $kwargs): array => ['cmd' => 'start']),
-      $this->filter(static function (TelegramObject $e, array $kwargs) use (&$received): bool {
+      $this->filter(static fn(object $e, array $kwargs): array => ['cmd' => 'start']),
+      $this->filter(static function (object $e, array $kwargs) use (&$received): bool {
         $received = $kwargs;
 
         return true;
@@ -113,15 +113,15 @@ final class AndFilterTest extends TestCase
    * Anonymous-class filter helper that delegates to a closure. Keeps each
    * fixture concise without polluting the test file with named subclasses.
    *
-   * @param Closure(TelegramObject, array<string, mixed>): (array<string, mixed>|bool) $vote
+   * @param Closure(object, array<string, mixed>): (array<string, mixed>|bool) $vote
    */
   private function filter(Closure $vote): Filter
   {
     return new class ($vote) extends Filter {
-      /** @param Closure(TelegramObject, array<string, mixed>): (array<string, mixed>|bool) $vote */
+      /** @param Closure(object, array<string, mixed>): (array<string, mixed>|bool) $vote */
       public function __construct(private readonly Closure $vote) {}
 
-      public function __invoke(TelegramObject $event, array $kwargs = []): array|bool
+      public function __invoke(object $event, array $kwargs = []): array|bool
       {
         return ($this->vote)($event, $kwargs);
       }

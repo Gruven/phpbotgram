@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Filters\Logic;
 
 use Gruven\PhpBotGram\Filters\Filter;
-use Gruven\PhpBotGram\Types\TelegramObject;
 
 /**
  * "Every child must accept" combinator with a kwarg cascade. Mirrors
@@ -38,7 +37,7 @@ final class AndFilter extends Filter
     $this->targets = array_values($targets);
   }
 
-  public function __invoke(TelegramObject $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, array $kwargs = []): array|bool
   {
     $merged = [];
 

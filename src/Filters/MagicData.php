@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Filters;
 
-use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Utils\MagicFilter\AttrDict;
 use Gruven\PhpBotGram\Utils\MagicFilter\Exception\RejectOperations;
 use Gruven\PhpBotGram\Utils\MagicFilter\MagicFilter;
@@ -41,7 +40,7 @@ final class MagicData extends Filter
 {
   public function __construct(public readonly MagicFilter $magicData) {}
 
-  public function __invoke(TelegramObject $event, array $kwargs = []): array|bool
+  public function __invoke(object $event, array $kwargs = []): array|bool
   {
     // Upstream `MagicData.__call__` builds `{'event': event, **kwargs}`
     // and resolves the chain against an `AttrDict` wrapping that dict.
