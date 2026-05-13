@@ -164,7 +164,13 @@ final class TelegramEventObserver
       // inner chain applies. We still return the inner-middleware list
       // verbatim so triggerCore's single composition path doesn't have
       // to special-case the standalone case.
-      return self::collectMiddlewares($this->innerMiddleware);
+      $own = [];
+
+      foreach ($this->innerMiddleware as $mw) {
+        $own[] = $mw;
+      }
+
+      return $own;
     }
 
     // Walk self → parent → root, pushing each ancestor's observer's
@@ -178,7 +184,7 @@ final class TelegramEventObserver
       $observer = $router->observers[$this->eventName] ?? null;
 
       if ($observer !== null) {
-        foreach (self::collectMiddlewares($observer->innerMiddleware) as $mw) {
+        foreach ($observer->innerMiddleware as $mw) {
           $reverseChain[] = $mw;
         }
       }
@@ -187,26 +193,6 @@ final class TelegramEventObserver
     }
 
     return array_reverse($reverseChain);
-  }
-
-  /**
-   * Extract the registered middlewares from a `MiddlewareManager` as a
-   * plain `list<BaseMiddleware>`. The manager only exposes its contents
-   * via `ArrayAccess` + `Countable` (`IteratorAggregate` is the I10
-   * follow-up); this helper provides the iteration shape we need without
-   * leaking the manager's internal storage.
-   *
-   * @return list<BaseMiddleware>
-   */
-  private static function collectMiddlewares(MiddlewareManager $manager): array
-  {
-    $out = [];
-
-    for ($i = 0, $n = count($manager); $i < $n; $i++) {
-      $out[] = $manager[$i];
-    }
-
-    return $out;
   }
 
   /**

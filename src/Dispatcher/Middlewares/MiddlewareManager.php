@@ -7,9 +7,10 @@ namespace Gruven\PhpBotGram\Dispatcher\Middlewares;
 use ArrayAccess;
 use Closure;
 use Countable;
+use IteratorAggregate;
 use OutOfBoundsException;
 use RuntimeException;
-use WeakMap;
+use Traversable;
 
 /**
  * Ordered registry of dispatcher-side `BaseMiddleware` instances for a single
@@ -27,27 +28,12 @@ use WeakMap;
  * timeout positional convention.
  *
  * @implements ArrayAccess<int, BaseMiddleware>
+ * @implements IteratorAggregate<int, BaseMiddleware>
  */
-final class MiddlewareManager implements ArrayAccess, Countable
+final class MiddlewareManager implements ArrayAccess, Countable, IteratorAggregate
 {
   /** @var list<BaseMiddleware> */
   private array $middlewares = [];
-
-  /**
-   * Cached wrapped chain keyed by terminal closure. Invalidated on every
-   * register/unregister by allocating a fresh `WeakMap`. WeakMap (PHP 8+)
-   * gives identity-keyed lookup that auto-evicts when the terminal closure
-   * is collected, avoiding spl_object_id collisions when ephemeral closures
-   * are wrapped.
-   *
-   * @var WeakMap<Closure, Closure>
-   */
-  private WeakMap $chainCache;
-
-  public function __construct()
-  {
-    $this->chainCache = new WeakMap();
-  }
 
   /**
    * Append a middleware to the chain. Returns the middleware unchanged so the
@@ -57,7 +43,6 @@ final class MiddlewareManager implements ArrayAccess, Countable
   public function register(BaseMiddleware $middleware): BaseMiddleware
   {
     $this->middlewares[] = $middleware;
-    $this->chainCache = new WeakMap();
 
     return $middleware;
   }
@@ -73,7 +58,6 @@ final class MiddlewareManager implements ArrayAccess, Countable
     foreach ($this->middlewares as $i => $existing) {
       if ($existing === $middleware) {
         array_splice($this->middlewares, $i, 1);
-        $this->chainCache = new WeakMap();
 
         return true;
       }
@@ -147,8 +131,15 @@ final class MiddlewareManager implements ArrayAccess, Countable
    * such as `ErrorEvent` through the dispatcher's error channel.
    *
    * If no middlewares are registered, the terminal is returned unchanged
-   * (zero-allocation fast path). Repeated `wrap()` calls with the same
-   * terminal hit the WeakMap cache.
+   * (zero-allocation fast path).
+   *
+   * **No cache (Fix I10)**: the WeakMap-backed wrap cache was removed
+   * because every caller — `TelegramEventObserver::trigger` (outer chain)
+   * and `triggerCore` (inner chain) — allocates a **fresh** terminal
+   * closure on each invocation, so the cache never hit. The overhead of
+   * maintaining the WeakMap (one allocation per register/unregister, the
+   * lookup miss per `wrap()` call) was pure deadweight. Profiling can
+   * re-add the cache if a real hit scenario emerges.
    *
    * @param Closure(object, array<string, mixed>): mixed $terminal
    *
@@ -159,10 +150,6 @@ final class MiddlewareManager implements ArrayAccess, Countable
     if ($this->middlewares === []) {
       return $terminal;
     }
-
-    if ($this->chainCache->offsetExists($terminal)) {
-      return $this->chainCache[$terminal];
-    }
     $next = $terminal;
 
     foreach (array_reverse($this->middlewares) as $middleware) {
@@ -170,6 +157,19 @@ final class MiddlewareManager implements ArrayAccess, Countable
       $next = static fn(object $event, array $data): mixed => $middleware($current, $event, $data);
     }
 
-    return $this->chainCache[$terminal] = $next;
+    return $next;
+  }
+
+  /**
+   * Iterate the registered middlewares in registration order. Enables
+   * `foreach ($manager as $mw)` in callers that need to read the raw
+   * list (e.g. `TelegramEventObserver::resolveMiddlewares()` walking
+   * the chain head for inherited inner middleware).
+   *
+   * @return Traversable<int, BaseMiddleware>
+   */
+  public function getIterator(): Traversable
+  {
+    yield from $this->middlewares;
   }
 }
