@@ -65,6 +65,41 @@ final class ScenesManager implements SceneManagerInterface
   }
 
   // ------------------------------------------------------------------ //
+  // SceneHandlerWrapper accessors (internal to Fsm namespace)
+  // ------------------------------------------------------------------ //
+
+  /**
+   * Return the update-type key this manager was created for.
+   *
+   * Used by `SceneHandlerWrapper` to populate the `SceneWizard`'s
+   * `$updateType` field without requiring access to the private property.
+   *
+   * Mirrors the `update_type` field on `ScenesManager`
+   * (`aiogram/fsm/scene.py:659`).
+   */
+  public function updateType(): string
+  {
+    return $this->updateType;
+  }
+
+  /**
+   * Merge additional data into this manager's data bag.
+   *
+   * Used by `SceneHandlerWrapper` to inject the full dispatcher kwargs bag
+   * so the scene wizard and lifecycle actions have access to `bot`,
+   * `event_context`, etc.
+   *
+   * Mirrors `scenes.data = {**scenes.data, **kwargs}` in
+   * `SceneHandlerWrapper.__call__` (`aiogram/fsm/scene.py:262`).
+   *
+   * @param array<string, mixed> $extra
+   */
+  public function mergeData(array $extra): void
+  {
+    $this->data = [...$this->data, ...$extra];
+  }
+
+  // ------------------------------------------------------------------ //
   // SceneManagerInterface
   // ------------------------------------------------------------------ //
 

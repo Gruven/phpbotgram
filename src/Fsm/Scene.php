@@ -6,10 +6,17 @@ namespace Gruven\PhpBotGram\Fsm;
 
 use Closure;
 use Gruven\PhpBotGram\Dispatcher\Router;
+use Gruven\PhpBotGram\Filters\StateFilter;
 use Gruven\PhpBotGram\Fsm\Exception\SceneException;
+use Gruven\PhpBotGram\Fsm\Scene\Attribute\OnAttribute;
 use Gruven\PhpBotGram\Fsm\Scene\Attribute\SceneState;
+use Gruven\PhpBotGram\Fsm\Scene\HandlerContainer;
 use Gruven\PhpBotGram\Fsm\Scene\SceneConfig;
+use Gruven\PhpBotGram\Fsm\Scene\SceneHandlerWrapper;
+use Gruven\PhpBotGram\Fsm\Scene\ScenesManager;
+use ReflectionAttribute;
 use ReflectionClass;
+use ReflectionMethod;
 
 /**
  * Abstract base for all scene classes in the Scene subsystem.
@@ -65,6 +72,16 @@ abstract class Scene
   public SceneWizard $wizard;
 
   /**
+   * Per-class cache of reflection-built `SceneConfig` instances.
+   *
+   * Keyed by `static::class` so each subclass gets its own entry.
+   * Populated lazily by `buildSceneConfig()` on first access.
+   *
+   * @var array<class-string<Scene>, SceneConfig>
+   */
+  private static array $cachedSceneConfig = [];
+
+  /**
    * Construct a scene instance.
    *
    * @param SceneWizard $wizard Scene wizard that drives transitions.
@@ -72,6 +89,7 @@ abstract class Scene
   public function __construct(SceneWizard $wizard)
   {
     $this->wizard = $wizard;
+    $this->wizard->scene = $this;
   }
 
   // ------------------------------------------------------------------ //
@@ -135,70 +153,179 @@ abstract class Scene
   }
 
   // ------------------------------------------------------------------ //
-  // Router / handler stubs — replaced by Task 5.12
+  // Router / handler building — Task 5.12
   // ------------------------------------------------------------------ //
 
   /**
    * Return a `Router` sub-tree that registers this scene's handlers.
    *
-   * **Stub implementation** — Task 5.12 will replace this with the full
-   * reflection-driven build. For now, returns a fresh empty `Router` keyed
-   * by the scene class name so `SceneRegistry::add()` can call
-   * `$parent->includeRouter(scene::asRouter())` without crashing.
+   * Mirrors `Scene.as_router()` (`aiogram/fsm/scene.py:407-421`).
    *
-   * @param ?string $name Optional router name override. Defaults to the
-   *                      fully-qualified scene class name.
+   * The router name defaults to:
+   *   "Scene '<FQCN>' for state '<state>'"
    *
-   * @todo Task 5.12: build the real handler-wired router.
+   * @param ?string $name Optional router name override.
    */
   public static function asRouter(?string $name = null): Router
   {
-    return new Router($name ?? static::class);
+    $config = static::sceneConfig();
+
+    if ($name === null) {
+      $state = $config->state !== null ? "'{$config->state}'" : 'null';
+      $name = "Scene '" . static::class . "' for state {$state}";
+    }
+
+    $router = new Router($name);
+    static::addToRouter($router);
+
+    return $router;
   }
 
   /**
-   * Return a callable that dispatches this scene as a handler.
+   * Wire this scene's handlers into an existing router.
    *
-   * **Stub implementation** — Task 5.12 will replace this with a proper
-   * dispatch closure. The stub throws `SceneException` at call time to
-   * surface a clear error if the scene is invoked before Task 5.12 lands.
+   * For each `HandlerContainer` in `sceneConfig()->handlers`:
+   * - Create a `SceneHandlerWrapper` around the handler.
+   * - Register it with the matching observer (keyed by `$handler->name`,
+   *   which is the Telegram event-type string such as `'message'`).
+   * - Track which observer names were used.
    *
-   * @todo Task 5.12: build the real dispatch handler.
+   * After all handlers are registered, add a `StateFilter` as a global
+   * observer filter on every used observer (except `callback_query` when
+   * `callbackQueryWithoutState` is `true`).
    *
-   * @return Closure(): never
+   * Mirrors `Scene.add_to_router()` (`aiogram/fsm/scene.py:379-405`).
    */
-  public static function asHandler(): Closure
+  public static function addToRouter(Router $router): void
   {
-    return static function (): never {
-      throw new SceneException(
-        static::class . '::asHandler() — stub; Task 5.12 will implement.',
+    $config = static::sceneConfig();
+
+    /** @var array<string, bool> $usedObservers */
+    $usedObservers = [];
+
+    foreach ($config->handlers as $handler) {
+      $observerName = $handler->name;
+
+      if (!isset($router->observers[$observerName])) {
+        continue;
+      }
+
+      $observer = $router->observers[$observerName];
+
+      // Build the wrapper for this handler entry.
+      $wrapper = new SceneHandlerWrapper(
+        sceneClass: static::class,
+        handler: $handler->handler,
+        after: $handler->after,
       );
+
+      // TelegramEventObserver::register() requires a Closure.
+      $wrapperClosure = Closure::fromCallable($wrapper);
+
+      // Convert per-handler Filter instances to Closures.
+      $filterClosures = [];
+
+      foreach ($handler->filters as $filter) {
+        $filterClosures[] = Closure::fromCallable($filter);
+      }
+
+      $observer->register($wrapperClosure, $filterClosures);
+
+      $usedObservers[$observerName] = true;
+    }
+
+    // Register a StateFilter as a global filter on each used observer.
+    // Mirrors `router.observers[name].filter(StateFilter(scene_config.state))`.
+    $stateFilter = new StateFilter($config->state);
+    $stateFilterClosure = Closure::fromCallable($stateFilter);
+
+    foreach (array_keys($usedObservers) as $observerName) {
+      // Skip callback_query when callbackQueryWithoutState is true.
+      if ($config->callbackQueryWithoutState === true && $observerName === 'callback_query') {
+        continue;
+      }
+
+      if (!isset($router->observers[$observerName])) {
+        continue;
+      }
+
+      $router->observers[$observerName]->filter($stateFilterClosure);
+    }
+  }
+
+  /**
+   * Return a callable that enters this scene when invoked.
+   *
+   * The returned closure is suitable for registering as a handler on any
+   * observer.  When invoked it calls `$scenes->enter(static::class)` where
+   * `$scenes` is the `ScenesManager` injected by `SceneRegistry` middleware.
+   *
+   * Mirrors `Scene.as_handler()` (`aiogram/fsm/scene.py:423-438`):
+   *
+   *   async def enter_to_scene_handler(event, scenes, **middleware_kwargs):
+   *       await scenes.enter(cls, **{**handler_kwargs, **middleware_kwargs})
+   *
+   * @param mixed ...$handlerKwargs Extra kwargs merged into the `enter()` call.
+   *
+   * @return Closure(object, mixed...): void
+   */
+  public static function asHandler(mixed ...$handlerKwargs): Closure
+  {
+    $sceneClass = static::class;
+
+    return static function (object $event, mixed ...$middlewareKwargs) use ($sceneClass, $handlerKwargs): void {
+      $scenes = $middlewareKwargs['scenes'] ?? null;
+
+      if (!$scenes instanceof ScenesManager) {
+        throw new SceneException(
+          "Scene context key 'scenes' is not available. "
+          . 'Ensure FSM is enabled and pipeline is intact.',
+        );
+      }
+
+      // Merge handler_kwargs into middleware_kwargs (middleware_kwargs wins
+      // on key collision — mirrors Python's `{**handler_kwargs, **middleware_kwargs}`).
+      // Retain only string-keyed entries as named kwargs so they flow into the
+      // variadic `...$kwargs` parameter of `enter()`.  Integer keys and the
+      // internal `checkActive` key are stripped to prevent positional / type
+      // conflicts.
+      /** @var array<string, mixed> $mergedKwargs */
+      $mergedKwargs = [];
+
+      foreach ([...$handlerKwargs, ...$middlewareKwargs] as $k => $v) {
+        if (is_string($k) && $k !== 'checkActive') {
+          $mergedKwargs[$k] = $v;
+        }
+      }
+
+      $scenes->enter($sceneClass, true, ...$mergedKwargs);
     };
   }
 
   // ------------------------------------------------------------------ //
-  // SceneConfig accessor — overridden by registered subclasses
+  // SceneConfig accessor — reflection-based, cached per class
   // ------------------------------------------------------------------ //
 
   /**
    * Return the `SceneConfig` for this scene class.
    *
-   * Subclasses that are registered via `SceneRegistry` override this method to
-   * return the registry-supplied `SceneConfig` instance.  The default
-   * implementation throws `SceneException` to surface a clear error message
-   * when a scene class is used without being registered.
+   * On first call the config is built via reflection (reading `#[SceneState]`
+   * from the class and `#[On*]` attributes from public methods) and cached in
+   * `self::$cachedSceneConfig[static::class]`. Subsequent calls return the
+   * cached instance without re-reflecting.
    *
-   * Mirrors the `__scene_config__` class attribute populated by
-   * `SceneRegistry.__init_subclass__` (`aiogram/fsm/scene.py:316-325`).
+   * Subclasses that override this method explicitly (e.g. test fixtures that
+   * hand-build a `SceneConfig`) bypass the reflection path entirely — the
+   * override is called instead.
    *
-   * @throws SceneException When the scene class has not been registered via
-   *                        `SceneRegistry` and therefore has no config.
+   * Mirrors the `__scene_config__` class attribute populated in
+   * `Scene.__init_subclass__` (`aiogram/fsm/scene.py:316-325`).
    */
   public static function sceneConfig(): SceneConfig
   {
-    throw new SceneException(
-      static::class . ' has no SceneConfig — register the scene via SceneRegistry before use.',
-    );
+    $class = static::class;
+
+    return self::$cachedSceneConfig[$class] ??= self::buildSceneConfig();
   }
 
   // ------------------------------------------------------------------ //
@@ -242,5 +369,87 @@ abstract class Scene
     $shortName = $ref->getShortName();
 
     return $shortName !== '' ? strtolower($shortName) : null;
+  }
+
+  // ------------------------------------------------------------------ //
+  // Private — reflection-based SceneConfig builder
+  // ------------------------------------------------------------------ //
+
+  /**
+   * Build a `SceneConfig` for this class by reflecting on `#[SceneState]`
+   * (class) and `#[On*]` (method) attributes.
+   *
+   * Algorithm:
+   * 1. Read `#[SceneState]` from the class → `$stateName`.
+   * 2. For each public method, read all `#[On*]` attributes:
+   *    - Attribute with `$action === null` → `HandlerContainer` entry in
+   *      `$handlers` (ordinary event handler).
+   *    - Attribute with `$action !== null` → entry in `$actions` keyed by
+   *      `$action->name` (lifecycle action handler).
+   * 3. Construct and return the `SceneConfig`.
+   *
+   * Mirrors `Scene.__init_subclass__` (`aiogram/fsm/scene.py:321-377`).
+   */
+  private static function buildSceneConfig(): SceneConfig
+  {
+    $class = static::class;
+    $reflection = new ReflectionClass($class);
+
+    // --- 1. Resolve state name ------------------------------------------
+    $stateName = static::sceneState();
+
+    // --- 2. Walk public methods for #[On*] attributes -------------------
+    /** @var list<HandlerContainer> $handlers */
+    $handlers = [];
+
+    /** @var array<string, array<string, callable>> $actions */
+    $actions = [];
+
+    foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+      // Skip abstract, static, and constructor-related methods.
+      if ($method->isAbstract() || $method->isStatic() || $method->isConstructor()) {
+        continue;
+      }
+
+      $onAttributes = $method->getAttributes(OnAttribute::class, ReflectionAttribute::IS_INSTANCEOF);
+
+      foreach ($onAttributes as $attrRef) {
+        /** @var OnAttribute $attr */
+        $attr = $attrRef->newInstance();
+
+        // Build the unbound callable: a closure that, when invoked with
+        // ($scene, $event, ...$kwargs), calls $method on $scene.
+        $methodName = $method->getName();
+        $handler = static function (Scene $scene, object $event, mixed ...$kwargs) use ($methodName): mixed {
+          return $scene->{$methodName}($event, ...$kwargs);
+        };
+
+        if ($attr->action === null) {
+          // Ordinary event handler → HandlerContainer.
+          $handlers[] = new HandlerContainer(
+            name: $attr->event,
+            handler: $handler,
+            filters: $attr->filters,
+            after: $attr->after,
+          );
+        } else {
+          // Lifecycle action handler → $actions[$actionName][$eventName].
+          $actionName = $attr->action->name;
+          $eventName = $attr->event;
+
+          if (!isset($actions[$actionName])) {
+            $actions[$actionName] = [];
+          }
+
+          $actions[$actionName][$eventName] = $handler;
+        }
+      }
+    }
+
+    return new SceneConfig(
+      state: $stateName,
+      handlers: $handlers,
+      actions: $actions,
+    );
   }
 }
