@@ -318,43 +318,49 @@ abstract class CallbackData
   /**
    * Decode a wire segment back to a typed value. The parameter
    * reflection gives us the target type; we dispatch per scalar/complex.
-   * Nullable parameters with an empty wire segment decode to `null`,
-   * unless the parameter has a non-empty default value — in that case
-   * the default is preferred, mirroring upstream's precedence in
-   * `callback_data.py:131-137`:
+   * Nullable parameters with an empty wire segment decode according to
+   * upstream `callback_data.py:131-137`:
    *
-   *   `parsed_value = field.default if field.default is not PydanticUndefined else None`
+   *   if v == "" and nullable and field.default != "":
+   *       return field.default if field.default is not PydanticUndefined else None
    *
-   * Upstream contract: when wire is empty AND field is nullable AND
-   * `field.default != ""`: return default (if defined), else None.
-   * The "default is not empty-string" predicate preserves the semantic
-   * that an empty default with an empty wire segment decodes to null.
+   * Upstream contract decomposed:
+   *
+   * 1. Empty wire + nullable + non-empty-string default → return default.
+   * 2. Empty wire + nullable + no default → return `null`.
+   * 3. Empty wire + nullable + empty-string default (`?string $foo = ''`) →
+   *    fall through to `$raw` (i.e. `''`).  `field.default != ""` fails, so
+   *    upstream does NOT return default/null — the empty wire round-trips as
+   *    the empty string.
+   * 4. Empty wire + non-nullable → fall through to scalar coercion path
+   *    (may raise `TypeError` for int/bool/float).
    */
   private static function decodeValue(string $raw, ReflectionParameter $param): mixed
   {
     $type = $param->getType();
 
     if ($raw === '') {
-      // Upstream precedence (callback_data.py:131-137):
-      // 1. If the parameter has a default that is NOT empty string,
-      //    return the default — mirrors `field.default != ""` guard.
-      // 2. Else if the type allows null, return null.
-      // 3. Else fall through to the empty-string coercion path below.
-      if (
-        $param->isDefaultValueAvailable()
-        && $param->getDefaultValue() !== ''
-      ) {
-        return $param->getDefaultValue();
+      $hasDefault = $param->isDefaultValueAvailable();
+      $default = $hasDefault ? $param->getDefaultValue() : null;
+      $isNullable = $type instanceof ReflectionNamedType && $type->allowsNull();
+
+      // Case 1: nullable + non-empty-string default → return default.
+      // Mirrors `field.default != ""` guard in upstream:
+      //   parsed_value = field.default if field.default is not PydanticUndefined else None
+      if ($isNullable && $hasDefault && $default !== '') {
+        return $default;
       }
 
-      if ($type instanceof ReflectionNamedType && $type->allowsNull()) {
+      // Case 2: nullable + no default → return null.
+      // `field.default is PydanticUndefined` branch: upstream returns None.
+      if ($isNullable && !$hasDefault) {
         return null;
       }
 
-      // Non-nullable, defaultless (or empty-default) target — return
-      // empty string and let the typed property's coercion (string only)
-      // or `newInstance()` raise. For `int`/`bool`/`float` PHP's strict
-      // typing rejects the empty string with a clear TypeError.
+      // Case 3 (nullable + empty-string default) and Case 4 (non-nullable):
+      // fall through to the coercion path below.  For `?string $foo = ''`
+      // this returns `''`, restoring upstream parity.  For non-nullable
+      // types the coercion may raise TypeError.
     }
 
     if (!$type instanceof ReflectionNamedType) {

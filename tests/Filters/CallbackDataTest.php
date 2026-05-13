@@ -373,18 +373,16 @@ final class CallbackDataTest extends TestCase
     // Upstream `test_unpack_optional` row: `MyCallback4.unpack("test4::") == MyCallback4(foo="", bar=None)`.
     // Both fields have empty wire segments.
     //
-    // `$foo` has type `?string` with default `''`. Since the default IS the
-    // empty string, the `field.default != ""` guard (callback_data.py:135)
-    // fires and we fall through to the `allowsNull()` branch → `null`.
-    // (Upstream returns `''` here because Pydantic carries the empty-string
-    // default through; our port returns `null` for the same reason it did
-    // before the precedence fix — the empty-default special case.)
+    // `$foo` has type `?string` with default `''`. Upstream's
+    // `field.default != ""` guard (callback_data.py:135) FAILS for an
+    // empty-string default, so upstream falls through and the empty wire
+    // segment round-trips as `''` — NOT null.
     //
     // `$bar` has type `?string` with default `null`. `null !== ''` so the
-    // default branch fires first and returns `null` (same outcome, different path).
+    // `field.default != ""` guard passes and the default (`null`) is returned.
     $decoded = CbDataTwoOptionals::unpack('opt4::');
 
-    self::assertNull($decoded->foo);
+    self::assertSame('', $decoded->foo, '?string with empty-string default must round-trip as empty string');
     self::assertNull($decoded->bar);
   }
 
