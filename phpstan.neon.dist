@@ -33,6 +33,10 @@ parameters:
             # dynamic-property dispatch (`MagicFilter::root()->firstName`,
             # `->isBot`, …) — by design, see `BaseField`.
             - tests/Filters/F/*
+            # MagicData test exercises the F-DSL natively (`F->event->text`,
+            # `F->state`, …) to mirror real call sites; the dispatch goes
+            # through MagicFilter::__get same as the F-DSL field wrappers.
+            - tests/Filters/MagicDataTest.php
         - identifier: method.notFound
           paths:
             - tests/Utils/MagicFilter/*
