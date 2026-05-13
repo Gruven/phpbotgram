@@ -223,6 +223,38 @@ final class HistoryManagerTest extends TestCase
     self::assertSame([], $manager->all());
   }
 
+  /**
+   * `push` merges into existing history-slot data, preserving sibling keys.
+   *
+   * Regression: `setData(['history' => ...])` would wipe ALL fields under
+   * `data` (analogous to Mongo `$set: {data: ...}`), losing any sibling key
+   * that was already stored in the same destiny slot. `updateData` performs
+   * a partial-key merge instead, leaving unrelated keys intact.
+   */
+  public function testPushPreservesSiblingKeysInHistorySlot(): void
+  {
+    $storage = $this->makeStorage();
+    $key = $this->makeKey();
+    $ctx = new FsmContext($storage, $key);
+
+    // Pre-seed the history destiny slot with a sibling key alongside 'history'.
+    $historyKey = $key->withDestiny('scenes_history');
+    $storage->setData($historyKey, ['history' => [], 'sibling' => 'preserved']);
+
+    $manager = new HistoryManager($ctx);
+    $manager->push('step1', ['foo' => 'bar']);
+
+    // The sibling key must still be present after push.
+    $rawSlot = $storage->getData($historyKey);
+    self::assertArrayHasKey('sibling', $rawSlot, 'sibling key must survive push');
+    self::assertSame('preserved', $rawSlot['sibling']);
+
+    // And history must contain the new entry.
+    self::assertArrayHasKey('history', $rawSlot);
+    self::assertIsArray($rawSlot['history']);
+    self::assertCount(1, $rawSlot['history']);
+  }
+
   // ------------------------------------------------------------------ //
   // clear()
   // ------------------------------------------------------------------ //

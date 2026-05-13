@@ -128,7 +128,7 @@ final class HistoryManager implements HistoryManagerInterface
       $history = array_slice($history, -$this->size);
     }
 
-    $this->historyState->setData(['history' => $history]);
+    $this->historyState->updateData(['history' => $history]);
   }
 
   /**
@@ -156,7 +156,7 @@ final class HistoryManager implements HistoryManagerInterface
     if ($history === []) {
       $this->historyState->setData([]);
     } else {
-      $this->historyState->setData(['history' => $history]);
+      $this->historyState->updateData(['history' => $history]);
     }
 
     return new MemoryStorageRecord(
