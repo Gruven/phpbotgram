@@ -291,6 +291,35 @@ final class SceneRoutingTest extends TestCase
     self::assertCount(1, $entered, 'scenes->enter() must be called exactly once');
   }
 
+  /**
+   * When the middleware bag contains a `scene` key, no Error is thrown.
+   *
+   * Regression: `ScenesManager::enter`'s first positional parameter is `$scene`.
+   * A kwarg named `scene` in the merged bag would duplicate-bind and PHP would
+   * throw "Cannot use positional argument after named argument during unpacking"
+   * (or a duplicate-named-arg Error). The defensive `unset($mergedKwargs['scene'])`
+   * silently strips it before the spread so `enter($sceneClass, $checkActive, ...)`
+   * never sees a collision.
+   */
+  public function testAsHandlerSilentlyStripsSceneFromKwargBag(): void
+  {
+    $entered = [];
+    $fakeScenes = $this->makeFakeScenesManager($entered);
+
+    $handler = SimpleMessageScene::asHandler();
+
+    // Inject `scene` into the middleware bag — must NOT throw an Error.
+    try {
+      $handler(new stdClass(), scenes: $fakeScenes, scene: 'some_scene_value');
+    } catch (SceneException $e) {
+      // The spy registry throws after recording — expected.
+      self::assertStringStartsWith('spy:', $e->getMessage());
+    }
+
+    // Scene must still be entered despite the scene kwarg collision.
+    self::assertCount(1, $entered, 'scenes->enter() must be called exactly once');
+  }
+
   // ------------------------------------------------------------------ //
   // 4. SceneHandlerWrapper — handler invocation
   // ------------------------------------------------------------------ //

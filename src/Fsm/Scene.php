@@ -309,10 +309,11 @@ abstract class Scene
       // `...$kwargs` parameter of `enter()`. Integer keys are stripped to
       // prevent positional conflicts.
       //
-      // Defensive: strip `checkActive` from the merged bag — it is already
-      // bound positionally to the `$checkActive` parameter above. A kwarg
-      // literally named `checkActive` would otherwise duplicate-bind and PHP
-      // would throw an Error.
+      // Defensive: strip reserved kwarg names that are already bound as
+      // positional parameters in `ScenesManager::enter($scene, $checkActive, ...)`.
+      // Keeping them in the bag produces PHP duplicate-named-arg Errors:
+      //   - `scene` collides with the first positional arg to enter().
+      //   - `checkActive` collides with the second positional arg to enter().
       /** @var array<string, mixed> $mergedKwargs */
       $mergedKwargs = [];
 
@@ -322,7 +323,7 @@ abstract class Scene
         }
       }
 
-      unset($mergedKwargs['checkActive']);
+      unset($mergedKwargs['scene'], $mergedKwargs['checkActive']);
 
       $scenes->enter($sceneClass, $checkActive, ...$mergedKwargs);
     };
