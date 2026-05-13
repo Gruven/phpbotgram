@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Dispatcher;
 
+use Gruven\PhpBotGram\Types\Unspecified;
 use Gruven\PhpBotGram\Utils\BackoffConfig;
 use InvalidArgumentException;
 
@@ -30,9 +31,12 @@ use InvalidArgumentException;
  *   which is what users see).
  * - `backoffConfig=new BackoffConfig()` — matches upstream
  *   `DEFAULT_BACKOFF_CONFIG = BackoffConfig(1.0, 5.0, 1.3, 0.1)`.
- * - `allowedUpdates=null` — Telegram interprets a missing key as "all
- *   subscribed update types". `null` is therefore the explicit "let
- *   Telegram filter" sentinel.
+ * - `allowedUpdates=Unspecified::instance()` — Fix I8 sentinel for
+ *   "auto-resolve via `Router::resolveUsedUpdateTypes()` at polling
+ *   start" (mirrors upstream's `UNSET` default at `dispatcher.py:526`).
+ *   Distinct from `null`, which remains the explicit "send no
+ *   allowed_updates key" passthrough so Telegram returns every
+ *   subscribed type.
  * - `handleAsTasks=100` — concurrent in-flight updates per bot. Upstream
  *   exposes `handle_as_tasks: bool` (on/off) PLUS `tasks_concurrency_limit:
  *   int|None` (cap). Collapsing into one `int|null` slot is denser without
@@ -45,12 +49,33 @@ final readonly class PollingOptions
   public BackoffConfig $backoffConfig;
 
   /**
+   * Telegram `allowed_updates` parameter, plus the `Unspecified` sentinel
+   * for "auto-resolve at polling start". Three legal shapes:
+   *
+   * - `Unspecified::instance()` (default): `Dispatcher::startPolling` calls
+   *   `Router::resolveUsedUpdateTypes()` and substitutes the resulting
+   *   `list<string>` before kicking off the per-bot polling fibers. Mirrors
+   *   upstream `dispatcher.py:564-565`.
+   * - `null`: explicit opt-out — the `getUpdates` request omits the
+   *   `allowed_updates` key, so Telegram returns every subscribed type.
+   * - `list<string>`: a caller-curated list; passed through verbatim.
+   *
+   * @var null|list<string>|Unspecified
+   */
+  public null|array|Unspecified $allowedUpdates;
+
+  /**
    * @param int $pollingTimeout Long-poll seconds for `getUpdates`. 0 means
    *                            short-poll (return immediately). Must be `>= 0`.
    * @param ?BackoffConfig $backoffConfig Retry tuning; `null` => use
    *                                      `new BackoffConfig()` (upstream `DEFAULT_BACKOFF_CONFIG`).
-   * @param ?list<string> $allowedUpdates Telegram `allowed_updates`
-   *                                      parameter. `null` => omit the key (receive all subscribed types).
+   * @param null|list<string>|Unspecified $allowedUpdates Telegram
+   *                                                      `allowed_updates` parameter. See `$allowedUpdates`
+   *                                                      property docblock for the three legal shapes. Omit
+   *                                                      the argument to get the `Unspecified` auto-resolve
+   *                                                      default (PHP can't use a function call as a default
+   *                                                      value, so the constructor maps a no-arg call to the
+   *                                                      sentinel in the body).
    * @param ?int $handleAsTasks Concurrent in-flight updates per bot.
    *                            `null` => fully serial (no fiber spawn); positive int => fiber
    *                            pool of that size. Must be `>= 1` or `null`.
@@ -58,9 +83,15 @@ final readonly class PollingOptions
   public function __construct(
     public int $pollingTimeout = 10,
     ?BackoffConfig $backoffConfig = null,
-    public ?array $allowedUpdates = null,
+    null|array|Unspecified $allowedUpdates = new Unspecified(),
     public ?int $handleAsTasks = 100,
   ) {
+    // The default `new Unspecified()` is a fresh instance per call by
+    // the language semantics; normalise to the singleton via identity
+    // check so `=== Unspecified::instance()` works in callers.
+    $this->allowedUpdates = $allowedUpdates instanceof Unspecified
+      ? Unspecified::instance()
+      : $allowedUpdates;
     $this->backoffConfig = $backoffConfig ?? new BackoffConfig();
 
     if ($pollingTimeout < 0) {

@@ -483,6 +483,81 @@ final class PollingTest extends TestCase
     self::assertTrue($bot->getMockedSession()->closed);
   }
 
+  public function testStartPollingAutoResolvesAllowedUpdatesWhenUnspecified(): void
+  {
+    // Fix I8: when PollingOptions::$allowedUpdates is left as the
+    // Unspecified sentinel default, Dispatcher::startPolling must replace
+    // it with the result of `resolveUsedUpdateTypes()` before kicking off
+    // the polling fibers. This mirrors upstream's `dispatcher.py:564-565`
+    // "if allowed_updates is UNSET: allowed_updates = self.resolve_used_update_types()".
+    //
+    // Observable shape: register handlers on `message` and `callback_query`
+    // and verify the resulting `getUpdates` request carries
+    // `allowed_updates: ['message', 'callback_query']` (order matches
+    // resolveUsedUpdateTypes walk order).
+    $dispatcher = new Dispatcher();
+    $bot = new MockedBot();
+    $dispatcher->message->register(static function (Update $event_update) use ($dispatcher): void {
+      $dispatcher->stopPolling();
+    });
+    $dispatcher->callbackQuery->register(static fn() => null);
+    $bot->addResultFor(GetUpdates::class, ok: true, result: [self::makeMessageUpdate(1, 'wake')]);
+
+    $this->runAsync(static function () use ($dispatcher, $bot): void {
+      $dispatcher->startPolling(new PollingOptions(handleAsTasks: null), $bot)->await();
+    });
+
+    $request = $bot->getRequest();
+    self::assertInstanceOf(GetUpdates::class, $request);
+    self::assertSame(['message', 'callback_query'], $request->allowedUpdates);
+  }
+
+  public function testStartPollingPassesNullAllowedUpdatesThrough(): void
+  {
+    // Counterpart to the auto-resolve test: an explicit `null` (the
+    // "receive all subscribed types" passthrough) must reach
+    // `getUpdates` verbatim — NOT be replaced by the auto-resolve.
+    $dispatcher = new Dispatcher();
+    $bot = new MockedBot();
+    $dispatcher->message->register(static function (Update $event_update) use ($dispatcher): void {
+      $dispatcher->stopPolling();
+    });
+    $bot->addResultFor(GetUpdates::class, ok: true, result: [self::makeMessageUpdate(2, 'wake')]);
+
+    $this->runAsync(static function () use ($dispatcher, $bot): void {
+      $dispatcher->startPolling(
+        new PollingOptions(allowedUpdates: null, handleAsTasks: null),
+        $bot,
+      )->await();
+    });
+
+    $request = $bot->getRequest();
+    self::assertInstanceOf(GetUpdates::class, $request);
+    self::assertNull($request->allowedUpdates);
+  }
+
+  public function testStartPollingPassesExplicitListAllowedUpdatesThrough(): void
+  {
+    // And an explicit list of update types reaches getUpdates as-is.
+    $dispatcher = new Dispatcher();
+    $bot = new MockedBot();
+    $dispatcher->message->register(static function (Update $event_update) use ($dispatcher): void {
+      $dispatcher->stopPolling();
+    });
+    $bot->addResultFor(GetUpdates::class, ok: true, result: [self::makeMessageUpdate(3, 'wake')]);
+
+    $this->runAsync(static function () use ($dispatcher, $bot): void {
+      $dispatcher->startPolling(
+        new PollingOptions(allowedUpdates: ['inline_query'], handleAsTasks: null),
+        $bot,
+      )->await();
+    });
+
+    $request = $bot->getRequest();
+    self::assertInstanceOf(GetUpdates::class, $request);
+    self::assertSame(['inline_query'], $request->allowedUpdates);
+  }
+
   /**
    * Build a minimal `Update` carrying a text Message with the given
    * updateId and body — parameterised version of `DispatcherTest`'s

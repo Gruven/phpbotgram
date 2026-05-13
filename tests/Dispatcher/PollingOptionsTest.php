@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Tests\Dispatcher;
 
 use Gruven\PhpBotGram\Dispatcher\PollingOptions;
+use Gruven\PhpBotGram\Types\Unspecified;
 use Gruven\PhpBotGram\Utils\BackoffConfig;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
@@ -14,11 +15,13 @@ final class PollingOptionsTest extends TestCase
   public function testDefaultsMatchSpec(): void
   {
     // Spec § "Polling loop": pollingTimeout=10s long-poll, default-tuned
-    // backoff, no allowed_updates filter (null = receive all subscribed
-    // types), and handle_as_tasks=100 concurrent in-flight tasks per bot.
+    // backoff, allowed_updates defaults to the Unspecified sentinel
+    // (Dispatcher::startPolling resolves it via Router::resolveUsedUpdateTypes
+    // — mirrors upstream's `UNSET` default at `dispatcher.py:526`), and
+    // handle_as_tasks=100 concurrent in-flight tasks per bot.
     $options = new PollingOptions();
     self::assertSame(10, $options->pollingTimeout);
-    self::assertNull($options->allowedUpdates);
+    self::assertSame(Unspecified::instance(), $options->allowedUpdates);
     self::assertSame(100, $options->handleAsTasks);
     self::assertInstanceOf(BackoffConfig::class, $options->backoffConfig);
   }
@@ -92,5 +95,23 @@ final class PollingOptionsTest extends TestCase
     $this->expectException(InvalidArgumentException::class);
     $this->expectExceptionMessage('handleAsTasks must be >= 1 or null');
     new PollingOptions(handleAsTasks: -5);
+  }
+
+  public function testNullAllowedUpdatesIsValidExplicitOptOut(): void
+  {
+    // Fix I8: `null` remains the explicit "send the empty key / receive all
+    // subscribed types" passthrough. Distinct from the Unspecified default
+    // (auto-resolve via Router::resolveUsedUpdateTypes).
+    $options = new PollingOptions(allowedUpdates: null);
+    self::assertNull($options->allowedUpdates);
+  }
+
+  public function testExplicitListAllowedUpdatesStoredAsIs(): void
+  {
+    // A caller-supplied list of update types skips the auto-resolve and
+    // skips the "receive all" passthrough — Telegram only sends the listed
+    // types.
+    $options = new PollingOptions(allowedUpdates: ['message', 'callback_query']);
+    self::assertSame(['message', 'callback_query'], $options->allowedUpdates);
   }
 }

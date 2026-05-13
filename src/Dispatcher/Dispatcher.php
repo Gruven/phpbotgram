@@ -30,6 +30,7 @@ use Gruven\PhpBotGram\Exceptions\UpdateTypeLookupException;
 use Gruven\PhpBotGram\Methods\GetUpdates;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use Gruven\PhpBotGram\Types\TelegramObject;
+use Gruven\PhpBotGram\Types\Unspecified;
 use Gruven\PhpBotGram\Types\Update;
 use Gruven\PhpBotGram\Utils\Backoff;
 use LogicException;
@@ -580,13 +581,22 @@ class Dispatcher extends Router
     $offset = null;
     $backoff = new Backoff($options->backoffConfig);
 
+    // Resolve the Unspecified sentinel (Fix I8) when callers drive
+    // `listenUpdates` directly — `startPolling` already replaces it, but
+    // tests and external callers may pass a stock `PollingOptions()`.
+    // Narrow the union to the `null|list<string>` shape `GetUpdates`
+    // expects via `instanceof` so PHPStan can see the narrowing.
+    $allowedUpdates = $options->allowedUpdates instanceof Unspecified
+      ? $this->resolveUsedUpdateTypes()
+      : $options->allowedUpdates;
+
     while ($this->stopSignal === null || !$this->stopSignal->isComplete()) {
       try {
         /** @var list<Update> $updates */
         $updates = $bot(new GetUpdates(
           offset: $offset,
           timeout: $options->pollingTimeout,
-          allowedUpdates: $options->allowedUpdates,
+          allowedUpdates: $allowedUpdates,
         ));
       } catch (TelegramRetryAfter $e) {
         delay((float)$e->retryAfter);
@@ -731,6 +741,26 @@ class Dispatcher extends Router
       $this->stopSignal = new DeferredFuture();
     } finally {
       $lock->release();
+    }
+
+    // Fix I8: when the caller left `$allowedUpdates` as the Unspecified
+    // sentinel, replace it with the auto-resolved list of update types
+    // that have at least one registered handler in the router tree.
+    // Mirrors upstream `dispatcher.py:564-565`: "if allowed_updates is
+    // UNSET: allowed_updates = self.resolve_used_update_types()".
+    //
+    // The replacement happens on a copy (new PollingOptions instance)
+    // because `PollingOptions` is `final readonly` — we cannot mutate
+    // the original. Constructing the copy here is cheap and keeps the
+    // polling loop's `$options` argument typed as `list<string>|null`,
+    // matching `GetUpdates::$allowedUpdates`.
+    if ($options->allowedUpdates instanceof Unspecified) {
+      $options = new PollingOptions(
+        pollingTimeout: $options->pollingTimeout,
+        backoffConfig: $options->backoffConfig,
+        allowedUpdates: $this->resolveUsedUpdateTypes(),
+        handleAsTasks: $options->handleAsTasks,
+      );
     }
 
     // Fire emitStartup BEFORE spawning fibers so a startup handler can

@@ -13,14 +13,23 @@ namespace Gruven\PhpBotGram\Types;
  *
  * NOT declared `readonly class`: PHP forbids `static` properties on a
  * readonly class, and the singleton needs `private static ?self $instance`
- * to cache the sole instance. The private constructor + singleton pattern
- * already enforces the desired immutability.
+ * to cache the sole instance. The class is otherwise immutable by having
+ * no state.
+ *
+ * **Public constructor (Fix I8 enabler)**: the constructor is `public`
+ * (not `private`) so a `new Unspecified()` expression can be used as a
+ * default value for typed parameters — PHP 8.1+ allows `new ClassName(...)`
+ * in constant expressions, but forbids static method calls there. Code
+ * that needs singleton identity (`=== Unspecified::instance()`, e.g. the
+ * serializer guards) MUST call `Unspecified::instance()` or normalise a
+ * fresh instance to the singleton via `instanceof` first. PollingOptions
+ * does exactly that in its constructor body.
  */
 final class Unspecified
 {
   private static ?self $instance = null;
 
-  private function __construct() {}
+  public function __construct() {}
 
   public static function instance(): self
   {
