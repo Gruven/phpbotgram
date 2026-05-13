@@ -127,6 +127,25 @@ final class ExceptionMessageFilterTest extends TestCase
     self::assertFalse($filter($this->errorEvent(new RuntimeException('different message'))));
   }
 
+  public function testPatternIsAnchoredAtStartLikePythonReMatch(): void
+  {
+    // Upstream-parity anchoring. Python's `re.Pattern.match` is anchored
+    // at position 0 of the string — `re.compile('error').match('foo error bar')`
+    // returns `None`. PHP's `preg_match` without the `A` modifier is
+    // unanchored and would find `'error'` at position 4. We add the PCRE
+    // `A` modifier to restore start-of-string anchoring.
+    //
+    // Upstream ref: `aiogram/filters/exception.py:54`
+    //   `result = self.pattern.match(str(cast(ErrorEvent, obj).exception))`
+    $filter = new ExceptionMessageFilter('/error/');
+
+    // MUST reject: 'error' appears mid-string, not at position 0.
+    self::assertFalse($filter($this->errorEvent(new RuntimeException('foo error bar'))));
+
+    // MUST accept: 'error' is at position 0.
+    self::assertIsArray($filter($this->errorEvent(new RuntimeException('error: something went wrong'))));
+  }
+
   /**
    * Build an `ErrorEvent` wrapping a given exception. The filter only
    * touches `->exception->getMessage()` so a placeholder `Update` is fine.

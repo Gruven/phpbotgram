@@ -23,6 +23,21 @@ use Gruven\PhpBotGram\Types\ErrorEvent;
  * pattern is held verbatim on a readonly property so debuggers and
  * potential future `__toString` introspection can recover it.
  *
+ * # Upstream-parity anchoring
+ *
+ * Upstream uses `pattern.match(message)` (`exception.py:54`). Python's
+ * `re.Pattern.match` is **anchored at the start of the string** — it
+ * matches only if the pattern satisfies at position 0, equivalent to
+ * wrapping the pattern in `(?:\A)`. PHP's `preg_match` is **unanchored**
+ * by default and would match mid-string. To restore parity we apply the
+ * PCRE `A` modifier (`PREG_ANCHOR`), which anchors the pattern at the
+ * start of the subject string. The modifier is appended after the
+ * user-supplied closing delimiter, e.g. `'/boom/'` becomes `'/boom/A'`.
+ * Patterns that already include `^` or `\A` continue to work correctly
+ * (they anchor at the start, same as `A`); the `A` modifier is simply
+ * redundant in that case. Modifiers already present in the user pattern
+ * (`/i`, `/u`, etc.) are fully preserved.
+ *
  * # Return shape
  *
  * On accept the filter returns:
@@ -74,11 +89,16 @@ final class ExceptionMessageFilter extends Filter
     $message = $event->exception->getMessage();
     $matches = [];
 
+    // Upstream uses `pattern.match(message)` which anchors at the start
+    // of the string (Python `re.Pattern.match` ≡ PCRE `\A`). We append
+    // the `A` modifier to the user-supplied pattern to restore this
+    // parity. The modifier is appended after the closing delimiter so
+    // existing modifiers (`/i`, `/u`, etc.) are fully preserved.
     // `preg_match` returns 1 on match, 0 on no match, false on regex
     // compilation/runtime error. Treat any non-1 outcome as reject — a
     // malformed pattern is the caller's bug to surface and we don't want
     // the dispatcher's error pipeline to itself throw mid-dispatch.
-    if (preg_match($this->pattern, $message, $matches) !== 1) {
+    if (preg_match($this->pattern . 'A', $message, $matches) !== 1) {
       return false;
     }
 
