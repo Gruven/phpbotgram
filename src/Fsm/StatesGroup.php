@@ -347,8 +347,9 @@ abstract class StatesGroup
   /**
    * Evaluate whether the event is in any state belonging to this group.
    *
-   * Reads `$kwargs['rawState'] ?? null` and returns `true` when that value
-   * is in `allStateNames()`.
+   * Reads `$kwargs['raw_state'] ?? null` (snake_case, matching
+   * `FsmContextMiddleware::RAW_STATE_KEY`) and returns `true` when that
+   * value is in `allStateNames()`.
    *
    * Mirrors `StatesGroup.__call__` (`aiogram/fsm/state.py:154-157`).
    *
@@ -356,7 +357,7 @@ abstract class StatesGroup
    */
   public static function match(object $event, mixed ...$kwargs): array|bool
   {
-    $rawState = $kwargs['rawState'] ?? null;
+    $rawState = $kwargs['raw_state'] ?? null;
 
     if (!is_string($rawState)) {
       return false;

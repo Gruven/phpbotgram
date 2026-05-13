@@ -77,9 +77,9 @@ final class StatesTest extends TestCase
     // No active FSM state (rawState absent) → null === null → true.
     self::assertTrue(States::default()->__invoke($event));
     // Explicit null kwarg — same result.
-    self::assertTrue(States::default()->__invoke($event, rawState: null));
+    self::assertTrue(States::default()->__invoke($event, raw_state: null));
     // A qualified state string does NOT match the null sentinel.
-    self::assertFalse(States::default()->__invoke($event, rawState: 'Form:step'));
+    self::assertFalse(States::default()->__invoke($event, raw_state: 'Form:step'));
   }
 
   // ------------------------------------------------------------------ //
@@ -131,9 +131,9 @@ final class StatesTest extends TestCase
   {
     $event = new stdClass();
 
-    self::assertTrue(States::any()->__invoke($event, rawState: 'Form:step'));
-    self::assertTrue(States::any()->__invoke($event, rawState: 'anything'));
-    self::assertTrue(States::any()->__invoke($event, rawState: null));
+    self::assertTrue(States::any()->__invoke($event, raw_state: 'Form:step'));
+    self::assertTrue(States::any()->__invoke($event, raw_state: 'anything'));
+    self::assertTrue(States::any()->__invoke($event, raw_state: null));
     self::assertTrue(States::any()->__invoke($event));
   }
 

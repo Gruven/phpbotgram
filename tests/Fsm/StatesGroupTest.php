@@ -324,7 +324,7 @@ final class StatesGroupTest extends TestCase
     $emptyGroup::class::bootstrap();
 
     $event = new stdClass();
-    self::assertFalse($emptyGroup::class::match($event, rawState: 'anything'));
+    self::assertFalse($emptyGroup::class::match($event, raw_state: 'anything'));
   }
 
   /**
@@ -340,9 +340,9 @@ final class StatesGroupTest extends TestCase
     $event = new stdClass();
 
     // FixtureFlatGroup has $start ('FixtureFlatGroup:start') and $finish.
-    self::assertTrue(FixtureFlatGroup::match($event, rawState: 'FixtureFlatGroup:start'));
-    self::assertTrue(FixtureFlatGroup::match($event, rawState: 'FixtureFlatGroup:finish'));
-    self::assertFalse(FixtureFlatGroup::match($event, rawState: 'FixtureFlatGroup:unknown'));
+    self::assertTrue(FixtureFlatGroup::match($event, raw_state: 'FixtureFlatGroup:start'));
+    self::assertTrue(FixtureFlatGroup::match($event, raw_state: 'FixtureFlatGroup:finish'));
+    self::assertFalse(FixtureFlatGroup::match($event, raw_state: 'FixtureFlatGroup:unknown'));
   }
 
   /**
@@ -361,13 +361,13 @@ final class StatesGroupTest extends TestCase
     $event = new stdClass();
 
     // FixtureForm contains FixtureForm:name, FixtureForm:age, and all child states.
-    self::assertTrue(FixtureForm::match($event, rawState: 'FixtureForm:name'));
-    self::assertTrue(FixtureForm::match($event, rawState: 'FixtureForm.FixtureChild:email'));
-    self::assertFalse(FixtureForm::match($event, rawState: 'FixtureForm:nonexistent'));
+    self::assertTrue(FixtureForm::match($event, raw_state: 'FixtureForm:name'));
+    self::assertTrue(FixtureForm::match($event, raw_state: 'FixtureForm.FixtureChild:email'));
+    self::assertFalse(FixtureForm::match($event, raw_state: 'FixtureForm:nonexistent'));
 
     // FixtureChild matches its own states but not FixtureForm-only states.
-    self::assertTrue(FixtureChild::match($event, rawState: 'FixtureForm.FixtureChild:email'));
-    self::assertFalse(FixtureChild::match($event, rawState: 'FixtureForm:name'));
+    self::assertTrue(FixtureChild::match($event, raw_state: 'FixtureForm.FixtureChild:email'));
+    self::assertFalse(FixtureChild::match($event, raw_state: 'FixtureForm:name'));
   }
 
   // ------------------------------------------------------------------ //
@@ -408,8 +408,8 @@ final class StatesGroupTest extends TestCase
   {
     $event = new stdClass();
 
-    self::assertTrue(FixtureForm::match($event, rawState: 'FixtureForm:name'));
-    self::assertTrue(FixtureForm::match($event, rawState: 'FixtureForm.FixtureChild:email'));
+    self::assertTrue(FixtureForm::match($event, raw_state: 'FixtureForm:name'));
+    self::assertTrue(FixtureForm::match($event, raw_state: 'FixtureForm.FixtureChild:email'));
   }
 
   /**
@@ -419,7 +419,7 @@ final class StatesGroupTest extends TestCase
   {
     $event = new stdClass();
 
-    self::assertFalse(FixtureForm::match($event, rawState: 'unknown'));
+    self::assertFalse(FixtureForm::match($event, raw_state: 'unknown'));
     self::assertFalse(FixtureForm::match($event));
   }
 }

@@ -90,9 +90,9 @@ final class StateFilterTest extends TestCase
   {
     $filter = new StateFilter('*');
 
-    self::assertTrue($filter($this->event, rawState: 'FormStates:name'));
-    self::assertTrue($filter($this->event, rawState: 'some:state'));
-    self::assertTrue($filter($this->event, rawState: 'anything'));
+    self::assertTrue($filter($this->event, raw_state: 'FormStates:name'));
+    self::assertTrue($filter($this->event, raw_state: 'some:state'));
+    self::assertTrue($filter($this->event, raw_state: 'anything'));
   }
 
   /**
@@ -102,7 +102,7 @@ final class StateFilterTest extends TestCase
   {
     $filter = new StateFilter('*');
 
-    self::assertTrue($filter($this->event, rawState: null));
+    self::assertTrue($filter($this->event, raw_state: null));
     self::assertTrue($filter($this->event)); // no rawState kwarg → null
   }
 
@@ -117,7 +117,7 @@ final class StateFilterTest extends TestCase
   {
     $filter = new StateFilter('FormStates:name');
 
-    self::assertTrue($filter($this->event, rawState: 'FormStates:name'));
+    self::assertTrue($filter($this->event, raw_state: 'FormStates:name'));
   }
 
   /**
@@ -127,9 +127,9 @@ final class StateFilterTest extends TestCase
   {
     $filter = new StateFilter('FormStates:name');
 
-    self::assertFalse($filter($this->event, rawState: 'FormStates:age'));
-    self::assertFalse($filter($this->event, rawState: null));
-    self::assertFalse($filter($this->event, rawState: 'other'));
+    self::assertFalse($filter($this->event, raw_state: 'FormStates:age'));
+    self::assertFalse($filter($this->event, raw_state: null));
+    self::assertFalse($filter($this->event, raw_state: 'other'));
   }
 
   // ------------------------------------------------------------------ //
@@ -143,7 +143,7 @@ final class StateFilterTest extends TestCase
   {
     $filter = new StateFilter(null);
 
-    self::assertTrue($filter($this->event, rawState: null));
+    self::assertTrue($filter($this->event, raw_state: null));
     self::assertTrue($filter($this->event)); // absent rawState kwarg → null
   }
 
@@ -154,7 +154,7 @@ final class StateFilterTest extends TestCase
   {
     $filter = new StateFilter(null);
 
-    self::assertFalse($filter($this->event, rawState: 'FormStates:name'));
+    self::assertFalse($filter($this->event, raw_state: 'FormStates:name'));
   }
 
   // ------------------------------------------------------------------ //
@@ -171,7 +171,7 @@ final class StateFilterTest extends TestCase
 
     $filter = new StateFilter(FormStates::$name);
 
-    self::assertTrue($filter($this->event, rawState: 'FormStates:name'));
+    self::assertTrue($filter($this->event, raw_state: 'FormStates:name'));
   }
 
   /**
@@ -183,8 +183,8 @@ final class StateFilterTest extends TestCase
 
     $filter = new StateFilter(FormStates::$name);
 
-    self::assertFalse($filter($this->event, rawState: 'FormStates:age'));
-    self::assertFalse($filter($this->event, rawState: null));
+    self::assertFalse($filter($this->event, raw_state: 'FormStates:age'));
+    self::assertFalse($filter($this->event, raw_state: null));
   }
 
   // ------------------------------------------------------------------ //
@@ -202,8 +202,8 @@ final class StateFilterTest extends TestCase
     $group = new FormStates();
     $filter = new StateFilter($group);
 
-    self::assertTrue($filter($this->event, rawState: 'FormStates:name'));
-    self::assertTrue($filter($this->event, rawState: 'FormStates:age'));
+    self::assertTrue($filter($this->event, raw_state: 'FormStates:name'));
+    self::assertTrue($filter($this->event, raw_state: 'FormStates:age'));
   }
 
   /**
@@ -216,8 +216,8 @@ final class StateFilterTest extends TestCase
     $group = new FormStates();
     $filter = new StateFilter($group);
 
-    self::assertFalse($filter($this->event, rawState: 'Other:state'));
-    self::assertFalse($filter($this->event, rawState: null));
+    self::assertFalse($filter($this->event, raw_state: 'Other:state'));
+    self::assertFalse($filter($this->event, raw_state: null));
   }
 
   // ------------------------------------------------------------------ //
@@ -241,8 +241,8 @@ final class StateFilterTest extends TestCase
     // it and still exercise the code path.
     $filter = new StateFilter(FormStates::class);
 
-    self::assertTrue($filter($this->event, rawState: 'FormStates:name'));
-    self::assertTrue($filter($this->event, rawState: 'FormStates:age'));
+    self::assertTrue($filter($this->event, raw_state: 'FormStates:name'));
+    self::assertTrue($filter($this->event, raw_state: 'FormStates:age'));
   }
 
   /**
@@ -252,8 +252,8 @@ final class StateFilterTest extends TestCase
   {
     $filter = new StateFilter(FormStates::class);
 
-    self::assertFalse($filter($this->event, rawState: 'Other:state'));
-    self::assertFalse($filter($this->event, rawState: null));
+    self::assertFalse($filter($this->event, raw_state: 'Other:state'));
+    self::assertFalse($filter($this->event, raw_state: null));
   }
 
   // ------------------------------------------------------------------ //
@@ -271,11 +271,11 @@ final class StateFilterTest extends TestCase
     $filter = new StateFilter('other:state', FormStates::$name, null);
 
     // Matches second entry.
-    self::assertTrue($filter($this->event, rawState: 'FormStates:name'));
+    self::assertTrue($filter($this->event, raw_state: 'FormStates:name'));
     // Matches third entry (null sentinel).
-    self::assertTrue($filter($this->event, rawState: null));
+    self::assertTrue($filter($this->event, raw_state: null));
     // No match at all.
-    self::assertFalse($filter($this->event, rawState: 'completely:unknown'));
+    self::assertFalse($filter($this->event, raw_state: 'completely:unknown'));
   }
 
   // ------------------------------------------------------------------ //
@@ -315,8 +315,8 @@ final class StateFilterTest extends TestCase
     //         which is the idempotency guarantee; the important thing is it RUNS.
     $filter = new StateFilter($groupClass);
 
-    self::assertTrue($filter($this->event, rawState: $expectedState));
-    self::assertFalse($filter($this->event, rawState: 'other:thing'));
+    self::assertTrue($filter($this->event, raw_state: $expectedState));
+    self::assertFalse($filter($this->event, raw_state: 'other:thing'));
 
     // Step 4: Verify the group IS now bootstrapped (bootstrapIfNeeded did its job).
     self::assertNotEmpty($groupClass::allStateNames());

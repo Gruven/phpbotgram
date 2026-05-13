@@ -40,12 +40,13 @@ use InvalidArgumentException;
  * of the states is the idiomatic way to ensure the group is bootstrapped;
  * `StateFilter` also accepts a `StatesGroup` instance for the same purpose.
  *
- * # Reading `rawState`
+ * # Reading `raw_state`
  *
- * The dispatcher (Task 5.7: FsmContextMiddleware) injects the current FSM state
- * into the kwargs bag as `rawState` (camelCase).  Until that middleware lands,
- * `StateFilter` reads `$kwargs['rawState'] ?? null` defensively — an absent key
- * is treated as `null` (no active state).
+ * `FsmContextMiddleware` injects the current FSM state into the kwargs bag as
+ * `raw_state` (snake_case, matching `FsmContextMiddleware::RAW_STATE_KEY` and
+ * the rest of the dispatcher's snake_case kwarg convention).
+ * `StateFilter` reads `$kwargs['raw_state'] ?? null` — an absent key is
+ * treated as `null` (no active state).
  *
  * @see State
  * @see StatesGroup
@@ -78,12 +79,12 @@ final class StateFilter extends Filter
   /**
    * Evaluate whether the event matches any of the registered states.
    *
-   * Reads `$kwargs['rawState'] ?? null` (injected by FsmContextMiddleware).
+   * Reads `$kwargs['raw_state'] ?? null` (injected by FsmContextMiddleware).
    * Returns `true` on the first match, `false` if no state matched.
    */
   public function __invoke(object $event, mixed ...$kwargs): bool
   {
-    $rawStateRaw = array_key_exists('rawState', $kwargs) ? $kwargs['rawState'] : null;
+    $rawStateRaw = array_key_exists('raw_state', $kwargs) ? $kwargs['raw_state'] : null;
     $rawState = is_string($rawStateRaw) ? $rawStateRaw : null;
 
     foreach ($this->states as $state) {
@@ -98,7 +99,7 @@ final class StateFilter extends Filter
 
       // ---- State instance -----------------------------------------------
       if ($state instanceof State) {
-        if ($state($event, rawState: $rawState)) {
+        if ($state($event, raw_state: $rawState)) {
           return true;
         }
 
@@ -110,7 +111,7 @@ final class StateFilter extends Filter
         $groupClass = $state::class;
         $groupClass::bootstrapIfNeeded();
 
-        if ($groupClass::match($event, rawState: $rawState)) {
+        if ($groupClass::match($event, raw_state: $rawState)) {
           return true;
         }
 
@@ -124,7 +125,7 @@ final class StateFilter extends Filter
       if (class_exists($state) && is_subclass_of($state, StatesGroup::class)) {
         $state::bootstrapIfNeeded();
 
-        if ($state::match($event, rawState: $rawState)) {
+        if ($state::match($event, raw_state: $rawState)) {
           return true;
         }
 

@@ -206,7 +206,7 @@ final class StateTest extends TestCase
   {
     $event = new stdClass();
 
-    self::assertSame($expected, $state->__invoke($event, rawState: $rawStateArg));
+    self::assertSame($expected, $state->__invoke($event, raw_state: $rawStateArg));
   }
 
   // ------------------------------------------------------------------ //
@@ -250,9 +250,9 @@ final class StateTest extends TestCase
     $state = new State(state: '*');
     $event = new stdClass();
 
-    self::assertTrue($state->__invoke($event, rawState: 'anything'));
-    self::assertTrue($state->__invoke($event, rawState: 'Form:step'));
-    self::assertTrue($state->__invoke($event, rawState: null));
+    self::assertTrue($state->__invoke($event, raw_state: 'anything'));
+    self::assertTrue($state->__invoke($event, raw_state: 'Form:step'));
+    self::assertTrue($state->__invoke($event, raw_state: null));
     self::assertTrue($state->__invoke($event));
   }
 
@@ -265,9 +265,9 @@ final class StateTest extends TestCase
     $state = new State(state: 'active', groupName: 'Form');
     $event = new stdClass();
 
-    self::assertTrue($state->__invoke($event, rawState: 'Form:active'));
-    self::assertFalse($state->__invoke($event, rawState: 'Form:idle'));
-    self::assertFalse($state->__invoke($event, rawState: null));
+    self::assertTrue($state->__invoke($event, raw_state: 'Form:active'));
+    self::assertFalse($state->__invoke($event, raw_state: 'Form:idle'));
+    self::assertFalse($state->__invoke($event, raw_state: null));
     self::assertFalse($state->__invoke($event));
   }
 

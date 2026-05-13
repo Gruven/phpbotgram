@@ -209,7 +209,8 @@ class State
   /**
    * Evaluate whether the event is in this state.
    *
-   * Reads `$kwargs['rawState'] ?? null` from the variadic dispatcher
+   * Reads `$kwargs['raw_state'] ?? null` (snake_case, matching
+   * `FsmContextMiddleware::RAW_STATE_KEY`) from the variadic dispatcher
    * kwargs bag and matches:
    * - always returns `true` when `$this->rawState === '*'`.
    * - returns `true` when the raw-state string equals `$this->state()`.
@@ -228,7 +229,7 @@ class State
       return true;
     }
 
-    $rawState = $kwargs['rawState'] ?? null;
+    $rawState = $kwargs['raw_state'] ?? null;
 
     return $rawState === $this->state();
   }
