@@ -37,6 +37,9 @@ use PHPUnit\Framework\TestCase;
  *   implemented in Phase 4 port.
  * - `TestCommand::test_str` — `Filter` and DTOs have no `__str__` / `__repr__` equivalents
  *   in the PHP port (reason 5).
+ * - `TestCommandFilter::test_call` row 3 (`None` message) — API divergence: PHP's
+ *   `object` type hint on `Command::__invoke` prevents passing `null`. The
+ *   non-message-event guard is covered by `testRejectsNonMessageEvents`.
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.

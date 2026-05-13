@@ -159,6 +159,25 @@ final class CallbackDataTest extends TestCase
     self::assertSame(CbDataAction::Edit, $decoded->action);
   }
 
+  public function testEncodingHandlesIntBackedEnumViaValue(): void
+  {
+    // Upstream `test_encode_value_positive` row: `[MyIntEnum.FOO, "1"]`.
+    // `MyIntEnum` is `Enum` with `FOO = auto()` (`.value == 1`). The
+    // expected encoding is `"1"` — the integer backing value cast to string.
+    // PHP's `encodeEnum` branch: `$value instanceof BackedEnum` →
+    // `(string) $value->value`, so `CbDataIntKind::Foo` (value `1`) encodes
+    // as `"1"`. Mirrors `aiogram/filters/callback_data.py:70-71`.
+    //
+    // Note: the `unpack()` round-trip for int-backed enums is not asserted
+    // here because `decodeComplex()` passes a `string` to `BackedEnum::from()`
+    // regardless of backing type — `CbDataIntKind::from(string)` raises
+    // `TypeError`. The encode path is what upstream `test_encode_value_positive`
+    // covers; decode of int enums is a separate (deferred) fix.
+    $data = new CbDataIntEnum(kind: CbDataIntKind::Foo);
+
+    self::assertSame('ien:1', $data->pack());
+  }
+
   public function testEncodingRejectsUnsupportedTypes(): void
   {
     // Any other value (object that's not Stringable/Enum, array, resource,
@@ -512,6 +531,32 @@ enum CbDataAction: string
 {
   case Edit = 'edit';
   case Delete = 'delete';
+}
+
+/**
+ * Int-backed-enum-valued fixture — exercises the `\BackedEnum → (string)$value->value`
+ * branch for integer backing values. Mirrors upstream `MyIntEnum.FOO` row in
+ * `test_encode_value_positive`.
+ *
+ * @internal
+ */
+#[CallbackPrefix('ien')]
+final class CbDataIntEnum extends CallbackData
+{
+  public function __construct(
+    public readonly CbDataIntKind $kind,
+  ) {}
+}
+
+/**
+ * Int-backed enum used by `CbDataIntEnum`.
+ *
+ * @internal
+ */
+enum CbDataIntKind: int
+{
+  case Foo = 1;
+  case Bar = 2;
 }
 
 /**
