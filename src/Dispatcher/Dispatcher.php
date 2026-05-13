@@ -17,6 +17,7 @@ use function Amp\Future\awaitFirst;
 
 use Amp\Sync\LocalMutex;
 use Amp\Sync\LocalSemaphore;
+use BadMethodCallException;
 use Generator;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
@@ -323,14 +324,14 @@ class Dispatcher extends Router
   /**
    * The FSM context middleware auto-wired at construction time.
    *
-   * Set when FSM is enabled (`$disableFsm = false`); left unset when FSM
+   * Non-null when FSM is enabled (`$disableFsm = false`); `null` when FSM
    * is disabled. Exposed so callers can call `$dispatcher->fsm->close()`
    * directly (or read FSM options in tests). Mirrors upstream's
    * `self.fsm: FSMContextMiddleware` property at `dispatcher.py:105`.
    *
    * Use `$dispatcher->storage()` as a shorthand for the storage accessor.
    */
-  public readonly FsmContextMiddleware $fsm;
+  public readonly ?FsmContextMiddleware $fsm;
 
   public function __construct(
     ?string $name = null,
@@ -400,6 +401,8 @@ class Dispatcher extends Router
       $this->shutdown->register(static function () use ($fsmMiddleware): void {
         $fsmMiddleware->close();
       });
+    } else {
+      $this->fsm = null;
     }
   }
 
@@ -408,12 +411,12 @@ class Dispatcher extends Router
    *
    * Mirrors upstream `Dispatcher.storage` property (`dispatcher.py:108`).
    *
-   * @throws \BadMethodCallException When FSM is disabled (`disableFsm: true`).
+   * @throws BadMethodCallException When FSM is disabled (`disableFsm: true`).
    */
   public function storage(): BaseStorage
   {
-    if (!isset($this->fsm)) {
-      throw new \BadMethodCallException('FSM is disabled on this Dispatcher (disableFsm: true).');
+    if ($this->fsm === null) {
+      throw new BadMethodCallException('FSM is disabled on this Dispatcher (disableFsm: true).');
     }
 
     return $this->fsm->storage;

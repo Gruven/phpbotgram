@@ -501,8 +501,10 @@ final class MongoStorageTest extends TestCase
       $storage->setData($key, $nestedData);
       $result = $storage->getData($key);
 
+      // assertSame performs a deep-equality check including types; if MongoDB
+      // returned a BSONDocument for the nested value, assertSame would fail
+      // because BSONDocument !== array. This is both the value and type check.
       self::assertSame($nestedData, $result, 'Nested data must survive MongoDB round-trip as plain PHP arrays.');
-      self::assertIsArray($result['nested'], 'Nested document must be a plain PHP array, not BSONDocument.');
     } finally {
       $storage->setState($key, null);
       $storage->setData($key, []);

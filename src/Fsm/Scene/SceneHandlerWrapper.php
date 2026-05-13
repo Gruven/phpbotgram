@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Fsm\Scene;
 
-use Gruven\PhpBotGram\Fsm\After;
 use Gruven\PhpBotGram\Exceptions\SceneException;
+use Gruven\PhpBotGram\Fsm\After;
 use Gruven\PhpBotGram\Fsm\FsmContext;
 use Gruven\PhpBotGram\Fsm\Scene;
 use Gruven\PhpBotGram\Fsm\SceneAction;

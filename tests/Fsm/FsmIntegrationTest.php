@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Fsm;
 
+use BadMethodCallException;
 use Closure;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
@@ -163,7 +164,7 @@ final class FsmIntegrationTest extends TestCase
   {
     $dispatcher = new Dispatcher(disableFsm: true);
 
-    $this->expectException(\BadMethodCallException::class);
+    $this->expectException(BadMethodCallException::class);
     $dispatcher->storage();
   }
 
