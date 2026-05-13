@@ -260,7 +260,8 @@ abstract class Scene
    * observer.  When invoked it calls `$scenes->enter(static::class)` where
    * `$scenes` is the `ScenesManager` injected by `SceneRegistry` middleware.
    *
-   * Mirrors `Scene.as_handler()` (`aiogram/fsm/scene.py:423-438`):
+   * Mirrors `Scene.as_handler()` (`aiogram/fsm/scene.py:423-438`), passing
+   * the full merged kwargs to `scenes->enter()` without stripping any keys:
    *
    *   async def enter_to_scene_handler(event, scenes, **middleware_kwargs):
    *       await scenes.enter(cls, **{**handler_kwargs, **middleware_kwargs})
@@ -286,14 +287,14 @@ abstract class Scene
       // Merge handler_kwargs into middleware_kwargs (middleware_kwargs wins
       // on key collision — mirrors Python's `{**handler_kwargs, **middleware_kwargs}`).
       // Retain only string-keyed entries as named kwargs so they flow into the
-      // variadic `...$kwargs` parameter of `enter()`.  Integer keys and the
-      // internal `checkActive` key are stripped to prevent positional / type
-      // conflicts.
+      // variadic `...$kwargs` parameter of `enter()`.  Integer keys are stripped
+      // to prevent positional conflicts; all string-keyed entries (including
+      // `checkActive`) are forwarded, matching upstream's full-kwargs pass-through.
       /** @var array<string, mixed> $mergedKwargs */
       $mergedKwargs = [];
 
       foreach ([...$handlerKwargs, ...$middlewareKwargs] as $k => $v) {
-        if (is_string($k) && $k !== 'checkActive') {
+        if (is_string($k)) {
           $mergedKwargs[$k] = $v;
         }
       }

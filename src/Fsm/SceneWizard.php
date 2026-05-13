@@ -146,13 +146,24 @@ final class SceneWizard
   /**
    * Re-enter the current scene (restart from the beginning).
    *
+   * Requires that the scene has a configured state (i.e.
+   * `$sceneConfig->state !== null`). A scene without a state cannot be
+   * re-entered — calling `retake()` on it is a programming error and throws
+   * `SceneException`.
+   *
    * Mirrors `SceneWizard.retake()` (`aiogram/fsm/scene.py:506-508`).
    *
    * @param mixed ...$kwargs Extra kwargs forwarded to the action handler.
+   *
+   * @throws SceneException When the scene has no configured state.
    */
   public function retake(mixed ...$kwargs): void
   {
-    $this->goto($this->sceneConfig->state ?? '', ...$kwargs);
+    if ($this->sceneConfig->state === null) {
+      throw new SceneException('Cannot retake() on a scene with no state.');
+    }
+
+    $this->goto($this->sceneConfig->state, ...$kwargs);
   }
 
   /**

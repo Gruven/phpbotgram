@@ -371,6 +371,28 @@ final class SceneWizardTest extends TestCase
     self::assertSame('retake_scene', $manager->enterCalls[0]['scene']); // @phpstan-ignore-line property.notFound
   }
 
+  /**
+   * `retake()` throws `SceneException` when the scene has no configured state.
+   *
+   * Mirrors the upstream guard: a stateless scene cannot be re-entered because
+   * there is no FSM state to `goto()` — silently falling back to `goto('')`
+   * would schedule an empty-string FSM state transition, which is wrong.
+   */
+  public function testRetakeThrowsWhenSceneHasNoState(): void
+  {
+    $config = new SceneConfig(
+      state: null,
+      handlers: [],
+      actions: [],
+    );
+    $wizard = $this->makeWizard(config: $config);
+
+    $this->expectException(SceneException::class);
+    $this->expectExceptionMessage('Cannot retake() on a scene with no state.');
+
+    $wizard->retake();
+  }
+
   // ------------------------------------------------------------------ //
   // goto()
   // ------------------------------------------------------------------ //
