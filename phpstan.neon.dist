@@ -28,9 +28,11 @@ parameters:
             - src/Utils/MagicFilter/MagicFilter.php
             - src/Utils/MagicFilter/AttrDict.php
             - tests/Utils/MagicFilter/*
+            - tests/FTest.php
         - identifier: method.notFound
           paths:
             - tests/Utils/MagicFilter/*
+            - tests/FTest.php
         # The exception hierarchy assertion test deliberately calls
         # is_subclass_of against literal class names; the analyser
         # "narrows" these too aggressively at level 9.

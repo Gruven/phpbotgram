@@ -40,7 +40,10 @@
 	"autoload" : {
 		"psr-4" : {
 			"Gruven\\PhpBotGram\\" : "src/"
-		}
+		},
+		"files" : [
+			"src/F.php"
+		]
 	},
 	"autoload-dev" : {
 		"psr-4" : {
