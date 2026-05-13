@@ -303,25 +303,41 @@ abstract class CallbackData
    * Decode a wire segment back to a typed value. The parameter
    * reflection gives us the target type; we dispatch per scalar/complex.
    * Nullable parameters with an empty wire segment decode to `null`,
-   * regardless of whether the type itself is a string.
+   * unless the parameter has a non-empty default value — in that case
+   * the default is preferred, mirroring upstream's precedence in
+   * `callback_data.py:131-137`:
+   *
+   *   `parsed_value = field.default if field.default is not PydanticUndefined else None`
+   *
+   * Upstream contract: when wire is empty AND field is nullable AND
+   * `field.default != ""`: return default (if defined), else None.
+   * The "default is not empty-string" predicate preserves the semantic
+   * that an empty default with an empty wire segment decodes to null.
    */
   private static function decodeValue(string $raw, ReflectionParameter $param): mixed
   {
     $type = $param->getType();
 
     if ($raw === '') {
+      // Upstream precedence (callback_data.py:131-137):
+      // 1. If the parameter has a default that is NOT empty string,
+      //    return the default — mirrors `field.default != ""` guard.
+      // 2. Else if the type allows null, return null.
+      // 3. Else fall through to the empty-string coercion path below.
+      if (
+        $param->isDefaultValueAvailable()
+        && $param->getDefaultValue() !== ''
+      ) {
+        return $param->getDefaultValue();
+      }
+
       if ($type instanceof ReflectionNamedType && $type->allowsNull()) {
         return null;
       }
 
-      if ($param->isDefaultValueAvailable()) {
-        // Mirror upstream's `parsed_value = field.default if ...`
-        // branch for fields whose default is a non-empty value.
-        return $param->getDefaultValue();
-      }
-      // Non-nullable, defaultless target — return empty string and let
-      // the typed property's coercion (string only) or
-      // `newInstance()` raise. For `int`/`bool`/`float` PHP's strict
+      // Non-nullable, defaultless (or empty-default) target — return
+      // empty string and let the typed property's coercion (string only)
+      // or `newInstance()` raise. For `int`/`bool`/`float` PHP's strict
       // typing rejects the empty string with a clear TypeError.
     }
 

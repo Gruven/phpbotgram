@@ -371,10 +371,17 @@ final class CallbackDataTest extends TestCase
   public function testUnpackTwoOptionalsBothEmpty(): void
   {
     // Upstream `test_unpack_optional` row: `MyCallback4.unpack("test4::") == MyCallback4(foo="", bar=None)`.
-    // Both fields have empty wire segments. In the PHP port, nullable types (`?string`) with an
-    // empty segment always decode to `null` — the `allowsNull()` branch fires before the default
-    // value is checked. This means `foo = ''` (null + default '') decodes to `null` in PHP,
-    // not `''` as in upstream. Both `foo` and `bar` decode to null.
+    // Both fields have empty wire segments.
+    //
+    // `$foo` has type `?string` with default `''`. Since the default IS the
+    // empty string, the `field.default != ""` guard (callback_data.py:135)
+    // fires and we fall through to the `allowsNull()` branch → `null`.
+    // (Upstream returns `''` here because Pydantic carries the empty-string
+    // default through; our port returns `null` for the same reason it did
+    // before the precedence fix — the empty-default special case.)
+    //
+    // `$bar` has type `?string` with default `null`. `null !== ''` so the
+    // default branch fires first and returns `null` (same outcome, different path).
     $decoded = CbDataTwoOptionals::unpack('opt4::');
 
     self::assertNull($decoded->foo);
@@ -396,6 +403,25 @@ final class CallbackDataTest extends TestCase
 
     self::assertSame(42, $decoded->chatId);
     self::assertNull($decoded->threadId);
+  }
+
+  public function testUnpackOptionalWithNonNullDefaultAndEmptyWireUsesDefault(): void
+  {
+    // Upstream-parity round-trip. Upstream `callback_data.py:131-137`:
+    //   if v == "" and _check_field_is_nullable(field) and field.default != "":
+    //       parsed_value = field.default if field.default is not PydanticUndefined else None
+    //
+    // `CbDataOptionalWithDefault` has `?string $foo = 'experiment'`.
+    // When the wire is `'opt3::0'` (foo segment empty), the PHP port MUST
+    // return the default `'experiment'` rather than `null`, because the
+    // default is a non-empty string (the `field.default != ""` guard passes).
+    //
+    // This was broken before the fix: `allowsNull()` fired first, returning
+    // `null` even when a non-null default was available.
+    $decoded = CbDataOptionalWithDefault::unpack('opt3::0');
+
+    self::assertSame('experiment', $decoded->foo, 'non-empty default must be preferred over null for empty wire segment');
+    self::assertSame(0, $decoded->bar);
   }
 
   public function testStaticFilterReturnsCallbackQueryFilterBoundToSubclass(): void
