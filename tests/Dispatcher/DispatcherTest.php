@@ -7,6 +7,7 @@ namespace Gruven\PhpBotGram\Tests\Dispatcher;
 use Closure;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\Event\Bases;
 use Gruven\PhpBotGram\Dispatcher\Event\UnhandledSentinel;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\ErrorsMiddleware;
@@ -562,6 +563,44 @@ final class DispatcherTest extends TestCase
     $dispatcher->feedUpdate($bot, $update);
 
     self::assertSame($update, $observed, 'feedUpdate must not clone the Update when bots already match.');
+  }
+
+  public function testRouterPropagateEventCollapsesRejectedSentinelToUnhandled(): void
+  {
+    // Fix I6: upstream's `Router.propagate_event` collapses any REJECTED
+    // observer result to UNHANDLED so callers don't need to know about
+    // the internal sentinel. A handler that `Bases::cancel()`s on the
+    // observer must surface to `feedUpdate` as `UnhandledSentinel`, NOT
+    // `RejectedSentinel`.
+    $dispatcher = new Dispatcher();
+    $dispatcher->message->register(static function (): never {
+      Bases::cancel('handled elsewhere');
+    });
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+
+    self::assertSame(
+      UnhandledSentinel::instance(),
+      $result,
+      'feedUpdate must surface RejectedSentinel from observer as UnhandledSentinel at Router boundary.',
+    );
+  }
+
+  public function testRouterPropagateEventCollapsesRejectedSentinelFromSubRouter(): void
+  {
+    // Same collapse must apply when a sub-router's observer returns
+    // REJECTED — the parent router's recursion sees the sentinel and
+    // collapses it before falling through.
+    $dispatcher = new Dispatcher();
+    $child = new Router('child');
+    $dispatcher->includeRouter($child);
+    $child->message->register(static function (): never {
+      Bases::cancel('child cancel');
+    });
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+
+    self::assertSame(UnhandledSentinel::instance(), $result);
   }
 
   public function testFeedWebhookUpdateAcceptsRawArrayUpdate(): void

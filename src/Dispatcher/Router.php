@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Dispatcher;
 
 use Gruven\PhpBotGram\Dispatcher\Event\EventObserver;
+use Gruven\PhpBotGram\Dispatcher\Event\RejectedSentinel;
 use Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver;
 use Gruven\PhpBotGram\Dispatcher\Event\UnhandledSentinel;
 use LogicException;
@@ -415,12 +416,32 @@ class Router
 
     $response = $this->observers[$updateType]->trigger($event, $kwargs);
 
+    // Fix I6: collapse `RejectedSentinel` to `UnhandledSentinel` at the
+    // Router boundary so external callers don't need to know about the
+    // internal REJECTED sentinel. Mirrors upstream
+    // `aiogram/dispatcher/router.py`'s `propagate_event` REJECTED-collapse:
+    // when a handler raised `CancelHandler` (or a global filter returned
+    // a falsy value) the observer returns REJECTED; the router treats
+    // that as "no observer in this tree claimed the event" for fall-through
+    // purposes.
+    if ($response === RejectedSentinel::instance()) {
+      return UnhandledSentinel::instance();
+    }
+
     if ($response !== UnhandledSentinel::instance()) {
       return $response;
     }
 
     foreach ($this->subRouters as $child) {
       $response = $child->propagateEvent($updateType, $event, $kwargs);
+
+      // Same collapse for the sub-router recursion: a child's REJECTED
+      // surfaces here as UNHANDLED so we keep walking siblings instead
+      // of short-circuiting on an internal sentinel the outer caller
+      // doesn't recognise.
+      if ($response === RejectedSentinel::instance()) {
+        continue;
+      }
 
       if ($response !== UnhandledSentinel::instance()) {
         return $response;
