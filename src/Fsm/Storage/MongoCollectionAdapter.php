@@ -22,7 +22,37 @@ use MongoDB\Operation\FindOneAndUpdate;
  */
 final class MongoCollectionAdapter implements MongoCollectionInterface
 {
-  public function __construct(private readonly Collection $collection) {}
+  private readonly Collection $collection;
+
+  /**
+   * Wrap a `\MongoDB\Collection` and apply a typeMap that deep-converts
+   * nested BSON documents to plain PHP arrays on read-back.
+   *
+   * Without a typeMap `findOne` returns a `BSONDocument` for the top-level
+   * document and nested embedded documents stay as `BSONDocument` instances.
+   * A shallow `(array)$document->data` cast inside `MongoStorage::getData`
+   * would then leave nested values as `BSONDocument` rather than arrays,
+   * violating the `array<string, mixed>` storage contract.
+   *
+   * TypeMap:
+   * - `'root' => 'object'` — keeps the top-level findOne result as `?object`
+   *   (matches the `MongoCollectionInterface::findOne` return-type signature).
+   * - `'document' => 'array'` — nested BSON embedded documents become PHP arrays.
+   * - `'array' => 'array'` — BSON arrays become PHP arrays.
+   *
+   * Applies via `Collection::withOptions` so the original `$collection` is
+   * unchanged (the caller may reuse it with different options).
+   */
+  public function __construct(Collection $collection)
+  {
+    $this->collection = $collection->withOptions([
+      'typeMap' => [
+        'root' => 'object',
+        'document' => 'array',
+        'array' => 'array',
+      ],
+    ]);
+  }
 
   /**
    * @param array<string, mixed> $filter

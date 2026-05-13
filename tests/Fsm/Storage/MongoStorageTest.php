@@ -469,6 +469,46 @@ final class MongoStorageTest extends TestCase
     self::assertInstanceOf(MongoStorage::class, $storage);
     $storage->close();
   }
+
+  /**
+   * Nested arrays survive a full write→read round-trip through MongoDB.
+   *
+   * Regression guard for the MongoCollectionAdapter typeMap fix: without
+   * `'document' => 'array'` in the typeMap, nested BSON embedded documents
+   * are returned as `BSONDocument` instances rather than plain PHP arrays.
+   * A shallow `(array)$document->data` cast in `MongoStorage::getData` then
+   * leaves nested values as BSONDocument, breaking the `array<string, mixed>`
+   * storage contract.
+   *
+   * This test is skipped unless `PHPBOTGRAM_TEST_MONGO_DSN` is set, so the
+   * unit-test suite continues to work without `ext-mongodb`. The spy-driven
+   * unit tests above remain unaffected because `MongoCollectionSpy` returns
+   * plain PHP objects directly.
+   */
+  public function testIntegrationNestedDataDeepRoundTrip(): void
+  {
+    $dsn = getenv('PHPBOTGRAM_TEST_MONGO_DSN');
+
+    if (!$dsn) {
+      $this->markTestSkipped('PHPBOTGRAM_TEST_MONGO_DSN not set; skipping live mongo tests');
+    }
+
+    $storage = MongoStorage::fromUrl((string)$dsn);
+    $key = new StorageKey(botId: 999, chatId: 888, userId: 779);
+    $nestedData = ['nested' => ['key' => 'value', 'num' => 42], 'top' => 'level'];
+
+    try {
+      $storage->setData($key, $nestedData);
+      $result = $storage->getData($key);
+
+      self::assertSame($nestedData, $result, 'Nested data must survive MongoDB round-trip as plain PHP arrays.');
+      self::assertIsArray($result['nested'], 'Nested document must be a plain PHP array, not BSONDocument.');
+    } finally {
+      $storage->setState($key, null);
+      $storage->setData($key, []);
+      $storage->close();
+    }
+  }
 }
 
 /**
