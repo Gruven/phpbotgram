@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Tests\Dispatcher\Event;
 
 use Closure;
+use Gruven\PhpBotGram\Dispatcher\Event\Bases;
 use Gruven\PhpBotGram\Dispatcher\Event\FilterObject;
 use Gruven\PhpBotGram\Dispatcher\Event\HandlerObject;
 use Gruven\PhpBotGram\Dispatcher\Event\RejectedSentinel;
@@ -641,6 +642,61 @@ final class TelegramEventObserverTest extends TestCase
       ['parent-before', 'child-before', 'handler', 'child-after', 'parent-after'],
       $log,
     );
+  }
+
+  public function testSkipHandlerContinuesToNextHandlerOnSameObserver(): void
+  {
+    // Fix C1: `Bases::skip()` (which throws `SkipHandlerException`) inside a
+    // handler must cause the observer to ABANDON that handler and try the
+    // next registered handler on the same observer. The previous behaviour
+    // — relying on `ErrorsMiddleware` to convert the exception to
+    // `UnhandledSentinel` — bubbled the sentinel up through the WHOLE
+    // observer trigger, aborting the per-handler iteration. Upstream
+    // (`aiogram/dispatcher/event/telegram.py:127-128`) catches the exception
+    // inside the handler-loop's `try/except SkipHandler: continue`, so the
+    // PHP port must mirror the same per-handler scope.
+    $observer = new TelegramEventObserver('message');
+    $firstRan = false;
+    $secondRan = false;
+    $observer->register(static function () use (&$firstRan): never {
+      $firstRan = true;
+      Bases::skip('not for me');
+    });
+    $observer->register(static function () use (&$secondRan): string {
+      $secondRan = true;
+
+      return 'second';
+    });
+
+    $result = $observer->trigger(new Chat(id: 1, type: 'private'));
+
+    self::assertTrue($firstRan, 'First handler must have been invoked before skipping.');
+    self::assertTrue($secondRan, 'Second handler must execute after the first skipped.');
+    self::assertSame('second', $result, 'Observer must return the second handler\'s result.');
+  }
+
+  public function testCancelHandlerStopsDispatchWithRejectedSentinel(): void
+  {
+    // Counterpart to SkipHandler: `Bases::cancel()` (which throws
+    // `CancelHandlerException`) inside a handler stops the entire observer
+    // dispatch and collapses to `RejectedSentinel`. No subsequent handler
+    // on the observer runs, and the caller can use `Router::propagateEvent`'s
+    // RejectedSentinel collapse (Fix I6) to fall through to `UnhandledSentinel`.
+    $observer = new TelegramEventObserver('message');
+    $secondCalled = false;
+    $observer->register(static function (): never {
+      Bases::cancel('handled elsewhere');
+    });
+    $observer->register(static function () use (&$secondCalled): string {
+      $secondCalled = true;
+
+      return 'second';
+    });
+
+    $result = $observer->trigger(new Chat(id: 1, type: 'private'));
+
+    self::assertSame(RejectedSentinel::instance(), $result);
+    self::assertFalse($secondCalled, 'Cancel must stop dispatch on the same observer.');
   }
 
   private static function passthroughMiddleware(): BaseMiddleware

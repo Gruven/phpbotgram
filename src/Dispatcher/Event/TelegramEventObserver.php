@@ -438,7 +438,37 @@ final class TelegramEventObserver
         $next = $wrappedHandler;
         $wrappedHandler = static fn(object $e, array $k): mixed => $middleware($next, $e, $k);
       }
-      $response = $wrappedHandler($event, $handlerKwargs);
+
+      // Fix C1: catch SkipHandlerException / CancelHandlerException at the
+      // per-handler boundary. Upstream's
+      // `aiogram/dispatcher/event/telegram.py:116-128` wraps the
+      // `wrapped_inner(event, kwargs)` call with `try/except SkipHandler:
+      // continue`, so `Bases::skip()` inside a handler abandons THAT
+      // handler and falls through to the next on the same observer.
+      // `Bases::cancel()` likewise collapses to `RejectedSentinel` here
+      // (parity with `CancelHandler`); the Router boundary then turns
+      // RejectedSentinel back into UnhandledSentinel for callers that
+      // don't know about the internal sentinel (see Fix I6 in
+      // `Router::propagateEvent`).
+      //
+      // Prior to this fix the exceptions were swallowed by
+      // `ErrorsMiddleware` (wrapping the whole dispatch via
+      // `Dispatcher::feedUpdate`'s middleware chain) which collapsed
+      // SkipHandler → UNHANDLED and CancelHandler → REJECTED at the
+      // dispatch boundary — meaning ANY handler that called `Bases::skip()`
+      // terminated the WHOLE observer iteration. The per-handler catch
+      // restores upstream parity.
+      try {
+        $response = $wrappedHandler($event, $handlerKwargs);
+      } catch (SkipHandlerException) {
+        // Skip THIS handler; try the next one on the same observer.
+        continue;
+      } catch (CancelHandlerException) {
+        // Cancel the entire observer dispatch. The Router boundary will
+        // collapse this RejectedSentinel to UnhandledSentinel for the
+        // outermost caller (Fix I6).
+        return RejectedSentinel::instance();
+      }
 
       if ($response === UnhandledSentinel::instance()) {
         // Handler ran but voluntarily passed. Continue to the next.

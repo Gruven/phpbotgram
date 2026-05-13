@@ -63,26 +63,37 @@ final class ErrorsMiddlewareTest extends TestCase
     self::assertSame('ok', $middleware($handler, $event, []));
   }
 
-  public function testSkipHandlerExceptionReturnsUnhandledSentinel(): void
+  public function testSkipHandlerExceptionIsReRaisedByErrorsMiddleware(): void
   {
+    // Fix C1: `SkipHandlerException` is no longer swallowed by ErrorsMiddleware
+    // — it must reach the observer's per-handler `try/catch` so the loop can
+    // continue to the next handler. Re-raising here means that if anything
+    // ever throws SkipHandlerException OUTSIDE the observer's per-handler
+    // scope (a misuse — e.g. inside `silentCallRequest`), the framework
+    // surfaces it as an error instead of silently collapsing to UNHANDLED.
     $middleware = new ErrorsMiddleware();
     $event = new Chat(id: 1, type: 'private');
     $handler = static function (object $e, array $d): never {
       throw new SkipHandlerException('skip');
     };
 
-    self::assertSame(UnhandledSentinel::instance(), $middleware($handler, $event, []));
+    $this->expectException(SkipHandlerException::class);
+    $middleware($handler, $event, []);
   }
 
-  public function testCancelHandlerExceptionReturnsRejectedSentinel(): void
+  public function testCancelHandlerExceptionIsReRaisedByErrorsMiddleware(): void
   {
+    // Fix C1: same rationale as testSkipHandlerExceptionIsReRaisedByErrorsMiddleware
+    // — the observer now handles CancelHandlerException at the per-handler
+    // boundary; ErrorsMiddleware must NOT swallow it.
     $middleware = new ErrorsMiddleware();
     $event = new Chat(id: 1, type: 'private');
     $handler = static function (object $e, array $d): never {
       throw new CancelHandlerException('cancel');
     };
 
-    self::assertSame(RejectedSentinel::instance(), $middleware($handler, $event, []));
+    $this->expectException(CancelHandlerException::class);
+    $middleware($handler, $event, []);
   }
 
   public function testThrowableWithoutTriggerIsReRaised(): void

@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Dispatcher\Middlewares;
 
 use Closure;
-use Gruven\PhpBotGram\Dispatcher\Event\CancelHandlerException;
 use Gruven\PhpBotGram\Dispatcher\Event\RejectedSentinel;
-use Gruven\PhpBotGram\Dispatcher\Event\SkipHandlerException;
 use Gruven\PhpBotGram\Dispatcher\Event\UnhandledSentinel;
 use Gruven\PhpBotGram\Types\ErrorEvent;
 use Gruven\PhpBotGram\Types\Update;
@@ -15,32 +13,33 @@ use Throwable;
 
 /**
  * Top-of-chain dispatcher middleware (mirror of aiogram's
- * `aiogram.dispatcher.middlewares.error.ErrorsMiddleware`) that:
+ * `aiogram.dispatcher.middlewares.error.ErrorsMiddleware`) that **routes real
+ * exceptions to the `errors` observer**.
  *
- *   1. **Swallows internal signalling exceptions.**
- *      - `SkipHandlerException` ("not for me, try the next handler") collapses
- *        to `UnhandledSentinel::instance()` so the outer dispatcher can move
- *        on to the next handler in the router chain.
- *      - `CancelHandlerException` ("stop the chain — somebody else handled
- *        this") collapses to `RejectedSentinel::instance()`.
+ *   Any `Throwable` is wrapped in an `ErrorEvent` and forwarded to the
+ *   dispatcher's `errors` observer via the `$errorsTrigger` closure.
+ *   - If the observer claims the error (returns a truthy non-sentinel value),
+ *     that value becomes the middleware's return value.
+ *   - If the observer returns `REJECTED`, the middleware collapses it to
+ *     `UNHANDLED` (parity with upstream's `if response is REJECTED: return
+ *     UNHANDLED`).
+ *   - If the observer returns `UNHANDLED` or `null`, the original exception
+ *     is re-raised so the caller sees it.
  *
- *   2. **Routes real exceptions to the `errors` observer.**
- *      Any other `Throwable` is wrapped in an `ErrorEvent` and forwarded to
- *      the dispatcher's `errors` observer via the `$errorsTrigger` closure.
- *      - If the observer claims the error (returns a truthy non-sentinel
- *        value), that value becomes the middleware's return value.
- *      - If the observer returns `REJECTED`, the middleware collapses it to
- *        `UNHANDLED` (parity with upstream's `if response is REJECTED: return
- *        UNHANDLED`).
- *      - If the observer returns `UNHANDLED` or `null`, the original
- *        exception is re-raised so the caller sees it.
+ * **Signalling exceptions are NOT handled here.** `SkipHandlerException` and
+ * `CancelHandlerException` are caught by `TelegramEventObserver::triggerCore`
+ * at the per-handler boundary (Fix C1) so a `Bases::skip()` inside a handler
+ * abandons that ONE handler and falls through to the next on the same
+ * observer — parity with upstream's
+ * `aiogram/dispatcher/event/telegram.py:127-128` per-handler `except
+ * SkipHandler: continue`. The previous behaviour of catching them in this
+ * top-of-chain middleware caused the WHOLE observer dispatch to collapse to
+ * UNHANDLED on a single `Bases::skip()`, deviating from upstream's semantics.
  *
- * The trigger is wired by Task 3.8 (`TelegramEventObserver`); for now callers
- * may pass `null` and the middleware will re-raise every non-signalling
- * exception unchanged. The `event_update` kwarg is injected by the Dispatcher
- * (Task 3.10) before this middleware runs — defensive code re-raises if it's
- * absent or non-`Update`, because the `errors` observer needs the original
- * Update to filter on update shape.
+ * The trigger is wired by `Dispatcher::__construct`. The `event_update`
+ * kwarg is injected by the Dispatcher (Task 3.10) before this middleware
+ * runs — defensive code re-raises if it's absent or non-`Update`, because
+ * the `errors` observer needs the original Update to filter on update shape.
  */
 final class ErrorsMiddleware extends BaseMiddleware
 {
@@ -72,10 +71,6 @@ final class ErrorsMiddleware extends BaseMiddleware
   {
     try {
       return $handler($event, $data);
-    } catch (SkipHandlerException) {
-      return UnhandledSentinel::instance();
-    } catch (CancelHandlerException) {
-      return RejectedSentinel::instance();
     } catch (Throwable $e) {
       $update = $data[self::EVENT_UPDATE_KEY] ?? null;
 

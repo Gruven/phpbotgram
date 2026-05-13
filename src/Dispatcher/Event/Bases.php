@@ -25,4 +25,19 @@ final class Bases
   {
     throw new SkipHandlerException($message ?? 'Handler skipped');
   }
+
+  /**
+   * Stop dispatch entirely — the observer collapses the in-flight handler
+   * iteration to `RejectedSentinel`. Used by handlers that want to assert
+   * "this update has been handled by someone else, do not try further
+   * handlers on this observer or fall through to other routers".
+   *
+   * Mirrors aiogram's `CancelHandler` exception path; the upstream observer
+   * does not have a dedicated `cancel()` helper but `Bases::skip()` /
+   * `Bases::cancel()` give parity with the broader handling protocol.
+   */
+  public static function cancel(?string $message = null): never
+  {
+    throw new CancelHandlerException($message ?? 'Handler cancelled');
+  }
 }
