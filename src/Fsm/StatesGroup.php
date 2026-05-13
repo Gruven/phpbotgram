@@ -121,9 +121,12 @@ abstract class StatesGroup
 
   /**
    * Walk the class via reflection to auto-vivify State instances, bind
-   * names and parents, cascade `fullGroupName`, and recurse into children.
+   * names and parents, and recurse into children.
    *
    * Idempotent: repeated calls for the same class are a no-op.
+   * When a parent bootstraps a child that is already in the registry the
+   * child's `parentGroup` is updated so that `fullGroupName()` can walk
+   * the correct chain on the next call.
    *
    * Mirrors `StatesGroupMeta.__new__` (`aiogram/fsm/state.py:89-143`).
    *
@@ -131,12 +134,9 @@ abstract class StatesGroup
    *                                                    from a parent group,
    *                                                    this is the parent's
    *                                                    class name.
-   * @param string $parentFullName The parent's resolved full group name, used
-   *                               to cascade the nested full name.
    */
   public static function bootstrap(
     ?string $parentClass = null,
-    string $parentFullName = '',
   ): void {
     $class = static::class;
 
@@ -149,19 +149,17 @@ abstract class StatesGroup
     // trigger a second top-level bootstrap for this class.
     self::$registry[$class] = [];
 
-    // -- Resolve fullGroupName ------------------------------------------
+    // -- Resolve shortName (stable) and parentGroup (may be updated later) --
     $shortName = self::extractShortName($class);
-    $fullGroupName = $parentFullName !== ''
-      ? "{$parentFullName}.{$shortName}"
-      : $shortName;
 
-    self::$registry[$class]['fullGroupName'] = $fullGroupName;
+    self::$registry[$class]['shortName'] = $shortName;
     self::$registry[$class]['parentGroup'] = $parentClass;
+
+    // fullGroupName is derived dynamically in fullGroupName() — not cached.
 
     // -- Discover State static properties ------------------------------
     $rc = new ReflectionClass($class);
     $states = [];
-    $stateNames = [];
 
     foreach ($rc->getProperties(ReflectionProperty::IS_STATIC | ReflectionProperty::IS_PUBLIC) as $prop) {
       if ($prop->class !== $class) {
@@ -194,12 +192,6 @@ abstract class StatesGroup
       $state->setParent($class);
 
       $states[] = $state;
-
-      $qualified = $state->state();
-
-      if ($qualified !== null) {
-        $stateNames[] = $qualified;
-      }
     }
 
     self::$registry[$class]['allStates'] = $states;
@@ -208,24 +200,25 @@ abstract class StatesGroup
     /** @var array<class-string<StatesGroup>> $childClasses */
     $childClasses = static::CHILDREN;
     $allChildClasses = [];
-    $allChildStateNames = $stateNames;
     $allNestedStates = $states;
 
     foreach ($childClasses as $childClass) {
-      $childClass::bootstrap(
-        parentClass: $class,
-        parentFullName: $fullGroupName,
-      );
+      if (isset(self::$registry[$childClass])) {
+        // Child was already bootstrapped standalone — update its parentGroup so
+        // that fullGroupName() can now walk the correct parent chain.
+        self::$registry[$childClass]['parentGroup'] = $class;
+      } else {
+        $childClass::bootstrap(parentClass: $class);
+      }
 
       $allChildClasses[] = $childClass;
       $allChildClasses = array_merge($allChildClasses, $childClass::allChildren());
-      $allChildStateNames = array_merge($allChildStateNames, $childClass::allStateNames());
       $allNestedStates = array_merge($allNestedStates, $childClass::allStatesIncludingNested());
     }
 
     self::$registry[$class]['allChildren'] = $allChildClasses;
-    self::$registry[$class]['allStateNames'] = $allChildStateNames;
     self::$registry[$class]['allStatesIncludingNested'] = $allNestedStates;
+    // allStateNames is derived dynamically in allStateNames() — not cached.
   }
 
   /**
@@ -276,14 +269,27 @@ abstract class StatesGroup
   /**
    * Return all qualified state-name strings for this group and its children.
    *
+   * Derived on each call from the live `State` objects in
+   * `allStatesIncludingNested()` so that a child whose `parentGroup` was
+   * updated after standalone bootstrap emits the correct qualified names.
+   *
    * Mirrors `StatesGroup.__all_states_names__` (`aiogram/fsm/state.py:126-131`).
    *
    * @return array<string>
    */
   public static function allStateNames(): array
   {
-    /** @var array<string> */
-    return self::$registry[static::class]['allStateNames'] ?? [];
+    $names = [];
+
+    foreach (static::allStatesIncludingNested() as $state) {
+      $qualified = $state->state();
+
+      if ($qualified !== null) {
+        $names[] = $qualified;
+      }
+    }
+
+    return $names;
   }
 
   /**
@@ -300,13 +306,27 @@ abstract class StatesGroup
   /**
    * Return the fully-qualified group name (`Parent.Child.GrandChild`).
    *
+   * Computed dynamically by walking the `parentGroup` chain so that a child
+   * bootstrapped standalone and later claimed by a parent reflects the correct
+   * qualified prefix on the very next call — no stale cached value.
+   *
    * Mirrors `StatesGroup.__full_group_name__` (`aiogram/fsm/state.py:117-120`).
    */
   public static function fullGroupName(): string
   {
-    $name = self::$registry[static::class]['fullGroupName'] ?? '';
+    $class = static::class;
+    static::bootstrapIfNeeded();
+    $entry = self::$registry[$class];
 
-    return is_string($name) ? $name : '';
+    /** @var null|class-string<StatesGroup> $parent */
+    $parent = $entry['parentGroup'] ?? null;
+    $shortName = is_string($entry['shortName'] ?? null) ? $entry['shortName'] : '';
+
+    if ($parent !== null) {
+      return $parent::fullGroupName() . '.' . $shortName;
+    }
+
+    return $shortName;
   }
 
   /**

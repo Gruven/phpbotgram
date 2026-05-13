@@ -53,6 +53,26 @@ final class FixtureFlatGroup extends StatesGroup
   public static State $finish;
 }
 
+/**
+ * Standalone child used to reproduce the idempotency-guard ordering bug:
+ * `FixtureChildStandalone::bootstrap()` is called first (standalone), then
+ * `FixtureParentStandalone::bootstrap()` is called — the child's
+ * `fullGroupName` must reflect the parent prefix after the parent bootstrap.
+ */
+final class FixtureChildStandalone extends StatesGroup
+{
+  public static State $x;
+}
+
+/**
+ * Parent for the ordering-bug regression test.
+ */
+final class FixtureParentStandalone extends StatesGroup
+{
+  /** @var array<class-string<StatesGroup>> */
+  public const array CHILDREN = [FixtureChildStandalone::class];
+}
+
 // ---------------------------------------------------------------------------
 
 /**
@@ -442,5 +462,41 @@ final class StatesGroupTest extends TestCase
 
     self::assertFalse(FixtureForm::match($event, raw_state: 'unknown'));
     self::assertFalse(FixtureForm::match($event));
+  }
+
+  // ------------------------------------------------------------------ //
+  // Bootstrap ordering — child-standalone-then-parent
+  // ------------------------------------------------------------------ //
+
+  /**
+   * When a child is bootstrapped standalone before its parent, a subsequent
+   * parent bootstrap must retroactively update the child's parent link so
+   * that `fullGroupName()` and `State::state()` return the fully-qualified
+   * names rather than the standalone (unqualified) ones.
+   *
+   * Regression test for the idempotency-guard ordering bug:
+   * `ChildFix::bootstrap()` first → then `ParentFix::bootstrap()` → child
+   * must report `'ParentFix.ChildFix:x'`, not `'ChildFix:x'`.
+   */
+  public function testChildBootstrappedStandaloneThenParentLinksProperly(): void
+  {
+    // Bootstrap child standalone first — replicates the bug scenario.
+    FixtureChildStandalone::bootstrap();
+
+    self::assertSame('FixtureChildStandalone:x', FixtureChildStandalone::$x->state());
+
+    // Now bootstrap the parent that declares FixtureChildStandalone as a child.
+    FixtureParentStandalone::bootstrap();
+
+    // After the parent bootstrap, the child's qualified name must include
+    // the parent prefix.
+    self::assertSame('FixtureParentStandalone.FixtureChildStandalone:x', FixtureChildStandalone::$x->state());
+    self::assertSame('FixtureParentStandalone.FixtureChildStandalone', FixtureChildStandalone::fullGroupName());
+
+    // The parent's allStateNames must include the child's updated qualified name.
+    self::assertContains(
+      'FixtureParentStandalone.FixtureChildStandalone:x',
+      FixtureParentStandalone::allStateNames(),
+    );
   }
 }
