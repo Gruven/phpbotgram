@@ -8,11 +8,15 @@ use Gruven\PhpBotGram\Fsm\Storage\StoragePart;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Verifies that `StoragePart` wire values match the upstream Python literals
- * `"data"`, `"state"`, `"lock"` used in `aiogram/fsm/storage/base.py:31,78`.
+ * Upstream `tests/test_fsm/storage/test_key_builder.py` `StoragePart` usage
+ * cases deliberately not ported here:
  *
- * These string values appear verbatim in stored keys and in wire comparisons;
- * any divergence would silently corrupt stored FSM records.
+ * - No deliberate skips. All `StoragePart` wire-value cases from the upstream
+ *   `DefaultKeyBuilder.build(key, field)` calls are covered by this file and
+ *   `DefaultKeyBuilderTest`.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class StoragePartTest extends TestCase
 {

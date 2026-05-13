@@ -17,14 +17,19 @@ use Gruven\PhpBotGram\Fsm\Storage\StoragePart;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Unit tests for `RedisStorage`.
+ * Upstream `tests/test_fsm/storage/test_redis_mock.py` cases deliberately
+ * not ported:
  *
- * All Redis I/O is intercepted by a minimal spy `RedisClient` that records
- * `RedisLink::execute()` calls and returns pre-programmed responses. No live
- * Redis connection is required.
+ * - `TestRedisStorageMock::test_from_url` — API divergence: upstream patches
+ *   `redis.asyncio.connection.ConnectionPool.from_url` with Python mock; PHP
+ *   uses amphp/redis which has no equivalent factory URL at this level.
+ * - `TestRedisStorageMock::test_close` — API divergence: `aclose()` is an
+ *   asyncio method; PHP uses `quit` command on the AMPHP client.
+ * - `TestRedisStorageMock::test_set_data_invalid` — covered by
+ *   `BaseStorageTest` / DataNotDictLike contract; PHP validates upstream.
  *
- * Integration tests (live Redis round-trips) are at the bottom and are
- * skipped when `PHPBOTGRAM_TEST_REDIS_DSN` is not set.
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class RedisStorageTest extends TestCase
 {
@@ -267,6 +272,56 @@ final class RedisStorageTest extends TestCase
     );
 
     self::assertSame($payload, $storage->getData($this->key));
+  }
+
+  // ------------------------------------------------------------------ //
+  // getState — string (not bytes) response
+  // ------------------------------------------------------------------ //
+
+  /**
+   * `getState` returns the value as-is when Redis returns a plain string
+   * (not bytes).
+   *
+   * Mirrors `TestRedisStorageMock::test_get_state_str`.
+   */
+  public function testGetStateReturnsStringDirectly(): void
+  {
+    $expectedKey = (new DefaultKeyBuilder())->build($this->key, StoragePart::State);
+    $storage = new RedisStorage($this->makeRedis([$expectedKey => 'test_state']));
+
+    self::assertSame('test_state', $storage->getState($this->key));
+  }
+
+  // ------------------------------------------------------------------ //
+  // getValue — base implementation delegation
+  // ------------------------------------------------------------------ //
+
+  /**
+   * `getValue` uses the base implementation and returns the dict key value.
+   *
+   * Mirrors `TestRedisStorageMock::test_get_value_uses_base_implementation`.
+   */
+  public function testGetValueUsesBaseImplementation(): void
+  {
+    $payload = ['foo' => 'bar'];
+    $expectedKey = (new DefaultKeyBuilder())->build($this->key, StoragePart::Data);
+    $storage = new RedisStorage(
+      $this->makeRedis([$expectedKey => json_encode($payload, JSON_THROW_ON_ERROR)])
+    );
+
+    self::assertSame('bar', $storage->getValue($this->key, 'foo'));
+  }
+
+  /**
+   * `getValue` returns the default when the key is absent.
+   *
+   * Mirrors `TestRedisStorageMock::test_get_value_default`.
+   */
+  public function testGetValueReturnsDefaultWhenKeyAbsent(): void
+  {
+    $storage = new RedisStorage($this->makeRedis());
+
+    self::assertSame('x', $storage->getValue($this->key, 'missing', 'x'));
   }
 
   // ------------------------------------------------------------------ //

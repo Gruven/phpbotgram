@@ -18,14 +18,20 @@ use ReflectionClass;
 use Revolt\EventLoop;
 
 /**
- * Covers `BaseEventIsolation`, `Lock`, `DisabledEventIsolation`, and
- * `SimpleEventIsolation`.
+ * Upstream `tests/test_fsm/storage/test_isolation.py` cases deliberately
+ * not ported:
  *
- * Ported from `aiogram.fsm.storage.base.BaseEventIsolation`
- * (`aiogram/fsm/storage/base.py:200-208`) and
- * `aiogram.fsm.storage.memory.DisabledEventIsolation` /
- * `aiogram.fsm.storage.memory.SimpleEventIsolation`
- * (`aiogram/fsm/storage/memory.py:72-97`).
+ * - `TestIsolations::test_lock` parametrize row `redis_isolation` — live-service
+ *   required: needs a real Redis server; covered by the integration test in
+ *   `RedisEventIsolationTest`.
+ * - `TestIsolations::test_lock` parametrize rows `lock_isolation` and
+ *   `disabled_isolation` — covered behaviorally by
+ *   `testSimpleLockReturnedIsLockInstance` and
+ *   `testDisabledLockReturnedIsLockInstance` in this file.
+ * - `TestRedisEventIsolation::*` — all ported in `RedisEventIsolationTest`.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class EventIsolationTest extends TestCase
 {

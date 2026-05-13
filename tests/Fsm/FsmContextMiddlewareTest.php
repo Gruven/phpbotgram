@@ -24,11 +24,13 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 
 /**
- * Covers `FsmContextMiddleware` — the middleware that injects FSM kwargs.
+ * Upstream `tests/test_fsm/test_middleware.py` cases deliberately not ported:
  *
- * Mirrors upstream `tests/test_fsm/test_middleware.py` adapted for the PHP port.
+ * - No deliberate skips. All five upstream `TestFSMContextMiddleware` test
+ *   cases are covered by the methods in this file.
  *
- * @coversNothing
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class FsmContextMiddlewareTest extends TestCase
 {

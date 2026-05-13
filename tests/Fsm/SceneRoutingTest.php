@@ -26,14 +26,21 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 
 /**
- * Covers `Scene::asRouter()`, `Scene::addToRouter()`, `Scene::asHandler()`,
- * `Scene::sceneConfig()` reflection builder, and `SceneHandlerWrapper`.
+ * Upstream `tests/test_fsm/test_scene.py` routing and config cases
+ * deliberately not ported here:
  *
- * Mirrors `Scene.as_router()` / `Scene.as_handler()` / `Scene.add_to_router()`
- * (`aiogram/fsm/scene.py:379-440`).
+ * - `TestSceneConfig::*` async registration / dispatcher integration cases —
+ *   dispatcher integration: require a full `Dispatcher.feed_update()` run
+ *   and async FSM context.
+ * - `test_scene.py::TestScene::test_scene_with_*` dispatcher-integration
+ *   cases — dispatcher integration: require end-to-end message routing.
+ * - `TestSceneHandlerWrapper::test_await` — API divergence: PHP has no
+ *   `__await__` protocol; `SceneHandlerWrapper` is not awaitable in PHP.
+ * - `TestSceneHandlerWrapper::test_scene_handler_wrapper_str` — API divergence:
+ *   PHP does not guarantee `__toString` parity with Python `__str__`.
  *
- * @see Scene
- * @see SceneHandlerWrapper
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class SceneRoutingTest extends TestCase
 {

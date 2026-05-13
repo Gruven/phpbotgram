@@ -9,9 +9,15 @@ use PHPUnit\Framework\TestCase;
 use ReflectionEnum;
 
 /**
- * Covers `SceneAction` enum case existence and ordering.
+ * Upstream `tests/test_fsm/test_scene.py` `SceneAction` cases deliberately
+ * not ported here:
  *
- * Mirrors upstream `SceneAction` (`aiogram/fsm/scene.py:167-171`).
+ * - `SceneAction` is used inline in many upstream tests; direct unit tests
+ *   for the enum itself are not separate in the upstream file. All enum cases
+ *   are ported in this file.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class SceneActionTest extends TestCase
 {

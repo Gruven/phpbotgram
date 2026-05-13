@@ -6,15 +6,19 @@ namespace Gruven\PhpBotGram\Tests\Fsm;
 
 use Gruven\PhpBotGram\Fsm\State;
 use Gruven\PhpBotGram\Fsm\StatesGroup;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
 /**
- * Covers `State` construction, lazy name resolution, filter invocation,
- * and equality semantics.
+ * Upstream `tests/test_fsm/test_state.py` cases deliberately not ported:
  *
- * Mirrors upstream `aiogram/fsm/state.py:1-85` and the associated behaviour
- * described in `aiogram/tests/test_fsm/test_state.py`.
+ * - `TestState::test_state_in_unknown_class` — API divergence: PHP has no
+ *   `__set_name__` hook that raises on assignment outside `StatesGroup`; the
+ *   guard exists only at bootstrap time, not at property-definition time.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class StateTest extends TestCase
 {
@@ -118,6 +122,91 @@ final class StateTest extends TestCase
     $groupClass::bootstrap();
 
     self::assertSame('myState', $groupClass::$myState->rawState());
+  }
+
+  // ------------------------------------------------------------------ //
+  // Standalone (unbound) State with explicit name — `test_alone` branch
+  // ------------------------------------------------------------------ //
+
+  /**
+   * A `State` constructed with only a raw name (no `groupName`) and later bound
+   * via `setName` stores the raw name and qualifies with the `'@'` prefix.
+   *
+   * Mirrors upstream `test_alone`: `state.state == "@:test"`.
+   */
+  public function testAloneStateQualifiesWithAtPrefix(): void
+  {
+    $state = new State(state: 'test');
+    $state->setName('test');
+
+    self::assertSame('@:test', $state->state());
+  }
+
+  /**
+   * A `State` with an explicit `groupName` and no parent group returns the
+   * `'GroupName:name'` qualified form.
+   *
+   * Mirrors upstream `test_alone_with_group`:
+   * `State("test", group_name="Test").state == "Test:test"`.
+   */
+  public function testAloneWithExplicitGroupNameReturnsQualifiedForm(): void
+  {
+    $state = new State(state: 'test', groupName: 'Test');
+
+    self::assertSame('Test:test', $state->state());
+  }
+
+  // ------------------------------------------------------------------ //
+  // __invoke parametrize rows — test_filter
+  // ------------------------------------------------------------------ //
+
+  /**
+   * Data provider for `testFilterParametrize`.
+   *
+   * Mirrors `TestState::test_filter` parametrize rows from upstream.
+   *
+   * Each row: [state, rawStateArg, expectedResult].
+   *
+   * @return array<string, array{State, null|string, bool}>
+   */
+  public static function filterProvider(): array
+  {
+    return [
+      'unbound_test_vs_bare_test' => [
+        new State('test'), 'test', false,
+      ],
+      'unbound_test_vs_at_test' => [
+        new State('test'), '@:test', true,
+      ],
+      'unbound_test_vs_test1' => [
+        new State('test'), 'test1', false,
+      ],
+      'grouped_test:test_matches' => [
+        new State('test', 'test'), 'test:test', true,
+      ],
+      'grouped_test:test_vs_test:test2' => [
+        new State('test', 'test'), 'test:test2', false,
+      ],
+      'grouped_test:test_vs_test2:test' => [
+        new State('test', 'test'), 'test2:test', false,
+      ],
+      'grouped_test:test_vs_test2:test2' => [
+        new State('test', 'test'), 'test2:test2', false,
+      ],
+    ];
+  }
+
+  /**
+   * `State.__invoke` (filter) matches only the qualified state string.
+   *
+   * Mirrors `TestState::test_filter` parametrize table from upstream.
+   */
+  #[DataProvider('filterProvider')]
+  public function testFilterParametrize(State $state, string $rawStateArg, bool $expected): void
+  {
+    $event = new stdClass();
+
+    self::assertSame($expected, $state->__invoke($event, rawState: $rawStateArg));
   }
 
   // ------------------------------------------------------------------ //

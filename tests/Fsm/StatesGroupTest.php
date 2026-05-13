@@ -56,15 +56,14 @@ final class FixtureFlatGroup extends StatesGroup
 // ---------------------------------------------------------------------------
 
 /**
- * Covers `StatesGroup::bootstrap()`, cascaded naming, membership tests,
- * idempotency, and `getRoot()` traversal.
+ * Upstream `tests/test_fsm/test_state.py` `TestStatesGroup` cases deliberately
+ * not ported here (all others are ported below):
  *
- * Mirrors upstream `StatesGroupMeta` semantics
- * (`aiogram/fsm/state.py:89-180`).
+ * - No deliberate skips. All `TestStatesGroup` upstream cases are ported
+ *   in this file.
  *
- * NOTE: All fixture classes are bootstrapped in `setUpBeforeClass()` so
- * that the `$bootstrapped` idempotency guard is shared correctly across all
- * tests in this class (as it would be in a running application).
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class StatesGroupTest extends TestCase
 {
@@ -284,6 +283,91 @@ final class StatesGroupTest extends TestCase
   public function testGetRootOnGrandChildGroupReturnsTopAncestor(): void
   {
     self::assertSame(FixtureForm::class, FixtureGrandChild::getRoot());
+  }
+
+  // ------------------------------------------------------------------ //
+  // Iteration / iterable contract — test_iterable
+  // ------------------------------------------------------------------ //
+
+  /**
+   * Iterating a `StatesGroup` yields its direct (non-nested) `State` instances.
+   *
+   * Mirrors upstream `TestStatesGroup::test_iterable`:
+   * `assert set(Group) == {Group.x, Group.y}`.
+   *
+   * PHP port: `allStates()` returns the direct states collection.
+   */
+  public function testGroupAllStatesContainsDirectStates(): void
+  {
+    // FixtureFlatGroup has exactly two direct states: $start and $finish.
+    $states = FixtureFlatGroup::allStates();
+
+    self::assertCount(2, $states);
+    self::assertContains(FixtureFlatGroup::$start, $states);
+    self::assertContains(FixtureFlatGroup::$finish, $states);
+  }
+
+  // ------------------------------------------------------------------ //
+  // match() filter — test_empty_filter, test_with_state_filter,
+  // test_nested_group_filter (filter-style invocations)
+  // ------------------------------------------------------------------ //
+
+  /**
+   * An empty group returns `false` for every `rawState` (nothing to match).
+   *
+   * Mirrors upstream `TestStatesGroup::test_empty_filter`.
+   */
+  public function testEmptyGroupMatchReturnsFalse(): void
+  {
+    // Bootstrap a one-off empty group inline so this test is self-contained.
+    $emptyGroup = new class extends StatesGroup {};
+    $emptyGroup::class::bootstrap();
+
+    $event = new stdClass();
+    self::assertFalse($emptyGroup::class::match($event, rawState: 'anything'));
+  }
+
+  /**
+   * A group with states matches only its own qualified names.
+   *
+   * Mirrors upstream `TestStatesGroup::test_with_state_filter`:
+   *   - `MyGroup()(None, "MyGroup:state1")` → True
+   *   - `MyGroup()(None, "MyGroup:state2")` → True
+   *   - `MyGroup()(None, "MyGroup:state3")` → False
+   */
+  public function testMatchReturnsTrueOnlyForGroupOwnStateNames(): void
+  {
+    $event = new stdClass();
+
+    // FixtureFlatGroup has $start ('FixtureFlatGroup:start') and $finish.
+    self::assertTrue(FixtureFlatGroup::match($event, rawState: 'FixtureFlatGroup:start'));
+    self::assertTrue(FixtureFlatGroup::match($event, rawState: 'FixtureFlatGroup:finish'));
+    self::assertFalse(FixtureFlatGroup::match($event, rawState: 'FixtureFlatGroup:unknown'));
+  }
+
+  /**
+   * A nested group filter includes child states in the parent match but not
+   * the converse.
+   *
+   * Mirrors upstream `TestStatesGroup::test_nested_group_filter`:
+   *   - Parent matches own state → True
+   *   - Parent matches child's state → True
+   *   - Parent does NOT match non-existent state → False
+   *   - Child group matches child state → True
+   *   - Child group does NOT match parent-only state → False
+   */
+  public function testNestedGroupFilterBehavior(): void
+  {
+    $event = new stdClass();
+
+    // FixtureForm contains FixtureForm:name, FixtureForm:age, and all child states.
+    self::assertTrue(FixtureForm::match($event, rawState: 'FixtureForm:name'));
+    self::assertTrue(FixtureForm::match($event, rawState: 'FixtureForm.FixtureChild:email'));
+    self::assertFalse(FixtureForm::match($event, rawState: 'FixtureForm:nonexistent'));
+
+    // FixtureChild matches its own states but not FixtureForm-only states.
+    self::assertTrue(FixtureChild::match($event, rawState: 'FixtureForm.FixtureChild:email'));
+    self::assertFalse(FixtureChild::match($event, rawState: 'FixtureForm:name'));
   }
 
   // ------------------------------------------------------------------ //

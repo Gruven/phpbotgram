@@ -10,10 +10,16 @@ use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Covers `MemoryStorage`.
+ * Upstream `tests/test_fsm/storage/test_storages.py` `memory_storage`
+ * parametrize rows deliberately not ported here:
  *
- * Mirrors the upstream contract from `aiogram/fsm/storage/memory.py:25-72` and
- * the test patterns in `aiogram/tests/test_fsm/storage/`.
+ * - `TestStorages::test_set_data` with `TypedDict` — API divergence: PHP has
+ *   no `TypedDict` equivalent; `setData` accepts `array<string,mixed>`.
+ * - `TestStorages::test_set_data` invalid-type `DataNotDictLikeError` case —
+ *   PHP `MemoryStorage::setData` accepts `array` by type hint; the exception
+ *   guard is a concern for typed storage layers, not the bare memory impl.
+ *
+ * All other upstream `memory_storage` cases are ported in this file.
  */
 final class MemoryStorageTest extends TestCase
 {

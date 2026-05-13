@@ -20,11 +20,20 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 
 /**
- * Covers `SceneWizard` — the per-scene state machine instance (Task 5.9).
+ * Upstream `tests/test_fsm/test_scene.py` `SceneWizard`-related cases
+ * deliberately not ported here:
  *
- * Mirrors `SceneWizard` (`aiogram/fsm/scene.py:442-655`).
- * Uses hand-rolled fakes for `SceneManagerInterface` and
- * `HistoryManagerInterface` to record method calls and assert order.
+ * - `TestSceneWizard::*` (upstream) — the upstream file does not have a
+ *   separate `TestSceneWizard` class; `SceneWizard` behaviour is exercised
+ *   inline via `ActionContainer.execute()` with `AsyncMock(spec=SceneWizard)`.
+ *   All observable `SceneWizard` method contracts are covered in this file
+ *   using synchronous fakes.
+ * - `TestScenesManager::*` async tests — dispatcher integration: depend on
+ *   `FSMContext` async methods and full dispatcher run; covered by
+ *   `ScenesManagerTest`.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class SceneWizardTest extends TestCase
 {

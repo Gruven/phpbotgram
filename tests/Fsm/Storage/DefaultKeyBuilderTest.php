@@ -11,16 +11,15 @@ use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Covers `DefaultKeyBuilder::build()` — the concrete key assembler that ships
- * with the FSM package.
+ * Upstream `tests/test_fsm/storage/test_key_builder.py` cases deliberately
+ * not ported:
  *
- * Mirrors `tests/test_fsm/storage/test_key_builder.py::TestDefaultKeyBuilder`
- * row-by-row.  Upstream `BOT_ID=42`, `CHAT_ID=-1`, `USER_ID=2`,
- * `THREAD_ID=3`, `BUSINESS_CONNECTION_ID="4"`, `FIELD="data"`.
+ * - No deliberate skips. All `TestDefaultKeyBuilder` cases (8 parametrize rows
+ *   of `test_generate_key`, `test_destiny_check`, and `test_thread_id`) are
+ *   fully ported in this file.
  *
- * Upstream uses `async def test_generate_key` (parametrize), `test_destiny_check`,
- * and `test_thread_id`.  Each upstream parametrize row is ported as a dedicated
- * test method here for clarity and independent failure reporting.
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class DefaultKeyBuilderTest extends TestCase
 {

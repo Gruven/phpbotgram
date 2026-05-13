@@ -19,10 +19,25 @@ use ReflectionClass;
 use stdClass;
 
 /**
- * Covers the `Scene` abstract shell added in Task 5.8.
+ * Upstream `tests/test_fsm/test_scene.py` scene-level cases deliberately
+ * not ported here:
  *
- * Mirrors upstream `Scene` (`aiogram/fsm/scene.py:297-441`) — tests the
- * PHP shell's reflection API and lifecycle stubs.
+ * - `TestSceneHandlerWrapper::*` — dispatcher integration: depends on a full
+ *   `SceneHandlerWrapper` dispatch loop with `Update`, `Message`, and async
+ *   `FSMContext`; these are dispatcher-integration tests.
+ * - `TestOnMarker::test_marker_name` parametrize rows — API divergence: PHP
+ *   `on` markers are typed PHP attributes, not runtime `ObserverMarker`
+ *   instances; covered by `OnAttributeTest`.
+ * - `test_empty_handler` — API divergence: `_empty_handler()` is an
+ *   internal async no-op in Python; PHP has no direct equivalent.
+ * - `TestObserverMarker::*` — API divergence: PHP uses PHP 8 attributes
+ *   instead of `ObserverMarker`/`ObserverDecorator` runtime objects.
+ * - `TestObserverDecorator::*` — API divergence: same as above.
+ * - `TestActionContainer::*` — phase scope deferral: `ActionContainer.execute()`
+ *   is wizard dispatch, covered by `SceneWizardTest`.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class SceneTest extends TestCase
 {

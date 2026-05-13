@@ -20,9 +20,16 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 
 /**
- * Covers `ScenesManager` — the per-update scene transition front-end (Task 5.10).
+ * Upstream `tests/test_fsm/test_scene.py` `ScenesManager` cases deliberately
+ * not ported here:
  *
- * Mirrors `ScenesManager` (`aiogram/fsm/scene.py:659-743`).
+ * - `TestScenesManager::test_enter_*` async integration cases — dispatcher
+ *   integration: require `FSMContext` async calls and full dispatcher loop.
+ * - `TestScenesManager::test_leave_*` async cases — same as above.
+ * - `TestScenesManager::test_close_*` async cases — same as above.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class ScenesManagerTest extends TestCase
 {

@@ -11,9 +11,14 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 /**
- * Covers `After` construction and its three static factory methods.
+ * Upstream `tests/test_fsm/test_scene.py::TestAfter` cases deliberately
+ * not ported:
  *
- * Mirrors `After` dataclass (`aiogram/fsm/scene.py:890-906`).
+ * - No deliberate skips. All three `TestAfter` cases (`test_exit`, `test_back`,
+ *   `test_goto`) are ported in this file.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class AfterTest extends TestCase
 {

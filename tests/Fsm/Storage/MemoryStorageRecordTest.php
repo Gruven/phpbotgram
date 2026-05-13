@@ -8,9 +8,16 @@ use Gruven\PhpBotGram\Fsm\Storage\MemoryStorageRecord;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Covers `MemoryStorageRecord`.
+ * Upstream `tests/test_fsm/storage/test_storages.py` `MemoryStorageRecord`
+ * cases deliberately not ported here:
  *
- * Mirrors the dataclass contract from `aiogram/fsm/storage/memory.py:20-22`.
+ * - `MemoryStorageRecord` is used as a fixture type in upstream but has no
+ *   dedicated upstream test file. All directly observable contract cases
+ *   (default construction, explicit construction, property mutation) are
+ *   ported in this file.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class MemoryStorageRecordTest extends TestCase
 {

@@ -20,13 +20,28 @@ use Gruven\PhpBotGram\Tests\Support\RunAsyncTrait;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Unit tests for `RedisEventIsolation`.
+ * Upstream `tests/test_fsm/storage/test_isolation.py` and
+ * `tests/test_fsm/storage/test_redis_mock.py::TestRedisEventIsolationLockMock`
+ * cases deliberately not ported:
  *
- * The Redis link is replaced with a spy that records every `execute()` call
- * and returns pre-programmed responses. No live Redis connection is required.
+ * - `TestIsolations::test_lock` parametrize rows `redis_isolation`,
+ *   `lock_isolation`, `disabled_isolation` — these are parameterized fixtures
+ *   requiring pytest fixture injection; `redis_isolation` needs a live Redis
+ *   server (live-service required) and `lock_isolation`/`disabled_isolation`
+ *   are covered by `EventIsolationTest`.
+ * - `TestRedisEventIsolation::test_create_isolation` — API divergence: PHP
+ *   `RedisStorage` does not expose a `create_isolation()` factory method; the
+ *   isolation is constructed explicitly via `new RedisEventIsolation($client)`.
+ * - `TestRedisEventIsolation::test_init_without_key_builder` — covered
+ *   behaviorally: constructor uses a default `DefaultKeyBuilder`; tested
+ *   implicitly by `testLockKeyBuiltWithLockPart`.
+ * - `TestRedisEventIsolation::test_create_from_url` — API divergence: PHP
+ *   uses `amphp/redis` DSN factory (`createRedisClient()`), not a Python
+ *   `ConnectionPool.from_url` patch.
+ * - `TestRedisEventIsolation::test_close` — covered by `testCloseIsNoOp`.
  *
- * Integration tests (requiring a live Redis server) are skipped automatically
- * when `PHPBOTGRAM_TEST_REDIS_DSN` is not set.
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class RedisEventIsolationTest extends TestCase
 {
@@ -111,6 +126,29 @@ final class RedisEventIsolationTest extends TestCase
     $isolation = new RedisEventIsolation($this->makeRedis());
 
     self::assertInstanceOf(BaseEventIsolation::class, $isolation);
+  }
+
+  /**
+   * Constructor accepts an explicit key builder; the provided builder is used.
+   *
+   * Mirrors `TestRedisEventIsolation::test_init_with_key_builder`.
+   */
+  public function testInitWithExplicitKeyBuilderUsesIt(): void
+  {
+    $redis = $this->makeRedis();
+    $kb = new DefaultKeyBuilder(prefix: 'myapp');
+    $isolation = new RedisEventIsolation($redis, keyBuilder: $kb);
+
+    // The isolation must use the custom key builder, reflected in the lock key.
+    $lock = $this->runAsync(function () use ($isolation): Lock {
+      return $isolation->lock($this->key);
+    });
+
+    $expectedKey = $kb->build($this->key, StoragePart::Lock);
+    $setCalls = array_values(array_filter($this->calls, static fn($e) => $e['cmd'] === 'set'));
+    self::assertSame($expectedKey, (string)$setCalls[0]['args'][0]);
+
+    $lock->release();
   }
 
   // ------------------------------------------------------------------ //

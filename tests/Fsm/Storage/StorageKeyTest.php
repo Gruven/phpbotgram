@@ -9,14 +9,15 @@ use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Verifies `StorageKey` construction, field accessibility, default values,
- * and immutability guarantees.
+ * Upstream `tests/test_fsm/storage/test_key_builder.py` `StorageKey` usage
+ * cases deliberately not ported here:
  *
- * Mirrors upstream `StorageKey` (`aiogram/fsm/storage/base.py:14-21`), a
- * `@dataclass(frozen=True)`.  PHP's `final readonly class` provides the
- * freeze guarantee natively — there is no runtime equivalent of "try to mutate
- * a frozen dataclass", so the immutability test confirms that the property
- * declarations carry `readonly` and that assignment raises a `\Error`.
+ * - All `StorageKey` construction cases from upstream are ported in this file.
+ *   The upstream file exercises `StorageKey` only as a parameter to
+ *   `DefaultKeyBuilder.build()`, which is covered in `DefaultKeyBuilderTest`.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class StorageKeyTest extends TestCase
 {

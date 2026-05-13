@@ -21,9 +21,17 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 
 /**
- * Covers `SceneRegistry` — the add()/register() flow (Task 5.11).
+ * Upstream `tests/test_fsm/test_scene.py::TestSceneRegistry` cases
+ * deliberately not ported:
  *
- * Mirrors `SceneRegistry` (`aiogram/fsm/scene.py:746-887`).
+ * - `TestSceneRegistry::test_include_*` dispatcher integration cases — require
+ *   a running `Dispatcher` with async `feed_update`; covered structurally by
+ *   `testDispatcherPathRegistersMiddlewareOnAllObserversExceptError` in this file.
+ * - `TestSceneRegistry::test_set_*` state persistence cases — dispatcher
+ *   integration: require full async FSM state machine loop.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class SceneRegistryTest extends TestCase
 {

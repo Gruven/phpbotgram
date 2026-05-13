@@ -11,10 +11,13 @@ use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Covers `FsmContext` — the per-context FSM handle.
+ * Upstream `tests/test_fsm/test_context.py` cases deliberately not ported:
  *
- * Uses `MemoryStorage` as the concrete backend so tests run without any I/O.
- * Mirrors `aiogram.fsm.context.FSMContext` (`aiogram/fsm/context.py`).
+ * - No deliberate skips. `TestFSMContext::test_address_mapping` is fully
+ *   ported below as `testAddressMappingIsolatesDistinctContexts`.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class FsmContextTest extends TestCase
 {
@@ -255,5 +258,71 @@ final class FsmContextTest extends TestCase
 
     self::assertSame('state_a', $this->ctx->getState());
     self::assertSame('state_b', $ctxB->getState());
+  }
+
+  // ------------------------------------------------------------------ //
+  // Address mapping (multi-context isolation)
+  // ------------------------------------------------------------------ //
+
+  /**
+   * Three contexts sharing one storage but distinct keys are fully isolated:
+   * writes on one do not affect the others, and `getValue` respects defaults.
+   *
+   * Mirrors upstream `TestFSMContext::test_address_mapping`.
+   *
+   * Fixture: storage pre-seeded with state="test", data={"foo":"bar"} for
+   * the primary key; secondary and tertiary keys start blank.
+   */
+  public function testAddressMappingIsolatesDistinctContexts(): void
+  {
+    $storage = new MemoryStorage();
+
+    $key1 = new StorageKey(botId: 1, chatId: -42, userId: 42);
+    $key2 = new StorageKey(botId: 1, chatId: 42, userId: 42);
+    $key3 = new StorageKey(botId: 1, chatId: 69, userId: 69);
+
+    // Pre-seed key1 directly (as the fixture's setUp does).
+    $storage->setState($key1, 'test');
+    $storage->setData($key1, ['foo' => 'bar']);
+
+    $state1 = new FsmContext($storage, $key1);
+    $state2 = new FsmContext($storage, $key2);
+    $state3 = new FsmContext($storage, $key3);
+
+    // Initial reads.
+    self::assertSame('test', $state1->getState());
+    self::assertNull($state2->getState());
+    self::assertNull($state3->getState());
+
+    self::assertSame(['foo' => 'bar'], $state1->getData());
+    self::assertSame([], $state2->getData());
+    self::assertSame([], $state3->getData());
+
+    // getValue: present key on key1, missing on key2 with default, custom default on key3.
+    self::assertSame('bar', $state1->getValue('foo'));
+    self::assertNull($state2->getValue('foo'));
+    self::assertSame('baz', $state3->getValue('foo', 'baz'));
+
+    // Write to key2 must not affect key1 or key3.
+    $state2->setState('experiments');
+    self::assertSame('test', $state1->getState());
+    self::assertNull($state3->getState());
+
+    // Write data to key3 must not affect key2.
+    $state3->setData(['key' => 'value']);
+    self::assertSame([], $state2->getData());
+
+    // updateData on key1 merges.
+    $merged = $state1->updateData(['key' => 'value']);
+    self::assertSame(['foo' => 'bar', 'key' => 'value'], $merged);
+    self::assertSame(['foo' => 'bar', 'key' => 'value'], $state1->getData());
+
+    // clear() on key1 wipes both state and data.
+    $state1->clear();
+    self::assertNull($state1->getState());
+    self::assertSame([], $state1->getData());
+
+    // key2's state is still 'experiments' after key1 clear.
+    self::assertSame('experiments', $state2->getState());
   }
 }

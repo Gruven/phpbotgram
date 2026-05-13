@@ -28,14 +28,16 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 /**
- * Covers all 14 `#[On*]` attribute classes.
+ * Upstream `tests/test_fsm/test_scene.py::TestOnMarker` cases deliberately
+ * not ported here:
  *
- * Verifies:
- * - Each carries the correct event-name string.
- * - Constructor accepts `?SceneAction $action`, `?After $after`, and
- *   variadic `Filter ...$filters`.
- * - `Attribute::TARGET_METHOD | Attribute::IS_REPEATABLE` flags are set.
- * - Stacking multiple `#[On*]` on a single method is allowed.
+ * - `TestOnMarker::test_marker_name` parametrize rows — API divergence: Python
+ *   uses `on.<event>` runtime `ObserverMarker` instances; PHP uses static PHP
+ *   attribute classes `#[OnMessage]`, `#[OnCallbackQuery]`, etc. The equivalent
+ *   test here verifies the `eventName` property on each attribute class.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class OnAttributeTest extends TestCase
 {

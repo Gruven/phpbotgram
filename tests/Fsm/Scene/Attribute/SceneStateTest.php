@@ -10,7 +10,14 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 /**
- * Covers the `#[SceneState]` attribute construction and reflection behaviour.
+ * Upstream `tests/test_fsm/test_scene.py` `SceneState` attribute cases
+ * deliberately not ported here:
+ *
+ * - Upstream has no dedicated `SceneState` test class; it is used inline in
+ *   `TestScene` setup. The PHP equivalent tests are all ported here.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class SceneStateTest extends TestCase
 {

@@ -12,9 +12,15 @@ use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Covers `HistoryManager` — the scene back-navigation stack (Task 5.10).
+ * Upstream `tests/test_fsm/test_scene.py::TestHistoryManager` cases
+ * deliberately not ported:
  *
- * Mirrors `HistoryManager` (`aiogram/fsm/scene.py:32-105`).
+ * - `TestHistoryManager::test_history_manager_push` and related async cases —
+ *   upstream uses `MemoryStorage` async `await` calls; PHP port is synchronous
+ *   but all the same contracts are verified in this file.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class HistoryManagerTest extends TestCase
 {

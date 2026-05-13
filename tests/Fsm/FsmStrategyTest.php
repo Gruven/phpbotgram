@@ -8,10 +8,13 @@ use Gruven\PhpBotGram\Fsm\FsmStrategy;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Covers `FsmStrategy` enum and its `apply()` method.
+ * Upstream `tests/test_fsm/test_strategy.py` cases deliberately not ported:
  *
- * Mirrors upstream `aiogram.fsm.strategy.FSMStrategy` and the module-level
- * `apply_strategy()` function (`aiogram/fsm/strategy.py`).
+ * - No deliberate skips. All `TestStrategy::test_strategy` parametrize rows
+ *   are ported in this file.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class FsmStrategyTest extends TestCase
 {
@@ -138,6 +141,128 @@ final class FsmStrategyTest extends TestCase
   {
     $result = FsmStrategy::ChatTopic->apply(self::CHAT_ID, self::USER_ID);
 
+    self::assertNull($result['threadId']);
+  }
+
+  // ------------------------------------------------------------------ //
+  // PRIVATE case (chat_id == user_id — DM / inline context)
+  // Mirrors upstream parametrize rows where PRIVATE = (USER_ID, USER_ID, None)
+  // ------------------------------------------------------------------ //
+
+  /**
+   * `UserInChat` PRIVATE case: chat and user ids are already equal, thread null.
+   *
+   * Upstream row `[FSMStrategy.USER_IN_CHAT, PRIVATE, PRIVATE]`.
+   */
+  public function testUserInChatPrivateCasePassesThrough(): void
+  {
+    $result = FsmStrategy::UserInChat->apply(self::USER_ID, self::USER_ID, null);
+
+    self::assertSame(self::USER_ID, $result['chatId']);
+    self::assertSame(self::USER_ID, $result['userId']);
+    self::assertNull($result['threadId']);
+  }
+
+  /**
+   * `Chat` PRIVATE case: chatId == userId, both slots become userId.
+   *
+   * Upstream row `[FSMStrategy.CHAT, PRIVATE, (USER_ID, USER_ID, None)]`.
+   */
+  public function testChatPrivateCaseMirrorsUserId(): void
+  {
+    $result = FsmStrategy::Chat->apply(self::USER_ID, self::USER_ID, null);
+
+    self::assertSame(self::USER_ID, $result['chatId']);
+    self::assertSame(self::USER_ID, $result['userId']);
+    self::assertNull($result['threadId']);
+  }
+
+  /**
+   * `GlobalUser` PRIVATE case: userId used for both slots, thread null.
+   *
+   * Upstream row `[FSMStrategy.GLOBAL_USER, PRIVATE, PRIVATE]`.
+   */
+  public function testGlobalUserPrivateCasePreservesUserId(): void
+  {
+    $result = FsmStrategy::GlobalUser->apply(self::USER_ID, self::USER_ID, null);
+
+    self::assertSame(self::USER_ID, $result['chatId']);
+    self::assertSame(self::USER_ID, $result['userId']);
+    self::assertNull($result['threadId']);
+  }
+
+  /**
+   * `UserInTopic` PRIVATE case: no thread, both ids preserved.
+   *
+   * Upstream row `[FSMStrategy.USER_IN_TOPIC, PRIVATE, PRIVATE]`.
+   */
+  public function testUserInTopicPrivateCasePreservesBothIds(): void
+  {
+    $result = FsmStrategy::UserInTopic->apply(self::USER_ID, self::USER_ID, null);
+
+    self::assertSame(self::USER_ID, $result['chatId']);
+    self::assertSame(self::USER_ID, $result['userId']);
+    self::assertNull($result['threadId']);
+  }
+
+  /**
+   * `ChatTopic` PRIVATE case: chatId == userId, no thread → userId for both.
+   *
+   * Upstream row `[FSMStrategy.CHAT_TOPIC, PRIVATE, PRIVATE]`.
+   */
+  public function testChatTopicPrivateCaseMirrorsUserId(): void
+  {
+    $result = FsmStrategy::ChatTopic->apply(self::USER_ID, self::USER_ID, null);
+
+    self::assertSame(self::USER_ID, $result['chatId']);
+    self::assertSame(self::USER_ID, $result['userId']);
+    self::assertNull($result['threadId']);
+  }
+
+  // ------------------------------------------------------------------ //
+  // THREAD case parametrize rows
+  // Mirrors upstream parametrize rows where THREAD = (CHAT_ID, USER_ID, THREAD_ID)
+  // ------------------------------------------------------------------ //
+
+  /**
+   * `UserInChat` THREAD case: thread is discarded → same as CHAT case.
+   *
+   * Upstream row `[FSMStrategy.USER_IN_CHAT, THREAD, CHAT]`.
+   */
+  public function testUserInChatThreadCaseDiscardsThread(): void
+  {
+    $result = FsmStrategy::UserInChat->apply(self::CHAT_ID, self::USER_ID, self::THREAD_ID);
+
+    self::assertSame(self::CHAT_ID, $result['chatId']);
+    self::assertSame(self::USER_ID, $result['userId']);
+    self::assertNull($result['threadId']);
+  }
+
+  /**
+   * `Chat` THREAD case: both slots become chatId, thread discarded.
+   *
+   * Upstream row `[FSMStrategy.CHAT, THREAD, (CHAT_ID, CHAT_ID, None)]`.
+   */
+  public function testChatThreadCaseUsesChatIdAndDiscardsThread(): void
+  {
+    $result = FsmStrategy::Chat->apply(self::CHAT_ID, self::USER_ID, self::THREAD_ID);
+
+    self::assertSame(self::CHAT_ID, $result['chatId']);
+    self::assertSame(self::CHAT_ID, $result['userId']);
+    self::assertNull($result['threadId']);
+  }
+
+  /**
+   * `GlobalUser` THREAD case: both slots become userId, thread discarded.
+   *
+   * Upstream row `[FSMStrategy.GLOBAL_USER, THREAD, PRIVATE]`.
+   */
+  public function testGlobalUserThreadCaseUsesUserIdAndDiscardsThread(): void
+  {
+    $result = FsmStrategy::GlobalUser->apply(self::CHAT_ID, self::USER_ID, self::THREAD_ID);
+
+    self::assertSame(self::USER_ID, $result['chatId']);
+    self::assertSame(self::USER_ID, $result['userId']);
     self::assertNull($result['threadId']);
   }
 

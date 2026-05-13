@@ -10,9 +10,14 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 
 /**
- * Covers `States::default()` and `States::any()` — the PHP equivalents of
- * the upstream `default_state` and `any_state` module-level constants
- * (`aiogram/fsm/state.py:180-182`).
+ * Upstream `tests/test_fsm/test_state.py` `any_state` / `default_state` cases
+ * deliberately not ported here:
+ *
+ * - `TestState::test_star_filter` — ported as `testAnyInvokeReturnsTrueForAnyRawState`
+ *   in this file (States::any() is the PHP equivalent of `any_state`).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class StatesTest extends TestCase
 {

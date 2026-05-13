@@ -11,14 +11,20 @@ use ReflectionClass;
 use ReflectionMethod;
 
 /**
- * Covers `BaseStorage` — the abstract FSM storage base class.
+ * Upstream `tests/test_fsm/storage/test_storages.py` cases deliberately
+ * not ported here:
  *
- * Because `BaseStorage` is abstract, tests run through a minimal in-memory
- * concrete subclass declared below (`InMemoryStorage`). The fixture stores
- * state and data in plain PHP arrays keyed by a synthetic string derived
- * from the `StorageKey` coordinates.
+ * - `TestStorages::test_set_state` parametrize rows `redis_storage`,
+ *   `mongo_storage`, `pymongo_storage` — live-service required: need real
+ *   Redis / MongoDB; memory_storage path covered here; others covered by
+ *   integration tests in `RedisStorageTest` / `MongoStorageTest`.
+ * - `TestStorages::test_set_data` with `TypedDict` and invalid data type —
+ *   API divergence: PHP has no `TypedDict` equivalent; dict-like validation
+ *   differs; invalid data type check is covered separately by the upstream
+ *   `DataNotDictLikeError` contract in each storage test.
  *
- * Mirrors `aiogram.fsm.storage.base.BaseStorage` (`aiogram/fsm/storage/base.py:103-200`).
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class BaseStorageTest extends TestCase
 {
@@ -253,6 +259,41 @@ final class BaseStorageTest extends TestCase
 
     self::assertSame(99, $result['score']);
     self::assertSame(99, $this->storage->getData($this->key)['score']);
+  }
+
+  /**
+   * Full `test_update_data` contract from `test_storages.py`:
+   * - initial data is empty
+   * - first update with `{'foo': 'bar'}` returns `{'foo': 'bar'}`
+   * - second update with `{}` returns `{'foo': 'bar'}` (unchanged)
+   * - third update with `{'baz': 'spam'}` returns merged dict
+   * - fourth update with `{'baz': 'test'}` overwrites baz
+   *
+   * Mirrors `TestStorages::test_update_data`.
+   */
+  public function testUpdateDataFullSequence(): void
+  {
+    // Empty to start.
+    self::assertSame([], $this->storage->getData($this->key));
+
+    // First update — creates record.
+    $result = $this->storage->updateData($this->key, ['foo' => 'bar']);
+    self::assertSame(['foo' => 'bar'], $result);
+
+    // Empty patch — no change.
+    $result = $this->storage->updateData($this->key, []);
+    self::assertSame(['foo' => 'bar'], $result);
+    self::assertSame(['foo' => 'bar'], $this->storage->getData($this->key));
+
+    // Add baz.
+    $result = $this->storage->updateData($this->key, ['baz' => 'spam']);
+    self::assertSame(['foo' => 'bar', 'baz' => 'spam'], $result);
+    self::assertSame(['foo' => 'bar', 'baz' => 'spam'], $this->storage->getData($this->key));
+
+    // Overwrite baz.
+    $result = $this->storage->updateData($this->key, ['baz' => 'test']);
+    self::assertSame(['foo' => 'bar', 'baz' => 'test'], $result);
+    self::assertSame(['foo' => 'bar', 'baz' => 'test'], $this->storage->getData($this->key));
   }
 
   // ------------------------------------------------------------------ //

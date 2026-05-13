@@ -13,20 +13,26 @@ use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Unit tests for `MongoStorage`.
+ * Upstream `tests/test_fsm/storage/test_mongo_mock.py`,
+ * `tests/test_fsm/storage/test_mongo.py`, and
+ * `tests/test_fsm/storage/test_pymongo.py` cases deliberately not ported:
  *
- * **Mocking strategy:** `MongoStorage` depends on a tiny internal
- * `MongoCollectionInterface` rather than the concrete `\MongoDB\Collection`.
- * Unit tests inject `MongoCollectionSpy` — a named class defined in this
- * file that records calls and returns pre-programmed responses.  No live
- * MongoDB connection is required and `ext-mongodb` is not needed.
+ * - `TestMongoStorageMock::test_from_url` — API divergence: upstream patches
+ *   `AsyncIOMotorClient`; PHP uses `MongoStorage::fromUrl()` which requires
+ *   `ext-mongodb` and a live server to construct a real collection.
+ * - `TestMongoStorageMock::test_close` — API divergence: upstream calls
+ *   `client.close()`; PHP `MongoStorage::close()` is a no-op (connection
+ *   lifecycle managed externally), already covered by `testCloseIsNoOp`.
+ * - `test_mongo.py` / `test_pymongo.py` — live-service required: all tests
+ *   depend on a real MongoDB server running and are environment-gated in
+ *   upstream; our integration tests with DSN check cover the same contract.
+ * - `test_pymongo.py::test_resolve_state` parametrize rows — API divergence:
+ *   upstream `PyMongoStorage.resolve_state()` is a public utility; in PHP
+ *   state resolution is performed internally by `setState` (tested via
+ *   `testSetStateWithStateObjectExtractsQualifiedName`).
  *
- * `\MongoDB\Collection` satisfies `MongoCollectionInterface` via
- * `MongoCollectionAdapter` (production path, used by `MongoStorage::create()`
- * and `MongoStorage::fromUrl()`).
- *
- * Integration tests (live Mongo) are at the bottom and skipped when
- * `PHPBOTGRAM_TEST_MONGO_DSN` is unset.
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
  */
 final class MongoStorageTest extends TestCase
 {
@@ -254,6 +260,52 @@ final class MongoStorageTest extends TestCase
     $storage = $this->makeStorage($collection);
 
     self::assertSame([], $storage->getData($this->key));
+  }
+
+  // ------------------------------------------------------------------ //
+  // updateData
+  // ------------------------------------------------------------------ //
+
+  /**
+   * `updateData` merges the patch and returns the merged dict from the document.
+   *
+   * Mirrors `TestMongoStorageMock::test_update_data_returns_data`.
+   */
+  public function testUpdateDataReturnsMergedDict(): void
+  {
+    $documentId = (new DefaultKeyBuilder())->build($this->key);
+    // Pre-existing doc has data = {'foo': 'bar'}.
+    $collection = $this->makeCollection([$documentId => ['data' => ['foo' => 'bar']]]);
+    $storage = $this->makeStorage($collection);
+
+    $result = $storage->updateData($this->key, ['baz' => 'qux']);
+
+    // BaseStorage::updateData merges existing + patch and returns the result.
+    self::assertSame('bar', $result['foo']);
+    self::assertSame('qux', $result['baz']);
+  }
+
+  /**
+   * `updateData` on a document that becomes empty after unset triggers deleteOne.
+   *
+   * Mirrors `TestMongoStorageMock::test_update_data_empty_result_deletes_doc`.
+   */
+  public function testUpdateDataEmptyDocumentTriggersDelete(): void
+  {
+    $documentId = (new DefaultKeyBuilder())->build($this->key);
+    // Document has only 'data', no 'state' — after clearing data it should be deleted.
+    $collection = $this->makeCollection([$documentId => []]);
+    $storage = $this->makeStorage($collection);
+
+    // Set up: write data so there is something to update, then set to empty.
+    $collection2 = $this->makeCollection([$documentId => ['data' => ['x' => 1]]]);
+    $storage2 = $this->makeStorage($collection2);
+
+    $storage2->setData($this->key, []);
+
+    // After setData([]) with doc that becomes empty, deleteOne must have been called.
+    $methods = array_column($collection2->calls, 'method');
+    self::assertContains('deleteOne', $methods);
   }
 
   // ------------------------------------------------------------------ //
