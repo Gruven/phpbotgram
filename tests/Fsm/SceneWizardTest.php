@@ -414,6 +414,29 @@ final class SceneWizardTest extends TestCase
     self::assertFalse($manager->enterCalls[0]['checkActive']); // @phpstan-ignore-line property.notFound
   }
 
+  /**
+   * `goto()` with integer-keyed kwargs must NOT throw a PHP unpack Error.
+   *
+   * Regression: PHP throws "Cannot use positional argument after named
+   * argument during unpacking" when a spread array contains integer keys
+   * alongside string keys. User code calling `$wizard->goto('target',
+   * ...$genericData)` where `$genericData` has integer keys would trigger
+   * this. The `namedOnly()` helper strips integer keys before every spread.
+   */
+  public function testGotoWithIntegerKeyedKwargsDoesNotThrow(): void
+  {
+    $manager = $this->makeManager($this->makeHistory());
+    $wizard = $this->makeWizard(manager: $manager);
+
+    // 0 => 'ignored' is an integer-keyed kwarg; 'real' => 'value' is named.
+    // Without namedOnly() this would throw an Error at the spread site.
+    $wizard->goto('target', ...[0 => 'ignored', 'real' => 'value']);
+
+    // Manager must have been called (goto completes, not crashes).
+    self::assertCount(1, $manager->enterCalls); // @phpstan-ignore-line property.notFound
+    self::assertSame('target', $manager->enterCalls[0]['scene']); // @phpstan-ignore-line property.notFound
+  }
+
   // ------------------------------------------------------------------ //
   // onAction() — returns false when no handler matches
   // ------------------------------------------------------------------ //

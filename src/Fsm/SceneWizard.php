@@ -81,9 +81,13 @@ final class SceneWizard
    * Mirrors `SceneWizard.enter()` (`aiogram/fsm/scene.py:474-484`).
    *
    * @param mixed ...$kwargs Extra kwargs forwarded to the action handler.
+   *                         Integer-keyed entries are silently dropped to
+   *                         prevent PHP's "positional after named" unpack Error.
    */
   public function enter(mixed ...$kwargs): void
   {
+    $named = self::namedOnly($kwargs);
+
     if ($this->sceneConfig->resetDataOnEnter === true) {
       $this->state->setData([]);
     }
@@ -93,7 +97,7 @@ final class SceneWizard
     }
 
     $this->state->setState($this->sceneConfig->state);
-    $this->onAction(SceneAction::Enter, ...$kwargs);
+    $this->onAction(SceneAction::Enter, ...$named);
   }
 
   /**
@@ -104,14 +108,17 @@ final class SceneWizard
    * @param bool $withHistory When `true` (default), push the current scene
    *                          state onto the history stack before leaving.
    * @param mixed ...$kwargs Extra kwargs forwarded to the action handler.
+   *                         Integer-keyed entries are silently dropped.
    */
   public function leave(bool $withHistory = true, mixed ...$kwargs): void
   {
+    $named = self::namedOnly($kwargs);
+
     if ($withHistory) {
       $this->manager->history()->snapshot();
     }
 
-    $this->onAction(SceneAction::Leave, ...$kwargs);
+    $this->onAction(SceneAction::Leave, ...$named);
   }
 
   /**
@@ -120,12 +127,14 @@ final class SceneWizard
    * Mirrors `SceneWizard.exit()` (`aiogram/fsm/scene.py:492-497`).
    *
    * @param mixed ...$kwargs Extra kwargs forwarded to the action handler.
+   *                         Integer-keyed entries are silently dropped.
    */
   public function exit(mixed ...$kwargs): void
   {
+    $named = self::namedOnly($kwargs);
     $this->manager->history()->clear();
-    $this->onAction(SceneAction::Exit, ...$kwargs);
-    $this->manager->enter(null, false, ...$kwargs);
+    $this->onAction(SceneAction::Exit, ...$named);
+    $this->manager->enter(null, false, ...$named);
   }
 
   /**
@@ -135,12 +144,14 @@ final class SceneWizard
    * Mirrors `SceneWizard.back()` (`aiogram/fsm/scene.py:499-504`).
    *
    * @param mixed ...$kwargs Extra kwargs forwarded to the action handler.
+   *                         Integer-keyed entries are silently dropped.
    */
   public function back(mixed ...$kwargs): void
   {
-    $this->leave(false, ...$kwargs);
+    $named = self::namedOnly($kwargs);
+    $this->leave(false, ...$named);
     $newScene = $this->manager->history()->rollback();
-    $this->manager->enter($newScene, false, ...$kwargs);
+    $this->manager->enter($newScene, false, ...$named);
   }
 
   /**
@@ -154,6 +165,7 @@ final class SceneWizard
    * Mirrors `SceneWizard.retake()` (`aiogram/fsm/scene.py:506-508`).
    *
    * @param mixed ...$kwargs Extra kwargs forwarded to the action handler.
+   *                         Integer-keyed entries are silently dropped.
    *
    * @throws SceneException When the scene has no configured state.
    */
@@ -174,11 +186,13 @@ final class SceneWizard
    *
    * @param class-string<Scene>|State|string $scene Target scene.
    * @param mixed ...$kwargs Extra kwargs forwarded to the action handler.
+   *                         Integer-keyed entries are silently dropped.
    */
   public function goto(State|string $scene, mixed ...$kwargs): void
   {
-    $this->leave(true, ...$kwargs);
-    $this->manager->enter($scene, false, ...$kwargs);
+    $named = self::namedOnly($kwargs);
+    $this->leave(true, ...$named);
+    $this->manager->enter($scene, false, ...$named);
   }
 
   // ------------------------------------------------------------------ //
@@ -289,9 +303,31 @@ final class SceneWizard
       return false;
     }
 
-    $merged = array_merge($this->data, $kwargs);
+    $merged = self::namedOnly(array_merge($this->data, $kwargs));
     ($handler)($this->scene, $this->event, ...$merged);
 
     return true;
+  }
+
+  // ------------------------------------------------------------------ //
+  // Helpers
+  // ------------------------------------------------------------------ //
+
+  /**
+   * Strip integer-keyed entries from a kwarg bag before spread.
+   *
+   * PHP throws "Cannot use positional argument after named argument during
+   * unpacking" if an array spread contains any integer-keyed element alongside
+   * string-keyed (named) ones. User-supplied `...$kwargs` bags may contain
+   * integer keys from generic data arrays. Filtering them here keeps all
+   * public lifecycle surfaces safe regardless of caller origin.
+   *
+   * @param array<int|string, mixed> $kwargs
+   *
+   * @return array<string, mixed>
+   */
+  private static function namedOnly(array $kwargs): array
+  {
+    return array_filter($kwargs, 'is_string', ARRAY_FILTER_USE_KEY);
   }
 }
