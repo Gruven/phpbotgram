@@ -942,6 +942,100 @@ final class PollingTest extends TestCase
     self::assertSame($method, $dispatcher->silentCalls[0][1]);
   }
 
+  public function testPollingForSerialSurvivesSilentCallRequestException(): void
+  {
+    // Cycle 5 review fix: the serial polling loop must NOT die if a
+    // handler-returned `TelegramMethod`, auto-dispatched via
+    // `silentCallRequest`, raises a `TelegramApiException`. Before the
+    // fix, the unhandled exception unwound through `pollingFor` and
+    // killed the long-poll loop after the very first failed reply —
+    // every subsequent update would never reach a handler. Upstream's
+    // `silent_call_request` (`aiogram/dispatcher/dispatcher.py:294-301`)
+    // catches `TelegramAPIError` and logs; the port emits an
+    // `E_USER_WARNING` so the next update still gets dispatched.
+    //
+    // Scenario:
+    //   1. Update 1 → handler returns SendMessage (auto-dispatched).
+    //   2. MockedSession's first sendMessage response is queued as
+    //      `ok=false, errorCode=400` → throws TelegramBadRequestException
+    //      from inside silentCallRequest.
+    //   3. Update 2 → handler runs, stops polling.
+    // Without the fix step 3 never runs.
+    $dispatcher = new Dispatcher();
+    $bot = new MockedBot();
+    $handled = [];
+    $dispatcher->message->register(static function (Update $event_update) use (
+      &$handled,
+      $dispatcher,
+    ): SendMessage {
+      $handled[] = $event_update->updateId;
+
+      if ($event_update->updateId === 2) {
+        // Stop after the second update is dispatched. Any non-empty
+        // return value is auto-dispatched via silentCallRequest; we
+        // route it through a "success" canned response so this leg
+        // doesn't itself fail.
+        $dispatcher->stopPolling();
+      }
+
+      return new SendMessage(chatId: 1, text: 'reply ' . $event_update->updateId);
+    });
+
+    // Round 1: two updates batched together so we don't need a second
+    // getUpdates round before the polling loop sees update 2. The serial
+    // dispatch consumes them in order; silentCallRequest for update 1
+    // throws TelegramBadRequestException (caught and warned), and
+    // silentCallRequest for update 2 succeeds.
+    $bot->addResultFor(GetUpdates::class, ok: true, result: [
+      self::makeMessageUpdate(1, 'first'),
+      self::makeMessageUpdate(2, 'second'),
+    ]);
+    // Reply for update 1 fails — this is the transient API error that
+    // must NOT kill the loop.
+    $bot->addResultFor(
+      SendMessage::class,
+      ok: false,
+      description: 'Bad Request: chat not found',
+      errorCode: 400,
+    );
+    // Reply for update 2 succeeds (any Message stub works — we don't
+    // inspect the returned value here).
+    $chat = new Chat(id: 1, type: 'private');
+    $bot->addResultFor(
+      SendMessage::class,
+      ok: true,
+      result: new Message(messageId: 99, date: new DateTime('@0'), chat: $chat, text: 'reply 2'),
+    );
+
+    $warning = null;
+    set_error_handler(static function (int $errno, string $errstr) use (&$warning): bool {
+      if ($errno === \E_USER_WARNING && $warning === null) {
+        $warning = $errstr;
+      }
+
+      return true;
+    });
+
+    try {
+      $this->runAsync(static function () use ($dispatcher, $bot): void {
+        $dispatcher->startPolling(new PollingOptions(handleAsTasks: null), $bot)->await();
+      });
+    } finally {
+      restore_error_handler();
+    }
+
+    self::assertSame(
+      [1, 2],
+      $handled,
+      'Polling must continue past a silentCallRequest TelegramApiException and dispatch the next update.',
+    );
+    self::assertNotNull(
+      $warning,
+      'silentCallRequest must emit a warning when swallowing TelegramApiException.',
+    );
+    self::assertStringContainsString('silentCallRequest', (string)$warning);
+  }
+
   /**
    * Build a minimal `Update` carrying a text Message with the given
    * updateId and body — parameterised version of `DispatcherTest`'s

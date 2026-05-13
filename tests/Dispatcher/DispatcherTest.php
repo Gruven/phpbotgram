@@ -14,6 +14,7 @@ use Gruven\PhpBotGram\Dispatcher\Middlewares\ErrorsMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\EventContext;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\UserContextMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Router;
+use Gruven\PhpBotGram\Exceptions\TelegramBadRequestException;
 use Gruven\PhpBotGram\Exceptions\UpdateTypeLookupException;
 use Gruven\PhpBotGram\Methods\GetMe;
 use Gruven\PhpBotGram\Methods\SendMessage;
@@ -477,6 +478,100 @@ final class DispatcherTest extends TestCase
     $result = $dispatcher->silentCallRequest($bot, $method);
 
     self::assertSame($user, $result);
+  }
+
+  public function testSilentCallRequestSwallowsTelegramApiExceptionWithWarning(): void
+  {
+    // Cycle 5 review fix: `silentCallRequest` is the polling-loop /
+    // webhook-fall-through routing hook for a handler-returned
+    // `TelegramMethod`. If the resulting `$bot($method)` raises a
+    // `TelegramApiException` (e.g. the chat is gone, the message was
+    // already deleted, the bot is blocked) the loop MUST NOT die — the
+    // next update is unrelated and the transient failure of one reply
+    // should not stop polling. Upstream's `silent_call_request`
+    // (`aiogram/dispatcher/dispatcher.py:294-301`) catches
+    // `TelegramAPIError` and logs; the port emits an `E_USER_WARNING`
+    // and returns null so the loop continues.
+    $bot = new MockedBot();
+    $method = new SendMessage(chatId: 1, text: 'will fail');
+    // Queue a 400 Bad Request response — MockedSession routes ok=false
+    // through `checkResponse` which throws `TelegramBadRequestException`
+    // (a `TelegramApiException` subclass).
+    $bot->addResultFor(
+      SendMessage::class,
+      ok: false,
+      description: 'Bad Request: chat not found',
+      errorCode: 400,
+    );
+
+    $dispatcher = new Dispatcher();
+    $warning = null;
+    set_error_handler(static function (int $errno, string $errstr) use (&$warning): bool {
+      if ($errno === \E_USER_WARNING && $warning === null) {
+        $warning = $errstr;
+      }
+
+      return true;
+    });
+
+    try {
+      $result = $dispatcher->silentCallRequest($bot, $method);
+    } finally {
+      restore_error_handler();
+    }
+
+    self::assertNull(
+      $result,
+      'silentCallRequest must return null when the underlying call raises TelegramApiException.',
+    );
+    self::assertNotNull(
+      $warning,
+      'silentCallRequest must emit an E_USER_WARNING when swallowing TelegramApiException.',
+    );
+    self::assertStringContainsString('silentCallRequest', (string)$warning);
+    self::assertStringContainsString(SendMessage::class, (string)$warning);
+    self::assertStringContainsString('chat not found', (string)$warning);
+  }
+
+  public function testSilentCallRequestRethrowsNonTelegramApiException(): void
+  {
+    // Sanity counterpart: only `TelegramApiException` is swallowed. Any
+    // other Throwable (a programming error, an out-of-band runtime
+    // failure) must propagate so the upstream dispatch layer / fiber-
+    // level error handlers can react. Upstream's `silent_call_request`
+    // narrows on `TelegramAPIError` for the same reason — broad catches
+    // hide bugs.
+    $bot = new MockedBot();
+    $method = new GetMe();
+    // No canned response queued → MockedSession::makeRequest raises
+    // RuntimeException("No canned responses left"), which is NOT a
+    // TelegramApiException and must bubble up.
+    $dispatcher = new Dispatcher();
+
+    $this->expectException(RuntimeException::class);
+    $this->expectExceptionMessage('No canned responses left');
+
+    $dispatcher->silentCallRequest($bot, $method);
+  }
+
+  /**
+   * Sanity that the canned `TelegramBadRequestException` class reference is
+   * still wired through MockedSession — guards the test above from a silent
+   * exception-class rename. Catches the throw directly without going through
+   * silentCallRequest.
+   */
+  public function testMockedBotErrorResponseRaisesTelegramBadRequestException(): void
+  {
+    $bot = new MockedBot();
+    $bot->addResultFor(
+      SendMessage::class,
+      ok: false,
+      description: 'Bad Request: chat not found',
+      errorCode: 400,
+    );
+
+    $this->expectException(TelegramBadRequestException::class);
+    $bot(new SendMessage(chatId: 1, text: 'will fail'));
   }
 
   public function testInheritsObserverMapShapeFromRouter(): void

@@ -24,6 +24,7 @@ use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\ErrorsMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\UserContextMiddleware;
 use Gruven\PhpBotGram\Exceptions\RestartingTelegram;
+use Gruven\PhpBotGram\Exceptions\TelegramApiException;
 use Gruven\PhpBotGram\Exceptions\TelegramNetworkException;
 use Gruven\PhpBotGram\Exceptions\TelegramRetryAfter;
 use Gruven\PhpBotGram\Exceptions\UpdateTypeLookupException;
@@ -652,7 +653,9 @@ class Dispatcher extends Router
    * Webhook fall-through: dispatch a method via `$bot($method)` when the
    * inline-response window has closed. Invoked by `feedWebhookUpdate`'s
    * map continuation when the dispatch chain finishes *after* the 55-second
-   * deadline and the eventual result is a `TelegramMethod`.
+   * deadline and the eventual result is a `TelegramMethod`. Also invoked
+   * from `pollingFor` when a handler returns a `TelegramMethod` (the
+   * polling-side analogue of the webhook inline response).
    *
    * Public **instance** method (deviation from upstream's `@classmethod`)
    * so tests can override it via `RecordingDispatcher` to capture the
@@ -669,15 +672,43 @@ class Dispatcher extends Router
    * lean on the `mixed` to return a sentinel (`null`) without driving the
    * real bot call.
    *
+   * **TelegramApiException handling**: a transient API failure from the
+   * underlying call (chat gone, message already deleted, bot blocked,
+   * etc.) MUST NOT kill the caller. In serial polling the next update
+   * is unrelated and the loop should keep going; on the webhook
+   * fall-through path the request lifecycle is already over and the
+   * failure has nowhere to surface. We mirror upstream's
+   * `silent_call_request` (`aiogram/dispatcher/dispatcher.py:294-301`)
+   * which catches `TelegramAPIError` and logs — the port emits an
+   * `E_USER_WARNING` (the project-wide RuntimeWarning analogue, see also
+   * Fix C2 / Fix I1) and returns `null`. Any non-API throwable
+   * (programming errors, fiber-level failures) still propagates so the
+   * upstream layers / `ErrorsMiddleware` can react.
+   *
    * @param TelegramMethod<mixed> $method
    *
    * @return mixed Whatever `$bot($method)` resolves to (the method's
-   *               declared `ReturnsType`). Subclass overrides may return
-   *               any value, including `null` to suppress side effects.
+   *               declared `ReturnsType`), or `null` when a
+   *               `TelegramApiException` was swallowed. Subclass
+   *               overrides may return any value, including `null` to
+   *               suppress side effects.
    */
   public function silentCallRequest(Bot $bot, TelegramMethod $method): mixed
   {
-    return $bot($method);
+    try {
+      return $bot($method);
+    } catch (TelegramApiException $e) {
+      trigger_error(
+        sprintf(
+          'silentCallRequest: %s failed — %s',
+          $method::class,
+          $e->getMessage(),
+        ),
+        \E_USER_WARNING,
+      );
+
+      return null;
+    }
   }
 
   /**
