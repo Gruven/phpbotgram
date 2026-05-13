@@ -20,6 +20,7 @@ use Amp\Sync\LocalSemaphore;
 use Generator;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\ErrorsMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\UserContextMiddleware;
 use Gruven\PhpBotGram\Exceptions\RestartingTelegram;
@@ -42,17 +43,20 @@ use Throwable;
  *
  * Extends `Router` with three responsibilities:
  *
- * 1. **Default middleware wiring**. The constructor attaches
- *    `UserContextMiddleware` (first) and `ErrorsMiddleware` (second) as
- *    outer middlewares on every non-error observer. Order matters: the
- *    user-context middleware injects the `event_context` / `event_from_user`
- *    / `event_chat` / `event_thread_id` kwargs *before* `ErrorsMiddleware`
+ * 1. **Default middleware wiring**. The constructor populates
+ *    `$dispatcherMiddlewares` with `UserContextMiddleware` (first) and
+ *    `ErrorsMiddleware` (second). `feedUpdate` composes the chain around
+ *    its terminal `propagateEvent` call **once** per ingress, so a
+ *    multi-router tree never sees these middlewares re-wrapped at each
+ *    `propagateEvent` recursion. Order matters: the user-context
+ *    middleware injects the `event_context` / `event_from_user` /
+ *    `event_chat` / `event_thread_id` kwargs *before* `ErrorsMiddleware`
  *    runs, so an error handler that catches a handler exception sees the
  *    same context shape any other observer would.
  *
- *    The error observer itself skips outer middleware — it IS the error
- *    handler. Wiring `ErrorsMiddleware` on it would loop forever the first
- *    time an error handler throws.
+ *    The error observer is left untouched at construction — observers
+ *    own their per-event inner / outer chains; the dispatcher-level
+ *    chain runs above them at the ingress.
  *
  * 2. **Update ingress entry points**. `feedUpdate` is the canonical
  *    synchronous dispatch; `feedRawUpdate` deserialises a wire-shaped
@@ -74,10 +78,10 @@ use Throwable;
  *
  * - **No synthetic 'update' observer.** Upstream attaches every middleware
  *   to a single `self.update` observer and routes inside `_listen_update`.
- *   The port wires middlewares on every observer directly because the
- *   Router is already schema-derived per-type. The behaviour is identical
- *   for the public ingress (`feedUpdate` resolves the wire update_type then
- *   dispatches to that observer); only the wiring topology differs.
+ *   The port stores the dispatcher-level chain on a private
+ *   `$dispatcherMiddlewares` list and wraps it around `propagateEvent`
+ *   inside `feedUpdate`, achieving the same wire shape (middleware wraps
+ *   the whole tree exactly once) without an extra synthetic observer.
  * - **No FSM / storage / events_isolation / disable_fsm parameters.** Those
  *   are Phase 5 territory and will be added when `FSMContextMiddleware`
  *   lands. The constructor takes only `$name` for now.
@@ -219,43 +223,56 @@ class Dispatcher extends Router
    */
   private readonly float $webhookTimeoutSeconds;
 
+  /**
+   * Dispatcher-level middleware chain wrapped around `propagateEvent`
+   * inside `feedUpdate` once per ingress. Mirrors upstream's
+   * `self.update.outer_middleware([...])` at `dispatcher.py:80-84`
+   * which composes the same chain around a single synthetic 'update'
+   * observer.
+   *
+   * The port wires the chain here (instead of on every observer) to fix
+   * the C1 regression: with per-observer wiring, `Router::propagateEvent`
+   * recursing through sub-routers wrapped each `trigger()` call with the
+   * same middleware AGAIN — `UserContextMiddleware::resolveContext()`
+   * fired twice for a 2-router tree and `ErrorsMiddleware` caught each
+   * handler exception twice.
+   *
+   * Order: `UserContextMiddleware` first so subsequent links see the
+   * canonical `event_context` keys populated; `ErrorsMiddleware` second
+   * so its catch wraps user-context resolution.
+   *
+   * @var list<BaseMiddleware>
+   */
+  private array $dispatcherMiddlewares;
+
   public function __construct(?string $name = null, ?float $webhookTimeoutSeconds = null)
   {
     parent::__construct($name);
     $this->runningLock = new LocalMutex();
     $this->webhookTimeoutSeconds = $webhookTimeoutSeconds ?? self::WEBHOOK_TIMEOUT_SECONDS;
 
-    // Wire UserContextMiddleware first so subsequent middlewares (and the
-    // error observer) see the canonical `event_context` keys populated.
-    // The error observer itself skips outer middleware because it IS the
-    // error handler — wiring ErrorsMiddleware on it would loop indefinitely
-    // the first time an error handler throws.
-    foreach ($this->observers as $eventName => $observer) {
-      if ($eventName === 'error') {
-        continue;
-      }
-      $observer->outerMiddleware(new UserContextMiddleware());
-    }
-
-    // ErrorsMiddleware needs a closure that re-enters propagateEvent with
-    // the synthetic ErrorEvent so a registered error observer can claim
-    // the failure. The closure captures $this; PHP binds it automatically
-    // so the call site stays terse.
+    // ErrorsMiddleware needs a closure that re-enters `propagateEvent`
+    // with the synthetic ErrorEvent so a registered error observer can
+    // claim the failure. The closure captures $this; PHP binds it
+    // automatically so the call site stays terse.
     $errorsTrigger = fn(string $type, object $event, array $data): mixed => $this->propagateEvent($type, $event, $data);
 
-    foreach ($this->observers as $eventName => $observer) {
-      if ($eventName === 'error') {
-        continue;
-      }
-      $observer->outerMiddleware(new ErrorsMiddleware($errorsTrigger));
-    }
+    // Wire the dispatcher-level chain once. `feedUpdate` composes it
+    // around the terminal `propagateEvent` call before each dispatch.
+    // The list is left mutable (no `readonly`) so `RecordingDispatcher`-
+    // style subclasses can inject test instrumentation via Reflection.
+    $this->dispatcherMiddlewares = [
+      new UserContextMiddleware(),
+      new ErrorsMiddleware($errorsTrigger),
+    ];
   }
 
   /**
    * Top-level synchronous dispatch entry. Resolves the wire update_type
    * from the `Update`, reads the child event slot, binds the bot via
-   * `Bot::setCurrent` (FiberLocal), and dispatches through `propagateEvent`
-   * with the merged kwargs bag.
+   * `Bot::setCurrent` (FiberLocal), composes the dispatcher-level
+   * middleware chain around `propagateEvent`, and dispatches with the
+   * merged kwargs bag.
    *
    * Kwargs precedence (last-wins on key collision):
    * 1. `$this->workflowData` — dispatcher-scoped defaults
@@ -268,6 +285,16 @@ class Dispatcher extends Router
    * cleared even if the dispatch raises — without that guard a handler
    * exception would leave the binding pointing at the now-irrelevant bot
    * for the next dispatch on the same fiber.
+   *
+   * **Middleware wiring (C1 fix)**: the dispatcher-level chain
+   * (`UserContextMiddleware` + `ErrorsMiddleware`) wraps the terminal
+   * `propagateEvent` call exactly once. Prior to the fix the chain was
+   * attached to every observer at construction, which meant
+   * `propagateEvent`'s sub-router recursion re-wrapped each child
+   * observer's `trigger()` with the same chain — doubling
+   * `resolveContext()` runs and duplicating error handling. Wrapping
+   * once at the ingress mirrors upstream's `self.update.wrap_outer_middleware`
+   * shape (`dispatcher.py:164-172`).
    *
    * @param array<string, mixed> $kwargs Per-call context (state, fsm_storage, …).
    *
@@ -315,7 +342,22 @@ class Dispatcher extends Router
         'bot' => $bot,
       ];
 
-      return $this->propagateEvent($updateType, $event, $merged);
+      // Terminal: propagate through router tree. Closure-typed so the
+      // middleware chain can compose around it via the standard
+      // `(handler, event, data)` contract.
+      $terminal = fn(object $e, array $data): mixed => $this->propagateEvent($updateType, $e, $data);
+
+      // Compose the dispatcher-level chain ONCE. `array_reverse` so the
+      // first registered middleware ends up outermost in the final
+      // wrapped closure — matches `MiddlewareManager::wrap` semantics.
+      $chain = $terminal;
+
+      foreach (array_reverse($this->dispatcherMiddlewares) as $middleware) {
+        $next = $chain;
+        $chain = static fn(object $e, array $data): mixed => $middleware($next, $e, $data);
+      }
+
+      return $chain($event, $merged);
     } finally {
       Bot::setCurrent(null);
     }

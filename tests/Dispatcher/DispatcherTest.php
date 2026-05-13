@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Dispatcher;
 
+use Closure;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
 use Gruven\PhpBotGram\Dispatcher\Event\UnhandledSentinel;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\ErrorsMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\EventContext;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\UserContextMiddleware;
@@ -22,6 +24,7 @@ use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Types\Update;
 use Gruven\PhpBotGram\Types\User;
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 use RuntimeException;
 
 /**
@@ -68,29 +71,88 @@ final class DispatcherTest extends TestCase
     self::assertSame([], $dispatcher->workflowData);
   }
 
-  public function testEveryTelegramObserverHasOuterMiddlewareInstalled(): void
+  public function testDispatcherMiddlewareWiredOnceAtFeedUpdateLayer(): void
   {
-    // The Dispatcher constructor wires UserContextMiddleware and
-    // ErrorsMiddleware onto every non-error observer at construction. Mirrors
-    // upstream `dispatcher.py:80-84` which calls
-    // `self.update.outer_middleware(ErrorsMiddleware(self))` then
-    // `self.update.outer_middleware(UserContextMiddleware())`. The port wires
-    // them on every observer directly because the PHP Router doesn't have a
-    // single synthetic 'update' observer.
+    // Fix C1: the dispatcher-level middleware (UserContextMiddleware first,
+    // ErrorsMiddleware second) is wired ONCE at the feedUpdate entry layer
+    // — NOT on every observer. Upstream achieves the same shape with a
+    // single synthetic 'update' observer (`dispatcher.py:72-84`); the port
+    // stores the chain on a private `dispatcherMiddlewares` property and
+    // wraps it around `propagateEvent` once per `feedUpdate` call.
+    //
+    // The motivation is C1: wiring on every observer caused the chain to
+    // wrap each invocation again when `propagateEvent` recurses through
+    // sub-routers, doubling `UserContextMiddleware::resolveContext()` runs
+    // and duplicating exception handling in `ErrorsMiddleware`.
     $dispatcher = new Dispatcher();
 
     foreach ($dispatcher->observers as $name => $observer) {
-      if ($name === 'error') {
-        // The error observer skips outer middleware — it IS the error
-        // handler. Wiring ErrorsMiddleware on it would loop indefinitely.
-        self::assertCount(0, $observer->outerMiddleware, 'Error observer must have no outer middleware.');
-
-        continue;
-      }
-      self::assertCount(2, $observer->outerMiddleware, "Observer '{$name}' must have two outer middlewares.");
-      self::assertInstanceOf(UserContextMiddleware::class, $observer->outerMiddleware[0]);
-      self::assertInstanceOf(ErrorsMiddleware::class, $observer->outerMiddleware[1]);
+      // After the fix, observers do NOT carry the dispatcher-level chain
+      // themselves — neither the 25 update observers nor the errors
+      // observer should have anything pre-installed at construction time.
+      self::assertCount(
+        0,
+        $observer->outerMiddleware,
+        "Observer '{$name}' must NOT carry per-observer dispatcher middleware (C1 fix).",
+      );
+      self::assertCount(0, $observer->innerMiddleware, "Observer '{$name}' must start with empty inner middleware.");
     }
+
+    $reflection = new ReflectionProperty(Dispatcher::class, 'dispatcherMiddlewares');
+
+    /** @var list<BaseMiddleware> $chain */
+    $chain = $reflection->getValue($dispatcher);
+
+    self::assertCount(2, $chain, 'Dispatcher must wire two middlewares at the feedUpdate layer.');
+    self::assertInstanceOf(UserContextMiddleware::class, $chain[0]);
+    self::assertInstanceOf(ErrorsMiddleware::class, $chain[1]);
+  }
+
+  public function testMultiRouterDoesNotDoubleRunDispatcherMiddleware(): void
+  {
+    // Fix C1 regression: when the root dispatcher includes a child router
+    // and the matching handler is registered on the child, the
+    // dispatcher-level outer middleware (UserContextMiddleware +
+    // ErrorsMiddleware) MUST run exactly once. Before the fix the
+    // middleware was wired onto every observer, and `propagateEvent`
+    // recursing into the child observer wrapped each invocation with the
+    // same middleware AGAIN — `resolveContext()` fired twice and a thrown
+    // handler exception walked through `ErrorsMiddleware` twice.
+    //
+    // We instrument by counting `UserContextMiddleware`-style runs: a
+    // spy middleware on the dispatcher-level chain increments a counter on
+    // each entry. The dispatcher MUST trigger it exactly once per
+    // feedUpdate, regardless of the depth at which the handler claims
+    // the event.
+    $dispatcher = new Dispatcher();
+    $child = new Router('child');
+    $dispatcher->includeRouter($child);
+    $child->message->register(static fn(): string => 'claimed-by-child');
+
+    $counter = 0;
+    $spy = new class ($counter) extends BaseMiddleware {
+      public function __construct(public int &$counter) {}
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        ++$this->counter;
+
+        return $handler($event, $data);
+      }
+    };
+
+    // The fixed Dispatcher exposes `dispatcherMiddlewares` so we can
+    // sneak in a counting middleware that runs at the same wrapping
+    // layer as UserContextMiddleware / ErrorsMiddleware.
+    $reflection = new ReflectionProperty(Dispatcher::class, 'dispatcherMiddlewares');
+
+    /** @var list<BaseMiddleware> $current */
+    $current = $reflection->getValue($dispatcher);
+    $reflection->setValue($dispatcher, [...$current, $spy]);
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+
+    self::assertSame('claimed-by-child', $result);
+    self::assertSame(1, $counter, 'Dispatcher middleware must run exactly once across the router tree.');
   }
 
   public function testFeedUpdateDispatchesMessageToObserver(): void
