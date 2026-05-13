@@ -801,9 +801,17 @@ class Dispatcher extends Router
     // raise to abort the whole launch (the LogicException bubbles up to
     // the caller without ever entering the polling loop). The `bots` key
     // mirrors upstream's `dispatcher.py:588` injection.
+    //
+    // Fix I4: inject `bot` singular = the LAST bot of the variadic list
+    // alongside `bots` plural. Mirrors upstream's
+    // `await self.emit_startup(bot=bots[-1], **workflow_data)`
+    // (`dispatcher.py:595`). Handlers can declare `Bot $bot` to receive
+    // a deterministic single-bot reference even when polling fans out
+    // over multiple bots — matches aiogram's convention.
     $startupKwargs = [
       ...$this->workflowData,
       'bots' => $bots,
+      'bot' => $bots[array_key_last($bots)],
       'dispatcher' => $this,
     ];
     $this->emitStartup($startupKwargs);

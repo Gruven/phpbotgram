@@ -342,6 +342,62 @@ final class PollingTest extends TestCase
     self::assertSame([$bot], $events[1]['bots']);
   }
 
+  public function testStartPollingInjectsBotSingularAlongsideBotsPlural(): void
+  {
+    // Fix I4: spec line 234 mandates that startup/shutdown receive a
+    // `bot` (singular) kwarg = `array_key_last($bots)`, alongside the
+    // `bots` plural list. Mirrors upstream `dispatcher.py:595`/`:626`
+    // calls `await self.emit_startup(bot=bots[-1], **workflow_data)`.
+    //
+    // Verify by registering a startup handler that requests both kwargs
+    // and asserting `$bot === $botB` (the last bot in the variadic list).
+    $dispatcher = new Dispatcher();
+    $botA = new MockedBot('1:A');
+    $botB = new MockedBot('2:B');
+
+    $captured = null;
+    $dispatcher->startup->register(static function (Bot $bot, array $bots) use (
+      &$captured,
+      $dispatcher,
+    ): void {
+      $captured = ['bot' => $bot, 'bots' => $bots];
+      $dispatcher->stopPolling();
+    });
+
+    $this->runAsync(static function () use ($dispatcher, $botA, $botB): void {
+      $dispatcher->startPolling(new PollingOptions(handleAsTasks: null), $botA, $botB)->await();
+    });
+
+    self::assertNotNull($captured);
+    self::assertSame($botB, $captured['bot'], 'bot singular must be the last bot in the variadic list.');
+    self::assertSame([$botA, $botB], $captured['bots']);
+  }
+
+  public function testStartPollingInjectsBotSingularIntoShutdownToo(): void
+  {
+    // Same `bot` singular injection must apply to shutdown — the spec
+    // documents a single workflow_data bag carried through both lifecycle
+    // hooks (the second `emit_shutdown(bot=bots[-1], **workflow_data)` call
+    // at `dispatcher.py:626`).
+    $dispatcher = new Dispatcher();
+    $botA = new MockedBot('1:A');
+    $botB = new MockedBot('2:B');
+    $dispatcher->startup->register(static fn() => $dispatcher->stopPolling());
+
+    $captured = null;
+    $dispatcher->shutdown->register(static function (Bot $bot, array $bots) use (&$captured): void {
+      $captured = ['bot' => $bot, 'bots' => $bots];
+    });
+
+    $this->runAsync(static function () use ($dispatcher, $botA, $botB): void {
+      $dispatcher->startPolling(new PollingOptions(handleAsTasks: null), $botA, $botB)->await();
+    });
+
+    self::assertNotNull($captured);
+    self::assertSame($botB, $captured['bot']);
+    self::assertSame([$botA, $botB], $captured['bots']);
+  }
+
   public function testStartPollingClosesBotSessionsOnShutdown(): void
   {
     // Session-close is the final shutdown step, after emitShutdown but
