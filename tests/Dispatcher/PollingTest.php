@@ -588,6 +588,36 @@ final class PollingTest extends TestCase
     self::assertStringContainsString('unknown update type', strtolower((string)$warning));
   }
 
+  public function testListenUpdatesPropagatesRequestTimeoutOverPollingBudget(): void
+  {
+    // Fix I5: `Bot::__invoke($method, $timeout)`'s second arg is the HTTP
+    // transport timeout the session should wait before bailing on the
+    // long-poll round. The polling driver must pass
+    // `session.timeout + options.pollingTimeout` so a mid-long-poll HTTP
+    // timeout (default 60s session timeout) doesn't cut the request short
+    // when the long-poll budget (default 10s) is comfortably inside the
+    // window. Mirrors upstream's `dispatcher.py:216` "request_timeout =
+    // int(bot.session.timeout + polling_timeout)" kwarg.
+    $dispatcher = new ExposedDispatcher();
+    $bot = new MockedBot();
+    $bot->addResultFor(GetUpdates::class, ok: true, result: [self::makeMessageUpdate(101, 'hi')]);
+
+    $this->runAsync(static function () use ($dispatcher, $bot): void {
+      $dispatcher->beginStopSignal();
+
+      foreach ($dispatcher->listenUpdates($bot, new PollingOptions(pollingTimeout: 7)) as $u) {
+        $dispatcher->resolveStopSignal();
+      }
+    });
+
+    $expected = (int)$bot->session->timeout + 7;
+    self::assertSame(
+      [$expected],
+      $bot->getMockedSession()->requestTimeouts,
+      'listenUpdates must pass (session.timeout + pollingTimeout) as the HTTP request timeout.',
+    );
+  }
+
   public function testStartPollingAutoResolvesAllowedUpdatesWhenUnspecified(): void
   {
     // Fix I8: when PollingOptions::$allowedUpdates is left as the

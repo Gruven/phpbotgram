@@ -605,13 +605,22 @@ class Dispatcher extends Router
       : $options->allowedUpdates;
 
     while ($this->stopSignal === null || !$this->stopSignal->isComplete()) {
+      // Fix I5: pass `$bot->session->timeout + $options->pollingTimeout`
+      // as the HTTP transport timeout to `Bot::__invoke($method,
+      // $timeout)`. Without this floor a mid-long-poll HTTP timeout
+      // (default 60s session timeout) would cut the request short when
+      // the long-poll budget (default 10s) is comfortably inside the
+      // window. Mirrors upstream `dispatcher.py:216`
+      // "request_timeout = int(bot.session.timeout + polling_timeout)".
+      $requestTimeout = (int)$bot->session->timeout + $options->pollingTimeout;
+
       try {
         /** @var list<Update> $updates */
         $updates = $bot(new GetUpdates(
           offset: $offset,
           timeout: $options->pollingTimeout,
           allowedUpdates: $allowedUpdates,
-        ));
+        ), $requestTimeout);
       } catch (TelegramRetryAfter $e) {
         delay((float)$e->retryAfter);
 

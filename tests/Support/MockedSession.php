@@ -21,6 +21,17 @@ final class MockedSession extends BaseSession
 
   /** @var SplDoublyLinkedList<TelegramMethod<mixed>> */
   private SplDoublyLinkedList $requests;
+
+  /**
+   * Per-request timeout values recorded alongside `$requests`, in dispatch
+   * order. Polling tests (Fix I5) assert that `Bot::__invoke(..., $timeout)`
+   * carries the resolved long-poll budget through to the session layer.
+   * Indexed by request push position (0-based) so callers can pair it with
+   * `getRequest()` results.
+   *
+   * @var list<?int>
+   */
+  public array $requestTimeouts = [];
   public bool $closed = false;
 
   /**
@@ -67,6 +78,7 @@ final class MockedSession extends BaseSession
   {
     $this->closed = false;
     $this->requests->push($method);
+    $this->requestTimeouts[] = $timeout;
 
     if ($this->responses->isEmpty()) {
       throw new RuntimeException('No canned responses left');
