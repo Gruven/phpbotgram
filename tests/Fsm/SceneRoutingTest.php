@@ -356,6 +356,35 @@ final class SceneRoutingTest extends TestCase
     self::assertNull($ctx->getState(), 'After::exit() must clear the FSM state');
   }
 
+  /**
+   * When an `After::goto(null)` is attached the wizard silently no-ops
+   * (upstream parity: `ActionContainer.execute` guards `target is not None`).
+   *
+   * Regression for: `After::goto(null)` must NOT call `$wizard->goto('')`
+   * which would throw `SceneException("Scene '' is not registered")`.
+   */
+  public function testSceneHandlerWrapperSkipsAfterEnterWhenSceneIsNull(): void
+  {
+    $handlerCalled = false;
+
+    $handler = static function (Scene $scene, object $event, mixed ...$kwargs) use (&$handlerCalled): void {
+      $handlerCalled = true;
+    };
+
+    $wrapper = new SceneHandlerWrapper(
+      sceneClass: SimpleMessageScene::class,
+      handler: $handler,
+      after: After::goto(null),
+    );
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx();
+
+    // Must not throw — the null-target Enter action is a silent no-op.
+    $wrapper(new stdClass(), ...['state' => $ctx, 'scenes' => $scenes]);
+
+    self::assertTrue($handlerCalled, 'handler must be called even when after is goto(null)');
+  }
+
   // ------------------------------------------------------------------ //
   // Helpers
   // ------------------------------------------------------------------ //

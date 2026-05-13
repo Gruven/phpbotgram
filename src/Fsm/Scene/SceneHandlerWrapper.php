@@ -129,7 +129,7 @@ final class SceneHandlerWrapper
   private function executeAfter(SceneWizard $wizard, After $after): void
   {
     match ($after->action) {
-      SceneAction::Enter => $wizard->goto($after->scene ?? ''),
+      SceneAction::Enter => $after->scene !== null ? $wizard->goto($after->scene) : null,
       SceneAction::Leave => $wizard->leave(),
       SceneAction::Exit  => $wizard->exit(),
       SceneAction::Back  => $wizard->back(),
