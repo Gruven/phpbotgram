@@ -581,7 +581,13 @@ final class PollingTest extends TestCase
     // tasks 1 and 2 begin running. Task 2's `leave:` then signals stop,
     // and once one of {1,2} drains its lock the third task spawns and
     // the polling loop exits on the next while-guard check.
-    $dispatcher = new Dispatcher();
+    //
+    // FSM is disabled here because Phase 5's auto-wired
+    // FsmContextMiddleware acquires a per-(chat,user) SimpleEventIsolation
+    // lock around each handler — and all three fake updates share the same
+    // chat+user, which would force serial execution and defeat the
+    // interleaving invariant this test pins.
+    $dispatcher = new Dispatcher(disableFsm: true);
     $bot = new MockedBot();
 
     /** @var list<string> $events */
