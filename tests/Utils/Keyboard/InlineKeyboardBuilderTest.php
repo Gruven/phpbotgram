@@ -150,6 +150,20 @@ final class InlineKeyboardBuilderTest extends TestCase
     }
   }
 
+  public function testRowWithNullWidthDefaultsToMaxWidth(): void
+  {
+    // With no explicit $width, row() must chunk by MAX_WIDTH=8.
+    // 13 buttons → ceil(13/8) = 2 rows: [8, 5].
+    $builder = new InlineKeyboardBuilder();
+    $buttons = array_map(static fn(int $i): InlineKeyboardButton => self::btn((string)$i), range(1, 13));
+    $builder->row($buttons); // width=null
+
+    $markup = $builder->asMarkup();
+    self::assertCount(2, $markup->inlineKeyboard);
+    self::assertCount(8, $markup->inlineKeyboard[0]);
+    self::assertCount(5, $markup->inlineKeyboard[1]);
+  }
+
   public function testRowEmptyNoop(): void
   {
     $builder = new InlineKeyboardBuilder();

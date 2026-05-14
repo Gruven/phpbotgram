@@ -167,9 +167,13 @@ abstract class KeyboardBuilder
   }
 
   /**
-   * Append buttons as a new row. If `$width` is supplied the row is split
-   * into sub-rows of that width (never larger than `MAX_WIDTH` when the
-   * constant is non-zero).
+   * Append buttons as one or more new rows.
+   *
+   * When `$width` is `null`, the effective width defaults to `MAX_WIDTH`
+   * (upstream `keyboard.py` parity: `width = self.max_width`). When
+   * `MAX_WIDTH` is 0 and `$width` is `null`, all buttons go into a single
+   * row (no width limit). An explicit `$width > 0` overrides the default
+   * but is capped to `MAX_WIDTH` when that constant is positive.
    *
    * @param list<T> $buttons
    *
@@ -185,17 +189,18 @@ abstract class KeyboardBuilder
       return $this;
     }
 
-    $effectiveWidth = $width;
+    $maxWidth = static::MAX_WIDTH;
 
-    if ($effectiveWidth !== null) {
-      $maxWidth = static::MAX_WIDTH;
+    // Resolve effective width: null → MAX_WIDTH (upstream default).
+    $effectiveWidth = $width ?? ($maxWidth > 0 ? $maxWidth : null);
 
-      if ($maxWidth > 0 && $effectiveWidth > $maxWidth) {
-        $effectiveWidth = $maxWidth;
-      }
+    // Cap explicit width to MAX_WIDTH when positive.
+    if ($effectiveWidth !== null && $maxWidth > 0 && $effectiveWidth > $maxWidth) {
+      $effectiveWidth = $maxWidth;
     }
 
     if ($effectiveWidth === null || $effectiveWidth <= 0) {
+      // No width limit — single row with all buttons.
       $this->markup[] = array_values($buttons);
 
       return $this;
