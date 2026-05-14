@@ -20,13 +20,14 @@ use PHPUnit\Framework\TestCase;
 /**
  * Unit tests for {@see ChatActionMiddleware}.
  *
- * Verifies that:
+ * Verifies upstream-parity default-ON behaviour:
  *
- * - A `Message` event processed by a handler with the `chat_action` flag
- *   triggers a {@see ChatActionSender} loop during handler execution.
- * - A handler WITHOUT the flag passes through unchanged (no sender started).
+ * - A `Message` event is automatically wrapped with a `typing` sender even
+ *   when no `chat_action` flag is set on the handler (default-ON).
+ * - Explicit `chat_action: false` flag suppresses the sender (opt-out).
  * - Non-Message events are passed through regardless of the flag.
- * - The flag value controls the action string sent.
+ * - String flag values forward that string as the action.
+ * - Array flag values (`['action' => ..., 'interval' => ...]`) apply per-key.
  *
  * Port of upstream `tests/test_utils/test_chat_action.py`
  * `TestChatActionMiddleware`.
@@ -37,7 +38,7 @@ use PHPUnit\Framework\TestCase;
  *   `ChatActionSender._stop` via `AsyncMock` and uses
  *   `flags.chat_action(value)(handler)` to decorate handlers; PHP has no
  *   equivalent attribute-based flag decorator — test infrastructure divergence
- *   (c); equivalent behavior is covered by `testFlaggedHandlerTriggersActionDuringExecution`
+ *   (c); equivalent behavior is covered by `testMiddlewareEnabledByDefaultForMessageEvents`
  *   and related tests using `HandlerObject` with flags.
  */
 final class ChatActionMiddlewareTest extends TestCase
@@ -119,16 +120,17 @@ final class ChatActionMiddlewareTest extends TestCase
     });
   }
 
-  public function testUnflaggedHandlerPassesThroughWithoutAction(): void
+  public function testMiddlewareEnabledByDefaultForMessageEvents(): void
   {
-    // No chat_action flag → handler runs, no sendChatAction calls.
+    // No chat_action flag → default-ON: sender still fires with 'typing'.
     $this->runAsync(static function (): void {
-      $bot = self::makeBot(responses: 0);
-      $middleware = self::middleware();
+      $bot = self::makeBot();
+      $middleware = self::middleware(interval: 0.01);
       $event = self::makeMessage(chatId: 9);
 
       $invoked = false;
       $handler = static function (object $e, array $d) use (&$invoked): string {
+        delay(0.05);
         $invoked = true;
 
         return 'noop';
@@ -141,7 +143,82 @@ final class ChatActionMiddlewareTest extends TestCase
 
       self::assertTrue($invoked);
       self::assertSame('noop', $result);
+      // Default-ON: at least one sendChatAction call.
+      self::assertGreaterThanOrEqual(1, count($bot->getMockedSession()->requestTimeouts));
+    });
+  }
+
+  public function testMiddlewareOptOutWhenFlagFalse(): void
+  {
+    // Explicit chat_action: false → opt-out; no sender started.
+    $this->runAsync(static function (): void {
+      $bot = self::makeBot(responses: 0);
+      $middleware = self::middleware();
+      $event = self::makeMessage(chatId: 9);
+
+      $invoked = false;
+      $handler = static function (object $e, array $d) use (&$invoked): string {
+        $invoked = true;
+
+        return 'noop';
+      };
+
+      $handlerObject = new HandlerObject($handler, [], ['chat_action' => false]);
+      $data = ['bot' => $bot, 'handler' => $handlerObject];
+
+      $result = $middleware($handler, $event, $data);
+
+      self::assertTrue($invoked);
+      self::assertSame('noop', $result);
       self::assertCount(0, $bot->getMockedSession()->requestTimeouts);
+    });
+  }
+
+  public function testMiddlewareReadsCustomActionFromFlag(): void
+  {
+    // chat_action: 'upload_photo' → sender uses that action string.
+    $this->runAsync(static function (): void {
+      $bot = self::makeBot();
+      $middleware = self::middleware(interval: 0.01);
+      $event = self::makeMessage(chatId: 1);
+
+      $handler = static fn(object $e, array $d): null => delay(0.03);
+      $handlerObject = new HandlerObject($handler, [], ['chat_action' => 'upload_photo']);
+      $data = ['bot' => $bot, 'handler' => $handlerObject];
+
+      $middleware($handler, $event, $data);
+
+      $session = $bot->getMockedSession();
+      self::assertGreaterThanOrEqual(1, count($session->requestTimeouts));
+
+      $method = $session->getRequest();
+      self::assertInstanceOf(SendChatAction::class, $method);
+      self::assertSame('upload_photo', $method->action);
+    });
+  }
+
+  public function testMiddlewareReadsConfigDictFromFlag(): void
+  {
+    // chat_action: ['action' => 'typing', 'interval' => 0.5] → honors keys.
+    $this->runAsync(static function (): void {
+      $bot = self::makeBot();
+      $middleware = self::middleware(interval: 5.0); // default large — dict overrides
+      $event = self::makeMessage(chatId: 1);
+
+      $handler = static fn(object $e, array $d): null => delay(0.06);
+      $handlerObject = new HandlerObject($handler, [], [
+        'chat_action' => ['action' => 'record_voice', 'interval' => 0.01],
+      ]);
+      $data = ['bot' => $bot, 'handler' => $handlerObject];
+
+      $middleware($handler, $event, $data);
+
+      $session = $bot->getMockedSession();
+      self::assertGreaterThanOrEqual(1, count($session->requestTimeouts));
+
+      $method = $session->getRequest();
+      self::assertInstanceOf(SendChatAction::class, $method);
+      self::assertSame('record_voice', $method->action);
     });
   }
 
@@ -218,15 +295,17 @@ final class ChatActionMiddlewareTest extends TestCase
     });
   }
 
-  public function testAbsentHandlerObjectPassesThrough(): void
+  public function testAbsentHandlerObjectStillFiresDefaultTyping(): void
   {
-    // If 'handler' key is absent or not a HandlerObject, no sender is started.
+    // When 'handler' key is absent from $data, resolveChatActionFlag() returns
+    // null (no metadata), which triggers the default-ON 'typing' path.
     $this->runAsync(static function (): void {
-      $bot = self::makeBot(responses: 0);
-      $middleware = self::middleware();
+      $bot = self::makeBot();
+      $middleware = self::middleware(interval: 0.01);
       $event = self::makeMessage();
       $invoked = false;
       $handler = static function (object $e, array $d) use (&$invoked): bool {
+        delay(0.05);
         $invoked = true;
 
         return true;
@@ -238,7 +317,8 @@ final class ChatActionMiddlewareTest extends TestCase
 
       self::assertTrue($invoked);
       self::assertTrue($result);
-      self::assertCount(0, $bot->getMockedSession()->requestTimeouts);
+      // Default-ON: sender fires even without HandlerObject in data.
+      self::assertGreaterThanOrEqual(1, count($bot->getMockedSession()->requestTimeouts));
     });
   }
 
