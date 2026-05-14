@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Utils;
 
+use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Methods\GetMe;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
 use Gruven\PhpBotGram\Types\User;
@@ -12,6 +13,7 @@ use Gruven\PhpBotGram\Utils\DeepLinkType;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
+use WeakMap;
 
 /**
  * Unit tests for {@see DeepLinking}.
@@ -24,6 +26,13 @@ use ReflectionProperty;
  *   third-party library with no PHP equivalent in this port; the round-trip
  *   concept is covered by `PayloadTest::testRoundTripWithCustomEncoderDecoder`
  *   — test infrastructure divergence (c).
+ *
+ * Phase 7 fix
+ * -----------
+ * Cache migrated from `array<int, string>` (keyed by `spl_object_id`) to
+ * `WeakMap<Bot, string>`. GC eviction is a stdlib invariant; the test below
+ * verifies via `gc_collect_cycles()` that the entry disappears after the
+ * Bot variable goes out of scope.
  */
 final class DeepLinkingTest extends TestCase
 {
@@ -114,9 +123,10 @@ final class DeepLinkingTest extends TestCase
 
   protected function setUp(): void
   {
-    // Clear the interim username cache before each test so tests are isolated.
+    // Reset the WeakMap to null before each test so tests are isolated.
+    // The first getUsername() call lazily allocates a fresh WeakMap.
     $cache = new ReflectionProperty(DeepLinking::class, 'usernameCache');
-    $cache->setValue(null, []);
+    $cache->setValue(null, null);
   }
 
   public function testCreateStartLinkUsesMe(): void
@@ -213,5 +223,33 @@ final class DeepLinkingTest extends TestCase
 
     self::assertSame('https://t.me/botone?start=x', $url1);
     self::assertSame('https://t.me/bottwo?start=x', $url2);
+  }
+
+  public function testWeakMapEntryEvictedAfterBotIsGarbageCollected(): void
+  {
+    // WeakMap eviction on GC is a PHP stdlib invariant; this test confirms that
+    // the cache entry disappears once the Bot object is collected so there is no
+    // stale-username hazard in long-running daemons.
+    $bot = $this->makeBot('gcbot');
+    DeepLinking::createStartLink($bot, 'payload');
+
+    // Verify the entry exists before GC.
+    $prop = new ReflectionProperty(DeepLinking::class, 'usernameCache');
+
+    /** @var null|WeakMap<Bot, string> $map */
+    $map = $prop->getValue(null);
+    self::assertNotNull($map);
+    self::assertCount(1, $map);
+    self::assertTrue(isset($map[$bot]));
+
+    // Drop the only strong reference and force a GC cycle.
+    unset($bot);
+    gc_collect_cycles();
+
+    // The WeakMap itself is still alive but must now be empty.
+    /** @var null|WeakMap<Bot, string> $mapAfterGc */
+    $mapAfterGc = $prop->getValue(null);
+    self::assertNotNull($mapAfterGc);
+    self::assertCount(0, $mapAfterGc);
   }
 }

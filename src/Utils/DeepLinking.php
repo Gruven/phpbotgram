@@ -9,6 +9,7 @@ use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Utils\Link\Link;
 use InvalidArgumentException;
 use LogicException;
+use WeakMap;
 
 /**
  * Telegram deep-linking helpers.
@@ -20,10 +21,11 @@ use LogicException;
  * The upstream Python API uses an `await bot.me()` coroutine; this PHP port
  * calls `Bot::getMe()` which is synchronous.
  *
- * Interim caching: `getUsername()` memoises the bot username by `spl_object_id`
- * so repeated `createStartLink`/`createStartGroupLink`/`createStartAppLink`
- * calls with the same Bot instance make only ONE `getMe()` round-trip.
- * Phase 8 will move the cache to `Bot::me()` itself.
+ * Caching: `getUsername()` memoises the bot username in a `WeakMap` keyed by
+ * the `Bot` instance. Unlike `spl_object_id()`, `WeakMap` keys are true object
+ * identities that auto-evict when the object is garbage-collected, eliminating
+ * the GC-reuse hazard present in long-running daemons (or test suites that
+ * recreate Bot instances).
  */
 final class DeepLinking
 {
@@ -38,35 +40,37 @@ final class DeepLinking
   private const BAD_PATTERN = '/[^A-Za-z0-9_-]/';
 
   /**
-   * Interim username cache keyed by spl_object_id() of the Bot instance.
+   * Username cache keyed by Bot instance. WeakMap entries are automatically
+   * evicted when the Bot object is garbage-collected, preventing stale-cache
+   * bugs from `spl_object_id` reuse.
    *
-   * @var array<int, string>
+   * @var null|WeakMap<Bot, string>
    */
-  private static array $usernameCache = [];
+  private static ?WeakMap $usernameCache = null;
 
   private function __construct() {}
 
   /**
    * Return the bot's username, fetching it via `getMe()` on the first call
-   * and serving subsequent calls from the in-process cache.
+   * and serving subsequent calls from the in-process WeakMap cache.
    *
    * @throws LogicException if the bot has no username.
    */
   private static function getUsername(Bot $bot): string
   {
-    $id = spl_object_id($bot);
+    self::$usernameCache ??= new WeakMap();
 
-    if (!isset(self::$usernameCache[$id])) {
+    if (!isset(self::$usernameCache[$bot])) {
       $me = $bot->getMe();
 
       if ($me->username === null) {
         throw new LogicException('Bot has no username — cannot build deep link.');
       }
 
-      self::$usernameCache[$id] = $me->username;
+      self::$usernameCache[$bot] = $me->username;
     }
 
-    return self::$usernameCache[$id];
+    return self::$usernameCache[$bot];
   }
 
   /**
