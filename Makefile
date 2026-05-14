@@ -1,4 +1,4 @@
-.PHONY: test stan lint fix regenerate
+.PHONY: test stan lint fix regenerate coverage coverage-gate
 
 test:
 	vendor/bin/phpunit
@@ -14,3 +14,9 @@ fix:
 
 regenerate:
 	php tools/generator/bin/generate.php
+
+coverage:
+	XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-clover=build/coverage/clover.xml
+
+coverage-gate: coverage
+	php scripts/coverage-gate.php build/coverage/clover.xml

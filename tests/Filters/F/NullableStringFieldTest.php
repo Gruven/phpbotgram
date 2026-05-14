@@ -61,6 +61,43 @@ final class NullableStringFieldTest extends TestCase
     self::assertNotSame($a, $b);
   }
 
+  public function testContainsMatchesSubstringRejectsNull(): void
+  {
+    $filter = (new NullableStringField(MagicFilter::root()->lastName))->contains('oe');
+
+    self::assertTrue($filter($this->user(lastName: 'Doe')));
+    self::assertFalse($filter($this->user(lastName: 'Smith')));
+    self::assertFalse($filter($this->user(lastName: null)));
+  }
+
+  public function testStartsWithMatchesPrefixRejectsNull(): void
+  {
+    $filter = (new NullableStringField(MagicFilter::root()->lastName))->startsWith('D');
+
+    self::assertTrue($filter($this->user(lastName: 'Doe')));
+    self::assertFalse($filter($this->user(lastName: 'Smith')));
+    self::assertFalse($filter($this->user(lastName: null)));
+  }
+
+  public function testEndsWithMatchesSuffixRejectsNull(): void
+  {
+    $filter = (new NullableStringField(MagicFilter::root()->lastName))->endsWith('oe');
+
+    self::assertTrue($filter($this->user(lastName: 'Doe')));
+    self::assertFalse($filter($this->user(lastName: 'Smith')));
+    self::assertFalse($filter($this->user(lastName: null)));
+  }
+
+  public function testInAcceptsMembershipRejectsAbsentAndNull(): void
+  {
+    $filter = (new NullableStringField(MagicFilter::root()->lastName))
+      ->in(['Doe', 'Roe']);
+
+    self::assertTrue($filter($this->user(lastName: 'Doe')));
+    self::assertFalse($filter($this->user(lastName: 'Smith')));
+    self::assertFalse($filter($this->user(lastName: null)));
+  }
+
   private function user(?string $lastName): User
   {
     return new User(id: 1, isBot: false, firstName: 'Alice', lastName: $lastName);

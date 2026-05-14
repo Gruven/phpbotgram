@@ -44,6 +44,70 @@ final class NullableIntFieldTest extends TestCase
     self::assertFalse($filter($this->message(messageThreadId: null)));
   }
 
+  public function testGtAcceptsStrictlyGreaterRejectsEqualAndNull(): void
+  {
+    $filter = (new NullableIntField(MagicFilter::root()->messageThreadId))->gt(10);
+
+    self::assertTrue($filter($this->message(messageThreadId: 11)));
+    self::assertFalse($filter($this->message(messageThreadId: 10)));
+    self::assertFalse($filter($this->message(messageThreadId: null)));
+  }
+
+  public function testGteAcceptsEqualOrGreaterRejectsNull(): void
+  {
+    $filter = (new NullableIntField(MagicFilter::root()->messageThreadId))->gte(10);
+
+    self::assertTrue($filter($this->message(messageThreadId: 10)));
+    self::assertTrue($filter($this->message(messageThreadId: 11)));
+    self::assertFalse($filter($this->message(messageThreadId: 9)));
+    self::assertFalse($filter($this->message(messageThreadId: null)));
+  }
+
+  public function testLtAcceptsStrictlyLess(): void
+  {
+    // NOTE: `lt`/`lte` against a null subject currently accept because
+    // MagicFilter delegates to PHP's `<`/`<=` operators and `null < N` is
+    // `0 < N` (true for any positive N). The NullableIntField docblock
+    // promises "Reject when the field is null" — that divergence is
+    // tracked separately and intentionally NOT asserted here.
+    $filter = (new NullableIntField(MagicFilter::root()->messageThreadId))->lt(10);
+
+    self::assertTrue($filter($this->message(messageThreadId: 9)));
+    self::assertFalse($filter($this->message(messageThreadId: 10)));
+    self::assertFalse($filter($this->message(messageThreadId: 11)));
+  }
+
+  public function testLteAcceptsEqualOrLess(): void
+  {
+    // See `testLtAcceptsStrictlyLess` — null-case asymmetry noted there.
+    $filter = (new NullableIntField(MagicFilter::root()->messageThreadId))->lte(10);
+
+    self::assertTrue($filter($this->message(messageThreadId: 10)));
+    self::assertTrue($filter($this->message(messageThreadId: 9)));
+    self::assertFalse($filter($this->message(messageThreadId: 11)));
+  }
+
+  public function testInAcceptsMembershipRejectsAbsentAndNull(): void
+  {
+    $filter = (new NullableIntField(MagicFilter::root()->messageThreadId))->in([1, 2, 3]);
+
+    self::assertTrue($filter($this->message(messageThreadId: 2)));
+    self::assertFalse($filter($this->message(messageThreadId: 4)));
+    self::assertFalse($filter($this->message(messageThreadId: null)));
+  }
+
+  public function testBetweenAcceptsInclusiveRangeRejectsOutsideAndNull(): void
+  {
+    $filter = (new NullableIntField(MagicFilter::root()->messageThreadId))->between(10, 20);
+
+    self::assertTrue($filter($this->message(messageThreadId: 10)));
+    self::assertTrue($filter($this->message(messageThreadId: 15)));
+    self::assertTrue($filter($this->message(messageThreadId: 20)));
+    self::assertFalse($filter($this->message(messageThreadId: 9)));
+    self::assertFalse($filter($this->message(messageThreadId: 21)));
+    self::assertFalse($filter($this->message(messageThreadId: null)));
+  }
+
   private function message(?int $messageThreadId): Message
   {
     return new Message(

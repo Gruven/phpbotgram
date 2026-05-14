@@ -164,6 +164,32 @@ final class CallbackQueryFilterTest extends TestCase
     self::assertSame(CbDataIntKindForFilter::First, $result['callback_data']->kind);
   }
 
+  public function testAbsorbsValueErrorFromUnpack(): void
+  {
+    // `\ValueError` lives in the broad-catch branch alongside `\TypeError`.
+    // It is the canonical Python-equivalent of "unknown enum case" — when
+    // `BackedEnum::from()` receives a typed-but-unrecognised value it
+    // throws ValueError. The filter should swallow that exception and
+    // return `false` so the dispatcher can move on.
+    $filter = new CallbackQueryFilter(ThrowingValueErrorCallbackData::class);
+    $query = $this->callbackQuery(data: 'throw_value_error:irrelevant');
+
+    self::assertFalse($filter($query));
+  }
+
+  public function testRethrowsUnexpectedExceptionFromUnpack(): void
+  {
+    // Programming errors that aren't on the upstream `(TypeError, ValueError)`
+    // tuple must NOT be absorbed — they should bubble to the dispatcher's
+    // top-level error handler. Mirrors upstream behaviour where
+    // `RuntimeError` would propagate.
+    $filter = new CallbackQueryFilter(ThrowingRuntimeCallbackData::class);
+    $query = $this->callbackQuery(data: 'throw_runtime:irrelevant');
+
+    $this->expectException(\RuntimeException::class);
+    $filter($query);
+  }
+
   /**
    * Build a minimally populated `CallbackQuery` for filter exercise. Reuses
    * a shared user/chat fixture so each test case stays focused on the
@@ -222,4 +248,40 @@ final class CbDataIntKindCarrier extends CallbackData
   public function __construct(
     public readonly CbDataIntKindForFilter $kind,
   ) {}
+}
+
+/**
+ * CallbackData stub whose `unpack()` always throws `\ValueError`. Exercises
+ * the `Throwable` branch of `CallbackQueryFilter` for typed-but-unknown
+ * decode failures (the upstream "unknown enum case" surface).
+ *
+ * @internal
+ */
+#[CallbackPrefix('throw_value_error')]
+final class ThrowingValueErrorCallbackData extends CallbackData
+{
+  public function __construct(public readonly string $unused) {}
+
+  public static function unpack(string $data): self
+  {
+    throw new \ValueError('forced ValueError from unpack');
+  }
+}
+
+/**
+ * CallbackData stub whose `unpack()` raises `\RuntimeException`. Exercises
+ * the re-throw branch of the `Throwable` catch — programming errors must
+ * propagate, not be swallowed.
+ *
+ * @internal
+ */
+#[CallbackPrefix('throw_runtime')]
+final class ThrowingRuntimeCallbackData extends CallbackData
+{
+  public function __construct(public readonly string $unused) {}
+
+  public static function unpack(string $data): self
+  {
+    throw new \RuntimeException('forced RuntimeException from unpack');
+  }
 }

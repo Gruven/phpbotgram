@@ -75,4 +75,34 @@ final class TelegramApiServerTest extends TestCase
     $api = TelegramApiServer::fromBase('http://localhost:8081');
     self::assertSame('http://localhost:8081/bot123/getMe', $api->apiUrl('123', 'getMe'));
   }
+
+  public function testTestFactoryReturnsTestEndpointUrls(): void
+  {
+    // `TelegramApiServer::test()` mirrors `aiogram.client.telegram.TEST`
+    // — the test environment under https://api.telegram.org/.../test/.
+    // Verify both the API-method URL and the file URL contain the `/test/`
+    // segment so callers can route to BotFather's test backend.
+    $api = TelegramApiServer::test();
+
+    self::assertSame(
+      'https://api.telegram.org/bot42:TEST/test/sendMessage',
+      $api->apiUrl('42:TEST', 'sendMessage'),
+    );
+    self::assertSame(
+      'https://api.telegram.org/file/bot42:TEST/test/path/to/file',
+      $api->fileUrl('42:TEST', 'path/to/file'),
+    );
+    self::assertFalse($api->isLocal);
+  }
+
+  public function testFromBaseStripsTrailingSlashAndDefaultsToRemote(): void
+  {
+    // Defensive: callers commonly pass `https://example.com/` with a
+    // trailing slash; the factory should normalise so the apiUrl doesn't
+    // end up with `//bot`. Also verifies the `isLocal` default of `false`.
+    $api = TelegramApiServer::fromBase('http://localhost:8081/');
+
+    self::assertSame('http://localhost:8081/bot42/getMe', $api->apiUrl('42', 'getMe'));
+    self::assertFalse($api->isLocal);
+  }
 }

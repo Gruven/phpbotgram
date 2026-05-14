@@ -75,4 +75,54 @@ final class DefaultBotPropertiesTest extends TestCase
     self::assertInstanceOf(LinkPreviewOptions::class, $lp);
     self::assertTrue($lp->isDisabled);
   }
+
+  public function testGetReturnsNullForUnknownKey(): void
+  {
+    // The `match (..) default => null` arm in `get()` covers
+    // keys outside the closed set — defensive but reachable when callers
+    // misspell or probe optional features.
+    $d = new DefaultBotProperties(parseMode: 'HTML');
+
+    self::assertNull($d->get('totally_unknown_key'));
+  }
+
+  public function testOffsetExistsReportsPresenceForKnownAndUnknownKeys(): void
+  {
+    // ArrayAccess::offsetExists must return `true` only for string keys
+    // whose `get()` lookup is non-null. Exercises both branches of the
+    // `is_string && get !== null` guard.
+    $d = new DefaultBotProperties(parseMode: 'HTML');
+
+    self::assertTrue(isset($d['parse_mode']));
+    self::assertFalse(isset($d['disable_notification']));
+    self::assertFalse(isset($d[0]));
+  }
+
+  public function testOffsetGetReturnsNullForNonStringOffset(): void
+  {
+    // Defensive: a non-string offset (e.g. `$d[0]`) returns null without
+    // throwing — mirrors PHP's loose `ArrayAccess` semantics for ints.
+    $d = new DefaultBotProperties(parseMode: 'HTML');
+
+    self::assertNull($d[0]);
+  }
+
+  public function testOffsetSetThrowsLogicExceptionDueToImmutability(): void
+  {
+    // `DefaultBotProperties` is read-only after construction; writes must
+    // fail loudly so callers don't silently lose state.
+    $d = new DefaultBotProperties();
+
+    $this->expectException(\LogicException::class);
+    $d['parse_mode'] = 'HTML';
+  }
+
+  public function testOffsetUnsetThrowsLogicExceptionDueToImmutability(): void
+  {
+    // Symmetric to `offsetSet` — deleting a property is rejected.
+    $d = new DefaultBotProperties(parseMode: 'HTML');
+
+    $this->expectException(\LogicException::class);
+    unset($d['parse_mode']);
+  }
 }

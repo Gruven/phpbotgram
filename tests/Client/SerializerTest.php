@@ -49,6 +49,38 @@ final class SerializerTestUnspecifiedFixture extends TelegramObject
   }
 }
 
+final class SerializerTestNestedFixture extends TelegramObject
+{
+  public function __construct(
+    public readonly User $inner,
+    ?Bot $bot = null,
+  ) {
+    parent::__construct($bot);
+  }
+}
+
+final class SerializerTestArrayFixture extends TelegramObject
+{
+  /** @param list<User> $users */
+  public function __construct(
+    public readonly array $users,
+    ?Bot $bot = null,
+  ) {
+    parent::__construct($bot);
+  }
+}
+
+final class SerializerTestNullableNoDefaultFixture extends TelegramObject
+{
+  public function __construct(
+    public readonly int $id,
+    public readonly ?string $tag,
+    ?Bot $bot = null,
+  ) {
+    parent::__construct($bot);
+  }
+}
+
 final class SerializerTest extends TestCase
 {
   public function testDumpStripsUnspecified(): void
@@ -98,5 +130,88 @@ final class SerializerTest extends TestCase
   {
     $this->expectException(ClientDecodeException::class);
     Serializer::load(SerializerTestDateFixture::class, []);
+  }
+
+  public function testDumpRecursesIntoNestedTelegramObject(): void
+  {
+    // `dumpValue` walks BotContextController instances recursively so
+    // nested objects (`Message::$from`, etc.) flatten into the wire dict.
+    $nested = new SerializerTestNestedFixture(
+      inner: new User(id: 42, isBot: false, firstName: 'Nested'),
+    );
+
+    $dumped = Serializer::dump($nested);
+
+    self::assertIsArray($dumped['inner']);
+    self::assertSame(42, $dumped['inner']['id']);
+    self::assertSame('Nested', $dumped['inner']['first_name']);
+  }
+
+  public function testDumpRecursesIntoListAndAssocArrays(): void
+  {
+    // Lists and associative arrays both recurse through `dumpValue`. Use a
+    // tiny list of users so the array_is_list branch fires and inner
+    // objects flatten correctly.
+    $payload = new SerializerTestArrayFixture(users: [
+      new User(id: 1, isBot: false, firstName: 'A'),
+      new User(id: 2, isBot: false, firstName: 'B'),
+    ]);
+
+    $dumped = Serializer::dump($payload);
+
+    self::assertIsArray($dumped['users']);
+    self::assertCount(2, $dumped['users']);
+    self::assertSame(1, $dumped['users'][0]['id']);
+    self::assertSame('A', $dumped['users'][0]['first_name']);
+    self::assertSame(2, $dumped['users'][1]['id']);
+  }
+
+  public function testLoadHonoursNullableParamWithoutDefault(): void
+  {
+    // The "nullable without default" branch in `Serializer::load` fills in
+    // an explicit `null` so `newInstance` doesn't ArgumentCountError when
+    // the wire payload omits the field.
+    $loaded = Serializer::load(SerializerTestNullableNoDefaultFixture::class, ['id' => 7]);
+
+    self::assertSame(7, $loaded->id);
+    self::assertNull($loaded->tag);
+  }
+
+  public function testLoadRecursesIntoNestedTelegramObject(): void
+  {
+    // `loadValue` detects a nested TelegramObject param and dispatches a
+    // second `load` call. Exercises the `is_subclass_of(TelegramObject)`
+    // branch in the named-type path.
+    $loaded = Serializer::load(SerializerTestNestedFixture::class, [
+      'inner' => ['id' => 9, 'is_bot' => false, 'first_name' => 'NestedLoad'],
+    ]);
+
+    self::assertInstanceOf(User::class, $loaded->inner);
+    self::assertSame(9, $loaded->inner->id);
+    self::assertSame('NestedLoad', $loaded->inner->firstName);
+  }
+
+  public function testLoadWrapsTypeErrorInClientDecodeException(): void
+  {
+    // Wire payload type-mismatch (a non-int for an `int $id` slot) must
+    // surface as `ClientDecodeException`, not raw `TypeError`. Mirrors
+    // upstream wrapping `pydantic.ValidationError` around `model_validate`.
+    $this->expectException(ClientDecodeException::class);
+    Serializer::load(SerializerTestNullableNoDefaultFixture::class, [
+      'id' => 'not-an-int',
+      'tag' => 'ignored',
+    ]);
+  }
+
+  public function testLoadParsesIsoStringDateForDateTimeImmutable(): void
+  {
+    // The DateTime fall-through branch accepts ISO-8601 strings so future
+    // schema changes (or hand-crafted wire payloads) don't immediately
+    // fail. Verify by feeding a known ISO date.
+    $loaded = Serializer::load(SerializerTestDateFixture::class, [
+      'stamp' => '2024-01-02T03:04:05+00:00',
+    ]);
+
+    self::assertSame('2024-01-02T03:04:05+00:00', $loaded->stamp->format(\DateTimeInterface::ATOM));
   }
 }
