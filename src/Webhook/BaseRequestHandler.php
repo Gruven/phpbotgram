@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Webhook;
 
 use function Amp\async;
 
+use Amp\ByteStream\BufferException;
 use Amp\Future;
 
 use function Amp\Future\await;
@@ -49,6 +50,14 @@ use Gruven\PhpBotGram\Methods\TelegramMethod;
  */
 abstract class BaseRequestHandler implements RequestHandler
 {
+  /**
+   * Maximum number of bytes buffered from the request body.
+   *
+   * 5 MiB is far larger than any Telegram update (typically < 64 KiB) and
+   * prevents an unbounded-buffer DoS from a malicious client.
+   */
+  public const MAX_BODY_BYTES = 5 * 1024 * 1024;
+
   /**
    * Extra workflow kwargs forwarded to
    * `Dispatcher::feedWebhookUpdate` / `feedRawUpdate` on every request.
@@ -205,7 +214,11 @@ abstract class BaseRequestHandler implements RequestHandler
    */
   private function handleRequestInline(Bot $bot, Request $request): Response
   {
-    $body = $request->getBody()->buffer();
+    try {
+      $body = $request->getBody()->buffer(null, self::MAX_BODY_BYTES);
+    } catch (BufferException) {
+      return new Response(413, [], 'Payload Too Large');
+    }
 
     /** @var array<string, mixed> $payload */
     $payload = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
@@ -232,7 +245,11 @@ abstract class BaseRequestHandler implements RequestHandler
    */
   private function handleRequestBackground(Bot $bot, Request $request): Response
   {
-    $body = $request->getBody()->buffer();
+    try {
+      $body = $request->getBody()->buffer(null, self::MAX_BODY_BYTES);
+    } catch (BufferException) {
+      return new Response(413, [], 'Payload Too Large');
+    }
 
     /** @var array<string, mixed> $payload */
     $payload = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);

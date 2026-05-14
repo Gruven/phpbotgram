@@ -7,6 +7,7 @@ namespace Gruven\PhpBotGram\Tests\Webhook;
 use function Amp\ByteStream\buffer as bufferStream;
 use function Amp\delay;
 
+use Amp\ByteStream\ReadableIterableStream;
 use Amp\Http\Server\Driver\Client;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
@@ -113,6 +114,34 @@ final class BaseRequestHandlerTest extends TestCase
     $allHeaders = array_merge($base, $headers);
 
     return new Request($this->makeClient(), 'POST', $uri, $allHeaders, $body);
+  }
+
+  /**
+   * Build a POST `Request` whose body is a ReadableStream containing
+   * exactly $size bytes.  Unlike the string-body variant, this uses
+   * ReadableIterableStream so Payload::buffer() reads through the real
+   * streaming path and enforces the size limit, triggering BufferException
+   * when $size > MAX_BODY_BYTES.
+   *
+   * Note: ReadableBuffer is eagerly consumed by Payload's constructor into a
+   * plain string (bypassing the limit check), so it cannot be used here.
+   */
+  private function makeStreamRequest(int $size): Request
+  {
+    $uri = LeagueUri::new('http://localhost/webhook');
+
+    // Yield the oversized payload as a single generator chunk.
+    $body = new ReadableIterableStream((static function () use ($size): \Generator {
+      yield str_repeat('x', $size);
+    })());
+
+    /** @var array<non-empty-string, string> $headers */
+    $headers = ['Content-Type' => 'application/json'];
+
+    $request = new Request($this->makeClient(), 'POST', $uri, $headers, '');
+    $request->setBody($body);
+
+    return $request;
   }
 
   /**
@@ -303,6 +332,43 @@ final class BaseRequestHandlerTest extends TestCase
       );
 
       self::assertSame('{}', bufferStream($response->getBody()));
+    });
+  }
+
+  // =========================================================================
+  // Body size limit — 413 Payload Too Large
+  // =========================================================================
+
+  /**
+   * A body larger than MAX_BODY_BYTES must produce 413 in inline mode.
+   */
+  public function testBaseRequestHandlerReturns413ForOversizedBodyInlineMode(): void
+  {
+    $this->runAsync(function (): void {
+      $handler = $this->makeHandler(secretOk: true, background: false);
+      // One byte over the limit.
+      $oversizeBytes = FakeRequestHandler::MAX_BODY_BYTES + 1;
+      $request = $this->makeStreamRequest($oversizeBytes);
+
+      $response = $handler->handleRequest($request);
+
+      self::assertSame(413, $response->getStatus());
+    });
+  }
+
+  /**
+   * A body larger than MAX_BODY_BYTES must produce 413 in background mode.
+   */
+  public function testBaseRequestHandlerReturns413ForOversizedBodyBackgroundMode(): void
+  {
+    $this->runAsync(function (): void {
+      $handler = $this->makeHandler(secretOk: true, background: true);
+      $oversizeBytes = FakeRequestHandler::MAX_BODY_BYTES + 1;
+      $request = $this->makeStreamRequest($oversizeBytes);
+
+      $response = $handler->handleRequest($request);
+
+      self::assertSame(413, $response->getStatus());
     });
   }
 
