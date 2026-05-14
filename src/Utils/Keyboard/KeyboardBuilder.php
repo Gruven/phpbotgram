@@ -137,6 +137,7 @@ abstract class KeyboardBuilder
       // upstream `keyboard.py` where `max_width == 0` appends a new row
       // rather than filling the last one).
       $this->markup[] = array_values($buttons);
+      $this->enforceMaxButtons();
 
       return $this;
     }
@@ -162,6 +163,8 @@ abstract class KeyboardBuilder
       $chunk = array_splice($queue, 0, $maxWidth);
       $this->markup[] = $chunk;
     }
+
+    $this->enforceMaxButtons();
 
     return $this;
   }
@@ -298,7 +301,8 @@ abstract class KeyboardBuilder
   }
 
   /**
-   * Assert that every row in a markup array is a list of valid buttons.
+   * Assert that every row in a markup array is a list of valid buttons, and
+   * that the total button count does not exceed `MAX_BUTTONS`.
    *
    * @param list<list<T>> $markup
    *
@@ -306,6 +310,8 @@ abstract class KeyboardBuilder
    */
   protected function validateMarkup(array $markup): void
   {
+    $totalButtons = 0;
+
     foreach ($markup as $rowIndex => $row) {
       if (!is_array($row)) {
         throw new InvalidArgumentException(
@@ -316,6 +322,16 @@ abstract class KeyboardBuilder
       foreach ($row as $button) {
         $this->validateButton($button);
       }
+
+      $totalButtons += count($row);
+    }
+
+    $maxButtons = static::MAX_BUTTONS;
+
+    if ($maxButtons > 0 && $totalButtons > $maxButtons) {
+      throw new InvalidArgumentException(
+        sprintf('Too many buttons (got %d, max %d)', $totalButtons, $maxButtons),
+      );
     }
   }
 
@@ -383,5 +399,34 @@ abstract class KeyboardBuilder
     }
 
     return $this;
+  }
+
+  /**
+   * Throw if the total button count across all rows now exceeds `MAX_BUTTONS`.
+   *
+   * Called after every mutation that can increase the button count (`add()`
+   * and the constructor path through `validateMarkup()`).
+   *
+   * @throws InvalidArgumentException
+   */
+  private function enforceMaxButtons(): void
+  {
+    $maxButtons = static::MAX_BUTTONS;
+
+    if ($maxButtons <= 0) {
+      return;
+    }
+
+    $total = 0;
+
+    foreach ($this->markup as $row) {
+      $total += count($row);
+    }
+
+    if ($total > $maxButtons) {
+      throw new InvalidArgumentException(
+        sprintf('Too many buttons (got %d, max %d)', $total, $maxButtons),
+      );
+    }
   }
 }

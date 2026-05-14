@@ -337,4 +337,20 @@ final class ReplyKeyboardBuilderTest extends TestCase
 
     self::assertSame($builder, $result);
   }
+
+  // ---------------------------------------------------------------------------
+  // MAX_BUTTONS enforcement
+  // ---------------------------------------------------------------------------
+
+  public function testAddRejectsMoreThanMaxButtonsTotal(): void
+  {
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/Too many buttons \(got 301, max 300\)/');
+
+    $builder = new ReplyKeyboardBuilder();
+
+    for ($i = 0; $i < 301; $i++) {
+      $builder->add(self::btn("btn{$i}"));
+    }
+  }
 }

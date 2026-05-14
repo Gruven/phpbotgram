@@ -369,6 +369,22 @@ final class InlineKeyboardBuilderTest extends TestCase
 
     self::assertSame($builder, $result);
   }
+
+  // ---------------------------------------------------------------------------
+  // MAX_BUTTONS enforcement
+  // ---------------------------------------------------------------------------
+
+  public function testAddRejectsMoreThanMaxButtonsTotal(): void
+  {
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/Too many buttons \(got 101, max 100\)/');
+
+    $builder = new InlineKeyboardBuilder();
+
+    for ($i = 0; $i < 101; $i++) {
+      $builder->add(self::btn("btn{$i}"));
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
