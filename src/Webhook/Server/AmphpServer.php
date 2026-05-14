@@ -114,13 +114,28 @@ final class AmphpServer
     // Mirrors upstream setup_application:
     //   app.on_startup.append(async def on_startup(*a, **kw): await dp.emit_startup(**data))
     //   app.on_shutdown.append(async def on_shutdown(*a, **kw): await dp.emit_shutdown(**data))
-    $server->onStart(static function (HttpServer $_) use ($dispatcher, $workflowData): void {
-      $dispatcher->emitStartup($workflowData);
+    //
+    // Merge order matches upstream:
+    //   {"dispatcher": dispatcher, **dispatcher.workflow_data, **kwargs}
+    // Per-call $workflowData wins on key collision; 'dispatcher' and 'server'
+    // are injected so startup/shutdown handlers receive them via named parameters.
+    $server->onStart(static function (HttpServer $_) use ($dispatcher, $server, $workflowData): void {
+      $dispatcher->emitStartup([
+        'dispatcher' => $dispatcher,
+        'server' => $server,
+        ...$dispatcher->workflowData,
+        ...$workflowData,
+      ]);
     });
 
-    $server->onStop(static function (HttpServer $_) use ($handler, $dispatcher, $workflowData): void {
+    $server->onStop(static function (HttpServer $_) use ($handler, $dispatcher, $server, $workflowData): void {
       $handler->close();
-      $dispatcher->emitShutdown($workflowData);
+      $dispatcher->emitShutdown([
+        'dispatcher' => $dispatcher,
+        'server' => $server,
+        ...$dispatcher->workflowData,
+        ...$workflowData,
+      ]);
     });
 
     $server->expose("{$host}:{$port}");

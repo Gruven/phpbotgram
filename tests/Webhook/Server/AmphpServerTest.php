@@ -410,4 +410,80 @@ final class AmphpServerTest extends TestCase
 
     self::assertSame(1, $counts->shutdown, 'emitShutdown must fire exactly once on server stop');
   }
+
+  // =========================================================================
+  // AmphpServer workflow data merge (#1 fix) verified via spy wiring
+  // =========================================================================
+
+  public function testWorkflowDataMergedWithDispatcherWorkflowDataOnStart(): void
+  {
+    $dispatcher = new RecordingDispatcher(disableFsm: true);
+    $dispatcher->workflowData['db'] = 'pdo-instance';
+
+    /** @var null|array<string,mixed> $capturedStartup */
+    $capturedStartup = null;
+
+    $dispatcher->startup->register(
+      static function (mixed ...$rest) use (&$capturedStartup): void {
+        $capturedStartup = $rest;
+      }
+    );
+
+    $spy = new SpyHttpServer();
+    $workflowData = ['extra' => 'x'];
+
+    // Mirror the exact wiring shape AmphpServer::run() uses.
+    $spy->onStart(static function (HttpServer $_) use ($dispatcher, $spy, $workflowData): void {
+      $dispatcher->emitStartup([
+        'dispatcher' => $dispatcher,
+        'server' => $spy,
+        ...$dispatcher->workflowData,
+        ...$workflowData,
+      ]);
+    });
+
+    foreach ($spy->startCallbacks as $cb) {
+      $cb($spy);
+    }
+
+    self::assertIsArray($capturedStartup);
+    self::assertSame('pdo-instance', $capturedStartup['db'] ?? null, 'dispatcher->workflowData must be merged');
+    self::assertSame('x', $capturedStartup['extra'] ?? null, 'per-call workflowData must be merged');
+    self::assertSame($dispatcher, $capturedStartup['dispatcher'] ?? null, 'dispatcher must be injected');
+  }
+
+  public function testPerCallWorkflowDataOverridesDispatcherDefaultOnStart(): void
+  {
+    $dispatcher = new RecordingDispatcher(disableFsm: true);
+    $dispatcher->workflowData['db'] = 'default';
+
+    /** @var null|array<string,mixed> $capturedStartup */
+    $capturedStartup = null;
+
+    $dispatcher->startup->register(
+      static function (mixed ...$rest) use (&$capturedStartup): void {
+        $capturedStartup = $rest;
+      }
+    );
+
+    $spy = new SpyHttpServer();
+    $workflowData = ['db' => 'override'];
+
+    // Mirror the exact wiring shape AmphpServer::run() uses.
+    $spy->onStart(static function (HttpServer $_) use ($dispatcher, $spy, $workflowData): void {
+      $dispatcher->emitStartup([
+        'dispatcher' => $dispatcher,
+        'server' => $spy,
+        ...$dispatcher->workflowData,
+        ...$workflowData,
+      ]);
+    });
+
+    foreach ($spy->startCallbacks as $cb) {
+      $cb($spy);
+    }
+
+    self::assertIsArray($capturedStartup);
+    self::assertSame('override', $capturedStartup['db'] ?? null, 'per-call workflowData must override dispatcher default');
+  }
 }

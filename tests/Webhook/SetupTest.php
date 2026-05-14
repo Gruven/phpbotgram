@@ -281,4 +281,79 @@ final class SetupTest extends TestCase
     self::assertIsArray($capturedData);
     self::assertSame('sqlite', $capturedData['db'] ?? null);
   }
+
+  // =========================================================================
+  // Dispatcher::workflowData merged into startup/shutdown kwargs (#1 fix)
+  // =========================================================================
+
+  public function testWorkflowDataMergedWithDispatcherWorkflowData(): void
+  {
+    $dispatcher = new RecordingDispatcher(disableFsm: true);
+    // Pre-load a value on the dispatcher's own workflowData.
+    $dispatcher->workflowData['db'] = 'pdo-instance';
+
+    /** @var null|array<string,mixed> $capturedStartup */
+    $capturedStartup = null;
+
+    $dispatcher->startup->register(
+      static function (mixed ...$rest) use (&$capturedStartup): void {
+        $capturedStartup = $rest;
+      }
+    );
+
+    $server = new SpyHttpServer();
+    $handler = $this->makeHandler();
+
+    Setup::register(
+      $server,
+      static fn(string $p, RequestHandler $h) => null,
+      $dispatcher,
+      $handler,
+      '/webhook',
+      ['extra' => 'x'],   // per-call workflow data
+    );
+
+    foreach ($server->startCallbacks as $cb) {
+      $cb($server);
+    }
+
+    self::assertIsArray($capturedStartup);
+    self::assertSame('pdo-instance', $capturedStartup['db'] ?? null, 'dispatcher->workflowData must be merged');
+    self::assertSame('x', $capturedStartup['extra'] ?? null, 'per-call workflowData must be merged');
+    self::assertSame($dispatcher, $capturedStartup['dispatcher'] ?? null, 'dispatcher must be injected');
+  }
+
+  public function testPerCallWorkflowDataOverridesDispatcherDefault(): void
+  {
+    $dispatcher = new RecordingDispatcher(disableFsm: true);
+    $dispatcher->workflowData['db'] = 'default';
+
+    /** @var null|array<string,mixed> $capturedStartup */
+    $capturedStartup = null;
+
+    $dispatcher->startup->register(
+      static function (mixed ...$rest) use (&$capturedStartup): void {
+        $capturedStartup = $rest;
+      }
+    );
+
+    $server = new SpyHttpServer();
+    $handler = $this->makeHandler();
+
+    Setup::register(
+      $server,
+      static fn(string $p, RequestHandler $h) => null,
+      $dispatcher,
+      $handler,
+      '/webhook',
+      ['db' => 'override'],  // per-call wins on collision
+    );
+
+    foreach ($server->startCallbacks as $cb) {
+      $cb($server);
+    }
+
+    self::assertIsArray($capturedStartup);
+    self::assertSame('override', $capturedStartup['db'] ?? null, 'per-call workflowData must override dispatcher default');
+  }
 }

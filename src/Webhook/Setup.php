@@ -90,13 +90,30 @@ final class Setup
 
     // Wire dispatcher startup/shutdown observers to the server lifecycle.
     // Mirrors upstream app.on_startup.append / app.on_shutdown.append.
-    $server->onStart(static function (HttpServer $_) use ($dispatcher, $workflowData): void {
-      $dispatcher->emitStartup($workflowData);
+    //
+    // Merge order matches upstream setup_application:
+    //   workflow_data = {"app": app, "dispatcher": dispatcher,
+    //                    **dispatcher.workflow_data, **kwargs}
+    // Per-call $workflowData wins on key collision; 'dispatcher' and 'server'
+    // are injected as top-level keys so startup/shutdown handlers can receive
+    // them via named parameters.
+    $server->onStart(static function (HttpServer $srv) use ($dispatcher, $server, $workflowData): void {
+      $dispatcher->emitStartup([
+        'dispatcher' => $dispatcher,
+        'server' => $server,
+        ...$dispatcher->workflowData,
+        ...$workflowData,
+      ]);
     });
 
-    $server->onStop(static function (HttpServer $_) use ($dispatcher, $handler, $workflowData): void {
+    $server->onStop(static function (HttpServer $srv) use ($dispatcher, $handler, $server, $workflowData): void {
       $handler->close();
-      $dispatcher->emitShutdown($workflowData);
+      $dispatcher->emitShutdown([
+        'dispatcher' => $dispatcher,
+        'server' => $server,
+        ...$dispatcher->workflowData,
+        ...$workflowData,
+      ]);
     });
   }
 }
