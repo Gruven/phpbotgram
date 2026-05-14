@@ -99,6 +99,13 @@ final class AmphpServer
   ): SocketHttpServer {
     $logger ??= new NullLogger();
 
+    // Run the handler's own register-time validation as a side-effect: a
+    // TokenBasedRequestHandler enforces that $path contains '{bot_token}',
+    // so mis-configuration (e.g. plain '/webhook' for a multi-bot handler)
+    // throws here at boot rather than 500-ing on every inbound request.
+    // The closure is a no-op — we only want the validation side effect.
+    $handler->register(static function (string $_method, RequestHandler $_handler): void {}, $path);
+
     // Build the route-matching request handler.
     $routedHandler = new PathRouter($path, $handler);
 

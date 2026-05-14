@@ -19,8 +19,11 @@ use Gruven\PhpBotGram\Tests\Support\RecordingDispatcher;
 use Gruven\PhpBotGram\Tests\Webhook\SpyHttpServer;
 use Gruven\PhpBotGram\Webhook\BaseRequestHandler;
 use Gruven\PhpBotGram\Webhook\IpFilter;
+use Gruven\PhpBotGram\Webhook\Server\AmphpServer;
 use Gruven\PhpBotGram\Webhook\Server\IpFilterMiddleware;
 use Gruven\PhpBotGram\Webhook\Server\PathRouter;
+use Gruven\PhpBotGram\Webhook\TokenBasedRequestHandler;
+use InvalidArgumentException;
 use League\Uri\Http as LeagueUri;
 use PHPUnit\Framework\TestCase;
 
@@ -695,5 +698,32 @@ final class AmphpServerTest extends TestCase
 
     self::assertIsArray($capturedStartup);
     self::assertSame('override', $capturedStartup['db'] ?? null, 'per-call workflowData must override dispatcher default');
+  }
+
+  /**
+   * Regression: `AmphpServer::run()` must run each handler's own
+   * `register()`-time validation as a side effect, so a
+   * `TokenBasedRequestHandler` wired against a path missing `{bot_token}` is
+   * caught at boot (`InvalidArgumentException`) rather than 500-ing every
+   * inbound request later. The bare side-effect closure passed by
+   * `AmphpServer::run` is a no-op route registrar — we only care about the
+   * validation that runs inside `TokenBasedRequestHandler::register()`.
+   */
+  public function testRunThrowsWhenTokenBasedHandlerPathLacksBotTokenPlaceholder(): void
+  {
+    $dispatcher = new RecordingDispatcher(disableFsm: true);
+    $handler = new TokenBasedRequestHandler(
+      $dispatcher,
+      static fn(string $token): Bot => new MockedBot(),
+    );
+
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/bot_token/');
+
+    AmphpServer::run(
+      handler: $handler,
+      dispatcher: $dispatcher,
+      path: '/webhook',
+    );
   }
 }
