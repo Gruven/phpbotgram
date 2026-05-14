@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Tests\Webhook;
 
 use function Amp\ByteStream\buffer as bufferStream;
+use function Amp\delay;
 
 use Amp\Http\Server\Driver\Client;
 use Amp\Http\Server\Request;
@@ -14,6 +15,7 @@ use Amp\Socket\SocketAddress;
 use Amp\Socket\TlsInfo;
 use Closure;
 use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
 use Gruven\PhpBotGram\Tests\Support\RecordingDispatcher;
 use Gruven\PhpBotGram\Tests\Support\RunAsyncTrait;
@@ -397,6 +399,125 @@ final class BaseRequestHandlerTest extends TestCase
       $handler->handleRequest($request);
 
       self::assertSame('my-secret', $handler->lastVerifySecretToken);
+    });
+  }
+
+  // =========================================================================
+  // awaitBackgroundTasks() — drain in-flight fibers
+  // =========================================================================
+
+  /**
+   * Verify that awaitBackgroundTasks() blocks until every in-flight background
+   * fiber has completed.
+   *
+   * A handler closure that uses Amp\delay(0.05) simulates nonzero-duration
+   * work.  We assert that the closure ran to completion (a flag is set) only
+   * after awaitBackgroundTasks() returns — confirming the drain is real.
+   */
+  public function testAwaitBackgroundTasksDrainsInFlightFibers(): void
+  {
+    $this->runAsync(function (): void {
+      // Use a mutable counter object so PHPStan cannot narrow the type to
+      // literal false and raise a staticMethod.impossibleType error.
+      $counter = new class {
+        public int $completions = 0;
+      };
+
+      $dispatcher = new RecordingDispatcher(disableFsm: true);
+      $dispatcher->message->register(static function () use ($counter): void {
+        delay(0.05);
+        $counter->completions++;
+      });
+
+      $handler = $this->makeHandler(
+        secretOk: true,
+        background: true,
+        dispatcher: $dispatcher,
+      );
+
+      // Send the request — 200 is returned immediately, fiber is in-flight.
+      $response = $handler->handleRequest(
+        $this->makeRequest($this->makeUpdatePayload()),
+      );
+
+      self::assertSame(200, $response->getStatus());
+      // Counter must be 0 yet — the fiber is still sleeping.
+      self::assertSame(0, $counter->completions, 'Handler must not have run to completion before drain');
+
+      // Drain: block until the background fiber finishes.
+      $handler->awaitBackgroundTasks();
+
+      self::assertSame(1, $counter->completions, 'Handler must have run to completion after awaitBackgroundTasks()');
+    });
+  }
+
+  // =========================================================================
+  // silentCallRequest fall-through — handler-returned TelegramMethod
+  // =========================================================================
+
+  /**
+   * When feedWebhookUpdate's dispatch chain returns a TelegramMethod in
+   * inline (synchronous) mode, BaseRequestHandler must route it via
+   * Dispatcher::silentCallRequest rather than embedding it in the HTTP
+   * response body.
+   */
+  public function testHandlerReturnedTelegramMethodRoutesViaSilentCallRequest(): void
+  {
+    $this->runAsync(function (): void {
+      $dispatcher = new RecordingDispatcher(disableFsm: true);
+      $dispatcher->message->register(
+        static fn(): SendMessage => new SendMessage(chatId: 42, text: 'hello'),
+      );
+
+      $bot = new MockedBot();
+      $handler = $this->makeHandler(
+        secretOk: true,
+        background: false,
+        bot: $bot,
+        dispatcher: $dispatcher,
+      );
+
+      $handler->handleRequest(
+        $this->makeRequest($this->makeUpdatePayload()),
+      );
+
+      self::assertCount(1, $dispatcher->silentCalls, 'silentCallRequest must be called exactly once');
+      self::assertSame($bot, $dispatcher->silentCalls[0][0], 'silentCallRequest must receive the resolved bot');
+      self::assertInstanceOf(SendMessage::class, $dispatcher->silentCalls[0][1], 'silentCallRequest must receive the returned TelegramMethod');
+    });
+  }
+
+  /**
+   * Same as the inline-mode variant, but with handleInBackground=true.
+   * The background fiber must also route the returned TelegramMethod via
+   * silentCallRequest after awaitBackgroundTasks() drains it.
+   */
+  public function testHandlerReturnedTelegramMethodRoutesViaSilentCallRequestInBackground(): void
+  {
+    $this->runAsync(function (): void {
+      $dispatcher = new RecordingDispatcher(disableFsm: true);
+      $dispatcher->message->register(
+        static fn(): SendMessage => new SendMessage(chatId: 42, text: 'hello from background'),
+      );
+
+      $bot = new MockedBot();
+      $handler = $this->makeHandler(
+        secretOk: true,
+        background: true,
+        bot: $bot,
+        dispatcher: $dispatcher,
+      );
+
+      $handler->handleRequest(
+        $this->makeRequest($this->makeUpdatePayload()),
+      );
+
+      // Drain the background fiber so the assertion sees the completed state.
+      $handler->awaitBackgroundTasks();
+
+      self::assertCount(1, $dispatcher->silentCalls, 'silentCallRequest must be called exactly once in background mode');
+      self::assertSame($bot, $dispatcher->silentCalls[0][0], 'silentCallRequest must receive the resolved bot');
+      self::assertInstanceOf(SendMessage::class, $dispatcher->silentCalls[0][1], 'silentCallRequest must receive the returned TelegramMethod');
     });
   }
 }

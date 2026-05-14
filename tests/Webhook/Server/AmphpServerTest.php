@@ -267,8 +267,17 @@ final class AmphpServerTest extends TestCase
       }
     };
 
-    $request = $this->makeRequest('http://localhost/webhook', 'POST', '1.2.3.4');
-    $response = $middleware->handleRequest($request, $inner);
+    // Suppress the E_USER_WARNING emitted for blocked IPs — this test only
+    // asserts on the 401 status; the warning itself is verified separately
+    // in testIpFilterMiddlewareEmitsWarningOnBlockedRequest.
+    set_error_handler(static fn(): bool => true, \E_USER_WARNING);
+
+    try {
+      $request = $this->makeRequest('http://localhost/webhook', 'POST', '1.2.3.4');
+      $response = $middleware->handleRequest($request, $inner);
+    } finally {
+      restore_error_handler();
+    }
 
     self::assertFalse($inner->called, 'Handler must NOT be called for a blocked IP');
     self::assertSame(401, $response->getStatus());
@@ -325,23 +334,72 @@ final class AmphpServerTest extends TestCase
       }
     };
 
-    // X-Forwarded-For contains a blocked IP; the real remote is allowed
-    // but X-Forwarded-For takes precedence.
-    $request = new Request(
-      $this->makeClient('149.154.160.1'),
-      'POST',
-      LeagueUri::new('http://localhost/webhook'),
-      [
-        'Content-Type' => 'application/json',
-        'X-Forwarded-For' => '1.2.3.4',
-      ],
-      '{}',
-    );
+    // Suppress the E_USER_WARNING emitted for blocked IPs — this test only
+    // asserts on the 401 status; the warning itself is verified separately
+    // in testIpFilterMiddlewareEmitsWarningOnBlockedRequest.
+    set_error_handler(static fn(): bool => true, \E_USER_WARNING);
 
-    $response = $middleware->handleRequest($request, $inner);
+    try {
+      // X-Forwarded-For contains a blocked IP; the real remote is allowed
+      // but X-Forwarded-For takes precedence.
+      $request = new Request(
+        $this->makeClient('149.154.160.1'),
+        'POST',
+        LeagueUri::new('http://localhost/webhook'),
+        [
+          'Content-Type' => 'application/json',
+          'X-Forwarded-For' => '1.2.3.4',
+        ],
+        '{}',
+      );
+
+      $response = $middleware->handleRequest($request, $inner);
+    } finally {
+      restore_error_handler();
+    }
 
     self::assertFalse($inner->called, 'Handler must NOT be called when X-Forwarded-For is blocked');
     self::assertSame(401, $response->getStatus());
+  }
+
+  /**
+   * Verify that a warning carrying the blocked IP is emitted when
+   * IpFilterMiddleware rejects a request from a non-allowlisted address.
+   *
+   * Mirrors upstream `aiogram/webhook/aiohttp_server.py:79`:
+   *   loggers.webhook.warning("Blocking request from an unauthorized IP: %s", ip_address)
+   */
+  public function testIpFilterMiddlewareEmitsWarningOnBlockedRequest(): void
+  {
+    $filter = new IpFilter(['149.154.160.0/20']);
+    $middleware = new IpFilterMiddleware($filter);
+
+    $inner = new class implements RequestHandler {
+      public function handleRequest(Request $request): Response
+      {
+        return new Response(200, [], 'should not reach here');
+      }
+    };
+
+    /** @var list<array{0: int, 1: string}> $warnings */
+    $warnings = [];
+    set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+      $warnings[] = [$errno, $errstr];
+
+      return true;
+    }, \E_USER_WARNING);
+
+    try {
+      $request = $this->makeRequest('http://localhost/webhook', 'POST', '1.2.3.4');
+      $response = $middleware->handleRequest($request, $inner);
+    } finally {
+      restore_error_handler();
+    }
+
+    self::assertSame(401, $response->getStatus());
+    self::assertCount(1, $warnings, 'Exactly one E_USER_WARNING must be emitted for a blocked request');
+    self::assertSame(\E_USER_WARNING, $warnings[0][0], 'Warning must be E_USER_WARNING');
+    self::assertStringContainsString('1.2.3.4', $warnings[0][1], 'Warning message must contain the blocked IP');
   }
 
   // =========================================================================
