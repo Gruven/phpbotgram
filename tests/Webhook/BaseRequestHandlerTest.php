@@ -25,6 +25,7 @@ use Gruven\PhpBotGram\Tests\Support\RecordingDispatcher;
 use Gruven\PhpBotGram\Tests\Support\RunAsyncTrait;
 use Gruven\PhpBotGram\Webhook\BaseRequestHandler;
 use League\Uri\Http as LeagueUri;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -547,6 +548,86 @@ final class BaseRequestHandlerTest extends TestCase
       $handler->awaitBackgroundTasks();
 
       self::assertSame(1, $counter->completions, 'Handler must have run to completion after awaitBackgroundTasks()');
+    });
+  }
+
+  // =========================================================================
+  // awaitBackgroundTasks() — per-fiber failure isolation
+  // =========================================================================
+
+  /**
+   * Verifies that a single failing background fiber does NOT prevent
+   * `awaitBackgroundTasks()` from completing, and that remaining fibers
+   * still run to completion.
+   *
+   * Two background fibers are registered:
+   *   1. One that throws `LogicException` (simulates a buggy handler).
+   *   2. One that increments a counter (simulates a healthy handler).
+   *
+   * After draining, the call must return normally (no rethrow), an
+   * E_USER_WARNING must have been emitted for the failure, and the
+   * counter must have been incremented.
+   */
+  public function testAwaitBackgroundTasksContinuesWhenSingleFiberThrows(): void
+  {
+    $this->runAsync(function (): void {
+      // Use a mutable counter object so PHPStan cannot narrow to literal.
+      $counter = new class {
+        public int $completions = 0;
+      };
+
+      /** @var list<array{0: int, 1: string}> $warnings */
+      $warnings = [];
+      set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+        $warnings[] = [$errno, $errstr];
+
+        return true;
+      }, \E_USER_WARNING);
+
+      try {
+        // Dispatcher 1: always throws from a message handler.
+        $throwingDispatcher = new RecordingDispatcher(disableFsm: true);
+        $throwingDispatcher->message->register(static function (): void {
+          throw new LogicException('simulated fiber failure');
+        });
+
+        // Dispatcher 2: increments the counter.
+        $countingDispatcher = new RecordingDispatcher(disableFsm: true);
+        $countingDispatcher->message->register(static function () use ($counter): void {
+          $counter->completions++;
+        });
+
+        $throwingHandler = $this->makeHandler(
+          secretOk: true,
+          background: true,
+          dispatcher: $throwingDispatcher,
+        );
+
+        $countingHandler = $this->makeHandler(
+          secretOk: true,
+          background: true,
+          dispatcher: $countingDispatcher,
+        );
+
+        // Dispatch to both handlers.
+        $throwingHandler->handleRequest($this->makeRequest($this->makeUpdatePayload()));
+        $countingHandler->handleRequest($this->makeRequest($this->makeUpdatePayload()));
+
+        // Drain — must not throw even though one fiber failed.
+        $throwingHandler->awaitBackgroundTasks();
+        $countingHandler->awaitBackgroundTasks();
+      } finally {
+        restore_error_handler();
+      }
+
+      // The draining must not have thrown (we reach this line).
+      // The healthy fiber must have completed.
+      self::assertSame(1, $counter->completions, 'Healthy fiber must have run to completion');
+
+      // A warning must have been emitted for the failing fiber.
+      self::assertGreaterThanOrEqual(1, count($warnings), 'At least one E_USER_WARNING must be emitted for the failing fiber');
+      self::assertSame(\E_USER_WARNING, $warnings[0][0], 'Warning must be E_USER_WARNING');
+      self::assertStringContainsString('simulated fiber failure', $warnings[0][1], 'Warning must contain the exception message');
     });
   }
 

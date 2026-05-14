@@ -18,6 +18,7 @@ use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use JsonException;
+use Throwable;
 
 /**
  * Abstract base for webhook request handlers.
@@ -289,6 +290,11 @@ abstract class BaseRequestHandler implements RequestHandler
    * self-cleaning `finally` callback so the entry is removed once the
    * fiber settles.
    *
+   * Any exception thrown inside `$task` is caught and demoted to an
+   * `E_USER_WARNING` so that a single failing fiber cannot prevent
+   * `awaitBackgroundTasks()` from completing and thereby block the
+   * `close()` / `emitShutdown()` shutdown sequence.
+   *
    * Shared by both `handleRequestInline` (silentCallRequest fiber) and
    * `handleRequestBackground` (full-dispatch fiber).
    *
@@ -296,10 +302,16 @@ abstract class BaseRequestHandler implements RequestHandler
    */
   private function trackBackgroundTask(Future $task): void
   {
-    $taskId = spl_object_id($task);
-    $this->backgroundTasks[$taskId] = $task;
-    $task->finally(function () use ($taskId): void {
-      unset($this->backgroundTasks[$taskId]);
+    $wrapped = $task->catch(static function (Throwable $e): void {
+      trigger_error(
+        sprintf('Webhook background task failure: %s', $e->getMessage()),
+        \E_USER_WARNING,
+      );
+    });
+    $wrappedId = spl_object_id($wrapped);
+    $this->backgroundTasks[$wrappedId] = $wrapped;
+    $wrapped->finally(function () use ($wrappedId): void {
+      unset($this->backgroundTasks[$wrappedId]);
     });
   }
 }
