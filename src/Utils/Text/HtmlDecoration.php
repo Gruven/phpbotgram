@@ -11,6 +11,11 @@ namespace Gruven\PhpBotGram\Utils\Text;
  *
  * Special characters in plain text are HTML-escaped via `quote()`.
  * Each entity type wraps its inner text in the appropriate HTML tag.
+ *
+ * NOTE: This implementation uses ENT_QUOTES rather than upstream's
+ * html.escape(quote=False). Upstream parity for non-quote characters is
+ * preserved; escaping `"` and `'` is defense-in-depth against XSS when
+ * the rendered HTML is consumed by webhook dashboards / web frontends.
  */
 class HtmlDecoration extends TextDecoration
 {
@@ -23,7 +28,7 @@ class HtmlDecoration extends TextDecoration
 
   public function quote(string $value): string
   {
-    return htmlspecialchars($value, ENT_NOQUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+    return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
   }
 
   protected function bold(string $value): string

@@ -134,10 +134,16 @@ final class HtmlDecorationTest extends TestCase
     self::assertSame('&gt;', $this->dec->quote('>'));
   }
 
-  public function testQuoteLeavesDoubleQuoteUnescaped(): void
+  public function testQuoteEscapesDoubleQuote(): void
   {
-    // ENT_NOQUOTES — double quotes must NOT be escaped in HTML body text.
-    self::assertSame('"hello"', $this->dec->quote('"hello"'));
+    // ENT_QUOTES — double quotes are escaped as defense-in-depth.
+    self::assertSame('&quot;hello&quot;', $this->dec->quote('"hello"'));
+  }
+
+  public function testQuoteEscapesSingleQuote(): void
+  {
+    // ENT_QUOTES | ENT_HTML5 — single quotes are escaped as &apos; (HTML5 entity).
+    self::assertSame('&apos;hello&apos;', $this->dec->quote("'hello'"));
   }
 
   public function testQuoteLeavesPlainTextUnchanged(): void
