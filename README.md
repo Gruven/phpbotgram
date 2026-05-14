@@ -55,9 +55,9 @@ documentation) lives at `examples/echo_bot.php`.
 
 ## Examples
 
-All examples are runnable and self-contained. Set `BOT_TOKEN` (and, where
-required, additional env vars like `WEBHOOK_URL` or `BASE_BOT_TOKENS`) before
-launching.
+All examples are runnable and self-contained. Set `BOT_TOKEN` before
+launching (and `BOT_TOKEN_2` for `examples/multibot.php`, which adds a
+second bot to the dispatcher when present).
 
 | Path | Demonstrates |
 | --- | --- |
@@ -82,9 +82,11 @@ launching.
 `SendPhoto`, …) and dispatches them through the `BaseSession`. The default
 session is `AmphpSession`, which builds an `amphp/http-client` instance via
 `HttpClientBuilder`, encodes form bodies, and surfaces Telegram error
-responses as typed exceptions (`TelegramRetryAfter`, `TelegramServerError`,
-…). Polling-loop backoff on `RetryAfter` lives in the dispatcher, not the
-session itself.
+responses as typed exceptions (`TelegramRetryAfter`,
+`TelegramServerException`, `TelegramBadRequestException`,
+`TelegramConflictException`, `TelegramForbiddenException`,
+`TelegramNetworkException`, …). Polling-loop backoff on `RetryAfter` lives
+in the dispatcher, not the session itself.
 
 ```php
 use Gruven\PhpBotGram\Bot;
@@ -131,7 +133,8 @@ $dispatcher->includeRouter($router);
 kwargs array merged into the handler arguments. Built-in filters cover
 commands (`Command`), magic field tests via the `F` constant
 (`use const Gruven\PhpBotGram\F;`), `CallbackData::filter()`, state
-predicates (`StateFilter`, `State::filter()`), and combinators
+predicates (`StateFilter`; a bare `State` instance is also directly
+usable as a filter), and combinators
 (`Filter::all()`, `Filter::any()`, `Filter::invertOf()`).
 
 ```php
@@ -155,7 +158,7 @@ $router->message->register(
 Scenes are explicit (no metaclass auto-discovery): subclass `Scene`, declare
 state methods with `#[OnMessage]` / `#[OnCallbackQuery]`, and register
 through `SceneRegistry`. Scene history, state, and storage isolation are
-all driven by `FSMContext`.
+all driven by `FsmContext`.
 
 ```php
 use Gruven\PhpBotGram\Fsm\Scene\SceneRegistry;

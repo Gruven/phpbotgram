@@ -8,8 +8,8 @@ namespace Gruven\PhpBotGram\Tests\Types;
  * Upstream `tests/test_api/test_types/*` port status — Phase 8, Task 8.3.
  *
  * Upstream has 25 test files (one per major Telegram type).
- * Phase 8 ports a representative sample of 8 files.
- * The remaining ~17 type tests are NOT individually ported because:
+ * Phase 8 ports a representative sample of 9 files.
+ * The remaining ~16 type tests are NOT individually ported because:
  *
  * 1. Codegen-determined behavior (b): each `Types/*.php` class is generated
  *    from the Telegram API spec. Constructor shapes, property names, and

@@ -8,7 +8,7 @@ namespace Gruven\PhpBotGram\Tests\Methods;
  * Upstream `tests/test_api/test_methods/*` port status — Phase 8, Task 8.2.
  *
  * Upstream has 179 test files (one per Telegram API method).
- * Phase 8 ports a representative sample of 9 files.
+ * Phase 8 ports a representative sample of 10 files.
  * The remaining ~170 method tests are NOT individually ported because:
  *
  * 1. Codegen-determined behavior (b): each `Methods/*.php` class is generated

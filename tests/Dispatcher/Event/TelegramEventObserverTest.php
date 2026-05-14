@@ -16,8 +16,16 @@ use Gruven\PhpBotGram\Dispatcher\Flags\FlagDecorator;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager;
 use Gruven\PhpBotGram\Dispatcher\Router;
+
+use const Gruven\PhpBotGram\F;
+
+use Gruven\PhpBotGram\Filters\Command;
+use Gruven\PhpBotGram\Filters\Filter;
 use Gruven\PhpBotGram\Types\Chat;
+use Gruven\PhpBotGram\Types\Custom\DateTime;
+use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Types\TelegramObject;
+use Gruven\PhpBotGram\Utils\MagicFilter\MagicFilter;
 use PHPUnit\Framework\TestCase;
 
 final class TelegramEventObserverTest extends TestCase
@@ -744,6 +752,88 @@ final class TelegramEventObserverTest extends TestCase
 
     self::assertSame(RejectedSentinel::instance(), $result);
     self::assertFalse($secondCalled, 'Cancel must stop dispatch on the same observer.');
+  }
+
+  public function testRegisterAcceptsFilterSubclassInstanceAsFilter(): void
+  {
+    // Phase 8 regression: `register(filters: [new Command('start')])` used
+    // to crash because `FilterObject::__construct` requires a `Closure`.
+    // The observer now wraps any non-Closure callable via
+    // `Closure::fromCallable`, matching aiogram's
+    // `aiogram.dispatcher.event.handler.FilterObject` which accepts any
+    // `Callable[..., Any]`. The wrapped closure must still resolve to the
+    // filter's `__invoke` at dispatch time, so feed it a real Message and
+    // assert the filter accepts.
+    $observer = new TelegramEventObserver('message');
+    $callback = static fn(): string => 'ok';
+    $filter = new Command('start');
+
+    $observer->register($callback, [$filter]);
+
+    self::assertCount(1, $observer->handlers);
+    self::assertCount(1, $observer->handlers[0]->filters);
+    self::assertInstanceOf(FilterObject::class, $observer->handlers[0]->filters[0]);
+    self::assertInstanceOf(Closure::class, $observer->handlers[0]->filters[0]->callback);
+
+    // Dispatch /start through the observer and verify the wrapped filter
+    // actually delegates to Command::__invoke (returns the parsed CommandObject
+    // as a kwarg) — proving the Closure::fromCallable wrap preserves semantics.
+    $message = new Message(
+      messageId: 1,
+      date: new DateTime('2024-01-01'),
+      chat: new Chat(id: 1, type: 'private'),
+      text: '/start',
+    );
+    $result = $observer->trigger($message);
+    self::assertSame('ok', $result);
+  }
+
+  public function testRegisterAcceptsMagicFilterAsFilterResult(): void
+  {
+    // `F->...->asFilter()` returns a `MagicFilterAsFilter` (invokable Filter
+    // subclass). Phase 8 must accept it directly in `filters:`. The chain
+    // is `F->event->text->equals('hi')` so the MagicFilter resolves the
+    // dispatch data dict (event=Message, kwargs spread). Confirm the
+    // wrapping accepts it and dispatch produces the handler's return value.
+    $observer = new TelegramEventObserver('message');
+    $callback = static fn(): string => 'ok';
+
+    /** @var Filter $filter */
+    $filter = MagicFilter::root()->text->equals('hi')->asFilter();
+
+    $observer->register($callback, [$filter]);
+
+    $message = new Message(
+      messageId: 1,
+      date: new DateTime('2024-01-01'),
+      chat: new Chat(id: 1, type: 'private'),
+      text: 'hi',
+    );
+    self::assertSame('ok', $observer->trigger($message));
+  }
+
+  public function testRegisterAcceptsAnonymousInvokableObjectAsFilter(): void
+  {
+    // Plain invokable class instance (not a Filter subclass). The
+    // `Closure::fromCallable` wrap should accept it as a generic callable.
+    $observer = new TelegramEventObserver('message');
+    $callback = static fn(): string => 'ok';
+    $alwaysAccept = new class {
+      public function __invoke(object $event): bool
+      {
+        return true;
+      }
+    };
+
+    $observer->register($callback, [$alwaysAccept]);
+
+    self::assertCount(1, $observer->handlers[0]->filters);
+    $message = new Message(
+      messageId: 1,
+      date: new DateTime('2024-01-01'),
+      chat: new Chat(id: 1, type: 'private'),
+    );
+    self::assertSame('ok', $observer->trigger($message));
   }
 
   private static function passthroughMiddleware(): BaseMiddleware

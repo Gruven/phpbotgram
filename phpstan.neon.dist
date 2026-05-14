@@ -39,6 +39,10 @@ parameters:
             # `F->state`, …) to mirror real call sites; the dispatch goes
             # through MagicFilter::__get same as the F-DSL field wrappers.
             - tests/Filters/MagicDataTest.php
+            # TelegramEventObserver's filter-acceptance test exercises the
+            # MagicFilterAsFilter path via `MagicFilter::root()->text`, by
+            # design relying on the same dynamic-property dispatch.
+            - tests/Dispatcher/Event/TelegramEventObserverTest.php
         - identifier: method.notFound
           paths:
             - tests/Utils/MagicFilter/*
