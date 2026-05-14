@@ -17,8 +17,10 @@ namespace Gruven\PhpBotGram\Tests\Types;
  *
  * 2. Round-trip serialization (b): the `model_dump()` / `model_validate()`
  *    pair that upstream type tests exercise is mirrored by phpbotgram's
- *    Serializer::pack() + Serializer::unpack(). These are exhaustively tested
- *    in tests/Client/SerializerTest.php and tests/Client/Session/BaseSessionTest.php.
+ *    Serializer::dump() + Serializer::load(), plus BaseSession::prepareValue()
+ *    and BaseSession::checkResponse() for the wire-path round-trip. These
+ *    are exhaustively tested in tests/Client/SerializerTest.php and
+ *    tests/Client/Session/BaseSessionTest.php.
  *
  * 3. Custom types already covered (b): tests/Types/Custom/DateTimeTest.php
  *    covers the DateTime wrapper; tests/Types/InputFileTest.php covers

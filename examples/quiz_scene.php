@@ -55,18 +55,16 @@ use Gruven\PhpBotGram\Types\Message;
 final class QuestionOneScene extends Scene
 {
     /**
-     * Ask the first question when entering this scene.
+     * Ask the first question when entering this scene. Mirrors upstream
+     * `@on.message.enter()` — the lifecycle handler is a separately-named
+     * method tagged with `#[OnMessage(action: SceneAction::Enter)]`, not
+     * an override of the base `Scene::enter()` method (which only sets
+     * FSM state and dispatches the lifecycle event).
      */
-    public function enter(mixed ...$kwargs): mixed
+    #[OnMessage(action: SceneAction::Enter)]
+    public function onEnter(Message $event): void
     {
-        $data = $this->wizard->data;
-        if (isset($data['event']) && $data['event'] instanceof Message) {
-            /** @var Message $msg */
-            $msg = $data['event'];
-            $msg->answer("Question 1: What is 2 + 2?")->emit();
-        }
-
-        return null;
+        $event->answer("Question 1: What is 2 + 2?")->emit();
     }
 
     /**
@@ -90,18 +88,13 @@ final class QuestionOneScene extends Scene
 final class QuestionTwoScene extends Scene
 {
     /**
-     * Ask the second question when entering this scene.
+     * Ask the second question when entering this scene. See QuestionOneScene
+     * for the lifecycle-attribute pattern.
      */
-    public function enter(mixed ...$kwargs): mixed
+    #[OnMessage(action: SceneAction::Enter)]
+    public function onEnter(Message $event): void
     {
-        $data = $this->wizard->data;
-        if (isset($data['event']) && $data['event'] instanceof Message) {
-            /** @var Message $msg */
-            $msg = $data['event'];
-            $msg->answer("Question 2: What is the capital of France?")->emit();
-        }
-
-        return null;
+        $event->answer("Question 2: What is the capital of France?")->emit();
     }
 
     /**
