@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Utils\WebApp;
 
+use function explode;
 use function hash_equals;
 use function hash_hmac;
 use function implode;
@@ -18,7 +19,9 @@ use const JSON_THROW_ON_ERROR;
 use JsonException;
 
 use function ksort;
-use function parse_str;
+use function strpos;
+use function substr;
+use function urldecode;
 
 /**
  * HMAC-SHA256-based standard WebApp signature validation and init data parsing.
@@ -32,6 +35,43 @@ use function parse_str;
 final class WebApp
 {
   private function __construct() {}
+
+  /**
+   * Parse a URL-encoded query string into a string-keyed assoc array,
+   * preserving the literal key names (no `.` or space mangling). Mirrors
+   * Python's `urllib.parse.parse_qsl(strict_parsing=True)`.
+   *
+   * @return array<string, string>
+   */
+  private static function parseQuery(string $input): array
+  {
+    if ($input === '') {
+      return [];
+    }
+
+    $result = [];
+
+    foreach (explode('&', $input) as $pair) {
+      if ($pair === '') {
+        continue;
+      }
+
+      $eq = strpos($pair, '=');
+
+      if ($eq === false) {
+        // Key without value — treat as empty-string value.
+        $result[urldecode($pair)] = '';
+
+        continue;
+      }
+
+      $key = urldecode(substr($pair, 0, $eq));
+      $value = urldecode(substr($pair, $eq + 1));
+      $result[$key] = $value;
+    }
+
+    return $result;
+  }
 
   /**
    * Verify the HMAC-SHA256 signature of WebApp init data.
@@ -52,9 +92,8 @@ final class WebApp
    */
   public static function checkSignature(string $token, string $initData): bool
   {
-    /** @var array<string, array<mixed>|string> $parsed */
-    $parsed = [];
-    parse_str($initData, $parsed);
+    /** @var array<string, string> $parsed */
+    $parsed = self::parseQuery($initData);
 
     $hashReceived = $parsed['hash'] ?? null;
 
@@ -69,7 +108,7 @@ final class WebApp
     $lines = [];
 
     foreach ($parsed as $key => $value) {
-      $lines[] = $key . '=' . (is_string($value) ? $value : '');
+      $lines[] = $key . '=' . $value;
     }
 
     $dataCheckString = implode("\n", $lines);
@@ -93,9 +132,8 @@ final class WebApp
    */
   public static function parseInitData(string $initData): WebAppInitData
   {
-    /** @var array<string, array<mixed>|string> $parsed */
-    $parsed = [];
-    parse_str($initData, $parsed);
+    /** @var array<string, string> $parsed */
+    $parsed = self::parseQuery($initData);
 
     if (!isset($parsed['auth_date']) || !is_string($parsed['auth_date'])) {
       throw new InvalidArgumentException("WebApp init data is missing required field 'auth_date'.");

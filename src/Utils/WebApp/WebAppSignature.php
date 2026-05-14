@@ -4,17 +4,21 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Utils\WebApp;
 
+use function explode;
 use function extension_loaded;
+use function implode;
 use function is_string;
 use function ksort;
-use function parse_str;
 use function sodium_crypto_sign_verify_detached;
 
 use SodiumException;
 
 use function str_repeat;
 use function strlen;
+use function strpos;
 use function strtr;
+use function substr;
+use function urldecode;
 
 /**
  * Ed25519-based third-party WebApp signature validation.
@@ -43,6 +47,43 @@ final class WebAppSignature
   private function __construct() {}
 
   /**
+   * Parse a URL-encoded query string into a string-keyed assoc array,
+   * preserving the literal key names (no `.` or space mangling). Mirrors
+   * Python's `urllib.parse.parse_qsl(strict_parsing=True)`.
+   *
+   * @return array<string, string>
+   */
+  private static function parseQuery(string $input): array
+  {
+    if ($input === '') {
+      return [];
+    }
+
+    $result = [];
+
+    foreach (explode('&', $input) as $pair) {
+      if ($pair === '') {
+        continue;
+      }
+
+      $eq = strpos($pair, '=');
+
+      if ($eq === false) {
+        // Key without value — treat as empty-string value.
+        $result[urldecode($pair)] = '';
+
+        continue;
+      }
+
+      $key = urldecode(substr($pair, 0, $eq));
+      $value = urldecode(substr($pair, $eq + 1));
+      $result[$key] = $value;
+    }
+
+    return $result;
+  }
+
+  /**
    * Verify an Ed25519 signature for WebApp init data.
    *
    * The `signature` field in the init data is a URL-safe base64-encoded
@@ -64,9 +105,8 @@ final class WebAppSignature
     }
 
     // Parse the query string into an assoc array.
-    /** @var array<string, array<mixed>|string> $parsed */
-    $parsed = [];
-    parse_str($initData, $parsed);
+    /** @var array<string, string> $parsed */
+    $parsed = self::parseQuery($initData);
 
     // Extract and remove the signature field.
     $signatureB64 = $parsed['signature'] ?? null;
@@ -84,7 +124,7 @@ final class WebAppSignature
     $lines = [];
 
     foreach ($parsed as $key => $value) {
-      $lines[] = $key . '=' . (is_string($value) ? $value : '');
+      $lines[] = $key . '=' . $value;
     }
 
     $dataCheckString = "{$botId}:WebAppData\n" . implode("\n", $lines);

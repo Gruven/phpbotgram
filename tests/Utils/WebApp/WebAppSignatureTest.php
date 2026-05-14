@@ -4,8 +4,19 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Utils\WebApp;
 
+use function base64_encode;
+use function extension_loaded;
+
 use Gruven\PhpBotGram\Utils\WebApp\WebAppSignature;
+
+use function implode;
+use function ksort;
+
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
+
+use function rtrim;
+use function strtr;
 
 /**
  * Unit tests for {@see WebAppSignature}.
@@ -193,6 +204,54 @@ final class WebAppSignatureTest extends TestCase
         (string)$badSig,
         $fixture['publicKeyHex'],
       ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // parseQuery — key fidelity (no parse_str mangling)
+  // ---------------------------------------------------------------------------
+
+  public function testParseQueryPreservesKeyWithDot(): void
+  {
+    $reflection = new ReflectionClass(WebAppSignature::class);
+    $method = $reflection->getMethod('parseQuery');
+
+    /** @var array<string, string> $result */
+    $result = $method->invoke(null, 'a.b=1');
+    self::assertSame(['a.b' => '1'], $result);
+  }
+
+  public function testCheckHandlesKeyWithDot(): void
+  {
+    if (!extension_loaded('sodium')) {
+      self::markTestSkipped('sodium extension not available');
+    }
+
+    $botId = 1234567890;
+    $keypair = sodium_crypto_sign_keypair();
+    $privateKey = sodium_crypto_sign_secretkey($keypair);
+    $publicKey = sodium_crypto_sign_publickey($keypair);
+
+    $params = [
+      'a.b' => '1',
+      'auth_date' => '1698000000',
+    ];
+    ksort($params);
+    $lines = [];
+
+    foreach ($params as $k => $v) {
+      $lines[] = "{$k}={$v}";
+    }
+
+    $dataCheckString = "{$botId}:WebAppData\n" . implode("\n", $lines);
+    $signature = sodium_crypto_sign_detached($dataCheckString, $privateKey);
+    $signatureB64 = rtrim(strtr(base64_encode($signature), ['+' => '-', '/' => '_']), '=');
+
+    // Build raw query string preserving the dot.
+    $initData = 'a.b=1&auth_date=1698000000&signature=' . $signatureB64;
+
+    self::assertTrue(
+      WebAppSignature::check($botId, $initData, bin2hex($publicKey)),
     );
   }
 

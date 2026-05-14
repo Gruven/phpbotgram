@@ -7,9 +7,17 @@ namespace Gruven\PhpBotGram\Tests\Utils\WebApp;
 use Gruven\PhpBotGram\Utils\WebApp\WebApp;
 use Gruven\PhpBotGram\Utils\WebApp\WebAppInitData;
 use Gruven\PhpBotGram\Utils\WebApp\WebAppUser;
+
+use function hash_hmac;
+use function implode;
+
 use InvalidArgumentException;
 use JsonException;
+
+use function ksort;
+
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 /**
  * Unit tests for {@see WebApp}.
@@ -225,6 +233,76 @@ final class WebAppTest extends TestCase
   {
     $user = WebAppUser::fromArray(['id' => 1, 'first_name' => 'X', 'is_bot' => false]);
     self::assertFalse($user->isBot);
+  }
+
+  // ---------------------------------------------------------------------------
+  // parseQuery — key fidelity (no parse_str mangling)
+  // ---------------------------------------------------------------------------
+
+  public function testParseQueryPreservesKeyWithDot(): void
+  {
+    $reflection = new ReflectionClass(WebApp::class);
+    $method = $reflection->getMethod('parseQuery');
+
+    /** @var array<string, string> $result */
+    $result = $method->invoke(null, 'a.b=1');
+    self::assertSame(['a.b' => '1'], $result);
+  }
+
+  public function testParseQueryPreservesKeyWithSpace(): void
+  {
+    $reflection = new ReflectionClass(WebApp::class);
+    $method = $reflection->getMethod('parseQuery');
+
+    /** @var array<string, string> $result */
+    $result = $method->invoke(null, 'a+b=1');
+    self::assertSame(['a b' => '1'], $result);
+  }
+
+  public function testParseQueryHandlesEmptyInput(): void
+  {
+    $reflection = new ReflectionClass(WebApp::class);
+    $method = $reflection->getMethod('parseQuery');
+
+    /** @var array<string, string> $result */
+    $result = $method->invoke(null, '');
+    self::assertSame([], $result);
+  }
+
+  public function testParseQueryHandlesKeyWithoutEquals(): void
+  {
+    $reflection = new ReflectionClass(WebApp::class);
+    $method = $reflection->getMethod('parseQuery');
+
+    /** @var array<string, string> $result */
+    $result = $method->invoke(null, 'lone_key');
+    self::assertSame(['lone_key' => ''], $result);
+  }
+
+  public function testCheckSignatureHandlesKeyWithDot(): void
+  {
+    // Build init data with a dotted key and compute the expected HMAC.
+    $token = self::TOKEN;
+    $params = [
+      'a.b' => '1',
+      'auth_date' => '1698000000',
+    ];
+    // Sort alphabetically (a.b < auth_date).
+    ksort($params);
+    $lines = [];
+
+    foreach ($params as $k => $v) {
+      $lines[] = "{$k}={$v}";
+    }
+
+    $dataCheckString = implode("\n", $lines);
+    $secret = hash_hmac('sha256', $token, 'WebAppData', binary: true);
+    $hash = hash_hmac('sha256', $dataCheckString, $secret);
+
+    // Build the raw query string manually to preserve the dot in the key.
+    $initData = 'a.b=1&auth_date=1698000000&hash=' . $hash;
+
+    self::assertTrue(WebApp::checkSignature($token, $initData));
   }
 
   // ---------------------------------------------------------------------------
