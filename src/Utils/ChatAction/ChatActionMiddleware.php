@@ -53,9 +53,9 @@ final class ChatActionMiddleware extends BaseMiddleware
   public const string DEFAULT_ACTION = 'typing';
 
   /**
-   * @param float $interval     Seconds between repeated `sendChatAction` calls.
-   *                            Defaults to `5.0` (matches Telegram's 5 s expiry window).
-   *                            Reduced values are useful in tests.
+   * @param float $interval Seconds between repeated `sendChatAction` calls.
+   *                        Defaults to `5.0` (matches Telegram's 5 s expiry window).
+   *                        Reduced values are useful in tests.
    * @param float $initialSleep Seconds to wait before the first send. Defaults to `0.0`.
    */
   public function __construct(
@@ -66,7 +66,7 @@ final class ChatActionMiddleware extends BaseMiddleware
   public function __invoke(Closure $handler, object $event, array $data): mixed
   {
     // Non-Message events are always passed through unchanged.
-    if (!($event instanceof Message)) {
+    if (!$event instanceof Message) {
       return $handler($event, $data);
     }
 
@@ -126,9 +126,9 @@ final class ChatActionMiddleware extends BaseMiddleware
    *
    * @param array<string, mixed> $data
    *
-   * @return null|bool|string|array<string, mixed> Flag value, or null if not set.
+   * @return null|array<string, mixed>|bool|string Flag value, or null if not set.
    */
-  private function resolveChatActionFlag(array $data): null|bool|string|array
+  private function resolveChatActionFlag(array $data): null|array|bool|string
   {
     $handler = $data['handler'] ?? null;
 
