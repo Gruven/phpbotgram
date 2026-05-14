@@ -19,6 +19,22 @@ use PHPUnit\Framework\TestCase;
  * Behavioural tests for {@see MediaGroupBuilder}.
  *
  * Covers the port of `aiogram/utils/media_group.py`.
+ *
+ * Upstream skips
+ * --------------
+ * - `test_add_incorrect_media` (calls `builder._add("test")`): PHP has no
+ *   public `_add()` method — API divergence (a).
+ * - `test_extend` (calls `builder._extend([media, media])`): PHP has no
+ *   public `_extend()` method — API divergence (a).
+ * - `test_add` (generic `builder.add(type="audio", ...)` dispatch): PHP uses
+ *   type-specific `addAudio/addVideo/addPhoto/addDocument` methods — API
+ *   divergence (a); covered implicitly by the per-type add tests.
+ * - `test_add_unknown_type`: same — API divergence (a).
+ * - `test_build_empty` upstream returns `[]`; PHP throws `LogicException` —
+ *   API divergence (a); covered by `testEmptyBuildThrowsLogicException`.
+ * - `test_build_with_caption` row where builder caption overrides per-item
+ *   caption only on first item while subsequent items retain their own
+ *   caption: covered by `testBuilderCaptionOnlyChangesFirstItem`.
  */
 final class MediaGroupBuilderTest extends TestCase
 {

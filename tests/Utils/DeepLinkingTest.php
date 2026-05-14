@@ -16,6 +16,13 @@ use PHPUnit\Framework\TestCase;
  * Unit tests for {@see DeepLinking}.
  *
  * Port of upstream `tests/test_utils/test_deep_linking.py` equivalents.
+ *
+ * Upstream skips
+ * --------------
+ * - `test_custom_encode_decode` uses PyCryptodome AES — depends on a Python
+ *   third-party library with no PHP equivalent in this port; the round-trip
+ *   concept is covered by `PayloadTest::testRoundTripWithCustomEncoderDecoder`
+ *   — test infrastructure divergence (c).
  */
 final class DeepLinkingTest extends TestCase
 {
@@ -141,5 +148,28 @@ final class DeepLinkingTest extends TestCase
     $encoder = static fn(string $bytes): string => strrev($bytes);
     $url = DeepLinking::createStartLink($this->makeBot(), 'foo', encoder: $encoder);
     self::assertStringStartsWith('https://t.me/tbot?start=', $url);
+  }
+
+  public function testCreateStartAppLinkWithEncodingTrue(): void
+  {
+    // Mirrors upstream test_get_startapp_link_with_encoding.
+    $url = DeepLinking::createStartAppLink($this->makeBot(), 'hello world!', encode: true);
+    self::assertStringStartsWith('https://t.me/tbot?startapp=', $url);
+    self::assertStringNotContainsString(' ', $url);
+    self::assertStringNotContainsString('!', $url);
+  }
+
+  public function testCreateStartAppLinkWithAppNameAndEncoding(): void
+  {
+    // Mirrors upstream test_get_startapp_link_with_app_name_and_encoding.
+    $url = DeepLinking::createStartAppLink(
+      $this->makeBot(),
+      'hello world!',
+      encode: true,
+      appName: 'myapp',
+    );
+    self::assertStringStartsWith('https://t.me/tbot/myapp?startapp=', $url);
+    self::assertStringNotContainsString(' ', $url);
+    self::assertStringNotContainsString('!', $url);
   }
 }

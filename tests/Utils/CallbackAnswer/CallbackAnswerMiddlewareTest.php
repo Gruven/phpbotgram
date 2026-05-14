@@ -30,6 +30,21 @@ use RuntimeException;
  * - Per-handler flag overrides middleware default `text`.
  * - Finally-block sends answer even when handler throws.
  * - No double-answer when handler calls `markAnswered()` manually.
+ *
+ * Port of upstream `tests/test_utils/test_callback_answer.py`.
+ *
+ * Upstream skips
+ * --------------
+ * - `TestCallbackAnswerMiddleware::test_construct_answer`: calls the internal
+ *   `construct_callback_answer()` as a public method; in PHP it is `private` —
+ *   API divergence (a); the logic is exercised indirectly by the integration
+ *   tests in this class.
+ * - `TestCallbackAnswerMiddleware::test_answer`: calls `middleware.answer()`
+ *   as a public method; in PHP it is `private` — API divergence (a).
+ * - `TestCallbackAnswerMiddleware::test_call` / `test_invalid_event_type`:
+ *   upstream uses `AsyncMock` / `patch` for async coroutine patching; PHP
+ *   uses synchronous closures — test infrastructure divergence (c); equivalent
+ *   behavior is covered by the integration tests in this class.
  */
 final class CallbackAnswerMiddlewareTest extends TestCase
 {

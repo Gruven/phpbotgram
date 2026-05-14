@@ -19,6 +19,14 @@ use PHPUnit\Framework\TestCase;
  *   $check  = "auth_date=1698000000\nfirst_name=John\nid=123456789\nusername=johndoe";
  *   $hash   = hash_hmac('sha256', $check, $secret);
  *   // => 6fbde7a6f6fbc1b095dd501623692a9322bd57b0b067c365dcf95ed32689a8d2
+ *
+ * Port of upstream `tests/test_utils/test_auth_widget.py`.
+ *
+ * Upstream skips
+ * --------------
+ * - The upstream tests only cover `check_integrity(token, data)` where `data`
+ *   includes a `hash` key. PHP additionally exposes `checkSignature()` and
+ *   field-ordering independence tests which are extra coverage, not skips.
  */
 final class AuthWidgetTest extends TestCase
 {

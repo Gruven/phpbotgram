@@ -84,6 +84,15 @@ final class HtmlDecorationExposer extends HtmlDecoration
  *
  * Covers every decoration method and `quote()`, plus the singleton accessor.
  * Port of upstream `tests/test_utils/test_text_decorations.py` — HTML cases.
+ *
+ * Upstream skips
+ * --------------
+ * - `pre` with language expects `<pre><code language="language-python">` in
+ *   upstream; PHP emits `class="language-python"` — API divergence (a).
+ * - `date_time` entity tag name is `<tg-time>` in upstream; PHP uses
+ *   `<tg-datetime>` — API divergence (a).
+ * - `test_date_time_with_datetime_object`: PHP `dateTime()` accepts
+ *   `int $unixTime` only — API divergence (a).
  */
 final class HtmlDecorationTest extends TestCase
 {

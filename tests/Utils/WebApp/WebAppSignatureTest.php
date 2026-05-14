@@ -14,6 +14,20 @@ use PHPUnit\Framework\TestCase;
  *
  * All test vectors are generated via sodium_crypto_sign_keypair() /
  * sodium_crypto_sign_detached() to avoid external network dependencies.
+ *
+ * Port of upstream `tests/test_utils/test_web_app_signature.py`.
+ *
+ * Upstream skips
+ * --------------
+ * - `test_safe_check_webapp_init_data_from_signature` (Python):
+ *   calls `safe_check_webapp_init_data_from_signature()` which returns a
+ *   `WebAppInitData` with a `.hash` field from the data — the PHP port has
+ *   no `safeCheckWebAppInitDataFromSignature` helper; this functionality is
+ *   covered by the combination of `WebAppSignature::check()` and
+ *   `WebApp::parseInitData()` — API divergence (a).
+ * - Upstream uses hardcoded hex private/public key bytes; PHP generates
+ *   a fresh keypair per test via `sodium_crypto_sign_keypair()` to avoid
+ *   hardcoded secret material — test infrastructure divergence (c).
  */
 final class WebAppSignatureTest extends TestCase
 {

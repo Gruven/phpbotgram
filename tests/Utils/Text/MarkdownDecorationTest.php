@@ -84,6 +84,17 @@ final class MarkdownDecorationExposer extends MarkdownDecoration
  *
  * Covers `quote()` escaping, every decoration method, and the singleton.
  * Port of upstream `tests/test_utils/test_text_decorations.py` — Markdown cases.
+ *
+ * Upstream skips
+ * --------------
+ * - Markdown V1 (`test_markdown.py`): phpbotgram only ports Markdown V2 —
+ *   phase scope deferral (b).
+ * - `date_time` markdown URL uses `tg://time?unix=` in upstream; PHP uses
+ *   `tg://datetime?unix_time=` — API divergence (a).
+ * - `custom_emoji` markdown format `![text](tg://emoji?emoji_id=id)` in
+ *   upstream; PHP uses `tg://emoji?id=` — API divergence (a).
+ * - `test_date_time_with_datetime_object`: PHP `dateTime()` accepts
+ *   `int $unixTime` only — API divergence (a).
  */
 final class MarkdownDecorationTest extends TestCase
 {

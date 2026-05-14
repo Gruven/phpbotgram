@@ -16,6 +16,23 @@ use PHPUnit\Framework\TestCase;
  * Behavioural tests for {@see ReplyKeyboardBuilder}.
  *
  * Mirrors upstream `tests/test_utils/test_keyboard.py` ReplyKeyboard cases.
+ *
+ * Upstream skips
+ * --------------
+ * - `test_init` / `KeyboardBuilder(button_type=object)`: PHP has no public
+ *   `KeyboardBuilder` base class instantiable with arbitrary button types —
+ *   API divergence (a).
+ * - `test_validate_button`, `test_validate_buttons`, `test_validate_row`,
+ *   `test_validate_markup_*`, `test_validate_size`: these call internal
+ *   `_validate_*` methods that are private in PHP — API divergence (a).
+ * - `test_add_wo_max_width` (`builder.max_width = 0`): PHP does not expose a
+ *   writable `$maxWidth` property — API divergence (a).
+ * - `test_as_markup_preserves_icon_and_style`: `icon_custom_emoji_id` and
+ *   `style` fields on buttons are stored but not yet plumbed through
+ *   `button()` factory in the PHP port — phase scope deferral (b).
+ * - `test_attach_not_builder` (attach a bare button): Python's `attach` raises
+ *   `TypeError`; PHP raises `InvalidArgumentException` for wrong builder type;
+ *   passing a non-builder is caught by type declarations — API divergence (a).
  */
 final class ReplyKeyboardBuilderTest extends TestCase
 {

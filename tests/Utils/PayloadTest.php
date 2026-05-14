@@ -12,6 +12,13 @@ use PHPUnit\Framework\TestCase;
  * Unit tests for {@see Payload}.
  *
  * Port of upstream `tests/test_utils/test_payload.py` equivalents.
+ *
+ * Upstream skips
+ * --------------
+ * - `test_custom_encode_decode` (from `test_deep_linking.py`): uses
+ *   PyCryptodome AES encryption as a custom codec; no PHP equivalent library
+ *   is bundled — test infrastructure divergence (c); the round-trip concept is
+ *   covered by `testRoundTripWithCustomEncoderDecoder` using XOR.
  */
 final class PayloadTest extends TestCase
 {

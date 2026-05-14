@@ -19,6 +19,13 @@ use PHPUnit\Framework\TestCase;
  * - `isAnswered()` reflects the internal flag.
  * - `markAnswered()` is idempotent.
  * - The DTO starts in the mutable state (pre-mark, setters work fine).
+ *
+ * Port of upstream `tests/test_utils/test_callback_answer.py`.
+ *
+ * Upstream skips
+ * --------------
+ * - `test_str` (asserts `str(instance) == "CallbackAnswer(answered=False, …)"`):
+ *   PHP does not implement `__toString()` on `CallbackAnswer` — API divergence (a).
  */
 final class CallbackAnswerTest extends TestCase
 {

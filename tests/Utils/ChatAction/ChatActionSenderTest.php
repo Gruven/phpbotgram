@@ -22,6 +22,19 @@ use PHPUnit\Framework\TestCase;
  * background loop has time to fire without needing real 5-second windows.
  * All tests run inside {@see RunAsyncTrait::runAsync()} to provide the
  * Revolt event-loop fibre context that Amp\async and Amp\delay require.
+ *
+ * Port of upstream `tests/test_utils/test_chat_action.py`.
+ *
+ * Upstream skips
+ * --------------
+ * - `test_wait`: calls `sender._wait(1)` directly; PHP has no public `_wait`
+ *   method — API divergence (a).
+ * - `test_contextmanager`: uses `async with sender` (Python async context
+ *   manager) and `sender._close_event.is_set()`; PHP uses
+ *   `scope()` / `start()` / `stop()` — API divergence (a).
+ * - `test_worker`: patches `Bot.send_chat_action` via `unittest.mock.AsyncMock`
+ *   at the class level — test infrastructure divergence (c); equivalent
+ *   behavior is covered by `testScopeCallsSendChatActionAtLeastOnce`.
  */
 final class ChatActionSenderTest extends TestCase
 {

@@ -27,6 +27,18 @@ use PHPUnit\Framework\TestCase;
  * - A handler WITHOUT the flag passes through unchanged (no sender started).
  * - Non-Message events are passed through regardless of the flag.
  * - The flag value controls the action string sent.
+ *
+ * Port of upstream `tests/test_utils/test_chat_action.py`
+ * `TestChatActionMiddleware`.
+ *
+ * Upstream skips
+ * --------------
+ * - Upstream `test_call_default` patches `ChatActionSender._run` and
+ *   `ChatActionSender._stop` via `AsyncMock` and uses
+ *   `flags.chat_action(value)(handler)` to decorate handlers; PHP has no
+ *   equivalent attribute-based flag decorator — test infrastructure divergence
+ *   (c); equivalent behavior is covered by `testFlaggedHandlerTriggersActionDuringExecution`
+ *   and related tests using `HandlerObject` with flags.
  */
 final class ChatActionMiddlewareTest extends TestCase
 {

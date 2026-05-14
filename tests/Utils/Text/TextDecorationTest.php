@@ -17,6 +17,30 @@ use PHPUnit\Framework\TestCase;
  * MarkdownDecoration subclasses.
  *
  * Port of upstream `tests/test_utils/test_text_decorations.py`.
+ *
+ * Upstream skips
+ * --------------
+ * - test_apply_single_entity / html_decoration / `date_time` row with
+ *   `unix_time=42, format="yMd"` expecting `<tg-time unix="42" format="yMd">`:
+ *   PHP uses `<tg-datetime>` tag — API divergence (a).
+ * - test_apply_single_entity / html_decoration / `pre` with language expecting
+ *   `<pre><code language="language-python">`: PHP uses `class="language-*"` —
+ *   API divergence (a).
+ * - test_date_time_with_datetime_object: PHP `dateTime()` accepts `int $unixTime`
+ *   only; there is no `datetime` object overload — API divergence (a).
+ * - test_unparse rows for markdown_decoration `date_time` entity: PHP emits
+ *   `tg://datetime?unix_time=` rather than `tg://time?unix=` — API divergence (a).
+ * - test_unparse emoji rows that rely on Python `add_surrogates`/surrogate-pair
+ *   slicing quirks (`👋🏾` two-surrogate-pair sequence): handled natively in PHP
+ *   via `mb_convert_encoding` UTF-16LE — the existing
+ *   `testUnparseUtf16EmojiOffsetAccounting` tests the same concept with a
+ *   single surrogate-pair emoji.
+ * - Passthrough types (mention, url, etc.) — Python `apply_entity` returns
+ *   `text` as-is; PHP returns `$this->quote($text)`; the test for the
+ *   `mention+bold` case asserts PHP-actual behaviour with a docblock
+ *   noting the divergence — API divergence (a).
+ * - `test_apply_single_entity` markdown `expandable_blockquote` row expects
+ *   `">test||"`; PHP emits `">test\n**"` — API divergence (a).
  */
 final class TextDecorationTest extends TestCase
 {
@@ -128,6 +152,184 @@ final class TextDecorationTest extends TestCase
     );
   }
 
+  public function testApplyEntityUnderlineHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Underline->value, offset: 0, length: 4);
+    self::assertSame('<u>test</u>', HtmlDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityStrikethroughHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Strikethrough->value, offset: 0, length: 4);
+    self::assertSame('<s>test</s>', HtmlDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntitySpoilerHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Spoiler->value, offset: 0, length: 4);
+    self::assertSame('<tg-spoiler>test</tg-spoiler>', HtmlDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityBlockquoteHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Blockquote->value, offset: 0, length: 4);
+    self::assertSame('<blockquote>test</blockquote>', HtmlDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityExpandableBlockquoteHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::ExpandableBlockquote->value, offset: 0, length: 4);
+    self::assertSame('<blockquote expandable>test</blockquote>', HtmlDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityCodeHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Code->value, offset: 0, length: 4);
+    self::assertSame('<code>test</code>', HtmlDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityUrlPassthroughHtml(): void
+  {
+    // url, hashtag, cashtag, bot_command, email, phone_number — not wrapped; just quoted.
+    $entity = new MessageEntity(type: MessageEntityType::Url->value, offset: 0, length: 4);
+    self::assertSame('test', HtmlDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityHashtagPassthroughHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Hashtag->value, offset: 0, length: 5);
+    self::assertSame('#test', HtmlDecoration::instance()->applyEntity($entity, '#test'));
+  }
+
+  public function testApplyEntityCashtagPassthroughHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Cashtag->value, offset: 0, length: 5);
+    self::assertSame('$TEST', HtmlDecoration::instance()->applyEntity($entity, '$TEST'));
+  }
+
+  public function testApplyEntityBotCommandPassthroughHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::BotCommand->value, offset: 0, length: 8);
+    self::assertSame('/command', HtmlDecoration::instance()->applyEntity($entity, '/command'));
+  }
+
+  public function testApplyEntityEmailPassthroughHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Email->value, offset: 0, length: 4);
+    self::assertSame('test', HtmlDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityPhoneNumberPassthroughHtml(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::PhoneNumber->value, offset: 0, length: 4);
+    self::assertSame('test', HtmlDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityBoldMarkdown(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Bold->value, offset: 0, length: 4);
+    self::assertSame('*test*', MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityItalicMarkdown(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Italic->value, offset: 0, length: 4);
+    self::assertSame("_\rtest_\r", MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityCodeMarkdown(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Code->value, offset: 0, length: 4);
+    self::assertSame('`test`', MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityPreMarkdown(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Pre->value, offset: 0, length: 4);
+    self::assertSame("```\ntest\n```", MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityPreWithLanguageMarkdown(): void
+  {
+    $entity = new MessageEntity(
+      type: MessageEntityType::Pre->value,
+      offset: 0,
+      length: 4,
+      language: 'python',
+    );
+    self::assertSame("```python\ntest\n```", MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityUnderlineMarkdown(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Underline->value, offset: 0, length: 4);
+    self::assertSame("__\rtest__\r", MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityStrikethroughMarkdown(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Strikethrough->value, offset: 0, length: 4);
+    self::assertSame('~test~', MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntitySpoilerMarkdown(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Spoiler->value, offset: 0, length: 4);
+    self::assertSame('||test||', MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityCustomEmojiMarkdown(): void
+  {
+    $entity = new MessageEntity(
+      type: MessageEntityType::CustomEmoji->value,
+      offset: 0,
+      length: 4,
+      customEmojiId: '42',
+    );
+    self::assertSame('![test](tg://emoji?id=42)', MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityTextMentionMarkdown(): void
+  {
+    $user = new User(id: 42, isBot: false, firstName: 'Test');
+    $entity = new MessageEntity(
+      type: MessageEntityType::TextMention->value,
+      offset: 0,
+      length: 4,
+      user: $user,
+    );
+    self::assertSame('[test](tg://user?id=42)', MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityBlockquoteMarkdown(): void
+  {
+    $entity = new MessageEntity(type: MessageEntityType::Blockquote->value, offset: 0, length: 4);
+    self::assertSame('>test', MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityExpandableBlockquoteMarkdown(): void
+  {
+    // NOTE: upstream Markdown V2 format is ">test||"; PHP format adds a
+    // trailing newline separator: ">test\n**". API divergence (a).
+    $entity = new MessageEntity(type: MessageEntityType::ExpandableBlockquote->value, offset: 0, length: 4);
+    self::assertSame(">test\n**", MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+  }
+
+  public function testApplyEntityPassthroughTypesMarkdown(): void
+  {
+    // Passthrough types are quote()-d; plain "test" has no Markdown specials.
+    foreach ([
+      MessageEntityType::Hashtag,
+      MessageEntityType::Cashtag,
+      MessageEntityType::BotCommand,
+      MessageEntityType::Email,
+      MessageEntityType::PhoneNumber,
+    ] as $type) {
+      $entity = new MessageEntity(type: $type->value, offset: 0, length: 4);
+      self::assertSame('test', MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+    }
+  }
+
   public function testApplyEntityNonDecoratingTypeFallsBackToQuoteHtml(): void
   {
     // Mention, hashtag, bot_command, url — not wrapped in tags; just quoted.
@@ -232,6 +434,107 @@ final class TextDecorationTest extends TestCase
     self::assertSame(
       '[click *here*](https://t.me)',
       MarkdownDecoration::instance()->unparse('click here', $entities),
+    );
+  }
+
+  public function testUnparseStrikethroughAndBoldNonOverlapping(): void
+  {
+    // "strike bold" — "strike" strikethrough, "bold" bold.
+    $entities = [
+      new MessageEntity(type: MessageEntityType::Strikethrough->value, offset: 0, length: 6),
+      new MessageEntity(type: MessageEntityType::Bold->value, offset: 7, length: 4),
+    ];
+    self::assertSame(
+      '<s>strike</s> <b>bold</b>',
+      HtmlDecoration::instance()->unparse('strike bold', $entities),
+    );
+  }
+
+  public function testUnparseSameOffsetWrapsInnerFirst(): void
+  {
+    // "test" — strikethrough wraps bold; same offset means outer is processed first.
+    $entities = [
+      new MessageEntity(type: MessageEntityType::Strikethrough->value, offset: 0, length: 4),
+      new MessageEntity(type: MessageEntityType::Bold->value, offset: 0, length: 4),
+    ];
+    self::assertSame(
+      '<s><b>test</b></s>',
+      HtmlDecoration::instance()->unparse('test', $entities),
+    );
+  }
+
+  public function testUnparseThreeLevelNestingStrikeBoldUnderline(): void
+  {
+    // "strikeboldunder" — strike covers all 15 chars; bold covers 6..15; under covers 10..15.
+    $entities = [
+      new MessageEntity(type: MessageEntityType::Strikethrough->value, offset: 0, length: 15),
+      new MessageEntity(type: MessageEntityType::Bold->value, offset: 6, length: 9),
+      new MessageEntity(type: MessageEntityType::Underline->value, offset: 10, length: 5),
+    ];
+    self::assertSame(
+      '<s>strike<b>bold<u>under</u></b></s>',
+      HtmlDecoration::instance()->unparse('strikeboldunder', $entities),
+    );
+  }
+
+  public function testUnparsePassthroughEntityWithBold(): void
+  {
+    // "@username" — mention + bold at same offset.
+    // NOTE: PHP API divergence from upstream: Python's apply_entity returns
+    // `text` as-is for passthrough types (mention, url, etc.), so the outer
+    // mention wrapper preserves the inner "<b>@username</b>" and the result
+    // would be "<b>@username</b>". PHP's default branch runs quote() on the
+    // inner text, so the outer mention escapes the "<b>" tags produced by bold.
+    // API divergence (a): passthrough returns quote($text) in PHP vs text in Python.
+    $entities = [
+      new MessageEntity(type: MessageEntityType::Mention->value, offset: 0, length: 9),
+      new MessageEntity(type: MessageEntityType::Bold->value, offset: 0, length: 9),
+    ];
+    self::assertSame(
+      '&lt;b&gt;@username&lt;/b&gt;',
+      HtmlDecoration::instance()->unparse('@username', $entities),
+    );
+  }
+
+  public function testUnparseDateTimeEntityHtml(): void
+  {
+    // date_time entity without format.
+    $entities = [
+      new MessageEntity(type: MessageEntityType::DateTime->value, offset: 0, length: 4, unixTime: 42),
+    ];
+    self::assertSame(
+      '<tg-datetime unix-time="42">test</tg-datetime>',
+      HtmlDecoration::instance()->unparse('test', $entities),
+    );
+  }
+
+  public function testUnparseDateTimeEntityWithFormatHtml(): void
+  {
+    // date_time entity with format string.
+    $entities = [
+      new MessageEntity(
+        type: MessageEntityType::DateTime->value,
+        offset: 0,
+        length: 4,
+        unixTime: 42,
+        dateTimeFormat: 'yMd',
+      ),
+    ];
+    self::assertSame(
+      '<tg-datetime unix-time="42" format="yMd">test</tg-datetime>',
+      HtmlDecoration::instance()->unparse('test', $entities),
+    );
+  }
+
+  public function testUnparseLeadingEntityHtml(): void
+  {
+    // Entity at offset 0 covering only part of the text.
+    $entities = [
+      new MessageEntity(type: MessageEntityType::Bold->value, offset: 0, length: 5),
+    ];
+    self::assertSame(
+      '<b>test1</b> test2',
+      HtmlDecoration::instance()->unparse('test1 test2', $entities),
     );
   }
 }

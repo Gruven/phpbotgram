@@ -15,6 +15,19 @@ use PHPUnit\Framework\TestCase;
  *
  * HMAC-SHA256 signature validation and init data parsing.
  * Test vectors are computed inline so there are no external dependencies.
+ *
+ * Port of upstream `tests/test_utils/test_web_app.py`.
+ *
+ * Upstream skips
+ * --------------
+ * - Row 2 of `test_check_webapp_signature` (user JSON with surrogate-pair
+ *   characters `🇺🇦`): Python's `parse_qsl(strict_parsing=True)`
+ *   rejects malformed pairs; PHP `parse_str` is lenient. The PHP port returns
+ *   `false` for the `"test&foo=bar=baz"` case by verifying HMAC mismatch
+ *   (not by strict-parsing rejection) — API divergence (a).
+ * - `test_parse_web_app_init_data` date check (`parsed.auth_date.year == 2022`):
+ *   PHP stores `authDate` as `int` epoch, not a `datetime` object — API
+ *   divergence (a); equivalent via `(new \DateTime())->setTimestamp($data->authDate)->format('Y')`.
  */
 final class WebAppTest extends TestCase
 {
