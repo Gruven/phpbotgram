@@ -18,8 +18,8 @@ final class WebAppUser
 {
   public function __construct(
     public readonly int $id,
-    public readonly bool $isBot,
-    public readonly string $firstName,
+    public readonly ?bool $isBot = null,
+    public readonly string $firstName = '',
     public readonly ?string $lastName = null,
     public readonly ?string $username = null,
     public readonly ?string $languageCode = null,
@@ -48,7 +48,7 @@ final class WebAppUser
 
     return new self(
       id: is_int($id) ? $id : (int)(is_string($id) ? $id : 0),
-      isBot: is_bool($data['is_bot'] ?? null) ? (bool)$data['is_bot'] : false,
+      isBot: array_key_exists('is_bot', $data) && is_bool($data['is_bot']) ? $data['is_bot'] : null,
       firstName: is_string($firstName) ? $firstName : '',
       lastName: is_string($lastName) ? $lastName : null,
       username: is_string($username) ? $username : null,

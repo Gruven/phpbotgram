@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Tests\Utils\WebApp;
 
 use Gruven\PhpBotGram\Utils\WebApp\WebApp;
 use Gruven\PhpBotGram\Utils\WebApp\WebAppInitData;
+use Gruven\PhpBotGram\Utils\WebApp\WebAppUser;
 use InvalidArgumentException;
 use JsonException;
 use PHPUnit\Framework\TestCase;
@@ -201,6 +202,29 @@ final class WebAppTest extends TestCase
     self::assertSame('-12345', $data->chatInstance);
     self::assertSame('deeplink', $data->startParam);
     self::assertSame(60, $data->canSendAfter);
+  }
+
+  // ---------------------------------------------------------------------------
+  // WebAppUser — isBot nullable
+  // ---------------------------------------------------------------------------
+
+  public function testWebAppUserIsBotPreservesNullWhenAbsent(): void
+  {
+    // When 'is_bot' is absent from the array, isBot must be null (not false).
+    $user = WebAppUser::fromArray(['id' => 1, 'first_name' => 'X']);
+    self::assertNull($user->isBot);
+  }
+
+  public function testWebAppUserIsBotTrueWhenPresent(): void
+  {
+    $user = WebAppUser::fromArray(['id' => 1, 'first_name' => 'X', 'is_bot' => true]);
+    self::assertTrue($user->isBot);
+  }
+
+  public function testWebAppUserIsBotFalseWhenPresentFalse(): void
+  {
+    $user = WebAppUser::fromArray(['id' => 1, 'first_name' => 'X', 'is_bot' => false]);
+    self::assertFalse($user->isBot);
   }
 
   // ---------------------------------------------------------------------------
