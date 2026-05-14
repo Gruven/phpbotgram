@@ -269,18 +269,36 @@ final class MediaGroupBuilderTest extends TestCase
     self::assertNull($second[1]->caption);
   }
 
-  public function testBuilderCaptionEntitiesSetOnFirstItem(): void
+  public function testBuilderCaptionEntitiesAloneDoesNotOverrideFirstItem(): void
   {
+    // Upstream: caption_entities alone (no caption) does NOT trigger the
+    // override block — only when self.caption is not None.
     $entity = new MessageEntity(type: 'bold', offset: 0, length: 5);
     $items = (new MediaGroupBuilder(captionEntities: [$entity]))
-      ->addPhoto('photo_1')
+      ->addPhoto('photo_1', caption: 'per-item caption')
       ->addPhoto('photo_2')
       ->build();
 
     self::assertCount(2, $items);
-    self::assertSame([$entity], $items[0]->captionEntities);
-    self::assertNull($items[0]->parseMode); // parse_mode cleared when entities provided
+    // First item caption must be preserved (builder caption is null → no override).
+    self::assertSame('per-item caption', $items[0]->caption);
+    // Builder-level captionEntities are NOT injected when caption is null.
+    self::assertNull($items[0]->captionEntities);
     self::assertNull($items[1]->captionEntities);
+  }
+
+  public function testBuildLeavesFirstItemCaptionWhenBuilderCaptionIsNull(): void
+  {
+    // When the builder has captionEntities but no caption, build() must leave
+    // the first item's per-item caption and entities untouched.
+    $entity = new MessageEntity(type: 'italic', offset: 0, length: 3);
+    $items = (new MediaGroupBuilder(captionEntities: [$entity]))
+      ->addPhoto('photo_1', caption: 'original caption')
+      ->build();
+
+    self::assertCount(1, $items);
+    self::assertSame('original caption', $items[0]->caption);
+    self::assertNull($items[0]->captionEntities); // per-item had no entities
   }
 
   public function testBuilderCaptionOnlyChangesFirstItem(): void
@@ -294,6 +312,45 @@ final class MediaGroupBuilderTest extends TestCase
     self::assertSame('Group caption', $items[0]->caption);
     // Non-first items keep their own per-item caption.
     self::assertSame('Item 2 caption', $items[1]->caption);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Constructor media list
+  // ---------------------------------------------------------------------------
+
+  public function testConstructorAcceptsMediaList(): void
+  {
+    $photo1 = new InputMediaPhoto(media: 'file_id_1', caption: 'First');
+    $photo2 = new InputMediaPhoto(media: 'file_id_2');
+    $builder = new MediaGroupBuilder(media: [$photo1, $photo2]);
+    $items = $builder->build();
+
+    self::assertCount(2, $items);
+    self::assertInstanceOf(InputMediaPhoto::class, $items[0]);
+    self::assertInstanceOf(InputMediaPhoto::class, $items[1]);
+    self::assertSame('file_id_1', $items[0]->media);
+    self::assertSame('file_id_2', $items[1]->media);
+    self::assertSame('First', $items[0]->caption);
+  }
+
+  public function testConstructorMediaListRespectsCaptionOverride(): void
+  {
+    $photo = new InputMediaPhoto(media: 'file_id_1', caption: 'per-item');
+    $items = (new MediaGroupBuilder(caption: 'builder caption', media: [$photo]))->build();
+
+    self::assertCount(1, $items);
+    // Builder caption takes precedence for first item.
+    self::assertSame('builder caption', $items[0]->caption);
+  }
+
+  public function testConstructorMediaListEnforcesHomogeneity(): void
+  {
+    $this->expectException(InvalidArgumentException::class);
+
+    new MediaGroupBuilder(media: [
+      new InputMediaPhoto(media: 'photo_id'),
+      new InputMediaAudio(media: 'audio_id'),
+    ]);
   }
 
   // ---------------------------------------------------------------------------

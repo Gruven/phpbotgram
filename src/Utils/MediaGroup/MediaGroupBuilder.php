@@ -43,11 +43,22 @@ final class MediaGroupBuilder
 
   /**
    * @param null|list<MessageEntity> $captionEntities
+   * @param null|list<InputMediaAudio|InputMediaDocument|InputMediaPhoto|InputMediaVideo> $media
+   *                                                                                             Optional list of media items to pre-populate the builder. Each item is
+   *                                                                                             appended via the same validation path as `addPhoto`/`addVideo`/etc.
+   *                                                                                             Mirrors upstream: `def __init__(self, *, caption=None, caption_entities=None, media=None)`.
    */
   public function __construct(
     private readonly ?string $caption = null,
     private readonly ?array $captionEntities = null,
-  ) {}
+    ?array $media = null,
+  ) {
+    if ($media !== null) {
+      foreach ($media as $item) {
+        $this->append($item);
+      }
+    }
+  }
 
   /**
    * Add a photo to the media group.
@@ -158,11 +169,16 @@ final class MediaGroupBuilder
   /**
    * Build and return the assembled media list.
    *
-   * If a builder-level `$caption` or `$captionEntities` is set (even `null`
-   * caption with non-null entities), the builder-level values are injected
-   * into the first item, **always overwriting** any per-item caption or
-   * entities. This matches upstream aiogram: `item.caption = self.caption`
-   * (unconditional assignment when the builder carries caption state).
+   * If the builder-level `$caption` is non-null, it is injected into the
+   * first item together with `$captionEntities`. When only `$captionEntities`
+   * is set but `$caption` is null, the first item's own caption is left
+   * untouched — matching upstream aiogram:
+   *
+   * ```python
+   * if self.caption is not None:
+   *     media[0].caption = self.caption
+   *     media[0].caption_entities = self.caption_entities
+   * ```
    *
    * The returned list is independent from the builder's internal state
    * (items are new instances), so the builder can be reused after a call to `build()`.
@@ -180,13 +196,12 @@ final class MediaGroupBuilder
     $result = [];
 
     foreach ($this->media as $index => $item) {
-      if ($index === 0 && ($this->caption !== null || $this->captionEntities !== null)) {
-        // Always use the builder-level caption (even null) — upstream alignment.
-        $caption = $this->caption;
+      if ($index === 0 && $this->caption !== null) {
+        // Only override when the builder carries an explicit caption — upstream alignment.
         $captionEntities = $this->captionEntities ?? $item->captionEntities;
         $parseMode = $this->captionEntities !== null ? null : $item->parseMode;
 
-        $result[] = $this->copyWithCaption($item, $caption, $captionEntities, $parseMode);
+        $result[] = $this->copyWithCaption($item, $this->caption, $captionEntities, $parseMode);
       } else {
         $result[] = $this->copy($item);
       }
