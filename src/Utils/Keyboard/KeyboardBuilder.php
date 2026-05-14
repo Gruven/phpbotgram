@@ -110,9 +110,11 @@ abstract class KeyboardBuilder
   }
 
   /**
-   * Flow buttons into rows, filling the last incomplete row first then
-   * chunking by `MAX_WIDTH`. When `MAX_WIDTH` is 0 the buttons are appended
-   * as a single row.
+   * Flow buttons into rows. When `MAX_WIDTH` is 0, each call appends a new
+   * row containing all the given buttons (no row-fill; matches upstream
+   * `keyboard.py` behaviour for `max_width == 0`). When `MAX_WIDTH` is
+   * positive, the last incomplete row is filled first, then remaining buttons
+   * are chunked into full rows of that width.
    *
    * @param T ...$buttons
    *
@@ -131,14 +133,10 @@ abstract class KeyboardBuilder
     $maxWidth = static::MAX_WIDTH;
 
     if ($maxWidth === 0) {
-      // No width constraint — pile everything into one row.
-      if ($this->markup === []) {
-        $this->markup[] = [];
-      }
-
-      foreach ($buttons as $button) {
-        $this->markup[count($this->markup) - 1][] = $button;
-      }
+      // No width constraint — append all buttons as a new row (mirrors
+      // upstream `keyboard.py` where `max_width == 0` appends a new row
+      // rather than filling the last one).
+      $this->markup[] = array_values($buttons);
 
       return $this;
     }
