@@ -14,6 +14,8 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Types\User;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use ValueError;
 
 /**
  * Coverage for `CallbackQueryFilter` — the runtime side of the
@@ -186,7 +188,7 @@ final class CallbackQueryFilterTest extends TestCase
     $filter = new CallbackQueryFilter(ThrowingRuntimeCallbackData::class);
     $query = $this->callbackQuery(data: 'throw_runtime:irrelevant');
 
-    $this->expectException(\RuntimeException::class);
+    $this->expectException(RuntimeException::class);
     $filter($query);
   }
 
@@ -264,7 +266,7 @@ final class ThrowingValueErrorCallbackData extends CallbackData
 
   public static function unpack(string $data): self
   {
-    throw new \ValueError('forced ValueError from unpack');
+    throw new ValueError('forced ValueError from unpack');
   }
 }
 
@@ -282,6 +284,6 @@ final class ThrowingRuntimeCallbackData extends CallbackData
 
   public static function unpack(string $data): self
   {
-    throw new \RuntimeException('forced RuntimeException from unpack');
+    throw new RuntimeException('forced RuntimeException from unpack');
   }
 }

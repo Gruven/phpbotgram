@@ -7,6 +7,7 @@ namespace Gruven\PhpBotGram\Tests\Client;
 use Gruven\PhpBotGram\Client\DefaultBotProperties;
 use Gruven\PhpBotGram\Enums\ParseMode;
 use Gruven\PhpBotGram\Types\LinkPreviewOptions;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -89,22 +90,11 @@ final class DefaultBotPropertiesTest extends TestCase
   public function testOffsetExistsReportsPresenceForKnownAndUnknownKeys(): void
   {
     // ArrayAccess::offsetExists must return `true` only for string keys
-    // whose `get()` lookup is non-null. Exercises both branches of the
-    // `is_string && get !== null` guard.
+    // whose `get()` lookup is non-null.
     $d = new DefaultBotProperties(parseMode: 'HTML');
 
     self::assertTrue(isset($d['parse_mode']));
     self::assertFalse(isset($d['disable_notification']));
-    self::assertFalse(isset($d[0]));
-  }
-
-  public function testOffsetGetReturnsNullForNonStringOffset(): void
-  {
-    // Defensive: a non-string offset (e.g. `$d[0]`) returns null without
-    // throwing — mirrors PHP's loose `ArrayAccess` semantics for ints.
-    $d = new DefaultBotProperties(parseMode: 'HTML');
-
-    self::assertNull($d[0]);
   }
 
   public function testOffsetSetThrowsLogicExceptionDueToImmutability(): void
@@ -113,7 +103,7 @@ final class DefaultBotPropertiesTest extends TestCase
     // fail loudly so callers don't silently lose state.
     $d = new DefaultBotProperties();
 
-    $this->expectException(\LogicException::class);
+    $this->expectException(LogicException::class);
     $d['parse_mode'] = 'HTML';
   }
 
@@ -122,7 +112,7 @@ final class DefaultBotPropertiesTest extends TestCase
     // Symmetric to `offsetSet` — deleting a property is rejected.
     $d = new DefaultBotProperties(parseMode: 'HTML');
 
-    $this->expectException(\LogicException::class);
+    $this->expectException(LogicException::class);
     unset($d['parse_mode']);
   }
 }

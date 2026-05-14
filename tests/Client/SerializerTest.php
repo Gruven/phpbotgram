@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Tests\Client;
 
 use DateTimeImmutable;
+use DateTimeInterface;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
 use Gruven\PhpBotGram\Exceptions\ClientDecodeException;
@@ -159,11 +160,13 @@ final class SerializerTest extends TestCase
 
     $dumped = Serializer::dump($payload);
 
-    self::assertIsArray($dumped['users']);
-    self::assertCount(2, $dumped['users']);
-    self::assertSame(1, $dumped['users'][0]['id']);
-    self::assertSame('A', $dumped['users'][0]['first_name']);
-    self::assertSame(2, $dumped['users'][1]['id']);
+    /** @var list<array<string, mixed>> $users */
+    $users = $dumped['users'];
+    self::assertIsArray($users);
+    self::assertCount(2, $users);
+    self::assertSame(1, $users[0]['id']);
+    self::assertSame('A', $users[0]['first_name']);
+    self::assertSame(2, $users[1]['id']);
   }
 
   public function testLoadHonoursNullableParamWithoutDefault(): void
@@ -212,6 +215,6 @@ final class SerializerTest extends TestCase
       'stamp' => '2024-01-02T03:04:05+00:00',
     ]);
 
-    self::assertSame('2024-01-02T03:04:05+00:00', $loaded->stamp->format(\DateTimeInterface::ATOM));
+    self::assertSame('2024-01-02T03:04:05+00:00', $loaded->stamp->format(DateTimeInterface::ATOM));
   }
 }

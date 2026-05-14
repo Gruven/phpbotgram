@@ -88,7 +88,7 @@ final class BotShortcutsTest extends TestCase
     $session = new MockedSession();
     $bot = new Bot(token: '1:test', session: $session);
 
-    ($bot->context(autoClose: false))(static fn (Bot $b): null => null);
+    ($bot->context(autoClose: false))(static fn(Bot $b): null => null);
 
     self::assertFalse($session->closed, 'Session must remain open when autoClose=false');
   }
