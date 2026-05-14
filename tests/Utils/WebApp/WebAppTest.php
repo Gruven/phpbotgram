@@ -306,6 +306,42 @@ final class WebAppTest extends TestCase
   }
 
   // ---------------------------------------------------------------------------
+  // parseInitData — auto-decode unknown JSON-shaped fields
+  // ---------------------------------------------------------------------------
+
+  public function testParseInitDataAutoDecodesUnknownStructuredField(): void
+  {
+    // Supply a mystery field whose value is a URL-encoded JSON object.
+    // The auto-decode loop must decode it without crashing, even though
+    // WebAppInitData has no property for "mystery".
+    $params = [
+      'auth_date' => '1698000000',
+      'hash' => 'aabbcc',
+      'mystery' => '{"foo":"1"}',
+    ];
+
+    // Should not throw — unknown keys with JSON values are silently decoded
+    // in the pipeline and ignored during DTO construction.
+    $data = WebApp::parseInitData(http_build_query($params));
+
+    self::assertInstanceOf(WebAppInitData::class, $data);
+    self::assertSame(1698000000, $data->authDate);
+  }
+
+  public function testParseInitDataThrowsOnMalformedUnknownJsonField(): void
+  {
+    $this->expectException(JsonException::class);
+
+    $params = [
+      'auth_date' => '1698000000',
+      'hash' => 'aabbcc',
+      'mystery' => '{not valid json}',
+    ];
+
+    WebApp::parseInitData(http_build_query($params));
+  }
+
+  // ---------------------------------------------------------------------------
   // safeParseInitData
   // ---------------------------------------------------------------------------
 

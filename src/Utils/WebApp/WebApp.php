@@ -11,6 +11,7 @@ use function implode;
 
 use InvalidArgumentException;
 
+use function is_array;
 use function is_string;
 use function json_decode;
 
@@ -19,6 +20,7 @@ use const JSON_THROW_ON_ERROR;
 use JsonException;
 
 use function ksort;
+use function str_starts_with;
 use function strpos;
 use function substr;
 use function urldecode;
@@ -123,17 +125,40 @@ final class WebApp
   /**
    * Parse a WebApp init data query string into a {@see WebAppInitData} DTO.
    *
-   * Nested JSON fields (`user`, `receiver`, `chat`) are decoded automatically.
+   * Any value that starts with `[` or `{` is auto-decoded as JSON before DTO
+   * construction, mirroring upstream `web_app.py:parse_webapp_init_data`:
+   * ```python
+   * if value.startswith(('[', '{')):
+   *     value = json.loads(value)
+   * ```
+   * Known structured fields (`user`, `receiver`, `chat`) are additionally
+   * converted to typed DTOs.
    *
    * @param string $initData the raw WebApp init data query string
    *
-   * @throws JsonException if any nested JSON field is malformed
+   * @throws JsonException if any JSON-shaped field is malformed
    * @throws InvalidArgumentException if required fields (`auth_date`, `hash`) are missing
    */
   public static function parseInitData(string $initData): WebAppInitData
   {
-    /** @var array<string, string> $parsed */
-    $parsed = self::parseQuery($initData);
+    /** @var array<string, string> $rawParsed */
+    $rawParsed = self::parseQuery($initData);
+
+    // Auto-decode any value that looks like a JSON object or array, mirroring
+    // upstream: `if value.startswith(('[', '{')): value = json.loads(value)`.
+    // Malformed JSON-shaped values raise JsonException (via JSON_THROW_ON_ERROR).
+    // Unknown future fields pass through as decoded arrays; known fields are
+    // further converted to typed DTOs below.
+    /** @var array<string, mixed> $parsed */
+    $parsed = $rawParsed;
+
+    foreach ($rawParsed as $key => $value) {
+      if ($value !== '' && (str_starts_with($value, '[') || str_starts_with($value, '{'))) {
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode($value, associative: true, flags: JSON_THROW_ON_ERROR);
+        $parsed[$key] = $decoded;
+      }
+    }
 
     if (!isset($parsed['auth_date']) || !is_string($parsed['auth_date'])) {
       throw new InvalidArgumentException("WebApp init data is missing required field 'auth_date'.");
@@ -148,25 +173,25 @@ final class WebApp
 
     $user = null;
 
-    if (isset($parsed['user']) && is_string($parsed['user'])) {
+    if (isset($parsed['user']) && is_array($parsed['user'])) {
       /** @var array<string, mixed> $userArr */
-      $userArr = json_decode($parsed['user'], associative: true, flags: JSON_THROW_ON_ERROR);
+      $userArr = $parsed['user'];
       $user = WebAppUser::fromArray($userArr);
     }
 
     $receiver = null;
 
-    if (isset($parsed['receiver']) && is_string($parsed['receiver'])) {
+    if (isset($parsed['receiver']) && is_array($parsed['receiver'])) {
       /** @var array<string, mixed> $receiverArr */
-      $receiverArr = json_decode($parsed['receiver'], associative: true, flags: JSON_THROW_ON_ERROR);
+      $receiverArr = $parsed['receiver'];
       $receiver = WebAppUser::fromArray($receiverArr);
     }
 
     $chat = null;
 
-    if (isset($parsed['chat']) && is_string($parsed['chat'])) {
+    if (isset($parsed['chat']) && is_array($parsed['chat'])) {
       /** @var array<string, mixed> $chatArr */
-      $chatArr = json_decode($parsed['chat'], associative: true, flags: JSON_THROW_ON_ERROR);
+      $chatArr = $parsed['chat'];
       $chat = WebAppChat::fromArray($chatArr);
     }
 
