@@ -23,6 +23,29 @@ use ReflectionClass;
 /**
  * Tests for {@see SimpleRequestHandler}.
  *
+ * Upstream `tests/test_webhook/test_aiohttp_server.py` `TestSimpleRequestHandler`
+ * cases deliberately not ported:
+ *
+ * - `TestSimpleRequestHandler::test_reply_into_webhook_file` — Phase scope deferral:
+ *   webhook-reply multipart response (returning a TelegramMethod as the HTTP body)
+ *   is not yet implemented; PHP always returns `200 OK {}` and routes the method
+ *   via `silentCallRequest`. Deferred to a later Phase 6 revision.
+ * - `TestSimpleRequestHandler::test_reply_into_webhook_text` — Phase scope deferral:
+ *   same webhook-reply multipart body deferral as above.
+ * - `TestSimpleRequestHandler::test_reply_into_webhook_unhandled` — covered
+ *   behaviorally: `BaseRequestHandlerTest::testInlineModeResponseBodyIsEmptyJson`
+ *   asserts the `{}` / `application/json` response when no handler fires.
+ * - `TestSimpleRequestHandler::test_reply_into_webhook_background` — covered
+ *   behaviorally: `BaseRequestHandlerTest::testBackgroundModeResponseBodyIsEmptyJson`
+ *   asserts the empty-JSON fast-return; the `silentCallRequest` invocation path is
+ *   the same code path tested by `testReturns200ImmediatelyInBackgroundMode`.
+ * - `TestSimpleRequestHandler::test_verify_secret` (401 when secret set, no header) —
+ *   covered by `testVerifySecretReturnsFalseForEmptyHeaderWhenSecretIsSet` and
+ *   `BaseRequestHandlerTest::testReturns401WhenSecretVerificationFails`.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ *
  * @internal
  *
  * @coversNothing

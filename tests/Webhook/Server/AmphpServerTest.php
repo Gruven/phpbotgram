@@ -29,6 +29,27 @@ use PHPUnit\Framework\TestCase;
  * lifecycle-wiring contract (onStart/onStop → emitStartup/emitShutdown) is
  * verified using a {@see SpyHttpServer} that never touches a real socket.
  *
+ * Upstream `tests/test_webhook/test_aiohttp_server.py` `TestAiohttpServer`
+ * cases deliberately not ported:
+ *
+ * - `TestAiohttpServer::test_setup_application` — API divergence: aiohttp
+ *   inspects `app.on_startup` / `app.on_shutdown` observer lists; PHP wires
+ *   callbacks via `$server->onStart()` / `$server->onStop()`. The equivalent
+ *   behavior (startup/shutdown callbacks registered and invoked) is covered by
+ *   `SetupTest::testRegisterAttachesOnStartCallback`, `testOnStartFiresEmitStartup`,
+ *   and `testLifecycleCallbacksFireDispatcherObservers`.
+ * - `TestAiohttpServer::test_middleware` (uses `aiohttp_client` live fixture) —
+ *   API divergence / live-service required: aiohttp's `ip_filter_middleware` is a
+ *   coroutine-based WSGI-style middleware wrapping `aiohttp.web.Application`; PHP
+ *   uses `IpFilterMiddleware` implementing amphp's `Middleware` interface. The
+ *   IP-blocking contract is covered by `testIpFilterMiddlewareAllowsKnownIp`,
+ *   `testIpFilterMiddlewareBlocks401ForUnknownIp`,
+ *   `testIpFilterMiddlewareHonoursXForwardedFor`, and
+ *   `testIpFilterMiddlewareBlocksWhenXForwardedForIsBlocked`.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ *
  * @internal
  *
  * @coversNothing

@@ -19,6 +19,21 @@ use PHPUnit\Framework\TestCase;
  * Uses a {@see SpyHttpServer} that records `onStart`/`onStop` callbacks and
  * invokes them manually — no real socket is ever opened.
  *
+ * Upstream `tests/test_webhook/test_aiohttp_server.py` `TestAiohttpServer::test_setup_application`
+ * cases deliberately not ported:
+ *
+ * - `TestAiohttpServer::test_setup_application` — API divergence: the upstream
+ *   test asserts `len(app.on_startup) == 2` and `len(app.on_shutdown) == 1` by
+ *   inspecting aiohttp's observer list directly. PHP uses amphp's `onStart`/`onStop`
+ *   callbacks, which are not exposed as a countable list. The equivalent behavior —
+ *   that exactly one `onStart` and one `onStop` callback are registered and invoked
+ *   correctly — is covered by `testRegisterAttachesOnStartCallback`,
+ *   `testRegisterAttachesOnStopCallback`, `testOnStartFiresEmitStartup`, and
+ *   `testOnStopFiresEmitShutdown`.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ *
  * @internal
  *
  * @coversNothing

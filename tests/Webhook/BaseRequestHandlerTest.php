@@ -31,6 +31,19 @@ use PHPUnit\Framework\TestCase;
  * `Amp\Http\Server\Driver\Client` instance; we supply an anonymous
  * implementation inline.
  *
+ * Upstream `tests/test_webhook/test_aiohttp_server.py` cases deliberately not ported
+ * (cases attributable to BaseRequestHandler behavior):
+ *
+ * - `TestSimpleRequestHandler::test_reply_into_webhook_file` — Phase scope deferral:
+ *   webhook-reply multipart response (returning a TelegramMethod as the HTTP body) is
+ *   not yet implemented; PHP always returns `200 OK {}` and routes the method via
+ *   `silentCallRequest`. Deferred to a later Phase 6 revision.
+ * - `TestSimpleRequestHandler::test_reply_into_webhook_text` — Phase scope deferral:
+ *   same as above (multipart/form-data webhook-reply body).
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ *
  * @internal
  *
  * @coversNothing

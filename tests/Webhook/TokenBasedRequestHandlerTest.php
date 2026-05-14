@@ -24,6 +24,27 @@ use ReflectionClass;
 /**
  * Tests for {@see TokenBasedRequestHandler}.
  *
+ * Upstream `tests/test_webhook/test_aiohttp_server.py` `TestTokenBasedRequestHandler`
+ * cases deliberately not ported:
+ *
+ * - `TestTokenBasedRequestHandler::test_resolve_bot` (uses `FakeRequest.match_info`) —
+ *   API divergence: aiohttp surfaces route captures via `request.match_info`
+ *   (a dict-like object); amphp/http-server uses `$request->getAttribute('bot_token')`.
+ *   The equivalent behaviour is covered by `testResolveBotCallsFactoryOnceAndCachesResult`,
+ *   `testResolveBotCallsFactoryAgainForDifferentToken`, and
+ *   `testResolveBotReturnsDifferentInstancesForDifferentTokens`.
+ * - `TestTokenBasedRequestHandler::test_close` (asserts `bot.session.closed`) —
+ *   covered behaviorally by `testCloseClosesAllCachedBotSessions`, which asserts
+ *   `MockedSession::$closed` directly.
+ * - `TestTokenBasedRequestHandler::test_register` (aiohttp `app.router.routes()`) —
+ *   API divergence: aiohttp's `Application.router.routes()` API does not exist in
+ *   amphp; route registration uses a plain `callable $registerRoute`. Covered by
+ *   `testRegisterAcceptsPathWithBotTokenPlaceholder` and
+ *   `testRegisterThrowsForPathWithoutBotTokenPlaceholder`.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ *
  * @internal
  *
  * @coversNothing

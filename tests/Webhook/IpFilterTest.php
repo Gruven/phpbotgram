@@ -16,6 +16,27 @@ use PHPUnit\Framework\TestCase;
  * the CIDR-based (perf-tuned) PHP implementation against the same contracts as
  * Python's host-set-based reference.
  *
+ * Upstream `tests/test_webhook/test_security.py` cases deliberately not ported:
+ *
+ * - `TestSecurity::test_empty_init` — API divergence: Python asserts
+ *   `not ip_filter._allowed_ips` (accessing private `_allowed_ips` set); PHP
+ *   uses CIDR arrays internally and has no equivalent public accessor. Behavior
+ *   (empty filter denies all) is covered by `testEmptyFilterDeniesEverything`.
+ * - `TestSecurity::test_allow_ip` parametrize row `[42, set()]` — API
+ *   divergence: Python accepts any type and raises `ValueError` for non-string/
+ *   non-IP-object; PHP's `allow()` is typed `string` and would produce a type
+ *   error at the call site rather than an exception from within the method. The
+ *   equivalent invalid-string rejection is covered by `testInvalidInputThrowsInvalidArgumentException`.
+ * - `TestSecurity::test_allow_ip` rows that assert exact `_allowed_ips` set
+ *   equality (e.g., `ip_filter._allowed_ips == set(IPv4Network("91.108.4.0/22").hosts())`) —
+ *   API divergence: Python expands CIDRs to host sets for O(1) lookup; PHP
+ *   stores the CIDR strings directly and matches with `ip_in_cidr()`. The
+ *   externally-observable contract (membership check) is verified by the
+ *   existing `testCheck*` / `testDefaultFilter*` / `testAllow*` test methods.
+ *
+ * All other upstream cases are either ported below or covered behaviorally
+ * by other test methods in this file.
+ *
  * @internal
  *
  * @coversNothing
