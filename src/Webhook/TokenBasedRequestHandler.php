@@ -23,6 +23,13 @@ use InvalidArgumentException;
  * `register()` method enforces this and throws `InvalidArgumentException`
  * when the placeholder is absent.
  *
+ * ## Security caveat
+ *
+ * This handler is not recommended in production because the bot token is
+ * available in the URL and can be logged by a reverse proxy server or other
+ * middleware.  Use {@see SimpleRequestHandler} for single-bot deployments
+ * where the token does not appear in the URL.
+ *
  * ## Bot factory (deviation from upstream)
  *
  * Upstream accepts a `bot_settings` dict and spreads it into `Bot(token=…,
