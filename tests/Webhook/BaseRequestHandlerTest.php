@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Tests\Webhook;
 
 use function Amp\ByteStream\buffer as bufferStream;
-use function Amp\delay;
 
 use Amp\ByteStream\ReadableIterableStream;
+
+use function Amp\delay;
+
 use Amp\Http\Server\Driver\Client;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
@@ -15,6 +17,7 @@ use Amp\Socket\InternetAddress;
 use Amp\Socket\SocketAddress;
 use Amp\Socket\TlsInfo;
 use Closure;
+use Generator;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
@@ -131,7 +134,7 @@ final class BaseRequestHandlerTest extends TestCase
     $uri = LeagueUri::new('http://localhost/webhook');
 
     // Yield the oversized payload as a single generator chunk.
-    $body = new ReadableIterableStream((static function () use ($size): \Generator {
+    $body = new ReadableIterableStream((static function () use ($size): Generator {
       yield str_repeat('x', $size);
     })());
 
@@ -556,6 +559,10 @@ final class BaseRequestHandlerTest extends TestCase
    * inline (synchronous) mode, BaseRequestHandler must route it via
    * Dispatcher::silentCallRequest rather than embedding it in the HTTP
    * response body.
+   *
+   * silentCallRequest is now detached into a background fiber so the 200
+   * returns immediately; awaitBackgroundTasks() is required before
+   * asserting on the recorded calls.
    */
   public function testHandlerReturnedTelegramMethodRoutesViaSilentCallRequest(): void
   {
@@ -576,6 +583,9 @@ final class BaseRequestHandlerTest extends TestCase
       $handler->handleRequest(
         $this->makeRequest($this->makeUpdatePayload()),
       );
+
+      // silentCallRequest runs in a detached fiber; drain before asserting.
+      $handler->awaitBackgroundTasks();
 
       self::assertCount(1, $dispatcher->silentCalls, 'silentCallRequest must be called exactly once');
       self::assertSame($bot, $dispatcher->silentCalls[0][0], 'silentCallRequest must receive the resolved bot');

@@ -9,6 +9,7 @@ use Amp\Http\Server\Middleware;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\Response;
+use Amp\Socket\InternetAddress;
 use Gruven\PhpBotGram\Webhook\IpFilter;
 
 /**
@@ -77,7 +78,7 @@ final class IpFilterMiddleware implements Middleware
     // (e.g. 'fe80::1' for IPv6) rather than the toString() form that
     // brackets IPv6 addresses (e.g. '[fe80::1]:12345').
     $socketAddress = $request->getClient()->getRemoteAddress();
-    $ip = $socketAddress instanceof \Amp\Socket\InternetAddress
+    $ip = $socketAddress instanceof InternetAddress
       ? $socketAddress->getAddress()
       : '';
 

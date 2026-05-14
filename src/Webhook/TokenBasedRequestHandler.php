@@ -147,7 +147,7 @@ final class TokenBasedRequestHandler extends BaseRequestHandler
   {
     if (!$request->hasAttribute('bot_token')) {
       throw new InvalidArgumentException(
-        "Request has no bot_token attribute — ensure PathRouter or a compatible router populated it from the URL pattern.",
+        'Request has no bot_token attribute — ensure PathRouter or a compatible router populated it from the URL pattern.',
       );
     }
 
@@ -155,7 +155,7 @@ final class TokenBasedRequestHandler extends BaseRequestHandler
 
     if (!is_string($token) || $token === '') {
       throw new InvalidArgumentException(
-        "Request has no bot_token attribute — ensure PathRouter or a compatible router populated it from the URL pattern.",
+        'Request has no bot_token attribute — ensure PathRouter or a compatible router populated it from the URL pattern.',
       );
     }
 

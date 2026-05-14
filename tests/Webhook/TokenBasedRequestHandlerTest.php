@@ -274,7 +274,7 @@ final class TokenBasedRequestHandlerTest extends TestCase
     // No attribute set — PathRouter or compatible router must populate it.
     $request = $this->makeRequest('/webhook/42:PATHTOKEN');
 
-    $this->expectException(\InvalidArgumentException::class);
+    $this->expectException(InvalidArgumentException::class);
     $this->expectExceptionMessageMatches('/bot_token/');
 
     $handler->resolveBot($request);

@@ -17,6 +17,7 @@ use Amp\Http\Server\Response;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
+use JsonException;
 
 /**
  * Abstract base for webhook request handlers.
@@ -205,8 +206,9 @@ abstract class BaseRequestHandler implements RequestHandler
   // -------------------------------------------------------------------------
 
   /**
-   * Dispatch synchronously and return the response only after the
-   * dispatcher chain has completed.
+   * Dispatch synchronously, then detach any `silentCallRequest` into a
+   * background fiber so the 200 is returned before the secondary API call
+   * completes (avoids one full RTT on Telegram's inbound webhook socket).
    *
    * Simplified from upstream: the result `TelegramMethod` (if any) is
    * routed via `silentCallRequest` rather than embedded in the HTTP
@@ -223,14 +225,21 @@ abstract class BaseRequestHandler implements RequestHandler
     try {
       /** @var array<string, mixed> $payload */
       $payload = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
-    } catch (\JsonException) {
+    } catch (JsonException) {
       return new Response(400, [], 'Invalid JSON');
     }
 
     $result = $this->dispatcher->feedWebhookUpdate($bot, $payload, $this->data);
 
     if ($result instanceof TelegramMethod) {
-      $this->dispatcher->silentCallRequest($bot, $result);
+      // Detach silentCallRequest into a background fiber so that the 200
+      // response is sent back to Telegram immediately rather than after
+      // the secondary outbound API call completes (saves one full RTT).
+      /** @var Future<void> $silentTask */
+      $silentTask = async(function () use ($bot, $result): void {
+        $this->dispatcher->silentCallRequest($bot, $result);
+      });
+      $this->trackBackgroundTask($silentTask);
     }
 
     return new Response(200, ['Content-Type' => 'application/json'], '{}');
@@ -258,7 +267,7 @@ abstract class BaseRequestHandler implements RequestHandler
     try {
       /** @var array<string, mixed> $payload */
       $payload = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
-    } catch (\JsonException) {
+    } catch (JsonException) {
       return new Response(400, [], 'Invalid JSON');
     }
 
@@ -270,13 +279,27 @@ abstract class BaseRequestHandler implements RequestHandler
         $this->dispatcher->silentCallRequest($bot, $result);
       }
     });
+    $this->trackBackgroundTask($task);
 
+    return new Response(200, ['Content-Type' => 'application/json'], '{}');
+  }
+
+  /**
+   * Register a fire-and-forget fiber in `$backgroundTasks` and wire a
+   * self-cleaning `finally` callback so the entry is removed once the
+   * fiber settles.
+   *
+   * Shared by both `handleRequestInline` (silentCallRequest fiber) and
+   * `handleRequestBackground` (full-dispatch fiber).
+   *
+   * @param Future<void> $task
+   */
+  private function trackBackgroundTask(Future $task): void
+  {
     $taskId = spl_object_id($task);
     $this->backgroundTasks[$taskId] = $task;
     $task->finally(function () use ($taskId): void {
       unset($this->backgroundTasks[$taskId]);
     });
-
-    return new Response(200, ['Content-Type' => 'application/json'], '{}');
   }
 }
