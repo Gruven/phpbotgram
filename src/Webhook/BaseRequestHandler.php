@@ -7,6 +7,9 @@ namespace Gruven\PhpBotGram\Webhook;
 use function Amp\async;
 
 use Amp\Future;
+
+use function Amp\Future\await;
+
 use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\Response;
@@ -137,6 +140,26 @@ abstract class BaseRequestHandler implements RequestHandler
     }
 
     return $this->handleRequestInline($bot, $request);
+  }
+
+  // -------------------------------------------------------------------------
+  // Shutdown helper
+  // -------------------------------------------------------------------------
+
+  /**
+   * Await all in-flight background tasks spawned by handleRequestBackground().
+   *
+   * Call this during graceful shutdown (Setup::register and AmphpServer::run
+   * wire it into the onStop callback) to ensure FSM writes and outbound API
+   * calls complete before the server shuts down.
+   */
+  public function awaitBackgroundTasks(): void
+  {
+    if ($this->backgroundTasks === []) {
+      return;
+    }
+
+    await($this->backgroundTasks);
   }
 
   // -------------------------------------------------------------------------

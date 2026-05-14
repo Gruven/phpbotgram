@@ -129,6 +129,7 @@ final class AmphpServer
     });
 
     $server->onStop(static function (HttpServer $_) use ($handler, $dispatcher, $server, $workflowData): void {
+      $handler->awaitBackgroundTasks();
       $handler->close();
       $dispatcher->emitShutdown([
         'dispatcher' => $dispatcher,
