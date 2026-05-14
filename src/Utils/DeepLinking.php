@@ -8,6 +8,7 @@ use Closure;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Utils\Link\Link;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * Telegram deep-linking helpers.
@@ -17,7 +18,12 @@ use InvalidArgumentException;
  * Deviation from upstream: `createDeepLink` accepts a `DeepLinkType` enum
  * instead of an arbitrary `string $linkType`, providing compile-time safety.
  * The upstream Python API uses an `await bot.me()` coroutine; this PHP port
- * calls `Bot::me()` which is synchronous.
+ * calls `Bot::getMe()` which is synchronous.
+ *
+ * Interim caching: `getUsername()` memoises the bot username by `spl_object_id`
+ * so repeated `createStartLink`/`createStartGroupLink`/`createStartAppLink`
+ * calls with the same Bot instance make only ONE `getMe()` round-trip.
+ * Phase 8 will move the cache to `Bot::me()` itself.
  */
 final class DeepLinking
 {
@@ -31,7 +37,37 @@ final class DeepLinking
    */
   private const BAD_PATTERN = '/[^A-Za-z0-9_-]/';
 
+  /**
+   * Interim username cache keyed by spl_object_id() of the Bot instance.
+   *
+   * @var array<int, string>
+   */
+  private static array $usernameCache = [];
+
   private function __construct() {}
+
+  /**
+   * Return the bot's username, fetching it via `getMe()` on the first call
+   * and serving subsequent calls from the in-process cache.
+   *
+   * @throws LogicException if the bot has no username.
+   */
+  private static function getUsername(Bot $bot): string
+  {
+    $id = spl_object_id($bot);
+
+    if (!isset(self::$usernameCache[$id])) {
+      $me = $bot->getMe();
+
+      if ($me->username === null) {
+        throw new LogicException('Bot has no username — cannot build deep link.');
+      }
+
+      self::$usernameCache[$id] = $me->username;
+    }
+
+    return self::$usernameCache[$id];
+  }
 
   /**
    * Create a `https://t.me/<bot>?start=<payload>` link.
@@ -44,11 +80,7 @@ final class DeepLinking
     bool $encode = false,
     ?Closure $encoder = null,
   ): string {
-    $username = $bot->getMe()->username;
-
-    if ($username === null) {
-      throw new InvalidArgumentException('Bot has no username; cannot build a deep link.');
-    }
+    $username = self::getUsername($bot);
 
     return self::createDeepLink(
       username: $username,
@@ -70,11 +102,7 @@ final class DeepLinking
     bool $encode = false,
     ?Closure $encoder = null,
   ): string {
-    $username = $bot->getMe()->username;
-
-    if ($username === null) {
-      throw new InvalidArgumentException('Bot has no username; cannot build a deep link.');
-    }
+    $username = self::getUsername($bot);
 
     return self::createDeepLink(
       username: $username,
@@ -97,11 +125,7 @@ final class DeepLinking
     ?string $appName = null,
     ?Closure $encoder = null,
   ): string {
-    $username = $bot->getMe()->username;
-
-    if ($username === null) {
-      throw new InvalidArgumentException('Bot has no username; cannot build a deep link.');
-    }
+    $username = self::getUsername($bot);
 
     return self::createDeepLink(
       username: $username,

@@ -11,6 +11,7 @@ use Gruven\PhpBotGram\Utils\DeepLinking;
 use Gruven\PhpBotGram\Utils\DeepLinkType;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 
 /**
  * Unit tests for {@see DeepLinking}.
@@ -111,6 +112,13 @@ final class DeepLinkingTest extends TestCase
     return $bot;
   }
 
+  protected function setUp(): void
+  {
+    // Clear the interim username cache before each test so tests are isolated.
+    $cache = new ReflectionProperty(DeepLinking::class, 'usernameCache');
+    $cache->setValue(null, []);
+  }
+
   public function testCreateStartLinkUsesMe(): void
   {
     $url = DeepLinking::createStartLink($this->makeBot(), 'abc123');
@@ -171,5 +179,39 @@ final class DeepLinkingTest extends TestCase
     self::assertStringStartsWith('https://t.me/tbot/myapp?startapp=', $url);
     self::assertStringNotContainsString(' ', $url);
     self::assertStringNotContainsString('!', $url);
+  }
+
+  // ---------------------------------------------------------------------------
+  // username caching
+  // ---------------------------------------------------------------------------
+
+  public function testCreateStartLinkUsesCachedUsernameOnSecondCall(): void
+  {
+    // The bot is set up with exactly ONE canned GetMe response.
+    // A second createStartLink call would fail with "No canned responses left"
+    // if getMe() were invoked again — the cache must prevent that.
+    $bot = $this->makeBot('cachedbot');
+    // First call: fetches and caches.
+    $url1 = DeepLinking::createStartLink($bot, 'foo');
+    self::assertSame('https://t.me/cachedbot?start=foo', $url1);
+
+    // Second call: uses cache — no second GetMe request.
+    $url2 = DeepLinking::createStartLink($bot, 'bar');
+    self::assertSame('https://t.me/cachedbot?start=bar', $url2);
+  }
+
+  public function testCacheIsPerBotInstance(): void
+  {
+    // Two separate Bot instances each get their own GetMe response.
+    $bot1 = $this->makeBot('botone');
+    $user2 = new User(id: 99, isBot: true, firstName: 'Bot2', username: 'bottwo');
+    $bot2 = new MockedBot();
+    $bot2->addResultFor(GetMe::class, ok: true, result: $user2);
+
+    $url1 = DeepLinking::createStartLink($bot1, 'x');
+    $url2 = DeepLinking::createStartLink($bot2, 'x');
+
+    self::assertSame('https://t.me/botone?start=x', $url1);
+    self::assertSame('https://t.me/bottwo?start=x', $url2);
   }
 }
