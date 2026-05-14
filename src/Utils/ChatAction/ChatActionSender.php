@@ -363,17 +363,20 @@ final class ChatActionSender
 
     $cancellation = new DeferredCancellation();
 
+    /** @var Future<null> $delayTask */
+    $delayTask = async(static fn(): null => delay($seconds, true, $cancellation->getCancellation()));
+
     /** @var list<Future<null>> $futures */
-    $futures = [
-      $closeFuture,
-      async(static fn(): null => delay($seconds, true, $cancellation->getCancellation())),
-    ];
+    $futures = [$closeFuture, $delayTask];
 
     try {
       awaitFirst($futures);
     } finally {
       // Reclaim the event-loop timer if the close-future won the race.
       $cancellation->cancel();
+      // Silence the unhandled-future warning that fires when the delay was
+      // cancelled but the future was never awaited (amphp stdlib contract).
+      $delayTask->ignore();
     }
   }
 }
