@@ -254,6 +254,36 @@ final class ChatActionSenderTest extends TestCase
   }
 
   // ---------------------------------------------------------------------------
+  // raceDelay cancellation — no orphaned timers
+  // ---------------------------------------------------------------------------
+
+  public function testStopReclaimsDelayPromptly(): void
+  {
+    // With interval=5s, if stop() did NOT cancel the orphaned delay the test
+    // would stall for ~5 s. The DeferredCancellation fix means awaitFirst
+    // returns quickly when close wins, so the whole test completes in <0.1 s.
+    $this->runAsync(static function (): void {
+      $bot = self::makeBot();
+      $sender = ChatActionSender::typing(bot: $bot, chatId: 1, interval: 5.0);
+
+      $start = microtime(true);
+      $handle = $sender->start();
+
+      // Give the first action a chance to fire (immediate on initialSleep=0).
+      delay(0.02);
+
+      $handle->stop();
+
+      $elapsed = microtime(true) - $start;
+
+      // Total elapsed should be well under 1 s — proves the 5 s delay timer
+      // was cancelled, not left to expire.
+      self::assertLessThan(1.0, $elapsed, 'stop() stalled — orphaned 5s delay timer not cancelled');
+      self::assertGreaterThanOrEqual(1, count($bot->getMockedSession()->requestTimeouts));
+    });
+  }
+
+  // ---------------------------------------------------------------------------
   // stop() concurrent with running loop
   // ---------------------------------------------------------------------------
 

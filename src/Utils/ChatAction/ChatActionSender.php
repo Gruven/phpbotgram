@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Utils\ChatAction;
 
 use function Amp\async;
 
+use Amp\DeferredCancellation;
 use Amp\DeferredFuture;
 
 use function Amp\delay;
@@ -348,20 +349,31 @@ final class ChatActionSender
    * Race a delay against the close-future. Returns when either the delay
    * elapses or the close signal fires — whichever comes first.
    *
+   * Uses {@see DeferredCancellation} to cancel the underlying event-loop
+   * timer when the close-future wins, preventing orphaned timers from
+   * accumulating when many senders are stopped early.
+   *
    * @param Future<null> $closeFuture
    */
   private static function raceDelay(float $seconds, Future $closeFuture): void
   {
-    if ($closeFuture->isComplete()) {
+    if ($closeFuture->isComplete() || $seconds <= 0.0) {
       return;
     }
+
+    $cancellation = new DeferredCancellation();
 
     /** @var list<Future<null>> $futures */
     $futures = [
       $closeFuture,
-      async(static fn(): null => delay($seconds)),
+      async(static fn(): null => delay($seconds, true, $cancellation->getCancellation())),
     ];
 
-    awaitFirst($futures);
+    try {
+      awaitFirst($futures);
+    } finally {
+      // Reclaim the event-loop timer if the close-future won the race.
+      $cancellation->cancel();
+    }
   }
 }
