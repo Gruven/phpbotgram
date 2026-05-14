@@ -399,6 +399,28 @@ final class InlineKeyboardBuilderTest extends TestCase
     $row = array_map(static fn(int $i): InlineKeyboardButton => self::btn("b{$i}"), range(1, 9));
     new InlineKeyboardBuilder([$row]);
   }
+
+  // ---------------------------------------------------------------------------
+  // row() explicit non-positive width
+  // ---------------------------------------------------------------------------
+
+  public function testRowWithZeroWidthThrows(): void
+  {
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/row\(\) width must be > 0, got 0/');
+
+    $builder = new InlineKeyboardBuilder();
+    $builder->row([self::btn('A')], 0);
+  }
+
+  public function testRowWithNegativeWidthThrows(): void
+  {
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/row\(\) width must be > 0, got -1/');
+
+    $builder = new InlineKeyboardBuilder();
+    $builder->row([self::btn('A')], -1);
+  }
 }
 
 // ---------------------------------------------------------------------------

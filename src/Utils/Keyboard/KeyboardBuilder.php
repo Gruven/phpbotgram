@@ -194,19 +194,19 @@ abstract class KeyboardBuilder
 
     $maxWidth = static::MAX_WIDTH;
 
-    // Resolve effective width: null → MAX_WIDTH (upstream default).
-    $effectiveWidth = $width ?? ($maxWidth > 0 ? $maxWidth : null);
-
-    // Cap explicit width to MAX_WIDTH when positive.
-    if ($effectiveWidth !== null && $maxWidth > 0 && $effectiveWidth > $maxWidth) {
-      $effectiveWidth = $maxWidth;
+    // Reject an explicitly-supplied non-positive width (upstream parity:
+    // `_validate_size(0)` raises because 0 < min_width).
+    if ($width !== null && $width <= 0) {
+      throw new InvalidArgumentException(sprintf('row() width must be > 0, got %d', $width));
     }
 
-    if ($effectiveWidth === null || $effectiveWidth <= 0) {
-      // No width limit — single row with all buttons.
-      $this->markup[] = array_values($buttons);
+    // Resolve effective width: null → MAX_WIDTH (upstream default). For
+    // unconstrained subclasses (MAX_WIDTH === 0) default to no limit.
+    $effectiveWidth = $width ?? ($maxWidth > 0 ? $maxWidth : PHP_INT_MAX);
 
-      return $this;
+    // Cap explicit width to MAX_WIDTH when positive.
+    if ($maxWidth > 0 && $effectiveWidth > $maxWidth) {
+      $effectiveWidth = $maxWidth;
     }
 
     $queue = array_values($buttons);
