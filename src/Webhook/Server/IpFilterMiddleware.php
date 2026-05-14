@@ -38,6 +38,11 @@ final class IpFilterMiddleware implements Middleware
     [$ip, $accepted] = $this->checkIp($request);
 
     if (!$accepted) {
+      trigger_error(
+        sprintf('Blocking webhook request from unauthorized IP: %s', $ip),
+        \E_USER_WARNING,
+      );
+
       return new Response(HttpStatus::UNAUTHORIZED, [], 'Unauthorized');
     }
 
