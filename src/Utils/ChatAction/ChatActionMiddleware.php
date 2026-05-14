@@ -96,8 +96,8 @@ final class ChatActionMiddleware extends BaseMiddleware
       $action = $flag;
     } elseif (is_array($flag)) {
       $action = isset($flag['action']) && is_string($flag['action']) ? $flag['action'] : $action;
-      $interval = isset($flag['interval']) && is_float($flag['interval']) ? $flag['interval'] : $interval;
-      $initialSleep = isset($flag['initial_sleep']) && is_float($flag['initial_sleep']) ? $flag['initial_sleep'] : $initialSleep;
+      $interval = isset($flag['interval']) && is_numeric($flag['interval']) ? (float)$flag['interval'] : $interval;
+      $initialSleep = isset($flag['initial_sleep']) && is_numeric($flag['initial_sleep']) ? (float)$flag['initial_sleep'] : $initialSleep;
     }
 
     $sender = new ChatActionSender(

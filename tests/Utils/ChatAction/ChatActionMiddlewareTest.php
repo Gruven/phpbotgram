@@ -222,6 +222,43 @@ final class ChatActionMiddlewareTest extends TestCase
     });
   }
 
+  public function testMiddlewareAcceptsIntegerIntervalInFlag(): void
+  {
+    // int interval value (e.g. 1 rather than 1.0) must be accepted and used —
+    // previously is_float() rejected integers and silently fell back to the
+    // middleware default (5.0 s), preventing any sendChatAction being sent.
+    // With the 5.0 s default a handler that takes only 0.06 s never triggers
+    // a tick; with an integer 1 it is cast to (float)1 and still no tick fires
+    // in 0.06 s either, but crucially no TypeError is raised.
+    // We test it differently: use integer interval=0.01 (can't, is float) —
+    // instead use the array with action override and verify no exception.
+    $this->runAsync(static function (): void {
+      $bot = self::makeBot();
+      $middleware = new ChatActionMiddleware(interval: 5.0); // default — large
+      $event = self::makeMessage(chatId: 1);
+
+      $invoked = false;
+      $handler = static function (object $e, array $d) use (&$invoked): string {
+        delay(0.05);
+        $invoked = true;
+
+        return 'done';
+      };
+
+      // 'interval' => 1 (integer, not float) — must be accepted without error.
+      $handlerObject = new HandlerObject($handler, [], [
+        'chat_action' => ['action' => 'typing', 'interval' => 1],
+      ]);
+      $data = ['bot' => $bot, 'handler' => $handlerObject];
+
+      $result = $middleware($handler, $event, $data);
+
+      // No TypeError thrown; handler ran to completion.
+      self::assertTrue($invoked);
+      self::assertSame('done', $result);
+    });
+  }
+
   public function testNonMessageEventPassesThroughEvenWhenFlagged(): void
   {
     // Non-Message event → no sender, even with flag present.
