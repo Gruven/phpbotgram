@@ -75,14 +75,15 @@ final class ReplyKeyboardBuilderTest extends TestCase
 
   public function testAddFlowsButtonsIntoRowsOfMaxWidth(): void
   {
-    // MAX_WIDTH for ReplyKeyboardBuilder is 12; 13 buttons → row of 12 + row of 1.
+    // MAX_WIDTH for ReplyKeyboardBuilder is 10 (upstream parity);
+    // 11 buttons → row of 10 + row of 1.
     $builder = new ReplyKeyboardBuilder();
-    $buttons = array_map(static fn(int $i): KeyboardButton => self::btn((string)$i), range(1, 13));
+    $buttons = array_map(static fn(int $i): KeyboardButton => self::btn((string)$i), range(1, 11));
     $builder->add(...$buttons);
 
     $markup = $builder->asMarkup();
     self::assertCount(2, $markup->keyboard);
-    self::assertCount(12, $markup->keyboard[0]);
+    self::assertCount(10, $markup->keyboard[0]);
     self::assertCount(1, $markup->keyboard[1]);
   }
 

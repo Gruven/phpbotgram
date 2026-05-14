@@ -22,9 +22,11 @@ use Gruven\PhpBotGram\Types\WebAppInfo;
 final class ReplyKeyboardBuilder extends KeyboardBuilder
 {
   /**
-   * Maximum buttons per row for reply keyboards (Telegram limit: 12).
+   * Maximum buttons per row for reply keyboards.
+   *
+   * Matches upstream `aiogram/utils/keyboard.py:374` (`max_width: int = 10`).
    */
-  public const int MAX_WIDTH = 12;
+  public const int MAX_WIDTH = 10;
 
   /**
    * Minimum row width.
