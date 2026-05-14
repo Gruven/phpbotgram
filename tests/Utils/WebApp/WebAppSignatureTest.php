@@ -7,9 +7,13 @@ namespace Gruven\PhpBotGram\Tests\Utils\WebApp;
 use function base64_encode;
 use function extension_loaded;
 
+use Gruven\PhpBotGram\Utils\WebApp\WebAppInitData;
 use Gruven\PhpBotGram\Utils\WebApp\WebAppSignature;
 
 use function implode;
+
+use InvalidArgumentException;
+
 use function ksort;
 
 use PHPUnit\Framework\TestCase;
@@ -283,6 +287,46 @@ final class WebAppSignatureTest extends TestCase
     self::assertSame(
       '40055058a4ee38156a06562e52eece92a771bcd8346a8c4615cb7376eddf72ec',
       WebAppSignature::TEST_PUBLIC_KEY_HEX,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // safeParseInitData
+  // ---------------------------------------------------------------------------
+
+  public function testSafeParseInitDataReturnsDtoOnValidSignature(): void
+  {
+    $fixture = $this->makeFixture();
+
+    // parseInitData requires a 'hash' field (HMAC variant); include a placeholder
+    // so the DTO can be constructed. The Ed25519 path does not validate hash here.
+    $initDataWithHash = $fixture['initData'] . '&hash=placeholder';
+
+    $data = WebAppSignature::safeParseInitData(
+      $fixture['botId'],
+      $initDataWithHash,
+      $fixture['publicKeyHex'],
+    );
+
+    self::assertInstanceOf(WebAppInitData::class, $data);
+    self::assertSame(1698000000, $data->authDate);
+    self::assertSame('AABCDE', $data->queryId);
+  }
+
+  public function testSafeParseInitDataThrowsOnInvalidSignature(): void
+  {
+    $fixture = $this->makeFixture();
+
+    // Tamper with the init data so the signature no longer matches.
+    $tampered = str_replace('auth_date=1698000000', 'auth_date=9999999999', $fixture['initData']);
+
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/signature/i');
+
+    WebAppSignature::safeParseInitData(
+      $fixture['botId'],
+      $tampered,
+      $fixture['publicKeyHex'],
     );
   }
 }

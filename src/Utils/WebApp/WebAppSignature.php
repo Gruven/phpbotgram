@@ -7,7 +7,13 @@ namespace Gruven\PhpBotGram\Utils\WebApp;
 use function explode;
 use function extension_loaded;
 use function implode;
+
+use InvalidArgumentException;
+
 use function is_string;
+
+use JsonException;
+
 use function ksort;
 use function sodium_crypto_sign_verify_detached;
 
@@ -81,6 +87,32 @@ final class WebAppSignature
     }
 
     return $result;
+  }
+
+  /**
+   * Verify and parse WebApp init data using the Ed25519 public key in one step.
+   *
+   * Calls {@see self::check()} first and throws if the signature is invalid,
+   * then delegates to {@see WebApp::parseInitData()}.
+   *
+   * Port of upstream `safe_check_webapp_init_data_from_signature` in
+   * `aiogram/utils/web_app_signature.py`.
+   *
+   * @param int $botId the numeric bot ID (extracted from the token)
+   * @param string $initData the raw WebApp init data query string
+   * @param null|string $publicKeyHex hex-encoded Ed25519 public key;
+   *                                  defaults to the production key
+   *
+   * @throws InvalidArgumentException if the signature is invalid
+   * @throws JsonException if any nested JSON field is malformed
+   */
+  public static function safeParseInitData(int $botId, string $initData, ?string $publicKeyHex = null): WebAppInitData
+  {
+    if (!self::check($botId, $initData, $publicKeyHex)) {
+      throw new InvalidArgumentException('Invalid WebApp init data signature.');
+    }
+
+    return WebApp::parseInitData($initData);
   }
 
   /**
