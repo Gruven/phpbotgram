@@ -57,9 +57,9 @@ final class MediaGroupBuilder
   public function addPhoto(
     InputFile|string $media,
     ?string $caption = null,
-    ?string $parseMode = null,
+    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
-    ?bool $showCaptionAboveMedia = null,
+    null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     ?bool $hasSpoiler = null,
   ): static {
     return $this->append(new InputMediaPhoto(
@@ -81,9 +81,9 @@ final class MediaGroupBuilder
     InputFile|string $media,
     ?InputFile $thumbnail = null,
     ?string $caption = null,
-    ?string $parseMode = null,
+    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
-    ?bool $showCaptionAboveMedia = null,
+    null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     ?int $width = null,
     ?int $height = null,
     ?int $duration = null,
@@ -114,7 +114,7 @@ final class MediaGroupBuilder
     InputFile|string $media,
     ?InputFile $thumbnail = null,
     ?string $caption = null,
-    ?string $parseMode = null,
+    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
     ?int $duration = null,
     ?string $performer = null,
@@ -141,7 +141,7 @@ final class MediaGroupBuilder
     InputFile|string $media,
     ?InputFile $thumbnail = null,
     ?string $caption = null,
-    ?string $parseMode = null,
+    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
     ?bool $disableContentTypeDetection = null,
   ): static {
@@ -158,8 +158,11 @@ final class MediaGroupBuilder
   /**
    * Build and return the assembled media list.
    *
-   * If a builder-level `$caption` is set it is injected into the first item,
-   * overwriting any per-item caption. Same for `$captionEntities`.
+   * If a builder-level `$caption` or `$captionEntities` is set (even `null`
+   * caption with non-null entities), the builder-level values are injected
+   * into the first item, **always overwriting** any per-item caption or
+   * entities. This matches upstream aiogram: `item.caption = self.caption`
+   * (unconditional assignment when the builder carries caption state).
    *
    * The returned list is independent from the builder's internal state
    * (items are new instances), so the builder can be reused after a call to `build()`.
@@ -178,7 +181,8 @@ final class MediaGroupBuilder
 
     foreach ($this->media as $index => $item) {
       if ($index === 0 && ($this->caption !== null || $this->captionEntities !== null)) {
-        $caption = $this->caption ?? $item->caption;
+        // Always use the builder-level caption (even null) — upstream alignment.
+        $caption = $this->caption;
         $captionEntities = $this->captionEntities ?? $item->captionEntities;
         $parseMode = $this->captionEntities !== null ? null : $item->parseMode;
 

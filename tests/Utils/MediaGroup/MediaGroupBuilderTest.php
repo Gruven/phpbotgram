@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Utils\MediaGroup;
 
+use Gruven\PhpBotGram\Client\BotDefault;
 use Gruven\PhpBotGram\Types\FsInputFile;
 use Gruven\PhpBotGram\Types\InputMediaAudio;
 use Gruven\PhpBotGram\Types\InputMediaDocument;
@@ -324,6 +325,32 @@ final class MediaGroupBuilderTest extends TestCase
       ->build();
 
     self::assertCount(3, $result);
+  }
+
+  // ---------------------------------------------------------------------------
+  // BotDefault sentinel preservation
+  // ---------------------------------------------------------------------------
+
+  public function testAddPhotoForwardsBotDefaultParseMode(): void
+  {
+    // When addPhoto() is called without an explicit parseMode the resulting
+    // InputMediaPhoto must carry the BotDefault sentinel, NOT null.
+    $items = (new MediaGroupBuilder())->addPhoto('photo_id')->build();
+
+    $item = $items[0];
+    self::assertInstanceOf(InputMediaPhoto::class, $item);
+    self::assertInstanceOf(BotDefault::class, $item->parseMode);
+    self::assertSame('parse_mode', $item->parseMode->name);
+  }
+
+  public function testAddPhotoForwardsBotDefaultShowCaptionAboveMedia(): void
+  {
+    $items = (new MediaGroupBuilder())->addPhoto('photo_id')->build();
+
+    $item = $items[0];
+    self::assertInstanceOf(InputMediaPhoto::class, $item);
+    self::assertInstanceOf(BotDefault::class, $item->showCaptionAboveMedia);
+    self::assertSame('show_caption_above_media', $item->showCaptionAboveMedia->name);
   }
 
   // ---------------------------------------------------------------------------
