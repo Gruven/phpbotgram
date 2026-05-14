@@ -133,12 +133,34 @@ final class CallbackAnswerMiddleware extends BaseMiddleware
     $cacheTime = $this->cacheTime;
 
     if (is_array($properties)) {
-      $pre = is_bool($properties['pre'] ?? null) ? $properties['pre'] : $pre;
-      $disabled = is_bool($properties['disabled'] ?? null) ? $properties['disabled'] : $disabled;
-      $text = is_string($properties['text'] ?? null) ? $properties['text'] : $text;
-      $showAlert = is_bool($properties['show_alert'] ?? null) ? $properties['show_alert'] : $showAlert;
-      $url = is_string($properties['url'] ?? null) ? $properties['url'] : $url;
-      $cacheTime = is_int($properties['cache_time'] ?? null) ? $properties['cache_time'] : $cacheTime;
+      // Use array_key_exists so an explicit `null` override reaches the DTO
+      // (mirrors upstream Python's `properties.get(key, default)` which
+      // returns the stored `None`). The is_*-on-non-null type guards are
+      // defensive: a flag of the wrong scalar type falls back to the
+      // middleware default, while `null` is honoured.
+      if (array_key_exists('pre', $properties) && (is_bool($properties['pre']) || $properties['pre'] === null)) {
+        $pre = $properties['pre'] ?? $pre;
+      }
+
+      if (array_key_exists('disabled', $properties) && is_bool($properties['disabled'])) {
+        $disabled = $properties['disabled'];
+      }
+
+      if (array_key_exists('text', $properties) && (is_string($properties['text']) || $properties['text'] === null)) {
+        $text = $properties['text'];
+      }
+
+      if (array_key_exists('show_alert', $properties) && (is_bool($properties['show_alert']) || $properties['show_alert'] === null)) {
+        $showAlert = $properties['show_alert'];
+      }
+
+      if (array_key_exists('url', $properties) && (is_string($properties['url']) || $properties['url'] === null)) {
+        $url = $properties['url'];
+      }
+
+      if (array_key_exists('cache_time', $properties) && (is_int($properties['cache_time']) || $properties['cache_time'] === null)) {
+        $cacheTime = $properties['cache_time'];
+      }
     }
 
     // When $pre is true the DTO is constructed with answered=true. The

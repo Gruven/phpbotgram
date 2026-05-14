@@ -239,6 +239,30 @@ final class CallbackAnswerMiddlewareTest extends TestCase
     self::assertSame('override-text', $method->text);
   }
 
+  public function testHandlerFlagExplicitNullOverridesMiddlewareDefault(): void
+  {
+    // Per-handler flag of `null` must beat a non-null middleware default.
+    // Mirrors upstream Python's `properties.get('text', default)` which
+    // returns the stored `None`. Without `array_key_exists`-based merging
+    // the explicit null would silently fall back to the middleware default.
+    $bot = self::makeBot();
+    $middleware = new CallbackAnswerMiddleware(text: 'default-text');
+    $event = self::makeCallbackQuery($bot);
+
+    $handler = static fn(object $e, array $d): string => 'ok';
+    $handlerObject = new HandlerObject($handler, [], [
+      'callback_answer' => ['text' => null],
+    ]);
+    $data = ['handler' => $handlerObject];
+
+    $middleware($handler, $event, $data);
+
+    $session = $bot->getMockedSession();
+    $method = $session->getRequest();
+    self::assertInstanceOf(AnswerCallbackQuery::class, $method);
+    self::assertNull($method->text, 'Explicit null in flag must reach the answer call');
+  }
+
   // ---------------------------------------------------------------------------
   // Finally: answer sent even when handler throws
   // ---------------------------------------------------------------------------
