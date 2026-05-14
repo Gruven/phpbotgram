@@ -422,6 +422,53 @@ final class AmphpServerTest extends TestCase
     self::assertStringContainsString('1.2.3.4', $warnings[0][1], 'Warning message must contain the blocked IP');
   }
 
+  /**
+   * Verify that the warning message for a blocked IPv6 address contains the
+   * un-bracketed address (e.g. 'fe80::1', not '[fe80').
+   *
+   * Regression test for the fragile explode(':', ...) fallback that was
+   * replaced by InternetAddress::getAddress().
+   */
+  public function testIpFilterMiddlewareEmitsUnbracketedIpv6InWarning(): void
+  {
+    $filter = new IpFilter(['149.154.160.0/20']);
+    $middleware = new IpFilterMiddleware($filter);
+
+    $inner = new class implements RequestHandler {
+      public function handleRequest(Request $request): Response
+      {
+        return new Response(200, [], 'should not reach here');
+      }
+    };
+
+    /** @var list<array{0: int, 1: string}> $warnings */
+    $warnings = [];
+    set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+      $warnings[] = [$errno, $errstr];
+
+      return true;
+    }, \E_USER_WARNING);
+
+    try {
+      // IPv6 client — the warning must contain 'fe80::1', not '[fe80'.
+      $request = new Request(
+        $this->makeClient('fe80::1'),
+        'POST',
+        LeagueUri::new('http://localhost/webhook'),
+        ['Content-Type' => 'application/json'],
+        '{}',
+      );
+      $response = $middleware->handleRequest($request, $inner);
+    } finally {
+      restore_error_handler();
+    }
+
+    self::assertSame(401, $response->getStatus());
+    self::assertCount(1, $warnings, 'Exactly one warning must be emitted');
+    self::assertStringContainsString('fe80::1', $warnings[0][1], 'Warning must contain the un-bracketed IPv6 address');
+    self::assertStringNotContainsString('[fe80', $warnings[0][1], 'Warning must NOT contain the bracketed form');
+  }
+
   // =========================================================================
   // AmphpServer::run() — skip live-server tests
   // =========================================================================

@@ -73,13 +73,13 @@ final class IpFilterMiddleware implements Middleware
     }
 
     // 2. TCP peer address from the amphp Client.
-    $remoteAddress = $request->getClient()->getRemoteAddress()->toString();
-
-    // Strip the port suffix (e.g. '1.2.3.4:12345' → '1.2.3.4').
-    // explode() always returns a non-empty list; the first element is the
-    // host portion (possibly the full address when no colon is present,
-    // e.g. a bare IPv4).
-    $ip = explode(':', $remoteAddress, 2)[0];
+    // Use InternetAddress::getAddress() which returns the bare IP string
+    // (e.g. 'fe80::1' for IPv6) rather than the toString() form that
+    // brackets IPv6 addresses (e.g. '[fe80::1]:12345').
+    $socketAddress = $request->getClient()->getRemoteAddress();
+    $ip = $socketAddress instanceof \Amp\Socket\InternetAddress
+      ? $socketAddress->getAddress()
+      : '';
 
     if ($ip === '') {
       return ['', false];
