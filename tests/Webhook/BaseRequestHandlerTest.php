@@ -336,6 +336,36 @@ final class BaseRequestHandlerTest extends TestCase
   }
 
   // =========================================================================
+  // Malformed JSON — 400 Invalid JSON
+  // =========================================================================
+
+  /**
+   * A body that is not valid JSON must produce 400 in inline mode.
+   */
+  public function testBaseRequestHandlerReturns400ForMalformedJsonInlineMode(): void
+  {
+    $this->runAsync(function (): void {
+      $handler = $this->makeHandler(secretOk: true, background: false);
+      $response = $handler->handleRequest($this->makeRequest('not-valid-json'));
+
+      self::assertSame(400, $response->getStatus());
+    });
+  }
+
+  /**
+   * A body that is not valid JSON must produce 400 in background mode.
+   */
+  public function testBaseRequestHandlerReturns400ForMalformedJsonBackgroundMode(): void
+  {
+    $this->runAsync(function (): void {
+      $handler = $this->makeHandler(secretOk: true, background: true);
+      $response = $handler->handleRequest($this->makeRequest('not-valid-json'));
+
+      self::assertSame(400, $response->getStatus());
+    });
+  }
+
+  // =========================================================================
   // Body size limit — 413 Payload Too Large
   // =========================================================================
 

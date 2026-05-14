@@ -220,8 +220,12 @@ abstract class BaseRequestHandler implements RequestHandler
       return new Response(413, [], 'Payload Too Large');
     }
 
-    /** @var array<string, mixed> $payload */
-    $payload = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
+    try {
+      /** @var array<string, mixed> $payload */
+      $payload = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
+    } catch (\JsonException) {
+      return new Response(400, [], 'Invalid JSON');
+    }
 
     $result = $this->dispatcher->feedWebhookUpdate($bot, $payload, $this->data);
 
@@ -251,8 +255,12 @@ abstract class BaseRequestHandler implements RequestHandler
       return new Response(413, [], 'Payload Too Large');
     }
 
-    /** @var array<string, mixed> $payload */
-    $payload = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
+    try {
+      /** @var array<string, mixed> $payload */
+      $payload = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
+    } catch (\JsonException) {
+      return new Response(400, [], 'Invalid JSON');
+    }
 
     /** @var Future<void> $task */
     $task = async(function () use ($bot, $payload): void {
