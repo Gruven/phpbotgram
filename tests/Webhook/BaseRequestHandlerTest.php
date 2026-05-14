@@ -370,6 +370,41 @@ final class BaseRequestHandlerTest extends TestCase
   }
 
   // =========================================================================
+  // Non-object JSON body — 400 Invalid JSON body
+  // =========================================================================
+
+  /**
+   * Valid JSON that is not an object (e.g. a string scalar) must produce 400
+   * in inline mode, consistent with the 400-on-invalid-JSON theme.
+   *
+   * Without this guard the non-array value reaches `feedWebhookUpdate(Bot,
+   * array, ...)` and raises a `TypeError` → 500.
+   */
+  public function testBaseRequestHandlerReturns400ForNonObjectJsonInlineMode(): void
+  {
+    $this->runAsync(function (): void {
+      $handler = $this->makeHandler(secretOk: true, background: false);
+      // Valid JSON but not an object — a quoted string scalar.
+      $response = $handler->handleRequest($this->makeRequest('"hello"'));
+
+      self::assertSame(400, $response->getStatus());
+    });
+  }
+
+  /**
+   * Same as inline-mode variant but with `handleInBackground = true`.
+   */
+  public function testBaseRequestHandlerReturns400ForNonObjectJsonBackgroundMode(): void
+  {
+    $this->runAsync(function (): void {
+      $handler = $this->makeHandler(secretOk: true, background: true);
+      $response = $handler->handleRequest($this->makeRequest('"hello"'));
+
+      self::assertSame(400, $response->getStatus());
+    });
+  }
+
+  // =========================================================================
   // Body size limit — 413 Payload Too Large
   // =========================================================================
 

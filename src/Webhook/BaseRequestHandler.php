@@ -224,12 +224,16 @@ abstract class BaseRequestHandler implements RequestHandler
     }
 
     try {
-      /** @var array<string, mixed> $payload */
       $payload = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
     } catch (JsonException) {
       return new Response(400, [], 'Invalid JSON');
     }
 
+    if (!is_array($payload)) {
+      return new Response(400, [], 'Invalid JSON body — expected object');
+    }
+
+    /** @var array<string, mixed> $payload */
     $result = $this->dispatcher->feedWebhookUpdate($bot, $payload, $this->data);
 
     if ($result instanceof TelegramMethod) {
@@ -266,12 +270,16 @@ abstract class BaseRequestHandler implements RequestHandler
     }
 
     try {
-      /** @var array<string, mixed> $payload */
       $payload = json_decode($body, true, 512, \JSON_THROW_ON_ERROR);
     } catch (JsonException) {
       return new Response(400, [], 'Invalid JSON');
     }
 
+    if (!is_array($payload)) {
+      return new Response(400, [], 'Invalid JSON body — expected object');
+    }
+
+    /** @var array<string, mixed> $payload */
     /** @var Future<void> $task */
     $task = async(function () use ($bot, $payload): void {
       $result = $this->dispatcher->feedRawUpdate($bot, $payload, $this->data);
