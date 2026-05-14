@@ -9,6 +9,15 @@ use Gruven\PhpBotGram\Client\BotContextController;
 use Gruven\PhpBotGram\Tests\Support\MockedSession;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Upstream: tests/test_api/test_client/test_context_controller.py
+ *
+ * Upstream skips:
+ *   - test_via_model_validate — API divergence (a): upstream uses Pydantic's
+ *     `model_validate(context={"bot": bot})`; PHP has no equivalent Pydantic
+ *     validation context injection pattern.
+ *   - test_via_model_validate_none — same as above.
+ */
 final class BotContextControllerTest extends TestCase
 {
   public function testBotDefaultsToNull(): void
@@ -28,11 +37,37 @@ final class BotContextControllerTest extends TestCase
     self::assertSame($bot, $clone->bot);
   }
 
+  /** Upstream: test_as — as_(bot) sets bot on clone. */
   public function testAsIsAliasOfWithBot(): void
   {
     $obj = new class extends BotContextController {};
     $bot = new Bot(token: '1:test', session: new MockedSession());
     self::assertSame($obj->withBot($bot)->bot, $obj->as_($bot)->bot);
+  }
+
+  /** Upstream: test_as_none — as_(null) sets bot to null. */
+  public function testAsNullClearsBotOnClone(): void
+  {
+    $bot = new Bot(token: '1:test', session: new MockedSession());
+    $obj = (new class extends BotContextController {})->withBot($bot);
+    self::assertSame($bot, $obj->bot);
+
+    $cleared = $obj->as_(null);
+    self::assertNull($cleared->bot);
+  }
+
+  /** Upstream: test_replacement — rebinding bot to null after it was set. */
+  public function testReplacementRebindsBotToNull(): void
+  {
+    $bot = new Bot(token: '1:test', session: new MockedSession());
+    $obj = new class extends BotContextController {};
+    $withBot = $obj->withBot($bot);
+    self::assertSame($bot, $withBot->bot);
+
+    $cleared = $withBot->as_(null);
+    self::assertNull($cleared->bot);
+    // Original object is unaffected.
+    self::assertSame($bot, $withBot->bot);
   }
 
   public function testWithBotRebindsNestedControllers(): void

@@ -18,6 +18,22 @@ use Gruven\PhpBotGram\Types\Message;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+/**
+ * Upstream: tests/test_api/test_client/test_session/test_middlewares/test_manager.py
+ *           tests/test_api/test_client/test_session/test_middlewares/test_request_logging.py
+ *
+ * Upstream skips (test_manager.py):
+ *   - test_register / test_wrap_middlewares — behaviorally covered by
+ *     testUnregisterRemovesMiddleware, testWrapChainsInRegistrationOrder,
+ *     testInvokeAsDecoratorFactory.
+ *
+ * Upstream skips (test_request_logging.py):
+ *   - test_use_middleware (RequestLogging) — phase scope deferral (b): the
+ *     RequestLogging middleware class is not yet ported (it is an optional
+ *     built-in middleware in upstream aiogram; the PHP port currently ships
+ *     only BaseRequestMiddleware and RequestMiddlewareManager).
+ *   - test_ignore_methods — same as above.
+ */
 final class RequestMiddlewareManagerTest extends TestCase
 {
   public function testWrapWithoutMiddlewareReturnsTerminal(): void
