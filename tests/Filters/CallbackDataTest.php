@@ -173,15 +173,20 @@ final class CallbackDataTest extends TestCase
     // PHP's `encodeEnum` branch: `$value instanceof BackedEnum` →
     // `(string) $value->value`, so `CbDataIntKind::Foo` (value `1`) encodes
     // as `"1"`. Mirrors `aiogram/filters/callback_data.py:70-71`.
-    //
-    // Note: the `unpack()` round-trip for int-backed enums is not asserted
-    // here because `decodeComplex()` passes a `string` to `BackedEnum::from()`
-    // regardless of backing type — `CbDataIntKind::from(string)` raises
-    // `TypeError`. The encode path is what upstream `test_encode_value_positive`
-    // covers; decode of int enums is a separate (deferred) fix.
     $data = new CbDataIntEnum(kind: CbDataIntKind::Foo);
 
     self::assertSame('ien:1', $data->pack());
+  }
+
+  public function testUnpackRoundTripsIntBackedEnum(): void
+  {
+    // `decodeComplex` inspects the enum's backing type via ReflectionEnum
+    // and coerces the wire string to int before calling `BackedEnum::from()`.
+    // Without this, `IntBackedEnum::from('1')` would raise TypeError under
+    // declare(strict_types=1).
+    $decoded = CbDataIntEnum::unpack('ien:2');
+
+    self::assertSame(CbDataIntKind::Bar, $decoded->kind);
   }
 
   public function testEncodingRejectsUnsupportedTypes(): void

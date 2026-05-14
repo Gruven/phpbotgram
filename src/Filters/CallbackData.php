@@ -8,10 +8,12 @@ use BackedEnum;
 use InvalidArgumentException;
 use LogicException;
 use ReflectionClass;
+use ReflectionEnum;
 use ReflectionNamedType;
 use ReflectionParameter;
 use Stringable;
 use UnitEnum;
+use ValueError;
 
 /**
  * Abstract base for typed callback-data payloads embedded inside
@@ -401,8 +403,32 @@ abstract class CallbackData
     $name = $type->getName();
 
     if (enum_exists($name)) {
-      /** @var class-string<BackedEnum> $name */
-      return $name::from($raw);
+      /** @var class-string<UnitEnum> $name */
+      $reflection = new ReflectionEnum($name);
+      $backingType = $reflection->isBacked() ? (string)$reflection->getBackingType() : null;
+
+      if ($backingType === 'int') {
+        // BackedEnum::from() is strictly typed: an int-backed enum rejects a
+        // string argument with TypeError under declare(strict_types=1). The
+        // wire format is always a string, so we coerce to int first.
+        /** @var class-string<BackedEnum> $name */
+        return $name::from((int)$raw);
+      }
+
+      if ($backingType === 'string') {
+        /** @var class-string<BackedEnum> $name */
+        return $name::from($raw);
+      }
+
+      // Pure UnitEnum (non-backed): the wire form is the case name. Match by
+      // walking `cases()` since there is no public from-name lookup.
+      foreach ($reflection->getCases() as $case) {
+        if ($case->getName() === $raw) {
+          return $case->getValue();
+        }
+      }
+
+      throw new ValueError(sprintf('"%s" is not a valid case for enum %s', $raw, $name));
     }
 
     throw new LogicException(sprintf(
