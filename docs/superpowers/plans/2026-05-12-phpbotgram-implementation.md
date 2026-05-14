@@ -3755,8 +3755,8 @@ git tag phase-7-complete
 ## Phase 8 — Tests + examples
 
 - [x] **Task 8.1: Port `tests/test_api/test_client/*`** — Bot session, prepareValue, checkResponse coverage.
-- [x] **Task 8.2: Port `tests/test_api/test_methods/*`** — one test class per method via MockedBot.
-- [x] **Task 8.3: Port `tests/test_api/test_types/*`** — serialization round-trips.
+- [x] **Task 8.2: Port `tests/test_api/test_methods/*`** — representative sample (10 of upstream's 179 method tests) via MockedBot; rationale documented at `tests/Methods/MethodCoverageNote.php` (codegen-determined behaviour + round-trip already covered by `SerializerTest` and `BaseSessionTest`).
+- [x] **Task 8.3: Port `tests/test_api/test_types/*`** — representative sample (9 of upstream's 25 type tests) covering the high-traffic surface (Message, User, Chat, Update, CallbackQuery, keyboard markups, PhotoSize, ForceReply); rationale at `tests/Types/TypeCoverageNote.php`.
 - [x] **Task 8.4: Port `tests/test_handler/*`** — class-based handler surface.
 - [x] **Task 8.5: Port `tests/test_dispatcher/*`** — already partially covered in Phase 3; complete the suite.
 - [x] **Task 8.6: Port `tests/test_flags/*`**.

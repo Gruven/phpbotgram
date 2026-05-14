@@ -12,8 +12,8 @@ native enums) throughout.
 
 - PHP 8.5+
 - ext-sodium (Web App / Login Widget signature verification)
-- A PSR-18 HTTP client discoverable through `php-http/discovery`
-  (the package suggests `amphp/http-client` for production)
+- HTTP transport — `amphp/http-client ^5` (required), used by the default
+  `AmphpSession` adapter
 - Composer 2.5+
 
 ## Install
@@ -80,9 +80,11 @@ launching.
 
 `Bot` is a thin facade that builds typed API method DTOs (`SendMessage`,
 `SendPhoto`, …) and dispatches them through the `BaseSession`. The default
-session is `AmphpSession`, which owns the HTTP transport
-(`Http\Transport` discovered via `php-http/discovery`), retry/backoff on
-`RetryAfter` and network errors, and graceful shutdown.
+session is `AmphpSession`, which builds an `amphp/http-client` instance via
+`HttpClientBuilder`, encodes form bodies, and surfaces Telegram error
+responses as typed exceptions (`TelegramRetryAfter`, `TelegramServerError`,
+…). Polling-loop backoff on `RetryAfter` lives in the dispatcher, not the
+session itself.
 
 ```php
 use Gruven\PhpBotGram\Bot;
@@ -95,16 +97,16 @@ $bot = new Bot(
 );
 ```
 
-Every typed API method returns a result (e.g. `sendMessage(...)` returns
-`Types\Message`). For deferred dispatch use the underlying method DTO
-directly:
+Every typed API method returns its result directly (e.g. `sendMessage(...)`
+returns `Types\Message`). For deferred dispatch use the underlying method
+DTO directly via `emit()`:
 
 ```php
 use Gruven\PhpBotGram\Methods\SendMessage;
 
 $send = new SendMessage(chatId: 1, text: 'hi');
-$result = $bot($send);          // synchronous in the current fiber
-$future = $send->future($bot);  // Amp\Future<Message> for concurrent dispatch
+$result = $bot($send);              // synchronous in the current fiber
+$alsoResult = $send->emit($bot);    // equivalent — TelegramMethod::emit()
 ```
 
 ### Dispatcher and Router

@@ -248,8 +248,17 @@ final class TelegramEventObserver
    * Returns the original callback unchanged so registration sites can keep
    * a reference for re-use (matches `EventObserver::register()` ergonomics).
    *
-   * @param list<Closure> $filters Per-handler filter pipeline. An
-   *                               empty list means "always accept" — fall-through to the handler itself.
+   * Filter entries may be any `callable` — bare `Closure`s, first-class
+   * callable expressions (`fn() => true`), or invokable objects such as
+   * `Filter` subclasses (`new Command('start')`, `new StateFilter(...)`,
+   * a user `Filter` instance). Invokable objects are wrapped with a
+   * `Closure::fromCallable` adapter so the `FilterObject` invariant
+   * (`Closure $callback`) stays intact. Mirrors aiogram's
+   * `aiogram.dispatcher.event.handler.FilterObject` which accepts any
+   * `Callable[..., Any]`.
+   *
+   * @param list<callable> $filters Per-handler filter pipeline. An empty
+   *                                list means "always accept" — fall-through to the handler itself.
    * @param array<string, mixed> $flags Manual flag overrides. Merged with
    *                                    attribute / WeakMap-attached flags via `Flags::extractFlags`.
    */
@@ -261,7 +270,9 @@ final class TelegramEventObserver
     $filterObjects = [];
 
     foreach ($filters as $f) {
-      $filterObjects[] = new FilterObject($f);
+      $filterObjects[] = new FilterObject(
+        $f instanceof Closure ? $f : Closure::fromCallable($f),
+      );
     }
 
     // Read attribute / WeakMap flags off the callback first, then overlay

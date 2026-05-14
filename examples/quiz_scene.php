@@ -57,7 +57,7 @@ final class QuestionOneScene extends Scene
     /**
      * Ask the first question when entering this scene.
      */
-    public function enter(mixed ...$kwargs): void
+    public function enter(mixed ...$kwargs): mixed
     {
         $data = $this->wizard->data;
         if (isset($data['event']) && $data['event'] instanceof Message) {
@@ -65,6 +65,8 @@ final class QuestionOneScene extends Scene
             $msg = $data['event'];
             $msg->answer("Question 1: What is 2 + 2?")->emit();
         }
+
+        return null;
     }
 
     /**
@@ -90,7 +92,7 @@ final class QuestionTwoScene extends Scene
     /**
      * Ask the second question when entering this scene.
      */
-    public function enter(mixed ...$kwargs): void
+    public function enter(mixed ...$kwargs): mixed
     {
         $data = $this->wizard->data;
         if (isset($data['event']) && $data['event'] instanceof Message) {
@@ -98,6 +100,8 @@ final class QuestionTwoScene extends Scene
             $msg = $data['event'];
             $msg->answer("Question 2: What is the capital of France?")->emit();
         }
+
+        return null;
     }
 
     /**
