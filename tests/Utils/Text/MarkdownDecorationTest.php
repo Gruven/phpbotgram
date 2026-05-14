@@ -95,6 +95,11 @@ final class MarkdownDecorationExposer extends MarkdownDecoration
  *   upstream; PHP uses `tg://emoji?id=` — API divergence (a).
  * - `test_date_time_with_datetime_object`: PHP `dateTime()` accepts
  *   `int $unixTime` only — API divergence (a).
+ *
+ * Bugs fixed (Phase 7 self-review)
+ * ---------------------------------
+ * - `quote()` now escapes backslash (Critical #1): `quote('\\')` → `'\\\\'`.
+ * - `expandableBlockquote()` now appends `||` (Critical #2): upstream syntax.
  */
 final class MarkdownDecorationTest extends TestCase
 {
@@ -204,6 +209,19 @@ final class MarkdownDecorationTest extends TestCase
     self::assertSame($expected, $this->dec->quote($input));
   }
 
+  public function testQuoteEscapesBackslash(): void
+  {
+    // A lone backslash must become two characters: backslash + backslash.
+    self::assertSame('\\\\', $this->dec->quote('\\'));
+  }
+
+  public function testQuoteEscapesBackslashFollowedByAsterisk(): void
+  {
+    // \* in input must not be interpreted as an escape-asterisk sequence;
+    // both characters must be independently escaped: \\ + \*.
+    self::assertSame('\\\\\\*', $this->dec->quote('\\*'));
+  }
+
   // -------------------------------------------------------------------------
   // Decoration methods
   // -------------------------------------------------------------------------
@@ -275,7 +293,18 @@ final class MarkdownDecorationTest extends TestCase
 
   public function testExpandableBlockquote(): void
   {
-    self::assertSame(">line1\n>line2\n**", $this->exposer->expandableBlockquote_("line1\nline2"));
+    self::assertSame(">line1\n>line2||", $this->exposer->expandableBlockquote_("line1\nline2"));
+  }
+
+  public function testExpandableBlockquoteUsesDoublePipeClosingMarker(): void
+  {
+    // `||` must be appended directly to the last quoted line (no separating newline).
+    self::assertSame(">a\n>b||", $this->exposer->expandableBlockquote_("a\nb"));
+  }
+
+  public function testExpandableBlockquoteSingleLine(): void
+  {
+    self::assertSame('>x||', $this->exposer->expandableBlockquote_('x'));
   }
 
   // -------------------------------------------------------------------------
@@ -297,12 +326,12 @@ final class MarkdownDecorationTest extends TestCase
   public function testExpandableBlockquoteHandlesCrlfLineEndings(): void
   {
     // CRLF input must not embed \r in the output lines.
-    self::assertSame(">line1\n>line2\n**", $this->exposer->expandableBlockquote_("line1\r\nline2"));
+    self::assertSame(">line1\n>line2||", $this->exposer->expandableBlockquote_("line1\r\nline2"));
   }
 
   public function testExpandableBlockquoteHandlesBareCarriageReturn(): void
   {
     // Bare \r must be treated as a line separator.
-    self::assertSame(">line1\n>line2\n**", $this->exposer->expandableBlockquote_("line1\rline2"));
+    self::assertSame(">line1\n>line2||", $this->exposer->expandableBlockquote_("line1\rline2"));
   }
 }

@@ -17,8 +17,17 @@ class MarkdownDecoration extends TextDecoration
 {
   /**
    * All characters that must be escaped in Markdown V2 plain text.
+   *
+   * Backslash MUST be listed first so that `str_replace` processes it before
+   * any other character. If backslash came later it would double-escape the
+   * backslashes that earlier replacements already inserted (e.g. `_` → `\_`,
+   * then `\` → `\\` would wrongly turn `\_` into `\\_`).
    */
-  private const SPECIAL_CHARS = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
+  private const array SPECIAL_CHARS = [
+    '\\',  // MUST BE FIRST — see backslash-doubling note above.
+    '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+',
+    '-', '=', '|', '{', '}', '.', '!',
+  ];
 
   private static ?self $instance = null;
 
@@ -29,11 +38,13 @@ class MarkdownDecoration extends TextDecoration
 
   public function quote(string $value): string
   {
-    return str_replace(
-      self::SPECIAL_CHARS,
-      array_map(static fn(string $c): string => '\\' . $c, self::SPECIAL_CHARS),
-      $value,
-    );
+    $escaped = [];
+
+    foreach (self::SPECIAL_CHARS as $char) {
+      $escaped[] = '\\' . $char;
+    }
+
+    return str_replace(self::SPECIAL_CHARS, $escaped, $value);
   }
 
   protected function bold(string $value): string
@@ -76,11 +87,13 @@ class MarkdownDecoration extends TextDecoration
   {
     // Use PCRE \R to match all universal newline sequences (\n, \r\n, \r, etc.)
     // — mirrors Python's str.splitlines() used in the upstream implementation.
-    $lines = preg_split('/\R/u', $value) ?: [$value];
+    $lines = preg_split('/\R/u', $value) ?: [''];
     $quoted = array_map(static fn(string $line): string => '>' . $line, $lines);
-    $quoted[] = '**';
 
-    return implode("\n", $quoted);
+    // The closing marker `||` is appended directly to the joined string
+    // (i.e. attached to the last `>line`), NOT on its own line.
+    // Upstream: `"\n".join(f">{line}" for line in lines) + "||"`
+    return implode("\n", $quoted) . '||';
   }
 
   protected function code(string $value): string

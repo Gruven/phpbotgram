@@ -37,8 +37,8 @@ use PHPUnit\Framework\TestCase;
  *   single surrogate-pair emoji.
  * - Passthrough types (mention, url, etc.) — now match upstream: `apply_entity`
  *   returns `text` as-is (no escaping). Fixed in Phase 7 review cycle 2.
- * - `test_apply_single_entity` markdown `expandable_blockquote` row expects
- *   `">test||"`; PHP emits `">test\n**"` — API divergence (a).
+ * - `test_apply_single_entity` markdown `expandable_blockquote` row: fixed in
+ *   Phase 7 self-review (Critical #2) to emit `">test||"` — was `">test\n**"`.
  */
 final class TextDecorationTest extends TestCase
 {
@@ -307,10 +307,10 @@ final class TextDecorationTest extends TestCase
 
   public function testApplyEntityExpandableBlockquoteMarkdown(): void
   {
-    // NOTE: upstream Markdown V2 format is ">test||"; PHP format adds a
-    // trailing newline separator: ">test\n**". API divergence (a).
+    // Fixed in Phase 7 self-review (Critical #2): `||` appended to the last
+    // quoted line (no separating newline), matching upstream Markdown V2 spec.
     $entity = new MessageEntity(type: MessageEntityType::ExpandableBlockquote->value, offset: 0, length: 4);
-    self::assertSame(">test\n**", MarkdownDecoration::instance()->applyEntity($entity, 'test'));
+    self::assertSame('>test||', MarkdownDecoration::instance()->applyEntity($entity, 'test'));
   }
 
   public function testApplyEntityPassthroughTypesMarkdown(): void
