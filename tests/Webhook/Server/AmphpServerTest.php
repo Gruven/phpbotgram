@@ -208,6 +208,26 @@ final class AmphpServerTest extends TestCase
     self::assertSame('/my/path', $router->getPattern());
   }
 
+  public function testPathRouterCapturesPlaceholderAndSetsRequestAttribute(): void
+  {
+    $inner = new class implements RequestHandler {
+      public ?Request $capturedRequest = null;
+
+      public function handleRequest(Request $request): Response
+      {
+        $this->capturedRequest = $request;
+
+        return new Response(200, [], 'ok');
+      }
+    };
+
+    $router = new PathRouter('/{token}/webhook', $inner);
+    $router->handleRequest($this->makeRequest('http://localhost/abc123/webhook'));
+
+    self::assertNotNull($inner->capturedRequest, 'Inner handler must have been called');
+    self::assertSame('abc123', $inner->capturedRequest->getAttribute('token'));
+  }
+
   public function testPathRouterParameterisedPathDoesNotMatchBarePrefix(): void
   {
     $inner = new class implements RequestHandler {

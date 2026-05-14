@@ -132,40 +132,31 @@ final class TokenBasedRequestHandler extends BaseRequestHandler
 
   /**
    * Resolve (or lazily create) the `Bot` instance for the token found in the
-   * request URI.
+   * request attributes.
    *
-   * The `{bot_token}` segment is extracted from the URI path by matching
-   * against the path structure.  Since `amphp/http-server-router` is not
-   * bundled in this project, the token is read from the `bot_token` request
-   * attribute when set (e.g. by a router middleware), or parsed from the URI
-   * path as a fallback.
+   * The `{bot_token}` value must have been captured from the URL pattern and
+   * stored on the request as an attribute by {@see PathRouter} (or a
+   * compatible router).  Calling this method when that attribute is absent
+   * indicates a misconfigured route registration and throws immediately.
    *
    * @param Request $request The incoming HTTP request.
    *
-   * @throws InvalidArgumentException When the `bot_token` attribute/path segment is missing or empty.
+   * @throws InvalidArgumentException When the `bot_token` attribute is missing or empty.
    */
   public function resolveBot(Request $request): Bot
   {
-    // Prefer the request attribute set by a router (e.g. amphp/http-server-router).
-    if ($request->hasAttribute('bot_token')) {
-      $token = $request->getAttribute('bot_token');
-
-      if (!is_string($token) || $token === '') {
-        throw new InvalidArgumentException('bot_token path variable is missing or empty.');
-      }
-
-      return $this->bots[$token] ??= ($this->botFactory)($token);
+    if (!$request->hasAttribute('bot_token')) {
+      throw new InvalidArgumentException(
+        "Request has no bot_token attribute — ensure PathRouter or a compatible router populated it from the URL pattern.",
+      );
     }
 
-    // Fallback: extract the last non-empty path segment from the URI.
-    // This works for paths like /webhook/{bot_token} where the token is
-    // the trailing segment.
-    $uriPath = $request->getUri()->getPath();
-    $segments = array_filter(explode('/', $uriPath));
-    $token = end($segments);
+    $token = $request->getAttribute('bot_token');
 
     if (!is_string($token) || $token === '') {
-      throw new InvalidArgumentException('bot_token path variable is missing or empty.');
+      throw new InvalidArgumentException(
+        "Request has no bot_token attribute — ensure PathRouter or a compatible router populated it from the URL pattern.",
+      );
     }
 
     return $this->bots[$token] ??= ($this->botFactory)($token);

@@ -25,7 +25,9 @@ use Amp\Http\Server\Response;
  *   `$pattern` exactly (modulo a trailing slash).
  * - **Parameterised** — a single `{bot_token}` placeholder, e.g.
  *   `'/webhook/{bot_token}'`: the trailing segment can be anything;
- *   the match still requires the prefix to be correct.
+ *   the match still requires the prefix to be correct.  The captured
+ *   value is stored on the request as an attribute with the same name
+ *   as the placeholder (e.g. `$request->getAttribute('bot_token')`).
  *
  * Any other path produces `404 Not Found`.
  * Any non-POST method on a matching path produces `405 Method Not Allowed`.
@@ -57,8 +59,16 @@ final class PathRouter implements RequestHandler
     // Normalise trailing slash for comparison purposes.
     $normPath = rtrim($path, '/') ?: '/';
 
-    if (!preg_match($this->regex, $normPath)) {
+    if (!preg_match($this->regex, $normPath, $matches)) {
       return new Response(HttpStatus::NOT_FOUND, [], 'Not Found');
+    }
+
+    // Populate named captures as request attributes so downstream handlers
+    // (e.g. TokenBasedRequestHandler) can retrieve them via getAttribute().
+    foreach ($matches as $key => $value) {
+      if (is_string($key) && $key !== '' && $value !== '') {
+        $request->setAttribute($key, $value);
+      }
     }
 
     if ($request->getMethod() !== 'POST') {
@@ -86,11 +96,12 @@ final class PathRouter implements RequestHandler
    * Convert a path pattern like `/webhook/{bot_token}` into a full-match
    * regex.
    *
-   * Each `{name}` placeholder is replaced with a non-empty segment matcher
-   * `[^/]+`.  Literal slashes and other regex-special characters in the
-   * static parts are escaped.  The trailing slash of the *whole pattern*
-   * (if present) is stripped before matching to normalise the comparison
-   * (the request path is also normalised in `handleRequest`).
+   * Each `{name}` placeholder is replaced with a named capture group
+   * `(?P<name>[^/]+)` so the captured value is available in the `$matches`
+   * array.  Literal slashes and other regex-special characters in the static
+   * parts are escaped.  The trailing slash of the *whole pattern* (if
+   * present) is stripped before matching to normalise the comparison (the
+   * request path is also normalised in `handleRequest`).
    */
   private function buildRegex(string $pattern): string
   {
@@ -109,8 +120,9 @@ final class PathRouter implements RequestHandler
 
     foreach ($parts as $part) {
       if (str_starts_with($part, '{') && str_ends_with($part, '}')) {
-        // Placeholder — match any non-empty path segment.
-        $regexParts[] = '[^/]+';
+        // Placeholder — named capture group matching any non-empty path segment.
+        $name = substr($part, 1, -1);
+        $regexParts[] = '(?P<' . $name . '>[^/]+)';
       } else {
         // Escape regex-special characters in the static part.
         // Do NOT strip slashes — they are path separators and must

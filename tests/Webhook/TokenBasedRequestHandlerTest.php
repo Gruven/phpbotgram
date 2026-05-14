@@ -267,15 +267,27 @@ final class TokenBasedRequestHandlerTest extends TestCase
     self::assertNotSame($bot1, $bot2);
   }
 
-  public function testResolveBotFallsBackToUriPathWhenNoAttribute(): void
+  public function testResolveBotThrowsWhenNoBotTokenAttribute(): void
   {
     $handler = new TokenBasedRequestHandler($this->makeDispatcher(), $this->makeFactory());
 
-    // No attribute set — token should be extracted from the trailing URI segment.
+    // No attribute set — PathRouter or compatible router must populate it.
     $request = $this->makeRequest('/webhook/42:PATHTOKEN');
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/bot_token/');
+
+    $handler->resolveBot($request);
+  }
+
+  public function testResolveBotUsesBotTokenAttribute(): void
+  {
+    $handler = new TokenBasedRequestHandler($this->makeDispatcher(), $this->makeFactory());
+
+    // Explicitly set the attribute, as PathRouter would do after matching.
+    $request = $this->makeRequestWithAttribute('42:PATHTOKEN');
     $bot = $handler->resolveBot($request);
 
-    // MockedBot stores the token; verify the correct token was used.
     self::assertInstanceOf(Bot::class, $bot);
   }
 
