@@ -630,4 +630,131 @@ final class RouterTest extends TestCase
       'Outer middleware short-circuit must prevent the sub-router walk too.',
     );
   }
+
+  /**
+   * Upstream `test_router.py::TestRouter::test_including_many_routers_bad_type`
+   * asserts that `include_routers()` (zero arguments) raises. PHP's variadic
+   * signature accepts zero-args silently — the method just becomes a no-op.
+   * Upstream's contract (at least one router required) does NOT apply here
+   * because the PHP signature is `Router ...$routers`; calling with no args
+   * is valid and simply returns `$this`. Documenting the intentional divergence.
+   *
+   * Upstream `test_router.py::TestRouter::test_include_router_by_string_bad_type`
+   * is enforced statically by PHP's type system — passing a non-Router to
+   * `includeRouter(Router $router)` triggers a fatal `TypeError` at the PHP
+   * engine level, with no need for a runtime check or a test. PHPStan level 9
+   * catches the caller-side mistake before runtime.
+   */
+  public function testIncludeRoutersWithZeroArgumentsIsNoOp(): void
+  {
+    // Upstream requires at least one router argument and raises ValueError for
+    // zero args. PHP variadic zero-args is a no-op; the method just returns
+    // `$this`. Verify the post-condition is clean (no sub-routers added).
+    $router = new Router('root');
+
+    $returned = $router->includeRouters();
+
+    self::assertSame($router, $returned, 'includeRouters() with zero args returns $this for fluent chaining.');
+    self::assertSame([], $router->subRouters, 'No sub-routers must be added for a zero-args call.');
+  }
+
+  /**
+   * Upstream `test_dispatcher.py::TestDispatcher::test_specify_updates_calculation`
+   * verifies that `resolveUsedUpdateTypes()` correctly reflects the growing
+   * tree as routers are attached and handlers registered.
+   *
+   * Partially covered by `testResolveUsedUpdateTypesWalksSubRouters` and
+   * `testResolveUsedUpdateTypesDeduplicatesAcrossTree`. This test adds the
+   * **incremental-attachment progression** shape from the upstream test:
+   * starting from a single handler, verify that new types appear only after
+   * new routers are attached, and that a sub-sub-router contributes its
+   * types to the root.
+   */
+  public function testResolveUsedUpdateTypesGrowsAsRoutersAttached(): void
+  {
+    // Step 0: root has only a message handler.
+    $dispatcher = new Router('root');
+    $dispatcher->message->register(static fn(): string => 'ok');
+
+    self::assertSame(['message'], $dispatcher->resolveUsedUpdateTypes());
+
+    // Step 1: attach a child with a callback_query handler.
+    $router1 = new Router('r1');
+    $router1->callbackQuery->register(static fn(): string => 'ok');
+    $dispatcher->includeRouter($router1);
+
+    $types2 = $dispatcher->resolveUsedUpdateTypes();
+    sort($types2);
+    self::assertSame(['callback_query', 'message'], $types2);
+
+    // Step 2: attach a second child with a poll handler.
+    $router2 = new Router('r2');
+    $router2->poll->register(static fn(): string => 'ok');
+    $dispatcher->includeRouter($router2);
+
+    $types3 = $dispatcher->resolveUsedUpdateTypes();
+    sort($types3);
+    self::assertSame(['callback_query', 'message', 'poll'], $types3);
+
+    // Step 3: attach a grandchild with an edited_message handler under router2.
+    $router21 = new Router('r21');
+    $router21->editedMessage->register(static fn(): string => 'ok');
+    $router2->includeRouter($router21);
+
+    $types4 = $dispatcher->resolveUsedUpdateTypes();
+    sort($types4);
+    self::assertSame(['callback_query', 'edited_message', 'message', 'poll'], $types4);
+
+    // Sub-tree from router2 alone also reports correctly.
+    $types5 = $router2->resolveUsedUpdateTypes();
+    sort($types5);
+    self::assertSame(['edited_message', 'poll'], $types5);
+  }
+
+  /**
+   * Upstream `test_router.py::TestRouter::test_global_filter_in_nested_router`
+   * verifies that a global filter on the parent's `message` observer that
+   * returns False causes `r1.propagate_event(...)` to return `UNHANDLED`.
+   *
+   * **phpbotgram behavior note (Fix I6 divergence)**:
+   * In upstream `aiogram`, when `r1.message.trigger()` returns `REJECTED` (due
+   * to the global filter), `_propagate_event` immediately returns `UNHANDLED`
+   * — the sub-router walk does NOT happen.
+   *
+   * In phpbotgram, Fix I6 converts `RejectedSentinel` → `UnhandledSentinel`
+   * before the sub-router walk. This means a global filter on the **parent's**
+   * local observer rejects only the parent's local handlers; sub-router handlers
+   * on the same event type are still reachable.
+   *
+   * This test documents the actual phpbotgram behavior:
+   * - Parent global filter that returns false → parent local observer returns
+   *   `RejectedSentinel` → collapsed to `UnhandledSentinel` by Fix I6 → sub-
+   *   router handler is reached → handler result is returned.
+   *
+   * To gate sub-routers, use outer middleware (which wraps both local observer
+   * AND sub-router recursion — see `testPropagateEventOuterMiddlewareWrapsSubRouterDispatch`).
+   */
+  public function testGlobalFilterOnParentLocalObserverDoesNotGateSubRouterHandlers(): void
+  {
+    // phpbotgram behavior: parent global filter only gates local observer handlers.
+    // Sub-router handlers bypass the parent's global filter because Fix I6
+    // collapses RejectedSentinel to UnhandledSentinel before the sub-router walk.
+    $r1 = new Router('r1');
+    $r2 = new Router('r2');
+    $r1->includeRouter($r2);
+
+    $r1->message->filter(static fn(): bool => false);
+
+    // Sub-router handler — reached because Fix I6 converts REJECTED to UNHANDLED.
+    $r2->message->register(static fn(): string => 'sub_router_reached');
+
+    $result = $r1->propagateEvent('message', new Chat(id: 1, type: 'private'));
+
+    self::assertSame(
+      'sub_router_reached',
+      $result,
+      'phpbotgram (Fix I6): parent global filter does not gate sub-router handlers; '
+      . 'use outer middleware to gate the full dispatch tree.',
+    );
+  }
 }

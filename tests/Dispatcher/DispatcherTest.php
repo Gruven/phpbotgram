@@ -782,6 +782,70 @@ final class DispatcherTest extends TestCase
     self::assertSame('hi raw', $observed->message?->text);
   }
 
+  /**
+   * Upstream `test_dispatcher.py::TestDispatcher::test_data_bind` verifies
+   * that the Dispatcher implements `__getitem__`/`__setitem__`/`__delitem__`
+   * (Python dict-like access) to proxy `workflow_data`. phpbotgram exposes
+   * `workflowData` as a plain public mutable array — no `ArrayAccess`
+   * interface — so the Python dict-subscript API has no equivalent.
+   *
+   * **Skip rationale (a) API divergence**: the public property
+   * `Dispatcher::$workflowData` is the canonical write path. Direct array
+   * mutation (`$dispatcher->workflowData['key'] = 42`) achieves the same
+   * result without operator-overloading. PHPStan level 9 catches typos at
+   * the caller side.
+   *
+   * This test documents the coverage gap and verifies the direct-mutation
+   * path that callers actually use.
+   */
+  public function testWorkflowDataDirectMutationIsEquivalentToDataBind(): void
+  {
+    // Upstream `dp["foo"] = 1; dp.workflow_data["foo"] == 1`.
+    // PHP equivalent: write and read through the public property directly.
+    $dispatcher = new Dispatcher();
+
+    self::assertSame([], $dispatcher->workflowData, 'workflowData starts empty.');
+
+    $dispatcher->workflowData['foo'] = 1;
+    self::assertSame(1, $dispatcher->workflowData['foo']);
+
+    unset($dispatcher->workflowData['foo']);
+    self::assertArrayNotHasKey('foo', $dispatcher->workflowData, 'Unset must remove the key.');
+  }
+
+  /**
+   * Upstream `test_dispatcher.py::TestDispatcher::test_init_args` /
+   * `test_init` verify that `Dispatcher` is a `Router` subclass and starts
+   * with default (not None) properties for storage and FSM. phpbotgram's
+   * `Dispatcher` also extends `Router`; FSM / storage properties are
+   * in scope for Phase 5 and tested in `FsmIntegrationTest`.
+   *
+   * Covered by: `DispatcherTest::testDispatcherExtendsRouter` (already
+   * present) and `FsmIntegrationTest::testDispatcherConstructorExposesStorageAccessor`.
+   *
+   * Upstream `test_dispatcher.py::test_parent_router` asserts `dispatcher.parent_router is None`.
+   * Covered by: `RouterTest::testInitialTreeStateHasNoParentAndNoSubRouters`.
+   *
+   * Upstream `test_dispatcher.py::TestDispatcher::test_storage_property` checks
+   * `dispatcher.storage is dispatcher.fsm.storage`.
+   * Covered by: `FsmIntegrationTest::testDispatcherConstructorExposesStorageAccessor`.
+   *
+   * This empty test is the coverage-note anchor only; no additional assertions
+   * are needed.
+   */
+  public function testDispatcherStartsWithNullParentRouter(): void
+  {
+    // Upstream test_parent_router: parent_router is None.
+    // Covered also in testDispatcherExtendsRouter (hierarchy check) and
+    // RouterTest::testInitialTreeStateHasNoParentAndNoSubRouters.
+    $dispatcher = new Dispatcher();
+
+    self::assertNull(
+      $dispatcher->parentRouter,
+      'A root Dispatcher has no parent router.',
+    );
+  }
+
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
