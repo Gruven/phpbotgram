@@ -60,25 +60,36 @@ abstract class TextDecoration
   {
     $type = MessageEntityType::from($entity->type);
 
-    return match ($type) {
-      MessageEntityType::Bold => $this->bold($text),
-      MessageEntityType::Italic => $this->italic($text),
-      MessageEntityType::Underline => $this->underline($text),
-      MessageEntityType::Strikethrough => $this->strikethrough($text),
-      MessageEntityType::Spoiler => $this->spoiler($text),
-      MessageEntityType::Blockquote => $this->blockquote($text),
-      MessageEntityType::ExpandableBlockquote => $this->expandableBlockquote($text),
-      MessageEntityType::Code => $this->code($text),
-      MessageEntityType::Pre => $entity->language !== null
+    return match (true) {
+      // Passthrough types — return text as-is (no escaping). Upstream parity.
+      // Upstream `aiogram/utils/text_decorations.py:46-56` returns `text` unchanged
+      // for these entity types; escaping corrupts URLs/usernames/hashtags in MD V2.
+      $type === MessageEntityType::BotCommand,
+      $type === MessageEntityType::Url,
+      $type === MessageEntityType::Mention,
+      $type === MessageEntityType::PhoneNumber,
+      $type === MessageEntityType::Hashtag,
+      $type === MessageEntityType::Cashtag,
+      $type === MessageEntityType::Email => $text,
+
+      $type === MessageEntityType::Bold => $this->bold($text),
+      $type === MessageEntityType::Italic => $this->italic($text),
+      $type === MessageEntityType::Underline => $this->underline($text),
+      $type === MessageEntityType::Strikethrough => $this->strikethrough($text),
+      $type === MessageEntityType::Spoiler => $this->spoiler($text),
+      $type === MessageEntityType::Blockquote => $this->blockquote($text),
+      $type === MessageEntityType::ExpandableBlockquote => $this->expandableBlockquote($text),
+      $type === MessageEntityType::Code => $this->code($text),
+      $type === MessageEntityType::Pre => $entity->language !== null
           ? $this->preLanguage($text, $entity->language)
           : $this->pre($text),
-      MessageEntityType::TextLink => $this->link($text, $entity->url ?? ''),
-      MessageEntityType::TextMention => $this->link(
+      $type === MessageEntityType::TextLink => $this->link($text, $entity->url ?? ''),
+      $type === MessageEntityType::TextMention => $this->link(
         $text,
         'tg://user?id=' . ($entity->user !== null ? $entity->user->id : 0),
       ),
-      MessageEntityType::CustomEmoji => $this->customEmoji($text, $entity->customEmojiId ?? ''),
-      MessageEntityType::DateTime => $this->dateTime($text, $entity->unixTime ?? 0, $entity->dateTimeFormat),
+      $type === MessageEntityType::CustomEmoji => $this->customEmoji($text, $entity->customEmojiId ?? ''),
+      $type === MessageEntityType::DateTime => $this->dateTime($text, $entity->unixTime ?? 0, $entity->dateTimeFormat),
       default => $this->quote($text),
     };
   }

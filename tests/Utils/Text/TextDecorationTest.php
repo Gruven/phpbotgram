@@ -35,10 +35,8 @@ use PHPUnit\Framework\TestCase;
  *   via `mb_convert_encoding` UTF-16LE — the existing
  *   `testUnparseUtf16EmojiOffsetAccounting` tests the same concept with a
  *   single surrogate-pair emoji.
- * - Passthrough types (mention, url, etc.) — Python `apply_entity` returns
- *   `text` as-is; PHP returns `$this->quote($text)`; the test for the
- *   `mention+bold` case asserts PHP-actual behaviour with a docblock
- *   noting the divergence — API divergence (a).
+ * - Passthrough types (mention, url, etc.) — now match upstream: `apply_entity`
+ *   returns `text` as-is (no escaping). Fixed in Phase 7 review cycle 2.
  * - `test_apply_single_entity` markdown `expandable_blockquote` row expects
  *   `">test||"`; PHP emits `">test\n**"` — API divergence (a).
  */
@@ -317,7 +315,9 @@ final class TextDecorationTest extends TestCase
 
   public function testApplyEntityPassthroughTypesMarkdown(): void
   {
-    // Passthrough types are quote()-d; plain "test" has no Markdown specials.
+    // Passthrough types return text as-is (upstream parity); for plain "test"
+    // this is indistinguishable from quote(), but for MD-special strings the
+    // difference matters (see testMarkdownV2RoundTripsHashtagWithUnderscore).
     foreach ([
       MessageEntityType::Hashtag,
       MessageEntityType::Cashtag,
@@ -480,19 +480,35 @@ final class TextDecorationTest extends TestCase
   public function testUnparsePassthroughEntityWithBold(): void
   {
     // "@username" — mention + bold at same offset.
-    // NOTE: PHP API divergence from upstream: Python's apply_entity returns
-    // `text` as-is for passthrough types (mention, url, etc.), so the outer
-    // mention wrapper preserves the inner "<b>@username</b>" and the result
-    // would be "<b>@username</b>". PHP's default branch runs quote() on the
-    // inner text, so the outer mention escapes the "<b>" tags produced by bold.
-    // API divergence (a): passthrough returns quote($text) in PHP vs text in Python.
+    // Upstream parity: passthrough types return text as-is, so the outer
+    // mention wrapper returns the inner "<b>@username</b>" unchanged (no
+    // escaping of the HTML tags produced by the inner bold entity).
     $entities = [
       new MessageEntity(type: MessageEntityType::Mention->value, offset: 0, length: 9),
       new MessageEntity(type: MessageEntityType::Bold->value, offset: 0, length: 9),
     ];
     self::assertSame(
-      '&lt;b&gt;@username&lt;/b&gt;',
+      '<b>@username</b>',
       HtmlDecoration::instance()->unparse('@username', $entities),
+    );
+  }
+
+  public function testMarkdownV2RoundTripsHashtagWithUnderscore(): void
+  {
+    // Regression for the MD V2 round-trip double-escaping bug.
+    //
+    // The entity inner text is produced by recursive _unparse_entities which
+    // already quote()s plain text ranges, so '#hash_tag' → '\#hash\_tag'.
+    // With the bug (default => quote($text)), that already-quoted text was
+    // quote()-d again: '\#hash\_tag' → '\\\\#hash\\_tag'.
+    // With the fix (passthrough => $text), it returns '\#hash\_tag' exactly —
+    // single-escaped, matching what Telegram needs.
+    $entities = [
+      new MessageEntity(type: MessageEntityType::Hashtag->value, offset: 0, length: 9),
+    ];
+    self::assertSame(
+      '\#hash\_tag',
+      MarkdownDecoration::instance()->unparse('#hash_tag', $entities),
     );
   }
 
