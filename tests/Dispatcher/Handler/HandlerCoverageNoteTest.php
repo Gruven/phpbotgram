@@ -52,8 +52,6 @@ use stdClass;
  *   synchronous from the caller's perspective.
  *
  * @internal
- *
- * @coversNothing
  */
 final class HandlerCoverageNoteTest extends TestCase
 {

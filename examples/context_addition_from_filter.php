@@ -15,6 +15,15 @@ declare(strict_types=1);
  *   - Handler receives the injected `db_connection` and `current_user` kwargs
  *     as named parameters — no global state needed.
  *
+ * # Parameter naming
+ *
+ * `CallableObject::prepareKwargs()` performs a strict `array_intersect_key`
+ * between the kwargs bag and the closure's declared parameter names — there
+ * is no snake_case ↔ camelCase translation. The filter return keys, the
+ * `workflowData` keys, and the handler parameter names must therefore match
+ * literally. This example uses snake_case throughout (the upstream Python
+ * convention) so the wire-name maps stay obvious.
+ *
  * Run:
  *   BOT_TOKEN=123:abc php examples/context_addition_from_filter.php
  */
@@ -72,19 +81,20 @@ $dispatcher = new Dispatcher();
 // (Here it's a placeholder; replace with a real PDO/Redis/etc. instance.)
 $dispatcher->workflowData['db_connection'] = 'pdo:sqlite::memory:';
 
-// The handler receives `$currentUser` injected by UserResolverFilter,
-// and `$dbConnection` from $dispatcher->workflowData.
+// The handler receives `$current_user` injected by UserResolverFilter,
+// and `$db_connection` from $dispatcher->workflowData. Names must match
+// literally: see the docblock at the top of this file for why.
 $dispatcher->message->register(
     static function (
         Message $event,
-        array $currentUser,
-        string $dbConnection,
+        array $current_user,
+        string $db_connection,
     ): void {
-        $name = $currentUser['name'] ?: 'stranger';
-        $premium = $currentUser['is_premium'] ? ' (Premium)' : '';
+        $name = $current_user['name'] ?: 'stranger';
+        $premium = $current_user['is_premium'] ? ' (Premium)' : '';
         $event->answer(
             "Hello, {$name}{$premium}!\n"
-            . "DB: {$dbConnection}"
+            . "DB: {$db_connection}"
         )->emit();
     },
     filters: [new UserResolverFilter()],

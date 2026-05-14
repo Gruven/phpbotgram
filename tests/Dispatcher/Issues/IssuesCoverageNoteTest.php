@@ -75,8 +75,6 @@ use PHPUnit\Framework\TestCase;
  * is available. The race condition does not occur in PHP.
  *
  * @internal
- *
- * @coversNothing
  */
 final class IssuesCoverageNoteTest extends TestCase
 {

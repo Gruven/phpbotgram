@@ -146,6 +146,22 @@ foreach ($xml->xpath('//file') as $file) {
   }
 }
 
+// Detect the missing-coverage-driver foot-gun: PHPUnit produces a Clover
+// report with all-zero `coveredstatements` whenever it runs without a
+// loaded coverage driver (XDEBUG_MODE=off being the typical cause on this
+// codebase). The default per-module gates would then fail with cryptic
+// "0 / N covered" messages. Surface the real cause up-front instead.
+$totalStatements = array_sum(array_column($tally, 'statements'));
+$totalCovered = array_sum(array_column($tally, 'covered'));
+
+if ($totalStatements > 0 && $totalCovered === 0) {
+  fwrite(STDERR, "coverage-gate: report has 0 covered statements across every module.\n");
+  fwrite(STDERR, "Was the suite run without a coverage driver? Re-run with:\n");
+  fwrite(STDERR, "  XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-clover={$cloverPath}\n");
+  fwrite(STDERR, "or `make coverage-gate` which sets the environment for you.\n");
+  exit(2);
+}
+
 $failed = [];
 
 printf("Coverage gate — per-module thresholds\n");
@@ -162,7 +178,7 @@ foreach ($tally as $module => $row) {
   }
 
   $pct = ($row['covered'] / $row['statements']) * 100.0;
-  $marker = $pct >= $threshold ? '✓' : '✗';
+  $marker = $pct >= $threshold ? 'OK' : 'FAIL';
   printf("%-12s %6d %6d/%-5d %11.2f%% %7.1f%% %s\n", $module, $row['files'], $row['covered'], $row['statements'], $pct, $threshold, $marker);
 
   if ($pct < $threshold) {

@@ -74,8 +74,6 @@ use stdClass;
  * `test_extract_flags` (data-dict shape) — divergence, skip (a).
  *
  * @internal
- *
- * @coversNothing
  */
 final class FlagsCoverageNoteTest extends TestCase
 {
