@@ -141,18 +141,27 @@ final class CallbackQueryFilterTest extends TestCase
     self::assertSame(CbqFixture::class, $filter->callbackDataClass);
   }
 
-  public function testRejectsCallbackQueryWhenDecodeThrowsTypeError(): void
+  public function testMatchesCallbackQueryWithIntBackedEnumCallbackData(): void
   {
     // `CbDataIntKindCarrier` uses an int-backed enum (`CbDataIntKindForFilter`).
-    // `CallbackData::decodeComplex()` calls `BackedEnum::from($raw)` where
-    // `$raw` is a string. Under `declare(strict_types=1)` this raises
-    // `\TypeError` for int-backed enums. The filter must catch that and
-    // return `false` rather than crashing the dispatcher loop — mirrors
-    // upstream `except (TypeError, ValueError): return False`.
+    // Earlier the filter swallowed a TypeError raised by
+    // `CallbackData::decodeComplex()` (it called `BackedEnum::from($raw)` with
+    // a string regardless of backing type). After the decoder was fixed to
+    // detect the backing type and coerce to int before calling `from()`,
+    // int-backed enums round-trip cleanly and the filter matches the carrier.
+    //
+    // The defensive `\TypeError` catch in `CallbackQueryFilter` remains as a
+    // backstop for future regressions in the decode path — exercised
+    // implicitly by the existing happy-path tests in this file.
     $filter = new CallbackQueryFilter(CbDataIntKindCarrier::class);
     $query = $this->callbackQuery(data: 'iek:1');
 
-    self::assertFalse($filter($query));
+    $result = $filter($query);
+
+    self::assertIsArray($result, 'Filter must report success on a valid int-enum payload');
+    self::assertArrayHasKey('callback_data', $result);
+    self::assertInstanceOf(CbDataIntKindCarrier::class, $result['callback_data']);
+    self::assertSame(CbDataIntKindForFilter::First, $result['callback_data']->kind);
   }
 
   /**
