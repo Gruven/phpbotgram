@@ -130,13 +130,13 @@ final class AmphpServer
 
     $server->onStop(static function (HttpServer $_) use ($handler, $dispatcher, $server, $workflowData): void {
       $handler->awaitBackgroundTasks();
-      $handler->close();
       $dispatcher->emitShutdown([
         'dispatcher' => $dispatcher,
         'server' => $server,
         ...$dispatcher->workflowData,
         ...$workflowData,
       ]);
+      $handler->close();
     });
 
     $server->expose("{$host}:{$port}");

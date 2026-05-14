@@ -13,8 +13,11 @@ use Amp\Socket\InternetAddress;
 use Amp\Socket\SocketAddress;
 use Amp\Socket\TlsInfo;
 use Closure;
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Tests\Support\MockedBot;
 use Gruven\PhpBotGram\Tests\Support\RecordingDispatcher;
 use Gruven\PhpBotGram\Tests\Webhook\SpyHttpServer;
+use Gruven\PhpBotGram\Webhook\BaseRequestHandler;
 use Gruven\PhpBotGram\Webhook\IpFilter;
 use Gruven\PhpBotGram\Webhook\Server\IpFilterMiddleware;
 use Gruven\PhpBotGram\Webhook\Server\PathRouter;
@@ -575,6 +578,88 @@ final class AmphpServerTest extends TestCase
     self::assertSame('pdo-instance', $capturedStartup['db'] ?? null, 'dispatcher->workflowData must be merged');
     self::assertSame('x', $capturedStartup['extra'] ?? null, 'per-call workflowData must be merged');
     self::assertSame($dispatcher, $capturedStartup['dispatcher'] ?? null, 'dispatcher must be injected');
+  }
+
+  // =========================================================================
+  // AmphpServer shutdown order: emitShutdown before close() (polling-mode parity)
+  // =========================================================================
+
+  /**
+   * Verifies that the onStop closure wired by AmphpServer::run() fires
+   * `emitShutdown` BEFORE calling `handler->close()`, matching the order
+   * used by `Dispatcher::run` in polling mode.
+   *
+   * Uses a SpyHttpServer and manually wires the same closure shape that
+   * AmphpServer::run() attaches to avoid opening a real socket.
+   */
+  public function testOnStopFiresEmitShutdownBeforeClose(): void
+  {
+    $dispatcher = new RecordingDispatcher(disableFsm: true);
+
+    // Shared ordered log. The shutdown observer appends via use(&); the handler
+    // appends via an injected Closure so the anonymous class avoids storing a
+    // bare `object` property (which PHPStan cannot resolve property names on).
+    /** @var list<string> $callOrder */
+    $callOrder = [];
+
+    $dispatcher->shutdown->register(static function () use (&$callOrder): void {
+      $callOrder[] = 'shutdown';
+    });
+
+    // Inject a recorder closure so close() appends without needing a typed
+    // object property on the anonymous class.
+    $recordClose = static function () use (&$callOrder): void {
+      $callOrder[] = 'close';
+    };
+
+    // Minimal close-tracking handler stub.
+    $handler = new class ($recordClose) extends BaseRequestHandler {
+      public function __construct(private readonly Closure $recordClose)
+      {
+        parent::__construct(new RecordingDispatcher(disableFsm: true), false);
+      }
+
+      public function close(): void
+      {
+        ($this->recordClose)();
+      }
+
+      public function resolveBot(Request $request): Bot
+      {
+        return new MockedBot();
+      }
+
+      public function verifySecret(string $telegramSecretToken, Bot $bot): bool
+      {
+        return true;
+      }
+    };
+
+    $spy = new SpyHttpServer();
+    $workflowData = [];
+
+    // Wire the exact same onStop closure shape that AmphpServer::run() uses.
+    $spy->onStop(static function (HttpServer $_) use ($handler, $dispatcher, $spy, $workflowData): void {
+      $handler->awaitBackgroundTasks();
+      $dispatcher->emitShutdown([
+        'dispatcher' => $dispatcher,
+        'server' => $spy,
+        ...$dispatcher->workflowData,
+        ...$workflowData,
+      ]);
+      $handler->close();
+    });
+
+    foreach ($spy->stopCallbacks as $cb) {
+      $cb($spy);
+    }
+
+    self::assertSame(['shutdown', 'close'], $callOrder, 'emitShutdown must fire before close()');
+    $shutdownPos = array_search('shutdown', $callOrder, true);
+    $closePos = array_search('close', $callOrder, true);
+    self::assertIsInt($shutdownPos);
+    self::assertIsInt($closePos);
+    self::assertLessThan($closePos, $shutdownPos, "'shutdown' must precede 'close' in call order");
   }
 
   public function testPerCallWorkflowDataOverridesDispatcherDefaultOnStart(): void

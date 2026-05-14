@@ -108,13 +108,13 @@ final class Setup
 
     $server->onStop(static function (HttpServer $srv) use ($dispatcher, $handler, $server, $workflowData): void {
       $handler->awaitBackgroundTasks();
-      $handler->close();
       $dispatcher->emitShutdown([
         'dispatcher' => $dispatcher,
         'server' => $server,
         ...$dispatcher->workflowData,
         ...$workflowData,
       ]);
+      $handler->close();
     });
   }
 }

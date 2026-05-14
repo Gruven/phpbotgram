@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Tests\Webhook;
 
 use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
+use Closure;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
 use Gruven\PhpBotGram\Tests\Support\RecordingDispatcher;
@@ -227,6 +228,76 @@ final class SetupTest extends TestCase
     }
 
     self::assertTrue($handler->closedCalled, 'handler->close() must be called when onStop fires');
+  }
+
+  // =========================================================================
+  // Shutdown order: emitShutdown before close() (polling-mode parity)
+  // =========================================================================
+
+  /**
+   * Verifies that the onStop callback fires `emitShutdown` BEFORE calling
+   * `handler->close()`, matching the order used by `Dispatcher::run` in
+   * polling mode.
+   *
+   * A shutdown observer that issues a final API call must see an open session;
+   * calling `close()` first would force a lazy session rebuild inside the
+   * observer, defeating the intent of close.
+   */
+  public function testOnStopFiresEmitShutdownBeforeClose(): void
+  {
+    $dispatcher = new RecordingDispatcher(disableFsm: true);
+    $server = new SpyHttpServer();
+
+    // Shared ordered log. The shutdown observer appends via use(&); the handler
+    // appends via an injected Closure so the anonymous class avoids storing a
+    // bare `object` property (which PHPStan cannot resolve property names on).
+    /** @var list<string> $callOrder */
+    $callOrder = [];
+
+    $dispatcher->shutdown->register(static function () use (&$callOrder): void {
+      $callOrder[] = 'shutdown';
+    });
+
+    // Inject a recorder closure so close() appends without needing a typed
+    // object property on the anonymous class.
+    $recordClose = static function () use (&$callOrder): void {
+      $callOrder[] = 'close';
+    };
+
+    $handler = new class ($recordClose) extends BaseRequestHandler {
+      public function __construct(private readonly Closure $recordClose)
+      {
+        parent::__construct(new RecordingDispatcher(disableFsm: true), false);
+      }
+
+      public function close(): void
+      {
+        ($this->recordClose)();
+      }
+
+      public function resolveBot(Request $request): Bot
+      {
+        return new MockedBot();
+      }
+
+      public function verifySecret(string $telegramSecretToken, Bot $bot): bool
+      {
+        return true;
+      }
+    };
+
+    Setup::register($server, static fn(string $p, RequestHandler $h) => null, $dispatcher, $handler);
+
+    foreach ($server->stopCallbacks as $cb) {
+      $cb($server);
+    }
+
+    self::assertSame(['shutdown', 'close'], $callOrder, 'emitShutdown must fire before close()');
+    $shutdownPos = array_search('shutdown', $callOrder, true);
+    $closePos = array_search('close', $callOrder, true);
+    self::assertIsInt($shutdownPos);
+    self::assertIsInt($closePos);
+    self::assertLessThan($closePos, $shutdownPos, "'shutdown' must precede 'close' in call order");
   }
 
   public function testStartupNotFiredBeforeOnStartInvoked(): void
