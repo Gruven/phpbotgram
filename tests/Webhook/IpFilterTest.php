@@ -80,20 +80,21 @@ final class IpFilterTest extends TestCase
   // CIDR range
   // =========================================================================
 
-  public function testCidrAllowsNetworkAddress(): void
+  public function testCidrRejectsNetworkAddress(): void
   {
-    // Network address itself is the first address in the range.
+    // For prefix 1-30 the network address (lowest) is excluded, matching
+    // upstream IPv4Network.hosts() semantics.
     $filter = new IpFilter(['10.0.0.0/24']);
 
-    self::assertTrue($filter->check('10.0.0.0'));
+    self::assertFalse($filter->check('10.0.0.0'), 'network address must be rejected for /24');
   }
 
-  public function testCidrAllowsBroadcastAddress(): void
+  public function testCidrRejectsBroadcastAddress(): void
   {
-    // Broadcast (last address) must also match.
+    // For prefix 1-30 the broadcast address (highest) is excluded.
     $filter = new IpFilter(['10.0.0.0/24']);
 
-    self::assertTrue($filter->check('10.0.0.255'));
+    self::assertFalse($filter->check('10.0.0.255'), 'broadcast address must be rejected for /24');
   }
 
   public function testCidrAllowsHostInMiddle(): void
@@ -117,22 +118,25 @@ final class IpFilterTest extends TestCase
 
   public function testDefaultFilterAllowsTelegramRange1(): void
   {
-    // 149.154.160.0/20 covers 149.154.160.0 – 149.154.175.255
+    // 149.154.160.0/20 covers 149.154.160.0 – 149.154.175.255.
+    // Network (149.154.160.0) and broadcast (149.154.175.255) are excluded per
+    // upstream IPv4Network.hosts() semantics; only interior hosts are allowed.
     $filter = IpFilter::default();
 
-    self::assertTrue($filter->check('149.154.160.0'), 'network address of /20');
-    self::assertTrue($filter->check('149.154.170.1'), 'mid-range host in /20');
-    self::assertTrue($filter->check('149.154.175.255'), 'broadcast of /20');
+    self::assertFalse($filter->check('149.154.160.0'), 'network address of /20 must be rejected');
+    self::assertTrue($filter->check('149.154.170.1'), 'mid-range host in /20 must be allowed');
+    self::assertFalse($filter->check('149.154.175.255'), 'broadcast of /20 must be rejected');
   }
 
   public function testDefaultFilterAllowsTelegramRange2(): void
   {
-    // 91.108.4.0/22 covers 91.108.4.0 – 91.108.7.255
+    // 91.108.4.0/22 covers 91.108.4.0 – 91.108.7.255.
+    // Network and broadcast excluded per upstream IPv4Network.hosts() semantics.
     $filter = IpFilter::default();
 
-    self::assertTrue($filter->check('91.108.4.0'), 'network address of /22');
-    self::assertTrue($filter->check('91.108.6.100'), 'mid-range host in /22');
-    self::assertTrue($filter->check('91.108.7.255'), 'broadcast of /22');
+    self::assertFalse($filter->check('91.108.4.0'), 'network address of /22 must be rejected');
+    self::assertTrue($filter->check('91.108.6.100'), 'mid-range host in /22 must be allowed');
+    self::assertFalse($filter->check('91.108.7.255'), 'broadcast of /22 must be rejected');
   }
 
   public function testDefaultFilterDeniesAddressOutsideTelegramRanges(): void
@@ -188,13 +192,17 @@ final class IpFilterTest extends TestCase
     self::assertFalse($filter->check('172.16.0.2'));
   }
 
-  public function testPrefixLength0MatchesAllIpv4(): void
+  public function testPrefixLength0MatchesInteriorIpv4(): void
   {
+    // /0 covers the entire IPv4 space but excludes the network address
+    // (0.0.0.0) and broadcast address (255.255.255.255), matching upstream
+    // IPv4Network.hosts() semantics applied consistently for all non-/31/32
+    // prefix lengths.
     $filter = new IpFilter(['0.0.0.0/0']);
 
-    self::assertTrue($filter->check('0.0.0.0'));
-    self::assertTrue($filter->check('1.2.3.4'));
-    self::assertTrue($filter->check('255.255.255.255'));
+    self::assertFalse($filter->check('0.0.0.0'), 'network address must be rejected for /0');
+    self::assertTrue($filter->check('1.2.3.4'), 'interior address must be allowed for /0');
+    self::assertFalse($filter->check('255.255.255.255'), 'broadcast address must be rejected for /0');
   }
 
   // =========================================================================
@@ -289,5 +297,51 @@ final class IpFilterTest extends TestCase
     $a->allow('10.0.0.0/8');
 
     self::assertFalse($b->check('10.1.2.3'));
+  }
+
+  // =========================================================================
+  // Upstream-parity: network/broadcast exclusion (#2 fix)
+  // =========================================================================
+
+  public function testDefaultFilterRejectsNetworkAddress(): void
+  {
+    // Upstream: IPv4Address('149.154.160.0') in IPFilter.default() → False
+    $filter = IpFilter::default();
+
+    self::assertFalse(
+      $filter->check('149.154.160.0'),
+      'network address 149.154.160.0 of /20 must be rejected (upstream parity)',
+    );
+  }
+
+  public function testDefaultFilterRejectsBroadcastAddress(): void
+  {
+    // Upstream: IPv4Address('149.154.175.255') in IPFilter.default() → False
+    $filter = IpFilter::default();
+
+    self::assertFalse(
+      $filter->check('149.154.175.255'),
+      'broadcast address 149.154.175.255 of /20 must be rejected (upstream parity)',
+    );
+  }
+
+  public function testSlash31AcceptsBothAddresses(): void
+  {
+    // /31: RFC 3021 — both addresses are usable hosts. Python hosts() returns
+    // both, so both must be accepted.
+    $filter = new IpFilter(['1.2.3.0/31']);
+
+    self::assertTrue($filter->check('1.2.3.0'), '/31 lower address must be accepted');
+    self::assertTrue($filter->check('1.2.3.1'), '/31 upper address must be accepted');
+  }
+
+  public function testSlash32AcceptsItsOnlyAddress(): void
+  {
+    // /32: single-host range. Python hosts() returns the one address.
+    $filter = new IpFilter(['1.2.3.4/32']);
+
+    self::assertTrue($filter->check('1.2.3.4'), '/32 address must be accepted');
+    self::assertFalse($filter->check('1.2.3.3'), 'address outside /32 must be rejected');
+    self::assertFalse($filter->check('1.2.3.5'), 'address outside /32 must be rejected');
   }
 }

@@ -25,8 +25,16 @@ use InvalidArgumentException;
  *   ($ipLong & $mask) === $networkLong
  *
  * With n=2 the difference is immeasurable in practice, and the implementation
- * avoids allocating a ~5 K-entry array.  The public API and observable behaviour
- * (including error semantics) are identical to the upstream contract.
+ * avoids allocating a ~5 K-entry array.
+ *
+ * ## Host-address semantics (upstream parity)
+ *
+ * `check()` rejects network and broadcast addresses for prefix lengths 1–30,
+ * matching Python's `IPv4Network.hosts()` which excludes them.  For /31 and /32
+ * all addresses in the range are usable hosts (RFC 3021 for /31). For /0 the
+ * network address (`0.0.0.0`) and broadcast address (`255.255.255.255`) are
+ * excluded, matching the same rule applied consistently across all non-/31/32
+ * prefix lengths.
  *
  * @internal
  */
@@ -84,7 +92,13 @@ final class IpFilter
   }
 
   /**
-   * Return `true` when `$ip` falls within any allowed network.
+   * Return `true` when `$ip` is a usable host address in any allowed network.
+   *
+   * Matches upstream `IPv4Network.hosts()` semantics: for prefix lengths 1–30
+   * the network address (lowest) and broadcast address (highest) are excluded.
+   * For /31 and /32 all addresses in the range are usable (RFC 3021 for /31;
+   * /32 is a single host by definition). For /0 the network address
+   * (`0.0.0.0`) and broadcast address (`255.255.255.255`) are also excluded.
    *
    * Returns `false` without throwing when `$ip` is syntactically invalid or
    * IPv6-formatted, mirroring the upstream behaviour where an address that
@@ -94,10 +108,13 @@ final class IpFilter
    */
   public function check(string $ip): bool
   {
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+      return false;
+    }
+
     $ipLong = ip2long($ip);
 
     if ($ipLong === false) {
-      // IPv6 or garbage — never matches.
       return false;
     }
 
@@ -105,13 +122,29 @@ final class IpFilter
     $ipLong = $ipLong & 0xFFFFFFFF;
 
     foreach ($this->networks as ['network' => $networkLong, 'prefix' => $prefix]) {
-      $mask = $prefix === 0
-          ? 0
-          : (~((1 << (32 - $prefix)) - 1)) & 0xFFFFFFFF;
+      $hostBits = 32 - $prefix;
+      $mask = $hostBits === 32
+        ? 0
+        : (~((1 << $hostBits) - 1)) & 0xFFFFFFFF;
 
-      if (($ipLong & $mask) === $networkLong) {
+      if (($ipLong & $mask) !== $networkLong) {
+        continue;
+      }
+
+      // The IP is within this network's range. For /31 and /32 all addresses
+      // are usable hosts; for all other prefix lengths (including /0) exclude
+      // the network address (lowest) and broadcast address (highest).
+      if ($prefix >= 31) {
         return true;
       }
+
+      $broadcastLong = ($networkLong | ((1 << $hostBits) - 1)) & 0xFFFFFFFF;
+
+      if ($ipLong === $networkLong || $ipLong === $broadcastLong) {
+        continue;
+      }
+
+      return true;
     }
 
     return false;
