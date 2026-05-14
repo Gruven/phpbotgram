@@ -385,6 +385,20 @@ final class InlineKeyboardBuilderTest extends TestCase
       $builder->add(self::btn("btn{$i}"));
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // MAX_WIDTH enforcement in constructor (validateMarkup)
+  // ---------------------------------------------------------------------------
+
+  public function testConstructorRejectsRowExceedingMaxWidth(): void
+  {
+    // InlineKeyboardBuilder::MAX_WIDTH = 8; passing 9 buttons in one row must throw.
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/Row 0 has 9 buttons \(max 8\)/');
+
+    $row = array_map(static fn(int $i): InlineKeyboardButton => self::btn("b{$i}"), range(1, 9));
+    new InlineKeyboardBuilder([$row]);
+  }
 }
 
 // ---------------------------------------------------------------------------

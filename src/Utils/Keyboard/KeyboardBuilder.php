@@ -311,12 +311,22 @@ abstract class KeyboardBuilder
   protected function validateMarkup(array $markup): void
   {
     $totalButtons = 0;
+    $maxWidth = static::MAX_WIDTH;
 
     foreach ($markup as $rowIndex => $row) {
       if (!is_array($row)) {
         throw new InvalidArgumentException(
           sprintf('Markup row %d must be an array, got %s', $rowIndex, get_debug_type($row)),
         );
+      }
+
+      if ($maxWidth > 0 && count($row) > $maxWidth) {
+        throw new InvalidArgumentException(sprintf(
+          'Row %d has %d buttons (max %d)',
+          $rowIndex,
+          count($row),
+          $maxWidth,
+        ));
       }
 
       foreach ($row as $button) {

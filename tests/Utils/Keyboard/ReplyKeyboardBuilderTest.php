@@ -353,4 +353,18 @@ final class ReplyKeyboardBuilderTest extends TestCase
       $builder->add(self::btn("btn{$i}"));
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // MAX_WIDTH enforcement in constructor (validateMarkup)
+  // ---------------------------------------------------------------------------
+
+  public function testConstructorRejectsRowExceedingMaxWidth(): void
+  {
+    // ReplyKeyboardBuilder::MAX_WIDTH = 10; passing 11 buttons in one row must throw.
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/Row 0 has 11 buttons \(max 10\)/');
+
+    $row = array_map(static fn(int $i): KeyboardButton => self::btn("b{$i}"), range(1, 11));
+    new ReplyKeyboardBuilder([$row]);
+  }
 }
