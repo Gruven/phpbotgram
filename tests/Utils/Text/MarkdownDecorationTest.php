@@ -277,4 +277,32 @@ final class MarkdownDecorationTest extends TestCase
   {
     self::assertSame(">line1\n>line2\n**", $this->exposer->expandableBlockquote_("line1\nline2"));
   }
+
+  // -------------------------------------------------------------------------
+  // Universal newline handling (\R — mirrors Python str.splitlines())
+  // -------------------------------------------------------------------------
+
+  public function testBlockquoteHandlesCrlfLineEndings(): void
+  {
+    // CRLF input must not embed \r in the output lines.
+    self::assertSame(">line1\n>line2", $this->exposer->blockquote_("line1\r\nline2"));
+  }
+
+  public function testBlockquoteHandlesBareCarriageReturn(): void
+  {
+    // Bare \r must be treated as a line separator, same as \n.
+    self::assertSame(">line1\n>line2", $this->exposer->blockquote_("line1\rline2"));
+  }
+
+  public function testExpandableBlockquoteHandlesCrlfLineEndings(): void
+  {
+    // CRLF input must not embed \r in the output lines.
+    self::assertSame(">line1\n>line2\n**", $this->exposer->expandableBlockquote_("line1\r\nline2"));
+  }
+
+  public function testExpandableBlockquoteHandlesBareCarriageReturn(): void
+  {
+    // Bare \r must be treated as a line separator.
+    self::assertSame(">line1\n>line2\n**", $this->exposer->expandableBlockquote_("line1\rline2"));
+  }
 }

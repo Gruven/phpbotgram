@@ -64,7 +64,9 @@ class MarkdownDecoration extends TextDecoration
 
   protected function blockquote(string $value): string
   {
-    $lines = explode("\n", $value);
+    // Use PCRE \R to match all universal newline sequences (\n, \r\n, \r, etc.)
+    // — mirrors Python's str.splitlines() used in the upstream implementation.
+    $lines = preg_split('/\R/u', $value) ?: [$value];
     $quoted = array_map(static fn(string $line): string => '>' . $line, $lines);
 
     return implode("\n", $quoted);
@@ -72,7 +74,9 @@ class MarkdownDecoration extends TextDecoration
 
   protected function expandableBlockquote(string $value): string
   {
-    $lines = explode("\n", $value);
+    // Use PCRE \R to match all universal newline sequences (\n, \r\n, \r, etc.)
+    // — mirrors Python's str.splitlines() used in the upstream implementation.
+    $lines = preg_split('/\R/u', $value) ?: [$value];
     $quoted = array_map(static fn(string $line): string => '>' . $line, $lines);
     $quoted[] = '**';
 
