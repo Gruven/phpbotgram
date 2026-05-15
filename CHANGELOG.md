@@ -141,14 +141,19 @@ documented inline at the call site (`# Divergence:` comments) and in
   facade from the upstream Telegram API spec.
 - `scripts/coverage-gate.php` enforces per-module coverage floors
   (Bot ≥80%, Session ≥75%, Dispatcher/Router/Filters/FSM ≥90%).
-- Make targets: `test`, `stan`, `lint`, `fix`, `regenerate`, `coverage`,
-  `coverage-gate`, `docs-api`.
+- Make targets and composer scripts: `test`, `stan`, `lint`, `fix`,
+  `regenerate`, `coverage`, `coverage-gate`, `docs-api` (script and
+  target names match).
 - 12 runnable examples under `examples/` mirroring upstream aiogram's
   example surface.
 - Deployment templates under `deploy/` (nginx reverse proxy, systemd
   unit, Docker compose).
-- API documentation site generated via phpDocumentor v3
-  (`make docs-api` outputs to `build/docs/api/`).
+- API documentation pipeline: `phpdocumentor/shim` composer dev-dep
+  drops the official phpDocumentor v3 phar into `vendor/bin/phpdoc` on
+  `composer install`; `composer docs-api` (or `make docs-api`) renders
+  the site into `build/docs/api/`. GitHub Actions
+  (`.github/workflows/docs.yml`) publishes the site to GitHub Pages on
+  every push to `master`.
 
 ### Quality bars
 

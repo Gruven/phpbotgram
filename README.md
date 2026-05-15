@@ -17,8 +17,10 @@ native enums) throughout.
 
 ## Links
 
-- **API documentation** — `make docs-api` regenerates the phpDocumentor
-  site under `build/docs/api/index.html`.
+- **API documentation** — published at <https://gruven.github.io/phpbotgram/>
+  (GitHub Pages, rebuilt on every push to `master`). Regenerate locally
+  with `composer docs-api` (or `make docs-api`); output lands in
+  `build/docs/api/index.html`.
 - **Design spec** — [`docs/superpowers/specs/`](docs/superpowers/specs/).
 - **Implementation plan** — [`docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md`](docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md).
 - **Changelog** — [`CHANGELOG.md`](CHANGELOG.md).
@@ -234,12 +236,16 @@ AmphpServer::run(
 
 ```bash
 composer install
-vendor/bin/phpunit                 # full suite
-vendor/bin/phpunit --testsuite phpbotgram
-vendor/bin/phpstan analyse         # level 9
-vendor/bin/php-cs-fixer fix --dry-run --diff
-make coverage-gate                 # XDEBUG_MODE=coverage + per-module floors
+composer test                      # full suite (or vendor/bin/phpunit)
+composer stan                      # PHPStan level 9
+composer lint                      # php-cs-fixer dry run
+composer coverage-gate             # XDEBUG_MODE=coverage + per-module floors
+composer docs-api                  # generate API docs into build/docs/api/
 ```
+
+Equivalent `make test / make stan / make lint / make coverage-gate /
+make docs-api` targets exist for contributors who prefer the Makefile
+interface.
 
 Tests against live external services are env-gated to keep CI offline by
 default:

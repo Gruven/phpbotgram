@@ -33,6 +33,7 @@
 		"amphp/redis": "^2",
 		"friendsofphp/php-cs-fixer": "^3.95",
 		"mongodb/mongodb": "^2",
+		"phpdocumentor/shim": "^3",
 		"phpstan/phpstan": "^2.1",
 		"phpunit/phpunit": "^13.1",
 		"symfony/yaml": "^7.3",
@@ -59,8 +60,29 @@
 			"Gruven\\PhpBotGram\\Generator\\" : "tools/generator/src/"
 		}
 	},
+	"scripts" : {
+		"test" : "phpunit",
+		"stan" : "phpstan analyze",
+		"lint" : "php-cs-fixer fix --dry-run --diff",
+		"fix" : "php-cs-fixer fix",
+		"docs-api" : "phpdoc -c phpdoc.dist.xml",
+		"coverage" : "XDEBUG_MODE=coverage phpunit --coverage-clover=build/coverage/clover.xml",
+		"coverage-gate" : ["@coverage", "php scripts/coverage-gate.php build/coverage/clover.xml"]
+	},
+	"scripts-descriptions" : {
+		"test" : "Run the full PHPUnit suite.",
+		"stan" : "Run PHPStan at level 9 across src/ and tests/.",
+		"lint" : "Run php-cs-fixer in dry-run/diff mode.",
+		"fix" : "Apply php-cs-fixer fixes in place.",
+		"docs-api" : "Generate the API documentation site into build/docs/api/.",
+		"coverage" : "Run the test suite with Xdebug coverage and emit clover.xml.",
+		"coverage-gate" : "Run coverage and enforce the per-module floors in scripts/coverage-gate.php."
+	},
 	"config" : {
 		"sort-packages" : true,
-		"optimize-autoloader" : true
+		"optimize-autoloader" : true,
+		"allow-plugins": {
+			"phpdocumentor/shim": true
+		}
 	}
 }
