@@ -3787,6 +3787,14 @@ git push --tags
 
 ---
 
+## Phase 10 — Narrative documentation
+
+See `docs/superpowers/plans/2026-05-15-phpbotgram-narrative-docs.md`.
+
+Status: implementation in progress / complete (update when shipped).
+
+---
+
 ## Self-Review Checklist
 
 After committing the plan:
