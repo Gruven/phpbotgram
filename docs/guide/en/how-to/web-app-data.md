@@ -51,4 +51,6 @@ token.
 - Both checks fail silently on missing `sodium` (Ed25519) or
   malformed query strings. Always treat `false`/exception as 403.
 - Don't reuse `initData` — Telegram allows up to 24 hours but the
-  `auth_date` field is yours to enforce. Reject older payloads.
+  `auth_date` field is yours to enforce. Reject older payloads. See
+  [Webhook](../concepts/webhook.md) for the broader Mini App entry
+  flow.

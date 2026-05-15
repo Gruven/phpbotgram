@@ -43,5 +43,4 @@ too restrictive.
   your work, not the indicator.
 - Forgetting to call `stop()` on a manual `start()` leaks the fiber.
   Always use `scope()` unless you have a state machine reason not to.
-- See [Background tasks](background-tasks.md) for the underlying
-  fiber model.
+  See [Dispatcher](../concepts/dispatcher.md) for the fiber lifecycle.

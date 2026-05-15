@@ -59,4 +59,6 @@ user pays, a `Message` arrives with a non-null `successfulPayment`.
 - The bot owner must enable payments via @BotFather before any of this
   works — the framework gives no clearer error than the API's "PAYMENT_PROVIDER_INVALID".
 - The `payload` round-trips through Telegram unchanged — sign or
-  encrypt it if you'd be unhappy with the user editing it.
+  encrypt it if you'd be unhappy with the user editing it. See
+  [Dispatcher](../concepts/dispatcher.md) for observer routing of the
+  three event types.

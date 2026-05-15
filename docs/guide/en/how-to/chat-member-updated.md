@@ -53,4 +53,5 @@ factory methods `join()`, `leave()`, `promotion()`, `demotion()`.
   `is_member`. For finer control, build a `transition()` manually and
   post-filter on `oldChatMember->isMember`.
 - The bot must be an admin in the chat to receive `chat_member` events
-  for OTHER users — Telegram restriction, not framework.
+  for OTHER users — Telegram restriction, not framework. See
+  [Filters](../concepts/filters.md) for the predicate model.
