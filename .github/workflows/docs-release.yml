@@ -36,7 +36,7 @@ jobs:
           fi
 
       - name: Checkout @ tag
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup PHP 8.5
         uses: shivammathur/setup-php@v2
@@ -47,12 +47,12 @@ jobs:
           coverage: none
 
       - name: Setup Node 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
 
       - name: Cache composer dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: vendor
           key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
@@ -66,7 +66,7 @@ jobs:
         run: composer docs-api
 
       - name: Checkout gh-pages worktree
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: gh-pages
           path: gh-pages-worktree
@@ -94,7 +94,7 @@ jobs:
           cp gh-pages-worktree/versions.json build/docs/root-publish/versions.json
 
       - name: Publish en/${{ github.ref_name }}
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
@@ -104,7 +104,7 @@ jobs:
           commit_message: "release ${{ github.ref_name }}: en/${{ github.ref_name }}"
 
       - name: Publish en/latest
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
@@ -114,7 +114,7 @@ jobs:
           commit_message: "release ${{ github.ref_name }}: en/latest"
 
       - name: Publish versions.json
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages

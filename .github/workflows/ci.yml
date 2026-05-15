@@ -22,13 +22,13 @@ jobs:
         ports: ['27017:27017']
         options: --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping').ok\"" --health-interval 10s
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           extensions: mbstring, json, mongodb, pcntl, sockets, openssl
           coverage: xdebug
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@4.0.0
       - run: vendor/bin/php-cs-fixer fix --dry-run --diff
       - run: vendor/bin/phpstan analyze --no-progress --memory-limit=512M
       - run: vendor/bin/phpunit --coverage-text
