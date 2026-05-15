@@ -21,6 +21,8 @@ native enums) throughout.
   (GitHub Pages, rebuilt on every push to `master`). Regenerate locally
   with `composer docs-api` (or `make docs-api`); output lands in
   `build/docs/api/index.html`.
+- **Narrative documentation:** <https://gruven.github.io/phpbotgram/en/dev/guide/>
+  (tutorial, cookbook, concepts).
 - **Design spec** — [`docs/superpowers/specs/`](docs/superpowers/specs/).
 - **Implementation plan** — [`docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md`](docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md).
 - **Changelog** — [`CHANGELOG.md`](CHANGELOG.md).

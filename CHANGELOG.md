@@ -155,6 +155,56 @@ documented inline at the call site (`# Divergence:` comments) and in
   (`.github/workflows/docs.yml`) publishes the site to GitHub Pages on
   every push to `master`.
 
+### Added — narrative documentation
+
+- Diataxis-structured narrative site under `docs/guide/en/` (46
+  committed pages: 1 top-level landing + 6 tutorial + 21 how-to + 17
+  concept + 1 reference stub) plus 2 build-time copies of
+  CHANGELOG.md and CONTRIBUTING.md → 48 rendered pages.
+- `phpdoc.dist.xml.tpl` template (envsubst → `phpdoc.dist.xml`)
+  rendering narrative + API into a single phpDocumentor v3 site under
+  `build/docs/api/`.
+- `.phpdoc/template/components/header.html.twig` override injecting a
+  navbar language+version switcher driven by `versions.json` and
+  `languages.json` served from the gh-pages branch root.
+- Seven post-build CI gates in `scripts/build-docs.sh`:
+  - `check-docs-build-log.php` greps phpdoc stderr for unresolved
+    refs / orphan docs / missing-title / missing-alt-text warnings.
+  - `check-docs-links.php` verifies every sentinel-URL
+    (`https://api.phpbotgram.local/...`) points at a real API page.
+  - `rewrite-api-links.php` HTML-aware DOM rewrite of sentinel URLs
+    to `classes/...`, with HTML5-doctype preservation and a 50%
+    size-shrink sanity guard.
+  - `check-internal-links.php` walks rendered HTML for non-sentinel
+    internal links and validates them against `<base href>`, with
+    macOS `/var`-vs-`/private/var` realpath canonicalisation.
+  - `lint-docs.php` runs `php -l` on every fenced ` ```php ` block and
+    bans inline raw HTML in narrative prose.
+  - `check-docs-examples.php` verifies every `examples/X.php` link
+    resolves to an existing file.
+  - `markdownlint-cli2@0.22.1` for prose style.
+- `.github/workflows/docs.yml` migrated from Pages "workflow mode" to
+  "branch mode" via `peaceiris/actions-gh-pages@v4`; publishes
+  master pushes to `/en/dev/`.
+- New `.github/workflows/docs-release.yml` publishes tag pushes to
+  `/en/<tag>/` + `/en/latest/` + updates `versions.json` with a
+  semver-shape validation gate at job entry.
+- `update-versions-json.php` atomic CLI with `stable=auto`
+  semver-aware backport handling.
+- `copy-root-docs.php` mirrors project-root `CHANGELOG.md` and
+  `CONTRIBUTING.md` into `docs/guide/en/` pre-build (gitignored
+  copies with AUTO-GENERATED banner; mtime preserved).
+- `CONTRIBUTING.md` at project root with "Fenced-block conventions"
+  documenting the ` ```php ` (lint-gated) vs ` ```php-fragment `
+  (lint-skipped) distinction.
+- `.markdownlint.jsonc` config compatible with the copied
+  CHANGELOG/CONTRIBUTING (MD024 siblings_only for Keep-a-Changelog
+  shape).
+- `composer.json` constraint for `phpdocumentor/shim` tightened from
+  `^3` to `~3.10.0`.
+- `composer docs-api` and `make docs-api` both delegate to
+  `bash scripts/build-docs.sh`.
+
 ### Quality bars
 
 - 2109 PHPUnit tests with 6599 assertions (9 env-gated skips). Real
