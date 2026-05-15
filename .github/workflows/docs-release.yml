@@ -1,0 +1,124 @@
+name: Release documentation
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-write
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and publish release docs
+    runs-on: ubuntu-latest
+    steps:
+      # Defense in depth: the workflow trigger filter `tags: ['v*.*.*']`
+      # narrows to semver-shaped tags, but `*.*.*` is a GLOB, not a regex,
+      # so `v..0.0` or `v;rm/0.0.0` would still match. The peaceiris steps
+      # below interpolate `${{ github.ref_name }}` directly into YAML
+      # action inputs (destination_dir, commit_message), which we can't
+      # safely route through an env-var indirection — those slots are
+      # interpolated by GitHub's expression engine, not the shell. Reject
+      # anything that doesn't look like a strict semver at the top of the
+      # job so peaceiris never sees an exotic value.
+      - name: Validate tag name shape
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if ! printf '%s' "$REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?(\+[A-Za-z0-9.-]+)?$'; then
+            echo "::error::Tag '$REF_NAME' does not match the strict semver shape v\d+.\d+.\d+(-prerelease)?(+meta)?; refusing to publish."
+            exit 1
+          fi
+
+      - name: Checkout @ tag
+        uses: actions/checkout@v5
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: mbstring, sodium, json
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Build docs
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: composer docs-api
+
+      - name: Checkout gh-pages worktree
+        uses: actions/checkout@v5
+        with:
+          ref: gh-pages
+          path: gh-pages-worktree
+
+      # Note: peaceiris/actions-gh-pages inputs below (destination_dir,
+      # commit_message) still interpolate `${{ github.ref_name }}` directly.
+      # That is acceptable because the workflow trigger filter restricts
+      # this job to tags matching `v*.*.*` — GitHub validates the tag name
+      # at push time, so the interpolated string is constrained to that
+      # shape. The `run:` block below is more permissive (any shell), hence
+      # the env-var indirection there.
+      - name: Update versions.json
+        env:
+          # Pass the tag through an env-var instead of interpolating
+          # `${{ github.ref_name }}` into the shell command.
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          php scripts/update-versions-json.php \
+            gh-pages-worktree/versions.json \
+            --upsert "id=${REF_NAME}" \
+                     "path=en/${REF_NAME}/" \
+                     "label=${REF_NAME}" \
+                     stable=auto
+          mkdir -p build/docs/root-publish
+          cp gh-pages-worktree/versions.json build/docs/root-publish/versions.json
+
+      - name: Publish en/${{ github.ref_name }}
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: build/docs/api
+          destination_dir: en/${{ github.ref_name }}
+          keep_files: false
+          commit_message: "release ${{ github.ref_name }}: en/${{ github.ref_name }}"
+
+      - name: Publish en/latest
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: build/docs/api
+          destination_dir: en/latest
+          keep_files: false
+          commit_message: "release ${{ github.ref_name }}: en/latest"
+
+      - name: Publish versions.json
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: build/docs/root-publish
+          destination_dir: ""
+          keep_files: true
+          commit_message: "release ${{ github.ref_name }}: update versions.json"
