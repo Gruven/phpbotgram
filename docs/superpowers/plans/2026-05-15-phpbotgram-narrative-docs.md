@@ -19,8 +19,7 @@
 | Path | Responsibility |
 | --- | --- |
 | `phpdoc.dist.xml.tpl` | Template for the rendered phpdoc config; envsubst expands `${VERSION}`. Replaces concrete `phpdoc.dist.xml`. |
-| `.phpdoc/template/layout.html.twig` | Verbatim copy of phpdoc's upstream `default/layout.html.twig`, shipped to anchor the override directory in phpdoc's template resolver. |
-| `.phpdoc/template/components/header.html.twig` | Copy of phpdoc's upstream `default/components/header.html.twig` with one extra `{{ include('_includes/switcher.html.twig') }}` line inside the navbar bar (so the switcher renders alongside the search input). |
+| `.phpdoc/template/components/header.html.twig` | Copy of phpdoc's upstream `default/components/header.html.twig` with one extra `{{ include('_includes/switcher.html.twig') }}` line inside the navbar bar (so the switcher renders alongside the search input). phpdoc's Twig `ChainLoader` consults `.phpdoc/template/` *before* the bundled defaults, so overriding just this one file routes the existing upstream `{% include 'components/header.html.twig' %}` call into our copy while the rest of the layout still loads from the phar. |
 | `.phpdoc/template/_includes/switcher.html.twig` | Twig partial: two `<select>` elements + inline JS that fetches `versions.json`/`languages.json` and populates them. |
 | `.markdownlint.jsonc` | markdownlint-cli2 rules permissive enough for `docs/guide/en/changelog.md` and `contributing.md` (or excluding those two paths). |
 | `scripts/build-docs.sh` | Bash wrapper: `set -euo pipefail`, envsubst, copy-root-docs, phpdoc, all gates. Invoked by `composer docs-api` and `make docs-api`. |
@@ -1631,6 +1630,21 @@ function rewrite_page(string $path, array &$failures): void
     return;
   }
 
+  // Sanity guard: if libxml choked on weird input it can return a tree
+  // missing most of the body. Refuse to write back anything <50% of the
+  // original byte count — that almost certainly means we'd zero-out the
+  // page silently. The threshold is conservative; legitimate HTML rewrites
+  // change a handful of href attributes and stay close to the original size.
+  if (strlen($rewritten) < (int)(strlen($body) * 0.5)) {
+    $failures[] = sprintf(
+      '%s: rewrite shrank output (%d → %d bytes); refusing to write',
+      $path,
+      strlen($body),
+      strlen($rewritten),
+    );
+    return;
+  }
+
   // Re-inject the original doctype literal if libxml mangled it.
   if ($originalDoctype !== null) {
     $rewritten = preg_replace(
@@ -1881,8 +1895,18 @@ function check_page(string $path, string $buildRoot, array &$errors): void
     // Resolve against <base href>. Since <base href> is depth-adaptive
     // (../, ../../, …), joining with the rendered page's directory and
     // normalizing is equivalent to resolving against the build root.
-    $pageDir = dirname($path);
-    $resolved = realpath_logical($pageDir . '/' . $base . $pathPart);
+    //
+    // Canonicalise $pageDir via realpath() so symlink-traversal mismatches
+    // (notably macOS, where /var → /private/var and the tmp-dir iterator
+    // yields /var/folders/… while realpath($buildRoot) yields
+    // /private/var/folders/…) don't make the str_starts_with check
+    // unconditionally fail.
+    $pageDirReal = realpath(dirname($path));
+    if ($pageDirReal === false) {
+      $errors[] = "{$path}: realpath of page dir failed";
+      continue;
+    }
+    $resolved = realpath_logical($pageDirReal . '/' . $base . $pathPart);
 
     if ($resolved === null || !str_starts_with($resolved, $buildRoot)) {
       $errors[] = "{$path}: link target escapes build root: {$href}";
@@ -2414,15 +2438,16 @@ git commit -m "phase-10: update-versions-json.php + test (semver-aware)"
 ## Task 12: `.phpdoc/template/` Twig override — navbar switcher
 
 **Files:**
-- Create: `.phpdoc/template/layout.html.twig`
 - Create: `.phpdoc/template/components/header.html.twig`
 - Create: `.phpdoc/template/_includes/switcher.html.twig`
 
-phpDocumentor auto-loads `.phpdoc/template/` relative to the config file. The visible chrome (header, sidebar, footer) lives in `layout.html.twig` — `base.html.twig` is a one-liner `{% extends 'layout.html.twig' %}`. We override **both** `layout.html.twig` (to include the switcher partial as a definitive placement contract) **and** `components/header.html.twig` (to inject the switcher's host `<div>` inside the actual navbar). phpdoc composes the rest of the template from upstream defaults.
+phpDocumentor's `ProvideTemplateOverridePathMiddleware` registers `.phpdoc/template/` (relative to the config file) as a higher-priority Twig `FilesystemLoader` in front of the bundled template. The Twig `ChainLoader` therefore consults `.phpdoc/template/` first for any template name, then falls back to the upstream `default` template files.
 
-We override both templates so the switcher can render inside the navbar bar (rather than as a stripe between `<header>` and `<main>`), which is what the spec calls for in §"Version + language switcher".
+Implication: we only need to ship the ONE file whose content we want to change — `components/header.html.twig`. When upstream `layout.html.twig` (still loaded from the phar) does `{% include 'components/header.html.twig' %}`, Twig finds our override first. We do **not** need to ship a verbatim copy of `layout.html.twig`; doing so would freeze the upstream layout against a specific phpdoc release and force a manual re-sync on every patch bump.
 
-- [ ] **Step 1: Extract the upstream templates for reference**
+The switcher renders inside the visible navbar bar (rather than as a stripe between `<header>` and `<main>`), which is what the spec calls for in §"Version + language switcher".
+
+- [ ] **Step 1: Extract the upstream header template for reference**
 
 ```bash
 mkdir -p /tmp/phpdoc-templates
@@ -2435,18 +2460,15 @@ mkdir -p /tmp/phpdoc-templates
 PHAR_PATH="$(php -r 'echo realpath("vendor/bin/phpdoc");')"
 php -r "Phar::loadPhar('$PHAR_PATH'); echo 'phar OK: $PHAR_PATH', PHP_EOL;"
 
-php -r "Phar::loadPhar('$PHAR_PATH'); copy('phar://$PHAR_PATH/data/templates/default/layout.html.twig', '/tmp/phpdoc-templates/layout.html.twig');"
 php -r "Phar::loadPhar('$PHAR_PATH'); copy('phar://$PHAR_PATH/data/templates/default/components/header.html.twig', '/tmp/phpdoc-templates/header.html.twig');"
-head -80 /tmp/phpdoc-templates/layout.html.twig
-echo '---'
 cat /tmp/phpdoc-templates/header.html.twig
 ```
 
 Expected: the first `php -r` prints `phar OK: <abs path>`. If it raises `UnexpectedValueException: ... is not a Phar archive`, stop and re-discover the phar location via `find vendor/phpdocumentor -name '*.phar'`; the shim's filename convention has changed.
 
-In `layout.html.twig` locate the existing `{% include 'components/header.html.twig' %}` site — the switcher partial sits right after it (as a fallback for any layout that doesn't pull our header override).
-
 In `header.html.twig` locate the navbar/`<header>` element — that's where the switcher's host `<div>` is rendered so it visually sits inside the navbar bar (typically right-aligned, alongside the search input). The exact insertion site depends on the upstream markup; usually the safe spot is right before the closing tag of whichever navbar container holds the search input.
+
+We do NOT extract `layout.html.twig` because we do NOT ship a layout override — phpdoc's Twig `ChainLoader` will fall back to the bundled `layout.html.twig`, which already does `{% include 'components/header.html.twig' %}`. Our `.phpdoc/template/components/header.html.twig` intercepts that include via the higher-priority override path.
 
 - [ ] **Step 2: Write the switcher partial**
 
@@ -2516,21 +2538,7 @@ Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/_includes/sw
 </script>
 ```
 
-- [ ] **Step 3: Write the layout override**
-
-Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/layout.html.twig` by **copying** the upstream `data/templates/default/layout.html.twig` extracted in Step 1 verbatim. No edits other than the file's continued reliance on `{% include 'components/header.html.twig' %}`, which is now resolved against our override directory first (per phpdoc's template-resolution order).
-
-Pseudo-shape (apply to the real extracted file unchanged):
-
-```twig
-{# ...existing upstream content; the file is a verbatim copy. #}
-{% include 'components/header.html.twig' %}    {# ← resolved to our override below #}
-{# ...existing upstream content (sidebar, main, footer)... #}
-```
-
-Why ship `layout.html.twig` at all when we don't edit it? Because phpdoc's template resolver falls back to the upstream `default` template only when both files (layout AND header) live there. Once we ship `components/header.html.twig` in our overlay, the resolver looks at the SAME directory for `layout.html.twig`. Shipping both keeps the resolution deterministic across phpdoc patch bumps.
-
-- [ ] **Step 3b: Write the header override**
+- [ ] **Step 3: Write the header override**
 
 Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/components/header.html.twig` by **copying** the upstream `data/templates/default/components/header.html.twig` extracted in Step 1 and adding ONE include of the switcher partial inside the navbar container (typically alongside the search-input form).
 
@@ -3527,7 +3535,7 @@ the dispatcher and every handler — across every router — inherits it.
 
 ```php
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
-use Gruven\PhpBotGram\Dispatcher\Event\ErrorEvent;
+use Gruven\PhpBotGram\Types\ErrorEvent;
 
 $dispatcher = new Dispatcher();
 $dispatcher->errors->register(static function (ErrorEvent $event): void {
@@ -3542,7 +3550,7 @@ $dispatcher->errors->register(static function (ErrorEvent $event): void {
 
 The `errors` observer fires whenever a handler raises an uncaught
 exception. The
-[`ErrorEvent`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Event-ErrorEvent.html)
+[`ErrorEvent`](https://api.phpbotgram.local/Gruven-PhpBotGram-Types-ErrorEvent.html)
 carries both the original update and the raised throwable. Returning
 without re-raising swallows the exception; rethrowing escalates to the
 polling loop's exit path.
@@ -4193,4 +4201,4 @@ git push origin phase-10-complete
   - Components table → cross-checked above.
   - Definition of done → Task 23.
 - [ ] No placeholder language ("TBD", "implement later", etc.). Search: `grep -nE 'TBD|TODO|FIXME|implement later' docs/superpowers/plans/2026-05-15-phpbotgram-narrative-docs.md` returns nothing.
-- [ ] Type/name consistency: `scripts/build-docs.sh` is called by `composer docs-api` script (Task 3) and `Makefile` target (Task 3) — both reference the same path. All 9 PHP scripts have matching test classes. Both workflows reference the same gh-pages branch and shared concurrency group.
+- [ ] Type/name consistency: `scripts/build-docs.sh` is called by `composer docs-api` script (Task 3) and `Makefile` target (Task 3) — both reference the same path. All 8 PHP scripts (`copy-root-docs`, `lint-docs`, `check-docs-build-log`, `check-docs-links`, `rewrite-api-links`, `check-internal-links`, `check-docs-examples`, `update-versions-json`) have matching test classes under `tests/Scripts/`. The bash wrapper `build-docs.sh` is covered indirectly by the gate chain it invokes. Both workflows reference the same gh-pages branch and shared concurrency group.
