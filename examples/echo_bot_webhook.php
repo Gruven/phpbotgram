@@ -64,9 +64,16 @@ $handler = new SimpleRequestHandler(
 // expose the bot directly to the public internet (rare; Telegram requires
 // HTTPS, so you would also need a TLS-terminating wrapper).
 //
-// The call returns once the event loop is set up; the amphp runtime keeps
-// processing requests until the dispatcher's shutdown observer fires
-// (SIGTERM/SIGINT or explicit `$dispatcher->stop()`).
+// `AmphpServer::run` returns the started `SocketHttpServer`. The amphp
+// runtime keeps processing requests until something stops the server —
+// typical paths are:
+//   - SIGTERM / SIGINT from the OS (the runtime will exit; the server's
+//     `onStop` hook flushes background tasks and emits the dispatcher
+//     shutdown observer);
+//   - explicit `$server->stop()` from inside another fiber for graceful
+//     drain (e.g. inside a `$dispatcher->shutdown->register(...)` body).
+// Capture the return value if you need either path; this minimal echo
+// example lets the OS handle termination.
 AmphpServer::run(
     handler: $handler,
     dispatcher: $dispatcher,

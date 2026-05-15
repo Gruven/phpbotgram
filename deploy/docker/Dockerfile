@@ -42,7 +42,11 @@ RUN addgroup -g 65532 -S bot \
     && chown -R bot:bot /app
 USER bot:bot
 
-# Telegram polling by default. Override at `docker run` time for webhook:
+# Telegram polling by default. Webhook override at `docker run` time
+# requires the example to bind 0.0.0.0 so the `-p` port mapping reaches
+# the process — the shipped example binds 127.0.0.1 for the bare-metal
+# reverse-proxy case. See `deploy/README.md` ("Edit before deploying")
+# for the one-line `examples/echo_bot_webhook.php` edit, then:
 #   docker run -e BOT_TOKEN=... -p 8080:8080 phpbotgram/echo \
 #     php examples/echo_bot_webhook.php
 ENV BOT_TOKEN=""
