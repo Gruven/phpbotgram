@@ -6,22 +6,18 @@ on:
       - master
   workflow_dispatch:
 
-# Required for the deploy-pages action to upload the artifact.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# Cancel in-flight runs when a new push arrives for the same ref. The docs
-# site is single-source-of-truth; running two builds concurrently would race
-# on the gh-pages artifact.
+# Single shared group with both docs-release.yml; cancel-in-progress: false
+# queues a tag publish behind a master push instead of cancelling it.
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: pages-write
+  cancel-in-progress: false
 
 jobs:
   build:
-    name: Build phpDocumentor site
+    name: Build and publish docs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,34 +31,55 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      # Cache vendor across runs so contributors don't wait on a full
-      # composer install on every docs build. Key the cache on composer.lock
-      # so any dep change invalidates it.
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Cache composer dependencies
         uses: actions/cache@v4
         with:
           path: vendor
           key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
 
-      - name: Install dependencies (no-dev would skip phpdoc shim, so keep dev)
+      - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
-      - name: Generate API documentation
+      - name: Build docs
+        env:
+          VERSION: dev
         run: composer docs-api
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Checkout gh-pages worktree
+        uses: actions/checkout@v5
         with:
-          path: build/docs/api
+          ref: gh-pages
+          path: gh-pages-worktree
 
-  deploy:
-    name: Deploy to GitHub Pages
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Update versions.json with dev entry
+        run: |
+          php scripts/update-versions-json.php \
+            gh-pages-worktree/versions.json \
+            --upsert id=dev path=en/dev/ "label=dev (master)" stable=false
+          mkdir -p build/docs/root-publish
+          cp gh-pages-worktree/versions.json build/docs/root-publish/versions.json
+
+      - name: Publish en/dev
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: build/docs/api
+          destination_dir: en/dev
+          keep_files: false
+          commit_message: "publish ${{ github.sha }} -> en/dev"
+
+      - name: Publish versions.json
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: build/docs/root-publish
+          destination_dir: ""
+          keep_files: true
+          commit_message: "update versions.json (dev=${{ github.sha }})"
