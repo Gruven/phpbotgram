@@ -93,8 +93,8 @@ Common types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`,
 
 ## Reporting security issues
 
-Email <security@example.invalid> (replace before merge). Do not file a
-public issue for security-sensitive bugs.
+Email <igruven@gmail.com>. Do not file a public issue for
+security-sensitive bugs.
 
 ## License
 
