@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing. This project is a PHP 8.5
 port of the aiogram Telegram bot framework; the design specs and
-implementation plans live under [`docs/superpowers/`](docs/superpowers/).
+implementation plans live under [`docs/superpowers/`](https://github.com/Gruven/phpbotgram/tree/master/docs/superpowers).
 
 ## Opening an issue
 

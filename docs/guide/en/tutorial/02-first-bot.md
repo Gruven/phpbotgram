@@ -42,7 +42,7 @@ BOT_TOKEN=123456:ABCdef… php echo_bot.php
 
 Send any text to your bot in Telegram; it echoes back.
 
-See the [full example](examples/echo_bot.php) for the version with
+See the [full example](https://github.com/Gruven/phpbotgram/blob/master/examples/echo_bot.php) for the version with
 graceful-shutdown handling.
 
 ## What just happened

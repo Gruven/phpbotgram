@@ -43,12 +43,14 @@ level.
 
 The `quote` method on each subclass is the escape function for the
 target dialect. `MarkdownDecoration::quote` escapes the Markdown V2
-special characters (`_`, `*`, `~`, `\`, `[`, `]`, `(`, `)`, `\``, `>`,
-`#`, `+`, `-`, `=`, `|`, `{`, `}`, `.`, `!`); `HtmlDecoration::quote`
-escapes `<`, `>`, and `&`. Apply it to any text segment that is not
-already inside an entity emitter — `unparse` does this automatically
-for untagged gaps between entities, so user code rarely calls `quote`
-directly.
+special-character set defined by the Telegram Bot API
+(underscore, asterisk, tilde, backslash, square brackets, parentheses,
+backtick, greater-than, hash, plus, minus, equals, pipe, curly braces,
+period, exclamation mark). `HtmlDecoration::quote` escapes the three
+XML-sensitive characters (less-than, greater-than, ampersand). Apply
+it to any text segment that is not already inside an entity emitter —
+`unparse` does this automatically for untagged gaps between entities,
+so user code rarely calls `quote` directly.
 
 Each subclass also exposes the per-entity emitters publicly via
 `unparse` and friends. A handler that wants to compose a Markdown V2
