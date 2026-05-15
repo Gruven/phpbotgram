@@ -309,11 +309,14 @@ would be silently corrupted by a `sed`-style rewrite. The script:
    assertion.
 
 Rewrite math: from a page at `guide/concepts/foo.html` with
-`<base href="../../">`, replacing `href="https://api.phpbotgram.local/X"`
-with `href="classes/X"` produces a browser-resolvable URL: the
-browser resolves `classes/X` against `<base href="../../">` to
-`build/docs/api/classes/X`. The same rule applies at every depth —
-the depth-adaptive `<base href>` does the work.
+`<base href="../../">` (i.e. resolved baseURI =
+`<repo-root>/<lang>/<version>/`), replacing
+`href="https://api.phpbotgram.local/X"` with `href="classes/X"`
+produces a browser-resolvable URL. The browser resolves `classes/X`
+against the resolved baseURI to
+`<repo-root>/<lang>/<version>/classes/X` — exactly the rendered API
+page URL. The same rule applies at every depth — the depth-adaptive
+`<base href>` does the work.
 
 **Author-visible footgun: bare sentinel URLs in narrative prose
 become CommonMark autolinks.** `Use https://api.phpbotgram.local/Foo.html`
@@ -371,13 +374,12 @@ build-output file, then post-processes:
 #!/usr/bin/env bash
 # scripts/build-docs.sh
 set -euo pipefail
-mkdir -p build/docs
 : "${VERSION:?VERSION env var must be set}"
-cd "$(dirname "$0")/.."   # anchor cwd to repo root so .phpdoc/template/ resolves
+cd "$(dirname "$0")/.."          # anchor cwd to repo root so .phpdoc/template/ resolves
+mkdir -p build/docs              # AFTER the cd, so it lands at repo/build/docs
 envsubst '${VERSION}' < phpdoc.dist.xml.tpl > phpdoc.dist.xml
 php scripts/copy-root-docs.php   # CHANGELOG/CONTRIBUTING → docs/guide/en/
-php scripts/copy-root-docs.php
-vendor/bin/phpdoc -c phpdoc.dist.xml 2>&1 \
+vendor/bin/phpdoc -c phpdoc.dist.xml --no-ansi --no-progress 2>&1 \
   | tee build/docs/build.out
 php scripts/check-docs-build-log.php build/docs/build.out
 # Copy language-agnostic assets (SVG diagrams, code-snippets, …)
@@ -390,8 +392,13 @@ php scripts/rewrite-api-links.php
 php scripts/check-internal-links.php
 php scripts/lint-docs.php
 php scripts/check-docs-examples.php
-npx markdownlint-cli2 'docs/guide/en/**/*.md'
+npx markdownlint-cli2@0.22.1 'docs/guide/en/**/*.md'
 ```
+
+`--no-ansi --no-progress` keep `build.out` text-clean: without them
+phpdoc colour-codes its output and prepends a Unicode progress bar
+to the first warning, making grep patterns brittle and CI logs
+illegible.
 
 `composer docs-api` and `make docs-api` both invoke
 `scripts/build-docs.sh` — never `vendor/bin/phpdoc` directly — so
@@ -689,7 +696,7 @@ After `composer docs-api`, in order:
      run: |
        php scripts/update-versions-json.php \
          gh-pages-worktree/versions.json \
-         --upsert id=dev path=en/dev/ label='dev (master)' stable=false
+         --upsert id=dev path=en/dev/ label="dev (master)" stable=false
        mkdir -p build/docs/root-publish
        cp gh-pages-worktree/versions.json build/docs/root-publish/versions.json
    ```
@@ -1208,11 +1215,15 @@ at `docs/`" simplifications.
   - `http://` / `https://` URLs (external; not our concern except for
     the sentinel host which is handled by `check-docs-links.php`).
   - `mailto:` URLs.
-  - Fragment-only (`#…`) links (in-page anchors are checked against
-    the same page's anchor IDs).
-- For each remaining link: resolves it against the page's `<base
-  href>` (parsed from the same HTML), joins with the rendered output
-  directory, and verifies the target file exists.
+- **Fragment-only (`#…`) links** (no path part): validated as
+  anchors against the SAME page they appear on. The script opens
+  the containing HTML once, builds a set of `id="…"` attribute
+  values, and rejects any `#fragment` link whose target isn't in
+  that set.
+- For each remaining link with a path part: resolves it against
+  the page's `<base href>` (parsed from the same HTML), joins with
+  the rendered output directory, and verifies the target file
+  exists.
 - For links with an anchor (`#method_foo`), opens the target HTML
   and verifies an `id="method_foo"` attribute exists. Anchor IDs
   are part of the phpDocumentor template contract; broken anchors
@@ -1239,13 +1250,14 @@ docs.yml workflow  [MIGRATED in Phase 10 from workflow mode → branch mode]
     │   ├─ scripts/check-docs-examples.php    (gate)
     │   └─ markdownlint-cli2 'docs/guide/en/**/*.md'  (gate)
     ├─ scripts/update-versions-json.php gh-pages-worktree/versions.json
-    │     --upsert id=dev path=en/dev/ label='dev (master)' stable=false
-    ├─ cp -r docs/guide/shared build/docs/api/guide/shared
+    │     --upsert id=dev path=en/dev/ label="dev (master)" stable=false
     ├─ cp gh-pages-worktree/versions.json build/docs/root-publish/versions.json
     ├─ peaceiris (publish_dir=build/docs/api, destination_dir=en/dev,
     │             keep_files=false)
     └─ peaceiris (publish_dir=build/docs/root-publish, destination_dir='',
                   keep_files=true)
+    # NB: shared-asset copy (docs/guide/shared/ → build/docs/api/guide/shared/)
+    # happens inside scripts/build-docs.sh, not as a separate workflow step.
 
 tag push v0.1.0
     │
@@ -1256,7 +1268,6 @@ docs-release.yml workflow
     ├─ actions/checkout@v5 ref=gh-pages path=gh-pages-worktree
     ├─ scripts/update-versions-json.php gh-pages-worktree/versions.json
     │     --upsert id=${REF} path=en/${REF}/ label="${REF}" stable=auto
-    ├─ cp -r docs/guide/shared build/docs/api/guide/shared
     ├─ cp gh-pages-worktree/versions.json build/docs/root-publish/versions.json
     │
     ├─ peaceiris (1) build/docs/api → en/${REF}/   keep_files=false
@@ -1264,6 +1275,7 @@ docs-release.yml workflow
     └─ peaceiris (3) build/docs/root-publish → ''   keep_files=true
        # Order matters: versions.json (step 3) is published LAST so
        # the JS redirect never points at a path that isn't yet live.
+       # Shared-asset copy is inside scripts/build-docs.sh, not a workflow step.
 ```
 
 ## Error handling
