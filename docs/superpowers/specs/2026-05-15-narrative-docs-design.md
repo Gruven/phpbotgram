@@ -143,6 +143,15 @@ wrapper script falls back to `/usr/local/opt/gettext/bin/envsubst`
 or `/opt/homebrew/opt/gettext/bin/envsubst` if the default `envsubst`
 isn't on `$PATH`.
 
+**Local prerequisites for `composer docs-api`** (CI installs them
+explicitly; document for contributors):
+
+- PHP 8.5 (already a project hard requirement).
+- `gettext` (`envsubst`). Ubuntu: preinstalled. macOS: `brew install gettext`.
+- Node 20+ for `npx markdownlint-cli2`. macOS: `brew install node`.
+  Ubuntu: `nvm install 20` or system Node. Add a note in
+  `CONTRIBUTING.md` so first-time contributors see the requirement.
+
 `VERSION` values:
 
 - Locally: `0.1.0-dev` (build-wrapper default).
@@ -279,9 +288,25 @@ would be silently corrupted by a `sed`-style rewrite. The script:
    only — text content, `<pre>`/`<code>`/`<kbd>`/`<samp>` descendants,
    and any other attributes stay untouched.
 4. Asserts no sentinel-URL substring remains in any rendered
-   page **after the rewrite, excluding text content of `<pre>` and
-   `<code>` descendants** (a literal sentinel inside a code block
-   is intentional and must survive).
+   page after the rewrite, **with these exclusions** (so legitimate
+   authoring constructs don't trip the gate):
+   - Text content of `<pre>`, `<code>`, `<kbd>`, `<samp>`
+     descendants (a literal sentinel inside a code block or inline
+     code span is intentional and must survive).
+   - Attribute values on any element except `<a>@href` —
+     specifically `<img alt="…">`, `<a title="…">`, `<abbr title="…">`,
+     and the like. Authors describing the sentinel convention in
+     a screenshot caption or accessibility text shouldn't trip the
+     rewrite. The rewrite only ever touches `<a>@href`, so other
+     attribute values are out of scope for both the rewrite and
+     the assertion.
+
+   Authoring rule: **bare sentinel URLs in narrative prose are
+   discouraged outside of `<a>@href`.** When you must show a literal
+   sentinel URL as text (tutorial step demonstrating the syntax),
+   wrap it in an inline backtick span: `` `https://api.phpbotgram.local/Foo.html` ``.
+   This renders as `<code>` and survives both the rewrite and the
+   assertion.
 
 Rewrite math: from a page at `guide/concepts/foo.html` with
 `<base href="../../">`, replacing `href="https://api.phpbotgram.local/X"`
@@ -348,11 +373,18 @@ build-output file, then post-processes:
 set -euo pipefail
 mkdir -p build/docs
 : "${VERSION:?VERSION env var must be set}"
-envsubst < phpdoc.dist.xml.tpl > phpdoc.dist.xml
+cd "$(dirname "$0")/.."   # anchor cwd to repo root so .phpdoc/template/ resolves
+envsubst '${VERSION}' < phpdoc.dist.xml.tpl > phpdoc.dist.xml
+php scripts/copy-root-docs.php   # CHANGELOG/CONTRIBUTING → docs/guide/en/
 php scripts/copy-root-docs.php
 vendor/bin/phpdoc -c phpdoc.dist.xml 2>&1 \
   | tee build/docs/build.out
 php scripts/check-docs-build-log.php build/docs/build.out
+# Copy language-agnostic assets (SVG diagrams, code-snippets, …)
+# into the rendered output so guide pages can reference them via
+# relative paths under <base href>.
+mkdir -p build/docs/api/guide/shared
+cp -r docs/guide/shared/. build/docs/api/guide/shared/
 php scripts/check-docs-links.php
 php scripts/rewrite-api-links.php
 php scripts/check-internal-links.php
@@ -530,10 +562,22 @@ create an extended broken-site window):
 
    The `git worktree --orphan -B gh-pages` flag (git 2.42+) is the
    safe way to materialise an orphan branch in a sibling directory.
-   On older git, fall back to a tempdir clone:
-   `git clone --no-checkout . /tmp/phpbotgram-gh-pages && cd
-   /tmp/phpbotgram-gh-pages && git checkout --orphan gh-pages && git
-   reset --hard && ...`. Document the fallback in the
+   On older git, the fallback is a tempdir clone that explicitly
+   re-points `origin` at the GitHub remote (the `git clone .` step
+   sets `origin` to the LOCAL repo path, not GitHub):
+
+   ```bash
+   git clone --no-checkout . /tmp/phpbotgram-gh-pages
+   cd /tmp/phpbotgram-gh-pages
+   git remote set-url origin git@github.com:Gruven/phpbotgram.git
+   git checkout --orphan gh-pages
+   git reset --hard
+   # …write index.html, versions.json, languages.json…
+   git add . && git commit -m "Bootstrap gh-pages…"
+   git push -u origin gh-pages
+   ```
+
+   Document the chosen path (worktree vs tempdir-clone) in the
    implementation plan.
 
    The first peaceiris run (step 3 below) will publish `/en/dev/`
@@ -590,10 +634,6 @@ branch).
   `php-version: "8.5"`, `extensions: mbstring, sodium, json`,
   `tools: composer:v2`, `coverage: none`
 - `actions/cache@v4` step caching `vendor/` keyed on `composer.lock`
-- `actions/setup-node@v4` step with `node-version: '20'` — required
-  by `npx markdownlint-cli2 …` in `scripts/build-docs.sh`. Phase 9
-  did not need Node because the docs gate was `composer docs-api`
-  with no Markdown lint step; Phase 10 introduces this dependency.
 - `composer install --no-interaction --no-progress --prefer-dist`
 - `composer docs-api` (whose internals are rewritten per
   §"CI gate strategy" but the workflow line stays the same) —
@@ -623,8 +663,15 @@ branch).
 | `deploy` job (entire job) | present (`needs: build`) | **remove the entire job** |
 | `actions/deploy-pages@v4` step | present in `deploy` | **remove** (lives in the deleted job) |
 
-**Phase 10 steps added to the single `build` job** (in this order
-after `composer docs-api`):
+**Phase 10 NEW steps added to the single `build` job**:
+
+0. **Between `actions/cache@v4` and `composer install`** — insert
+   `actions/setup-node@v4` with `node-version: '20'`. Required by
+   `npx markdownlint-cli2 'docs/guide/en/**/*.md'` inside
+   `scripts/build-docs.sh`. Phase 9 did not need Node; Phase 10
+   introduces this dependency.
+
+After `composer docs-api`, in order:
 
 1. **Checkout `gh-pages` into a worktree**:
    ```yaml
@@ -715,26 +762,33 @@ atomically:
      --upsert id="${GITHUB_REF_NAME}" \
               path="en/${GITHUB_REF_NAME}/" \
               label="${GITHUB_REF_NAME}" \
-              stable=true
+              stable=auto
    ```
    The contract (see below) dedups by `id` and flips prior entries
    to `stable: false`.
-3. **Publish three things via three peaceiris invocations**, all
-   serialised behind the shared `concurrency.group: pages-write`:
-   - `build/docs/api/` → `gh-pages/en/<tag>/`: `keep_files: false`
-     (re-upload the version dir atomically; peaceiris wipes inside
-     `destination_dir` only).
-   - `build/docs/api/` → `gh-pages/en/latest/`: `keep_files: false`
-     (same reasoning).
-   - Updated `versions.json` → `gh-pages/`: copy `gh-pages-worktree/versions.json`
-     into a scratch `build/docs/root-publish/` directory, then publish
-     with `publish_dir: build/docs/root-publish`,
-     `destination_dir: ''`, `keep_files: true`. Here
-     `keep_files: true` is **required** — `destination_dir: ''`
-     means "branch root", which would wipe `en/`, `index.html`, and
-     `languages.json` if `keep_files` were false. With it true, the
-     rewrite is scoped to files present in `publish_dir` (the single
-     `versions.json` file).
+3. **Publish three things via three peaceiris invocations, in
+   this exact order**, all serialised behind the shared
+   `concurrency.group: pages-write`:
+   1. `build/docs/api/` → `gh-pages/en/<tag>/`: `keep_files: false`
+      (re-upload the version dir atomically; peaceiris wipes
+      inside `destination_dir` only).
+   2. `build/docs/api/` → `gh-pages/en/latest/`: `keep_files: false`
+      (same reasoning).
+   3. Updated `versions.json` → `gh-pages/`: copy
+      `gh-pages-worktree/versions.json` into a scratch
+      `build/docs/root-publish/` directory, then publish with
+      `publish_dir: build/docs/root-publish`, `destination_dir: ''`,
+      `keep_files: true`. Here `keep_files: true` is **required** —
+      `destination_dir: ''` means "branch root", which would wipe
+      `en/`, `index.html`, and `languages.json` if `keep_files`
+      were false. With it true, the rewrite is scoped to files
+      present in `publish_dir` (the single `versions.json` file).
+
+**Order matters.** Step 3 publishes `versions.json` after steps 1
+and 2 so the JS redirect on `gh-pages/index.html` never points at a
+path that isn't yet live. If step 3 ran first, visitors hitting
+`https://gruven.github.io/phpbotgram/` between step 3 and step 1
+would be redirected to `/en/<tag>/index.html` and see a 404.
 
 All four peaceiris invocations (one in `docs.yml`, three in
 `docs-release.yml`) use:
@@ -856,9 +910,11 @@ Algorithm:
      greater than all existing tag ids, set this entry to `stable:
      true` AND flip every other entry's `stable` to `false`.
      Otherwise (the new tag is older than an existing one — a
-     backport / out-of-order publish) keep this entry's `stable`
-     at the current "newest" value's stable state, and leave
-     other entries' `stable` flags alone.
+     backport / out-of-order publish): set this entry's `stable:
+     false` and leave every other entry's `stable` flag
+     untouched. The dropdown still lists the backport so users can
+     read its docs, but the landing redirect continues to point
+     at the actually-newest release.
    - If `stable=true` (explicit override): flip every other
      entry's `stable` to `false`, set this entry stable.
    - If `stable=false` (used for dev pushes): leave all other
@@ -1182,23 +1238,32 @@ docs.yml workflow  [MIGRATED in Phase 10 from workflow mode → branch mode]
     │   ├─ scripts/lint-docs.php              (gate)
     │   ├─ scripts/check-docs-examples.php    (gate)
     │   └─ markdownlint-cli2 'docs/guide/en/**/*.md'  (gate)
-    └─ peaceiris/actions-gh-pages@v4
-        publish_branch=gh-pages
-        publish_dir=build/docs/api
-        destination_dir=en/dev
-        keep_files=true
+    ├─ scripts/update-versions-json.php gh-pages-worktree/versions.json
+    │     --upsert id=dev path=en/dev/ label='dev (master)' stable=false
+    ├─ cp -r docs/guide/shared build/docs/api/guide/shared
+    ├─ cp gh-pages-worktree/versions.json build/docs/root-publish/versions.json
+    ├─ peaceiris (publish_dir=build/docs/api, destination_dir=en/dev,
+    │             keep_files=false)
+    └─ peaceiris (publish_dir=build/docs/root-publish, destination_dir='',
+                  keep_files=true)
 
 tag push v0.1.0
     │
     ▼
 docs-release.yml workflow
-    ├─ (same build steps with VERSION=v0.1.0)
-    ├─ peaceiris publishes build/docs/api/ → gh-pages/en/v0.1.0/
-    ├─ peaceiris publishes build/docs/api/ → gh-pages/en/latest/
-    ├─ scripts/update-versions-json.php on a gh-pages worktree
-    └─ peaceiris publishes the modified versions.json → gh-pages/
-       (publish_dir = scratch dir containing just versions.json,
-        destination_dir = '', keep_files = true)
+    ├─ checkout master @ tag, setup-php, setup-node, cache, composer install
+    ├─ env VERSION=${{ github.ref_name }} composer docs-api  (build + gates)
+    ├─ actions/checkout@v5 ref=gh-pages path=gh-pages-worktree
+    ├─ scripts/update-versions-json.php gh-pages-worktree/versions.json
+    │     --upsert id=${REF} path=en/${REF}/ label="${REF}" stable=auto
+    ├─ cp -r docs/guide/shared build/docs/api/guide/shared
+    ├─ cp gh-pages-worktree/versions.json build/docs/root-publish/versions.json
+    │
+    ├─ peaceiris (1) build/docs/api → en/${REF}/   keep_files=false
+    ├─ peaceiris (2) build/docs/api → en/latest/    keep_files=false
+    └─ peaceiris (3) build/docs/root-publish → ''   keep_files=true
+       # Order matters: versions.json (step 3) is published LAST so
+       # the JS redirect never points at a path that isn't yet live.
 ```
 
 ## Error handling
