@@ -18,7 +18,9 @@ final class UpdateVersionsJsonTest extends TestCase
 
   protected function tearDown(): void
   {
-    foreach (glob($this->tmp . '/*') as $f) unlink($f);
+    foreach (glob($this->tmp . '/*') ?: [] as $f) {
+      unlink($f);
+    }
     rmdir($this->tmp);
   }
 
@@ -136,6 +138,6 @@ final class UpdateVersionsJsonTest extends TestCase
       implode(' ', array_map(escapeshellarg(...), $args)),
     );
     exec($cmd, $output, $rc);
-    self::assertSame(0, $rc, "Script failed: " . implode("\n", $output));
+    self::assertSame(0, $rc, 'Script failed: ' . implode("\n", $output));
   }
 }

@@ -53,3 +53,14 @@ parameters:
         - identifier: function.alreadyNarrowedType
           paths:
             - tests/Utils/MagicFilter/Exception/*
+        # Phase 10 docs-pipeline script tests exercise dynamic JSON shapes
+        # (`json_decode` returns `mixed`, then access `$data['versions'][0]['stable']`).
+        # The tests are pinned against fixture-emitted JSON they control,
+        # so the offset chain is safe at runtime; level-9 mixed-offset
+        # narrowing is too aggressive for this style.
+        - identifier: offsetAccess.nonOffsetAccessible
+          paths:
+            - tests/Scripts/*
+        - identifier: argument.type
+          paths:
+            - tests/Scripts/*

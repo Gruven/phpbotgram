@@ -75,8 +75,11 @@ final class CopyRootDocsTest extends TestCase
     if (!is_dir($dir)) {
       return;
     }
+
     foreach (scandir($dir) as $e) {
-      if ($e === '.' || $e === '..') continue;
+      if ($e === '.' || $e === '..') {
+        continue;
+      }
       $p = $dir . '/' . $e;
       is_dir($p) && !is_link($p) ? $this->rrmdir($p) : unlink($p);
     }

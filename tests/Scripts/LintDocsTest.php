@@ -84,9 +84,14 @@ final class LintDocsTest extends TestCase
 
   private function rrmdir(string $dir): void
   {
-    if (!is_dir($dir)) return;
+    if (!is_dir($dir)) {
+      return;
+    }
+
     foreach (scandir($dir) as $e) {
-      if ($e === '.' || $e === '..') continue;
+      if ($e === '.' || $e === '..') {
+        continue;
+      }
       $p = $dir . '/' . $e;
       is_dir($p) && !is_link($p) ? $this->rrmdir($p) : unlink($p);
     }
