@@ -80,7 +80,7 @@
 4. **Template override (Task 12)** — Twig partials + JS switcher.
 5. **`.gitignore` + `CONTRIBUTING.md` + `.markdownlint.jsonc` + composer/Makefile (Task 13)** — manifest changes.
 6. **Workflows (Tasks 14–15)** — `docs.yml` migration + new `docs-release.yml`.
-7. **Content authoring (Tasks 16–20)** — landing, tutorial, how-to, concepts, reference stub. One task per Diataxis section.
+7. **Content authoring (Tasks 16–20)** — landing, tutorial, how-to, concepts, reference stub. One task per Diataxis section. Numbering reflects Diataxis order, but the physical execution order swaps Tasks 17 and 18: author concepts first so cross-links from recipes find existing targets (see the note at the top of each task).
 8. **One-time manual setup (Task 21)** — gh-pages bootstrap + Pages UI flip, documented but not executed by the automation.
 9. **CHANGELOG + README polish (Task 22)** — final commit polish.
 10. **Phase 10 acceptance + tag (Task 23)** — verify all gates green, smoke-test, tag `phase-10-complete`.
@@ -341,6 +341,17 @@ git commit -m "phase-10: pilot pass — empirical phpdoc 3.10 findings"
 - Create: `phpdoc.dist.xml.tpl`
 - Modify: `.gitignore` (add three entries)
 - Delete: `phpdoc.dist.xml` (Phase 9 concrete file)
+
+> **Intentional deviation from spec §"Build pipeline" example:** the
+> approved spec shows `<ignore-tags>` as a direct child of `<version>`,
+> sibling to `<api>` and `<guide>`. That placement is invalid against
+> phpDocumentor's v3 XSD (`versionType`'s sequence is
+> `folder?, api*, guide*` — no `ignore-tags` slot). The Phase 9
+> working file (`phpdoc.dist.xml` on `master`) correctly nests
+> `<ignore-tags>` inside `<api>`, which is where the v3 XSD allows it.
+> This plan follows the working file's shape, not the spec's. The
+> spec deviation is intentional; do not "correct" it back to the
+> spec form during execution.
 
 - [ ] **Step 1: Write the template**
 
@@ -1211,7 +1222,11 @@ function process_fence(string $path, ?string $info, array $buffer, int $startLin
   }
 
   $body = implode("\n", $buffer);
-  $body = ltrim($body);
+  // Strip only leading newlines, NOT leading indentation. A fenced block
+  // inside a list item legitimately starts with spaces; `php -l` doesn't
+  // care, but preserving the author's indentation makes error messages
+  // (which include the file body) easier to map back to the source.
+  $body = ltrim($body, "\r\n");
   if (!str_starts_with($body, '<?php')) {
     $body = "<?php\n" . $body;
   }
@@ -1827,6 +1842,22 @@ final class CheckInternalLinksTest extends TestCase
     self::assertSame(0, $this->run());
   }
 
+  public function testResolvesShallowBaseHref(): void
+  {
+    // Regression for a depth-1 page that uses `<base href="../">`
+    // (one level up from the page's directory). The previous depth-2
+    // test (`<base href="../../">`) didn't exercise this shape.
+    file_put_contents($this->apiRoot . '/classes/Foo.html', '<html><body></body></html>');
+    file_put_contents(
+      $this->apiRoot . '/guide/index.html',
+      '<html><head><base href="../"></head><body>'
+      . '<a href="classes/Foo.html">api</a>'
+      . '</body></html>',
+    );
+
+    self::assertSame(0, $this->run());
+  }
+
   private function run(): int
   {
     $script = dirname(__DIR__, 2) . '/scripts/check-internal-links.php';
@@ -2002,7 +2033,7 @@ function realpath_logical(string $path): ?string
 - [ ] **Step 4: Run test, verify it passes**
 
 Run: `vendor/bin/phpunit tests/Scripts/CheckInternalLinksTest.php`
-Expected: PASS (4 tests).
+Expected: PASS (5 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -3472,6 +3503,8 @@ git commit -m "phase-10: top-level landing + 5 tutorial pages"
 - Create: `docs/guide/en/how-to/index.md`
 - Create: `docs/guide/en/how-to/<one file per recipe>` × 20
 
+> **Execution order:** complete **Task 18** (concepts) **before** Task 17 (how-to). Several recipe pages in this task cross-link into `../concepts/<topic>.md`; running the gate chain between batches will emit `Document with name 'X' not found` warnings (which `check-docs-build-log.php` treats as failures) for any concept page that doesn't yet exist. Authoring concepts first inverts that dependency. The task numbering reflects Diataxis ordering, not execution order — physically execute 18, then 17.
+
 Each recipe page follows the structure: **When to use this** → solution code → **Pitfalls**. Per spec's manual-review checklist.
 
 - [ ] **Step 1: Write the how-to landing**
@@ -3676,6 +3709,8 @@ git commit -m "phase-10: 20 cookbook recipes + how-to landing"
 **Files:**
 - Create: `docs/guide/en/concepts/index.md`
 - Create: `docs/guide/en/concepts/<one file per concept>` × 16
+
+> **Execution order:** run this task **before** Task 17. The recipe pages authored in Task 17 link into `../concepts/<topic>.md`; without those targets, the gate chain between batches fails on unresolved cross-page references.
 
 Each concepts page follows: introduction → "How it works" → "Trade-offs" → cross-reference into the API. Per spec's checklist, every concept page must contain at least one sentinel hyperlink to the API.
 
@@ -4077,8 +4112,18 @@ cat > languages.json <<'JSON'
 {"languages": [{"id": "en", "label": "English"}]}
 JSON
 
-git add index.html versions.json languages.json
-git commit -m "Bootstrap gh-pages with JS redirect + empty inventories"
+# .nojekyll disables GitHub Pages' default Jekyll preprocessing. Without
+# this file, Jekyll silently drops anything that starts with `_` —
+# including phpDocumentor's `_static/` asset directories — and the
+# deployed site loses its CSS and JS. peaceiris/actions-gh-pages writes
+# `.nojekyll` automatically on each publish (its default behaviour with
+# `disable_nojekyll: false`), but bootstrapping it here removes the
+# window between the initial branch push and the first peaceiris run
+# where Jekyll could still try to process the placeholders.
+touch .nojekyll
+
+git add index.html versions.json languages.json .nojekyll
+git commit -m "Bootstrap gh-pages with JS redirect + empty inventories + .nojekyll"
 git push -u origin gh-pages
 
 cd /Users/gruven/repository/github/phpbotgram
