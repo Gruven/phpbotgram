@@ -449,6 +449,14 @@ deliberately-broken fixtures (3.10.0, May 2026):
   on the Markdown source (see §"Code examples" / §"Cross-references").
 - Monolog level keywords (` ERROR `, ` WARNING `, ` CRITICAL `) —
   do NOT appear in default phpdoc output.
+- `Image reference not found` — emitted by phpdoc for shared-asset
+  image references because `cp -r docs/guide/shared/.` runs AFTER
+  phpdoc parses. The asset isn't on disk at the rendered location
+  yet; phpdoc warns. The final rendered site still works because
+  the copy happens before publish. The pilot pass (step 8 above)
+  confirms whether this warning appears; either reorder the cp
+  before phpdoc OR add this pattern to the script's allow-list.
+  Either way, this pattern is NOT a CI gate.
 
 `Could not find an index file` (a hard exception thrown by
 `ParseDirectoryHandler` when a guide subdirectory lacks
@@ -1361,11 +1369,18 @@ pilot:
    page (acceptable or fallback-to-plain noted in §Code examples).
 8. Verify shared-asset image resolution: place a sentinel SVG at
    `docs/guide/shared/_pilot.svg`, reference it from a concepts page
-   as `![](../shared/_pilot.svg)`, build, and confirm the rendered
-   `<img src=…>` href resolves under `<base href>` to
+   (`docs/guide/en/concepts/_pilot.md`) as
+   `![](../../shared/_pilot.svg)` — two `..` because concepts lives
+   two levels below the `shared/` parent. Build, and confirm the
+   rendered `<img src=…>` href resolves under `<base href>` to
    `build/docs/api/guide/shared/_pilot.svg`. This validates the
    in-`build-docs.sh` `cp -r docs/guide/shared/.` step actually
-   lands assets where the rendered HTML expects them.
+   lands assets where the rendered HTML expects them. (Independently
+   verify whether `Image reference not found` warnings appear in
+   `build.out` due to the cp running after phpdoc parses; if so,
+   either reorder the cp before phpdoc OR add the warning string to
+   `scripts/check-docs-build-log.php`'s allow-list rather than the
+   gate list.)
 9. Remove the deliberately-broken page.
 
 This avoids guessing at log formats or template behaviour that may
