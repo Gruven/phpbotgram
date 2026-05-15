@@ -246,8 +246,8 @@ default:
 
 | Variable | What it unlocks |
 | --- | --- |
-| `PHPBOTGRAM_REDIS_DSN` | `RedisStorage` integration cases |
-| `PHPBOTGRAM_MONGO_DSN` | `MongoStorage` integration cases |
+| `PHPBOTGRAM_TEST_REDIS_DSN` | `RedisStorage` integration cases |
+| `PHPBOTGRAM_TEST_MONGO_DSN` | `MongoStorage` integration cases |
 
 ## Project structure
 

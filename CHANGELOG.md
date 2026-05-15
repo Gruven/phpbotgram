@@ -89,8 +89,8 @@ documented inline at the call site (`# Divergence:` comments) and in
   message thread isolation.
 - Storage backends:
   - `MemoryStorage` (in-process default).
-  - `RedisStorage` (env-gated by `PHPBOTGRAM_REDIS_DSN`).
-  - `MongoStorage` (env-gated by `PHPBOTGRAM_MONGO_DSN`).
+  - `RedisStorage` (integration tests gated by `PHPBOTGRAM_TEST_REDIS_DSN`).
+  - `MongoStorage` (integration tests gated by `PHPBOTGRAM_TEST_MONGO_DSN`).
 - `StatesGroup` and `State` (explicit; no metaclass auto-discovery).
 - Scenes:
   - `Scene` base with reflection-driven `sceneConfig()` extraction.
@@ -154,7 +154,7 @@ documented inline at the call site (`# Divergence:` comments) and in
 
 - 2109 PHPUnit tests with 6599 assertions (9 env-gated skips). Real
   Redis / MongoDB integration tests gated on
-  `PHPBOTGRAM_REDIS_DSN` / `PHPBOTGRAM_MONGO_DSN` env vars.
+  `PHPBOTGRAM_TEST_REDIS_DSN` / `PHPBOTGRAM_TEST_MONGO_DSN` env vars.
 - PHPStan level 9, clean.
 - `php-cs-fixer` enforced.
 - Coverage gate passes at the documented per-module floors.

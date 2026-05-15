@@ -31,7 +31,7 @@
         </include>
     </source>
     <php>
-        <env name="PHPBOTGRAM_REDIS_DSN" value=""/>
-        <env name="PHPBOTGRAM_MONGO_DSN" value=""/>
+        <env name="PHPBOTGRAM_TEST_REDIS_DSN" value=""/>
+        <env name="PHPBOTGRAM_TEST_MONGO_DSN" value=""/>
     </php>
 </phpunit>

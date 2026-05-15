@@ -2,25 +2,26 @@
 #
 # Brings up:
 #   - bot        long-polling echo bot built from deploy/docker/Dockerfile
-#   - redis      optional FSM storage backend (compose profile `redis`)
-#   - mongo      optional FSM storage backend (compose profile `mongo`)
+#   - redis      Redis sidecar for the integration test suite
+#                (compose profile `redis`)
+#   - mongo      MongoDB sidecar for the integration test suite
+#                (compose profile `mongo`)
 #
 # Quickstart (polling only):
 #   BOT_TOKEN=123:abc docker compose -f deploy/docker/compose.yaml up --build
 #
-# With Redis-backed FSM (note the DSN is the compose-internal hostname):
-#   BOT_TOKEN=123:abc \
-#   PHPBOTGRAM_REDIS_DSN=redis://redis:6379 \
-#   docker compose -f deploy/docker/compose.yaml --profile redis up --build
+# The shipped `examples/echo_bot.php` uses `MemoryStorage`; the redis /
+# mongo sidecars are NOT wired into the echo bot at runtime — they exist
+# so the integration test suite has a real backend to talk to. Run the
+# tests with:
 #
-# With MongoDB-backed FSM:
-#   BOT_TOKEN=123:abc \
-#   PHPBOTGRAM_MONGO_DSN=mongodb://mongo:27017 \
-#   docker compose -f deploy/docker/compose.yaml --profile mongo up --build
+#   PHPBOTGRAM_TEST_REDIS_DSN=redis://localhost:6379 \
+#   docker compose -f deploy/docker/compose.yaml --profile redis up -d redis
+#   vendor/bin/phpunit --filter Redis
 #
-# The bot reads BOT_TOKEN from the environment. Optional FSM backends are
-# off by default — the echo bot uses MemoryStorage which needs no external
-# service.
+# To actually run a bot with Redis-backed FSM, write your own example that
+# constructs `new RedisStorage(...)` from a connection your code creates
+# (see src/Fsm/Storage/RedisStorage.php).
 
 services:
   bot:
@@ -30,8 +31,6 @@ services:
     image: phpbotgram/echo:dev
     environment:
       BOT_TOKEN: "${BOT_TOKEN:?BOT_TOKEN must be set}"
-      PHPBOTGRAM_REDIS_DSN: "${PHPBOTGRAM_REDIS_DSN:-}"
-      PHPBOTGRAM_MONGO_DSN: "${PHPBOTGRAM_MONGO_DSN:-}"
     restart: unless-stopped
     # Long-polling needs outbound HTTPS to api.telegram.org; no inbound ports.
     depends_on:
