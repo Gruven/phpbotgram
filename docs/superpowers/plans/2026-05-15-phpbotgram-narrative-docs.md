@@ -1182,7 +1182,12 @@ function lint_file(string $path, array &$errors): void
   foreach ($lines as $idx => $line) {
     $lineno = $idx + 1;
 
-    if (preg_match('/^```\s*(\S*)/', $line, $m)) {
+    // Tolerate up to 3 leading spaces (CommonMark's "indented fence"
+    // rule). Recipes nested inside list items legitimately produce
+    // fences like `    ` ` ``` ` `; with the regex anchored at column 0,
+    // the closing fence would never match and lint would never exit
+    // $inside_fence, mis-attributing every later inline-HTML hit.
+    if (preg_match('/^ {0,3}```\s*(\S*)/', $line, $m)) {
       if ($inside_fence) {
         // Closing fence: process buffer if php/php-fragment.
         process_fence($path, $fence_info, $fence_buffer, $fence_start_line, $errors);
@@ -1741,7 +1746,7 @@ function rewrite_page(string $path, array &$failures): void
 - [ ] **Step 4: Run test, verify it passes**
 
 Run: `vendor/bin/phpunit tests/Scripts/RewriteApiLinksTest.php`
-Expected: PASS (4 tests).
+Expected: PASS (5 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -2996,6 +3001,24 @@ jobs:
     name: Build and publish release docs
     runs-on: ubuntu-latest
     steps:
+      # Defense in depth: the workflow trigger filter `tags: ['v*.*.*']`
+      # narrows to semver-shaped tags, but `*.*.*` is a GLOB, not a regex,
+      # so `v..0.0` or `v;rm/0.0.0` would still match. The peaceiris steps
+      # below interpolate `${{ github.ref_name }}` directly into YAML
+      # action inputs (destination_dir, commit_message), which we can't
+      # safely route through an env-var indirection — those slots are
+      # interpolated by GitHub's expression engine, not the shell. Reject
+      # anything that doesn't look like a strict semver at the top of the
+      # job so peaceiris never sees an exotic value.
+      - name: Validate tag name shape
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if ! printf '%s' "$REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$'; then
+            echo "::error::Tag '$REF_NAME' does not match the strict semver shape v\d+.\d+.\d+(-prerelease)?; refusing to publish."
+            exit 1
+          fi
+
       - name: Checkout @ tag
         uses: actions/checkout@v5
 
@@ -3492,13 +3515,15 @@ or the [concepts pages](../concepts/index.md) for the architectural
 deep dive.
 ```
 
-- [ ] **Step 8: Run the gate chain locally**
+- [ ] **Step 8: Run the gate chain locally (partial OK at this stage)**
 
 ```bash
-VERSION=0.1.0-dev bash scripts/build-docs.sh 2>&1 | tail -15
+VERSION=0.1.0-dev bash scripts/build-docs.sh 2>&1 | tail -25
 ```
 
-Expected: every gate passes (or the cumulative output points at the first failure for fixing). If `check-docs-examples.php` complains about missing examples (it shouldn't — Phase 9 shipped them), check the `examples/` directory contains the referenced filenames.
+Expected: phpdoc, `lint-docs`, and `check-docs-examples` pass. **`check-docs-build-log` will emit unresolved-reference warnings** for any cross-link the tutorial pages make into `../how-to/<name>.md` or `../concepts/<name>.md`, because Tasks 17 and 18 haven't run yet. That is expected and acceptable at this stage; do NOT fix the warnings by removing the cross-links. The same gate runs cleanly at the end of Task 18 (concepts) and again at the end of Task 17 (how-to), at which point every cross-link target exists.
+
+If you need a clean local run before Task 18 / 17 complete (e.g. to verify a separate change to one of the gate scripts), temporarily comment out the cross-link in the tutorial page and revert the change before commit. The cross-links are content; they must remain in the final commit.
 
 - [ ] **Step 9: Commit**
 
