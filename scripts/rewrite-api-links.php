@@ -82,6 +82,9 @@ function rewrite_page(string $path, array &$failures): void
 
   $xpath = new DOMXPath($dom);
   foreach ($xpath->query('//a[@href]') as $a) {
+    if (!$a instanceof DOMElement) {
+      continue;
+    }
     $href = $a->getAttribute('href');
     if (str_starts_with($href, SENTINEL_PREFIX)) {
       $a->setAttribute('href', REPLACE_PREFIX . substr($href, strlen(SENTINEL_PREFIX)));
