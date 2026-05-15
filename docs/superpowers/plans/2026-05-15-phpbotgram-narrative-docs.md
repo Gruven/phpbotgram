@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a Diataxis-structured narrative docs site (48 pages) rendered into the same phpDocumentor v3 build as the Phase 9 API reference, published per-version to a `gh-pages` branch via GitHub Actions.
+**Goal:** Build a Diataxis-structured narrative docs site (46 committed pages + 2 build-time copies of CHANGELOG / CONTRIBUTING → 48 rendered pages) into the same phpDocumentor v3 build as the Phase 9 API reference, published per-version to a `gh-pages` branch via GitHub Actions.
 
 **Architecture:** Single `composer docs-api` invocation runs phpDocumentor over `src/` + `docs/guide/en/`, then a chain of PHP scripts validates and rewrites the output. CI publishes to `gh-pages` via `peaceiris/actions-gh-pages@v4` in branch mode (replacing Phase 9's workflow-mode Pages). A JS redirect at the gh-pages root + a Twig template override provides language + version switching.
 
@@ -194,6 +194,53 @@ Expected: each page has a `<base href>` matching its depth (`./` at root, `../` 
 Search `build.out` for the literal string `Image reference not found`. Record whether it appears for the `![](../shared/_pilot.svg)` reference. Two outcomes are possible:
 - Warning **does** appear → spec's allow-list assumption is correct; `scripts/check-docs-build-log.php` must skip this substring.
 - Warning **does not** appear → spec's gate set is already complete without an allow-list.
+
+- [ ] **Step 4a: Confirm sentinel-URL form matches phpdoc's real class-page filenames**
+
+The plan's sentinel URLs use dash-separated namespace forms like
+`Gruven-PhpBotGram-Filters-Filter.html`. The fixture pilot above only
+tests `TestNS-Foo.html` (single-namespace toy). Before authoring any
+narrative page, confirm the dash form matches what phpdoc actually
+emits for the real codebase:
+
+```bash
+cd /Users/gruven/repository/github/phpbotgram
+# If a Phase 9 build is not on disk, run one (it's idempotent).
+[ -d build/docs/api/classes ] || VERSION=0.1.0-dev vendor/bin/phpdoc -c phpdoc.dist.xml >/dev/null 2>&1 || true
+
+ls build/docs/api/classes/ | grep -E '^Gruven-PhpBotGram-' | head -10
+```
+
+Expected: at least 10 filenames of the form
+`Gruven-PhpBotGram-<subpath>-<Class>.html`. Record one example each
+of:
+- A top-level class: `Gruven-PhpBotGram-Bot.html`.
+- A nested-namespace class:
+  `Gruven-PhpBotGram-Client-Session-BaseSession.html`.
+- A `Types` namespace class:
+  `Gruven-PhpBotGram-Types-Message.html`.
+- A `Types` class introduced in Phase 8/9:
+  `Gruven-PhpBotGram-Types-ErrorEvent.html`.
+
+If any of the four are MISSING (e.g. nested namespaces use underscores
+or PascalCase joins), STOP and update the sentinel-URL convention in
+the spec + all the worked examples in Tasks 17/18 BEFORE proceeding.
+The convention is load-bearing for every narrative page that links
+into the API ref; getting it wrong here cascades into every
+`check-docs-links.php` failure later.
+
+Record the observed convention in the pilot notes:
+
+```markdown
+## Class-page filename convention
+
+`Gruven-PhpBotGram-Foo-Bar.html` form: <yes|no>
+Examples observed:
+- ...
+- ...
+- ...
+- ...
+```
 
 - [ ] **Step 4b: Probe `php-fragment` fence rendering**
 
@@ -451,7 +498,7 @@ New Phase 10 form (plain delegation; inherits `VERSION` from caller env):
 
 CI workflows export `VERSION` via the step-level `env:` block (Tasks 14–15). Local contributors set it inline: `VERSION=0.1.0-dev composer docs-api`. Document this in `CONTRIBUTING.md` (Task 13).
 
-Also tighten the `phpdocumentor/shim` constraint in `require-dev` from `"^3"` to `"~3.10.0"`. Re-resolve the lock by running `composer update phpdocumentor/shim` afterwards (Step 5). Note: composer's `--lock` flag does **not** accept a package argument — `composer update --lock <pkg>` silently ignores the package and only refreshes the lock hash, leaving the resolved version untouched. To actually pull the new 3.10.x patch we omit `--lock` and pass the package name; composer will update only the named package's entry in the lock.
+Also tighten the `phpdocumentor/shim` constraint in `require-dev` from `"^3"` to `"~3.10.0"`. Re-resolve the lock by running `composer update phpdocumentor/shim` afterwards (Step 5). Note: composer's `--lock` flag does **not** accept a package argument — `composer update --lock <pkg>` silently ignores the package and only refreshes the lock hash, leaving the resolved version untouched. To actually pull the new 3.10.x patch we omit `--lock` and pass the package name; composer re-resolves the named package **and its transitive requirements** (the lock hash will also bump). Inspect `git diff composer.lock` after the update to confirm only `phpdocumentor/shim` plus expected transitive deps moved.
 
 - [ ] **Step 4: Rewrite `Makefile`'s `docs-api` target**
 
@@ -2942,13 +2989,17 @@ jobs:
           ref: gh-pages
           path: gh-pages-worktree
 
+      # Note: peaceiris/actions-gh-pages inputs below (destination_dir,
+      # commit_message) still interpolate `${{ github.ref_name }}` directly.
+      # That is acceptable because the workflow trigger filter restricts
+      # this job to tags matching `v*.*.*` — GitHub validates the tag name
+      # at push time, so the interpolated string is constrained to that
+      # shape. The `run:` block below is more permissive (any shell), hence
+      # the env-var indirection there.
       - name: Update versions.json
         env:
           # Pass the tag through an env-var instead of interpolating
-          # `${{ github.ref_name }}` into the shell command. GitHub accepts
-          # surprisingly liberal ref-names; while a tag like `v1; rm -rf /`
-          # is unusual, treating expression interpolation as untrusted is
-          # the cheap, correct posture.
+          # `${{ github.ref_name }}` into the shell command.
           REF_NAME: ${{ github.ref_name }}
         run: |
           php scripts/update-versions-json.php \
@@ -3924,7 +3975,7 @@ the existing `## [0.1.0] — Initial release` section, add:
 
 ### Added — Phase 10 narrative documentation
 
-- 48-page Diataxis-structured narrative site under `docs/guide/en/`
+- Diataxis-structured narrative site under `docs/guide/en/` (46 committed pages + 2 build-time copies of CHANGELOG / CONTRIBUTING → 48 rendered)
   (5 tutorial, 20 how-to, 16 concept pages, plus indexes, reference
   stub, copy of CHANGELOG/CONTRIBUTING).
 - `phpdoc.dist.xml.tpl` template (envsubst → `phpdoc.dist.xml`)
@@ -4142,8 +4193,9 @@ PR body (template):
 ```markdown
 ## Summary
 
-- 48 narrative pages under `docs/guide/en/` (5 tutorial + 20 how-to +
-  16 concept + indexes/stubs).
+- 46 committed narrative pages under `docs/guide/en/` (1 top-level
+  + 6 tutorial + 21 how-to + 17 concept + 1 reference stub) plus 2
+  build-time copies (CHANGELOG, CONTRIBUTING) → 48 rendered pages.
 - `phpdoc.dist.xml.tpl` + `.phpdoc/template/` override producing a
   single phpDocumentor site with narrative + API + a navbar
   language/version switcher.
