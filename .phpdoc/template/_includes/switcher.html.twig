@@ -1,0 +1,61 @@
+{# Phase 10 — version + language switcher.
+   Populates two <select> elements from /versions.json and /languages.json,
+   served at the gh-pages branch root. Path resolution is base-href-derived
+   (no leading-slash absolute URLs — those would 404 on user-pages
+   deployments).
+
+   Styling notes:
+   - margin-left:auto pushes the switcher to the right end of the navbar's
+     flex container (alongside the search input).
+   - inline style block intentional — phpdoc's CSS pipeline doesn't pick up
+     ad-hoc files we drop into .phpdoc/template/, so colocating layout here
+     keeps the override one Twig file and one inline <style>. #}
+<div class="phpbotgram-switcher" style="display:flex; gap:0.5rem; padding:0.5rem; margin-left:auto; align-items:center;">
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled style="font-size:0.85rem; padding:0.2rem 0.4rem;"></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled style="font-size:0.85rem; padding:0.2rem 0.4rem;"></select>
+</div>
+<script>
+(function () {
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
