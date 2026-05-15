@@ -2665,18 +2665,24 @@ Build the API docs. `scripts/copy-root-docs.php` (invoked inside `scripts/build-
 mkdir -p docs/guide/en
 echo "# phpbotgram" > docs/guide/en/index.md
 
-# Temporary stub so `scripts/build-docs.sh` can reach phpdoc.
-[ -f CONTRIBUTING.md ] || echo "# Contributing (Phase 10 placeholder)" > CONTRIBUTING.md
-__stubbed_contributing=$([ "$(stat -f %z CONTRIBUTING.md 2>/dev/null || wc -c < CONTRIBUTING.md)" -lt 80 ] && echo "yes")
+# Temporary stub so `scripts/build-docs.sh` can reach phpdoc. The
+# `__created_stub` flag is set ONLY when we actually wrote the stub on
+# this run — never key the cleanup off file size, because a contributor
+# could legitimately have a short real CONTRIBUTING.md they'd lose.
+__created_stub=
+if [ ! -f CONTRIBUTING.md ]; then
+  echo "# Contributing (Phase 10 placeholder)" > CONTRIBUTING.md
+  __created_stub=yes
+fi
 
 VERSION=0.1.0-dev bash scripts/build-docs.sh 2>&1 | tail -10 || true
 
-# Remove the stub if we created it (i.e. if the file is still under ~80 bytes).
-# Task 13 writes the real file later.
-if [ "$__stubbed_contributing" = "yes" ]; then
+# Remove the stub iff we created it on this run. Task 13 writes the
+# real file later.
+if [ "$__created_stub" = "yes" ]; then
   rm CONTRIBUTING.md
 fi
-unset __stubbed_contributing
+unset __created_stub
 ```
 
 The build will fail at one of the gates (no real content yet) — that's expected. What matters is that the phpdoc step itself completed and rendered the template. Inspect `build/docs/api/index.html`:
