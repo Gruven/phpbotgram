@@ -96,6 +96,16 @@
 
 This task does not change runtime behavior — it produces a research notes commit only.
 
+- [ ] **Step 0: Create the Phase 10 feature branch off `master`**
+
+```bash
+cd /Users/gruven/repository/github/phpbotgram
+git fetch origin master
+git checkout -b feat/phase-10-narrative-docs origin/master
+```
+
+Expected: branch `feat/phase-10-narrative-docs` exists and is checked out, tracking nothing yet (Task 23 pushes with `-u`). All subsequent commits in this plan land on this branch. If the branch already exists from a previous run, switch to it (`git checkout feat/phase-10-narrative-docs`); do not re-create it.
+
 - [ ] **Step 1: Build the pilot fixture**
 
 ```bash
@@ -185,6 +195,39 @@ Search `build.out` for the literal string `Image reference not found`. Record wh
 - Warning **does** appear → spec's allow-list assumption is correct; `scripts/check-docs-build-log.php` must skip this substring.
 - Warning **does not** appear → spec's gate set is already complete without an allow-list.
 
+- [ ] **Step 4b: Probe `php-fragment` fence rendering**
+
+Extend the pilot fixture with a fenced block tagged `php-fragment`, rebuild, and inspect the rendered HTML:
+
+```bash
+cat >> /tmp/phpdoc-pilot/docs/guide/index.md <<'MD'
+
+## Fragment fence
+
+```php-fragment
+public function send(): Message {
+    return $this->bot->sendMessage(text: 'hi');
+}
+```
+
+## Plain php fence
+
+```php
+$x = 1;
+```
+MD
+
+cd /tmp/phpdoc-pilot && /Users/gruven/repository/github/phpbotgram/vendor/bin/phpdoc -c phpdoc.xml --no-ansi --no-progress 2>&1 | tee build.out
+grep -A2 'fragment-fence\|Fragment fence' build/guide/index.html | head -20
+```
+
+Record:
+- Does `php-fragment` render as `<pre><code>...` or as something different (raw block, plain `<p>`)?
+- Does plain `php` render as a highlighted block (look for class attributes like `language-php` or syntax-highlighted spans)?
+- Is the `php-fragment` block visually distinguishable from a `php` block? Note any divergence so authors know which fence to choose in Tasks 16–18.
+
+This decision rolls into the "Fenced-block conventions" section of `CONTRIBUTING.md` (Task 13).
+
 - [ ] **Step 5: Write the pilot notes file**
 
 ```bash
@@ -221,10 +264,18 @@ phpDocumentor version (from `vendor/bin/phpdoc --version`):
 `![](../shared/_pilot.svg)` rendered as: ...
 Cp-after-phpdoc warning observed: <yes|no>
 
+## `php-fragment` fence rendering
+
+`php-fragment` rendered as: ...
+`php` rendered as: ...
+Visually distinguishable: <yes|no>
+Authoring guidance: <prefer `php` for full files, `php-fragment` for snippets | both render identically, prefer `php`>
+
 ## Decision rolls into
 
 - `scripts/check-docs-build-log.php` patterns array.
 - §"Build pipeline" cp ordering (before vs after phpdoc).
+- `CONTRIBUTING.md` "Fenced-block conventions" section (Task 13).
 ```
 
 - [ ] **Step 6: Commit the pilot notes**
@@ -400,7 +451,7 @@ New Phase 10 form (plain delegation; inherits `VERSION` from caller env):
 
 CI workflows export `VERSION` via the step-level `env:` block (Tasks 14–15). Local contributors set it inline: `VERSION=0.1.0-dev composer docs-api`. Document this in `CONTRIBUTING.md` (Task 13).
 
-Also tighten the `phpdocumentor/shim` constraint in `require-dev` from `"^3"` to `"~3.10.0"`. Run `composer update --lock phpdocumentor/shim` afterwards (Step 5).
+Also tighten the `phpdocumentor/shim` constraint in `require-dev` from `"^3"` to `"~3.10.0"`. Re-resolve the lock by running `composer update phpdocumentor/shim` afterwards (Step 5). Note: composer's `--lock` flag does **not** accept a package argument — `composer update --lock <pkg>` silently ignores the package and only refreshes the lock hash, leaving the resolved version untouched. To actually pull the new 3.10.x patch we omit `--lock` and pass the package name; composer will update only the named package's entry in the lock.
 
 - [ ] **Step 4: Rewrite `Makefile`'s `docs-api` target**
 
@@ -421,12 +472,12 @@ docs-api:
 - [ ] **Step 5: Refresh `composer.lock` and verify the pin**
 
 ```bash
-NO_PROXY='*' no_proxy='*' composer update --lock phpdocumentor/shim --no-interaction --ignore-platform-req=ext-mongodb
+NO_PROXY='*' no_proxy='*' composer update phpdocumentor/shim --no-interaction --ignore-platform-req=ext-mongodb
 composer show phpdocumentor/shim | grep -E '^versions\s*:.*3\.10\.' \
   || { echo "ERROR: phpdocumentor/shim resolved outside 3.10.x — check composer.json constraint"; exit 1; }
 ```
 
-Expected: lock entry for `phpdocumentor/shim` pins to a 3.10.x version AND the grep verifies the resolved version is 3.10.x. If composer reports network errors, see Phase 9 §"NO_PROXY workaround" for the proxy bypass.
+Expected: lock entry for `phpdocumentor/shim` pins to a 3.10.x version AND the grep verifies the resolved version is 3.10.x. Composer only touches the named package's lock entry (no global re-resolution). If composer reports network errors, see Phase 9 §"NO_PROXY workaround" for the proxy bypass.
 
 - [ ] **Step 6: Verify the wrapper exits with a clear error before any script exists**
 
@@ -434,7 +485,7 @@ Expected: lock entry for `phpdocumentor/shim` pins to a 3.10.x version AND the g
 VERSION=0.1.0-dev bash scripts/build-docs.sh 2>&1 | tail -3
 ```
 
-Expected: phpdoc runs (envsubst + the existing API rendering still work), then the gate chain fails on the first missing `scripts/check-docs-build-log.php`. The error line will be `php: ... No such file or directory`. This confirms the wrapper integrates correctly with the to-be-built scripts.
+Expected: phpdoc runs (envsubst + the existing API rendering still work), then the gate chain fails on the first missing `scripts/check-docs-build-log.php`. The exact wording of the "PHP could not open input file" message varies across platforms (`php: ... No such file or directory` on macOS, `Could not open input file: scripts/...` on Linux); the only invariant is that the wrapper exits non-zero with a message that contains `check-docs-build-log.php`. This confirms the wrapper integrates correctly with the to-be-built scripts.
 
 - [ ] **Step 7: Commit**
 
@@ -861,6 +912,22 @@ before phpdoc", drop the `'Image reference not found'` entry from
 `ALLOW_PATTERNS` AND swap the cp ordering in `scripts/build-docs.sh`
 (Task 3). Document the chosen branch in a comment at the top of the
 patterns constants.
+
+**Whenever the patterns arrays change, update
+`tests/Scripts/CheckDocsBuildLogTest.php` in lockstep.** The test is
+fixture-driven, so a removed allow-entry or an added gate-entry leaves
+the corresponding test case asserting against the wrong body. Specifically:
+
+- If you remove an entry from `ALLOW_PATTERNS`, also remove or rewrite
+  the test case that asserted "ignored when allowed" for that substring.
+- If you add an entry to `GATE_PATTERNS`, add a parallel test case that
+  feeds the substring through the script and asserts exit code 1.
+- If you remove an entry from `GATE_PATTERNS`, remove the corresponding
+  failing test or replace its body with a different gate-pattern.
+
+Re-run `vendor/bin/phpunit tests/Scripts/CheckDocsBuildLogTest.php` after
+the edits and confirm the count of tests still matches the count of
+fixtures.
 
 - [ ] **Step 6: Commit**
 
@@ -1416,6 +1483,21 @@ final class RewriteApiLinksTest extends TestCase
     self::assertSame(1, $this->run());
   }
 
+  public function testPreservesHtml5Doctype(): void
+  {
+    // Regression: DOMDocument::loadHTML defaults to substituting an HTML 4.01
+    // PUBLIC doctype when LIBXML_HTML_NODEFDTD is missing. Real phpdoc output
+    // uses `<!DOCTYPE html>` (HTML5); the rewrite must round-trip it intact.
+    $original = "<!DOCTYPE html>\n<html lang=\"en\"><head><meta charset=\"UTF-8\"><title>x</title></head><body><a href=\"https://api.phpbotgram.local/Foo.html\">x</a></body></html>";
+    file_put_contents($this->guideRoot . '/x.html', $original);
+    self::assertSame(0, $this->run());
+
+    $after = file_get_contents($this->guideRoot . '/x.html');
+    self::assertStringStartsWith('<!DOCTYPE html>', ltrim($after));
+    self::assertStringNotContainsString('-//W3C//DTD HTML 4.01//EN', $after);
+    self::assertStringContainsString('href="classes/Foo.html"', $after);
+  }
+
   private function run(): int
   {
     $script = dirname(__DIR__, 2) . '/scripts/rewrite-api-links.php';
@@ -1514,9 +1596,20 @@ function rewrite_page(string $path, array &$failures): void
     return;
   }
 
+  // Preserve the original doctype literal. libxml's HTML parser, even with
+  // LIBXML_HTML_NODEFDTD, can collapse `<!DOCTYPE html>` (HTML5) to its
+  // canonical form on serialization. Capturing and re-injecting the original
+  // bytes keeps the rewrite a true no-op for the doctype line.
+  $originalDoctype = null;
+  if (preg_match('#^\s*(<!DOCTYPE[^>]*>)#i', $body, $m)) {
+    $originalDoctype = $m[1];
+  }
+
   $dom = new DOMDocument();
   libxml_use_internal_errors(true);
-  $loaded = $dom->loadHTML($body, LIBXML_NOERROR | LIBXML_NOWARNING);
+  // LIBXML_HTML_NODEFDTD prevents libxml from substituting an HTML 4.01
+  // PUBLIC doctype when the input already declares `<!DOCTYPE html>`.
+  $loaded = $dom->loadHTML($body, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_HTML_NODEFDTD);
   libxml_clear_errors();
   if (!$loaded) {
     $failures[] = "{$path}: HTML parse failed";
@@ -1532,7 +1625,22 @@ function rewrite_page(string $path, array &$failures): void
   }
 
   $rewritten = $dom->saveHTML();
-  if ($rewritten === false || file_put_contents($path, $rewritten) === false) {
+  if ($rewritten === false) {
+    $failures[] = "{$path}: write failed";
+    return;
+  }
+
+  // Re-inject the original doctype literal if libxml mangled it.
+  if ($originalDoctype !== null) {
+    $rewritten = preg_replace(
+      '#^\s*<!DOCTYPE[^>]*>#i',
+      $originalDoctype,
+      $rewritten,
+      1,
+    );
+  }
+
+  if (file_put_contents($path, $rewritten) === false) {
     $failures[] = "{$path}: write failed";
     return;
   }
@@ -1541,7 +1649,7 @@ function rewrite_page(string $path, array &$failures): void
   // bare sentinel substring there is a violation.
   $reloaded = new DOMDocument();
   libxml_use_internal_errors(true);
-  $reloaded->loadHTML($rewritten, LIBXML_NOERROR | LIBXML_NOWARNING);
+  $reloaded->loadHTML($rewritten, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_HTML_NODEFDTD);
   libxml_clear_errors();
   $xpath = new DOMXPath($reloaded);
   $textNodes = $xpath->query('//text()[not(ancestor::pre or ancestor::code or ancestor::kbd or ancestor::samp)]');
@@ -1711,7 +1819,12 @@ declare(strict_types=1);
  *   1 — at least one broken link.
  */
 
-$buildRoot = getenv('PHPBOTGRAM_BUILD_ROOT') ?: (dirname(__DIR__) . '/build/docs/api');
+$buildRootInput = getenv('PHPBOTGRAM_BUILD_ROOT') ?: (dirname(__DIR__) . '/build/docs/api');
+$buildRoot = realpath($buildRootInput);
+if ($buildRoot === false) {
+  fwrite(STDERR, "check-internal-links: build root not found: {$buildRootInput}\n");
+  exit(1);
+}
 $guideRoot = $buildRoot . '/guide';
 
 if (!is_dir($guideRoot)) {
@@ -1770,7 +1883,7 @@ function check_page(string $path, string $buildRoot, array &$errors): void
     $pageDir = dirname($path);
     $resolved = realpath_logical($pageDir . '/' . $base . $pathPart);
 
-    if ($resolved === null || !str_starts_with($resolved, realpath($buildRoot) ?: $buildRoot)) {
+    if ($resolved === null || !str_starts_with($resolved, $buildRoot)) {
       $errors[] = "{$path}: link target escapes build root: {$href}";
       continue;
     }
@@ -2278,22 +2391,27 @@ git commit -m "phase-10: update-versions-json.php + test (semver-aware)"
 
 **Files:**
 - Create: `.phpdoc/template/layout.html.twig`
+- Create: `.phpdoc/template/components/header.html.twig`
 - Create: `.phpdoc/template/_includes/switcher.html.twig`
 
-phpDocumentor auto-loads `.phpdoc/template/` relative to the config file. The visible chrome (header, sidebar, footer) lives in `layout.html.twig` — `base.html.twig` is a one-liner `{% extends 'layout.html.twig' %}`. We override `layout.html.twig` and add our switcher partial; phpdoc composes the rest of the template from upstream defaults.
+phpDocumentor auto-loads `.phpdoc/template/` relative to the config file. The visible chrome (header, sidebar, footer) lives in `layout.html.twig` — `base.html.twig` is a one-liner `{% extends 'layout.html.twig' %}`. We override **both** `layout.html.twig` (to include the switcher partial as a definitive placement contract) **and** `components/header.html.twig` (to inject the switcher's host `<div>` inside the actual navbar). phpdoc composes the rest of the template from upstream defaults.
 
-- [ ] **Step 1: Extract the upstream `layout.html.twig` for reference**
+We override both templates so the switcher can render inside the navbar bar (rather than as a stripe between `<header>` and `<main>`), which is what the spec calls for in §"Version + language switcher".
+
+- [ ] **Step 1: Extract the upstream templates for reference**
 
 ```bash
 mkdir -p /tmp/phpdoc-templates
 php -r "Phar::loadPhar('vendor/bin/phpdoc'); copy('phar://vendor/bin/phpdoc/data/templates/default/layout.html.twig', '/tmp/phpdoc-templates/layout.html.twig');"
+php -r "Phar::loadPhar('vendor/bin/phpdoc'); copy('phar://vendor/bin/phpdoc/data/templates/default/components/header.html.twig', '/tmp/phpdoc-templates/header.html.twig');"
 head -80 /tmp/phpdoc-templates/layout.html.twig
+echo '---'
+cat /tmp/phpdoc-templates/header.html.twig
 ```
 
-Locate the `<header>` block (or wherever the existing
-`{% include 'components/header.html.twig' %}` lives) — that's the
-insertion point for the switcher partial. We copy the upstream file
-verbatim and add ONE line.
+In `layout.html.twig` locate the existing `{% include 'components/header.html.twig' %}` site — the switcher partial sits right after it (as a fallback for any layout that doesn't pull our header override).
+
+In `header.html.twig` locate the navbar/`<header>` element — that's where the switcher's host `<div>` is rendered so it visually sits inside the navbar bar (typically right-aligned, alongside the search input). The exact insertion site depends on the upstream markup; usually the safe spot is right before the closing tag of whichever navbar container holds the search input.
 
 - [ ] **Step 2: Write the switcher partial**
 
@@ -2304,10 +2422,17 @@ Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/_includes/sw
    Populates two <select> elements from /versions.json and /languages.json,
    served at the gh-pages branch root. Path resolution is base-href-derived
    (no leading-slash absolute URLs — those would 404 on user-pages
-   deployments). #}
-<div class="phpbotgram-switcher" style="display:flex; gap:0.5rem; padding:0.5rem;">
-  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
-  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+   deployments).
+
+   Styling notes:
+   - margin-left:auto pushes the switcher to the right end of the navbar's
+     flex container (alongside the search input).
+   - inline style block intentional — phpdoc's CSS pipeline doesn't pick up
+     ad-hoc files we drop into .phpdoc/template/, so colocating layout here
+     keeps the override one Twig file and one inline <style>. #}
+<div class="phpbotgram-switcher" style="display:flex; gap:0.5rem; padding:0.5rem; margin-left:auto; align-items:center;">
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled style="font-size:0.85rem; padding:0.2rem 0.4rem;"></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled style="font-size:0.85rem; padding:0.2rem 0.4rem;"></select>
 </div>
 <script>
 (function () {
@@ -2358,20 +2483,36 @@ Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/_includes/sw
 
 - [ ] **Step 3: Write the layout override**
 
-Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/layout.html.twig` by **copying** the upstream `data/templates/default/layout.html.twig` extracted in Step 1 and adding ONE include of the switcher partial right after the existing `<header>` include so the switcher renders inside the header bar.
+Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/layout.html.twig` by **copying** the upstream `data/templates/default/layout.html.twig` extracted in Step 1 verbatim. No edits other than the file's continued reliance on `{% include 'components/header.html.twig' %}`, which is now resolved against our override directory first (per phpdoc's template-resolution order).
 
-Pseudo-edit (apply to the real extracted file):
+Pseudo-shape (apply to the real extracted file unchanged):
 
 ```twig
-{# ...existing upstream content... #}
-{% include 'components/header.html.twig' %}
-{{ include('_includes/switcher.html.twig') }}    {# ← Phase 10 addition: navbar switcher #}
+{# ...existing upstream content; the file is a verbatim copy. #}
+{% include 'components/header.html.twig' %}    {# ← resolved to our override below #}
 {# ...existing upstream content (sidebar, main, footer)... #}
 ```
 
-The full file is a verbatim copy of the phar's `layout.html.twig` plus this one extra include. Do not invent any other changes. If the upstream version's header include site looks different on a future phpdoc bump, adjust the insertion site and bump the phpdoc-version pin checklist note in §"Version + language switcher" of the spec.
+Why ship `layout.html.twig` at all when we don't edit it? Because phpdoc's template resolver falls back to the upstream `default` template only when both files (layout AND header) live there. Once we ship `components/header.html.twig` in our overlay, the resolver looks at the SAME directory for `layout.html.twig`. Shipping both keeps the resolution deterministic across phpdoc patch bumps.
 
-- [ ] **Step 4: Verify the override compiles**
+- [ ] **Step 3b: Write the header override**
+
+Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/components/header.html.twig` by **copying** the upstream `data/templates/default/components/header.html.twig` extracted in Step 1 and adding ONE include of the switcher partial inside the navbar container (typically alongside the search-input form).
+
+Pseudo-edit (apply to the real extracted file — the exact insertion site depends on the upstream markup; locate the navbar `<form>` or search-related container):
+
+```twig
+{# ...existing upstream header markup... #}
+<header class="phpdocumentor-on-this-page__header">
+  {# ...existing logo / nav / search form... #}
+  {{ include('_includes/switcher.html.twig') }}    {# ← Phase 10 addition: navbar switcher #}
+</header>
+{# ...existing upstream content... #}
+```
+
+The full file is a verbatim copy of the phar's `components/header.html.twig` plus this one extra include placed inside the visible navbar bar so the switcher is right-aligned alongside the existing search input (and inherits the navbar's flex layout). Do not invent any other changes. If the upstream version's header markup looks different on a future phpdoc bump, adjust the insertion site and bump the phpdoc-version pin checklist note in §"Version + language switcher" of the spec.
+
+- [ ] **Step 4: Verify the override compiles AND renders inside the navbar**
 
 Build the API docs (with the new config + no narrative content yet — phpdoc tolerates an empty `docs/guide/en/`):
 
@@ -2385,15 +2526,25 @@ The build will fail at one of the gates (no real content yet) — that's expecte
 
 ```bash
 grep -c 'phpbotgram-switcher' build/docs/api/index.html
+# Expected: 1 — the switcher partial rendered.
+
+# Sanity check it actually landed INSIDE <header>, not after it. Grab the
+# bytes between <header> and </header> and confirm the switcher class is
+# inside that span.
+php -r '
+$h = file_get_contents("build/docs/api/index.html");
+if (!preg_match("#<header[^>]*>(.*?)</header>#is", $h, $m)) { echo "no <header>\n"; exit(1); }
+echo str_contains($m[1], "phpbotgram-switcher") ? "OK: switcher is inside <header>\n" : "FAIL: switcher is OUTSIDE <header>\n";
+'
 ```
 
-Expected: `1` (the switcher partial rendered into the navbar).
+Expected: `OK: switcher is inside <header>`. If you see `FAIL: switcher is OUTSIDE <header>`, the insertion site in `header.html.twig` was wrong — re-locate it inside the actual `<header>` element.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add .phpdoc/
-git commit -m "phase-10: .phpdoc/template/ override — version + language switcher"
+git commit -m "phase-10: .phpdoc/template/ override — version + language switcher in navbar"
 ```
 
 ---
@@ -2509,6 +2660,12 @@ Create `/Users/gruven/repository/github/phpbotgram/.markdownlint.jsonc`:
   // Allow inline HTML in fenced code blocks (the spec forbids it in narrative
   // prose; lint-docs.php's positive regex enforces that separately).
   "MD033": false,
+
+  // CHANGELOG.md uses `### Added` / `### Fixed` / `### Changed` under every
+  // version section, which legitimately repeats those headings. siblings_only
+  // permits duplicates as long as they don't share a parent heading — exactly
+  // the Keep-a-Changelog shape.
+  "MD024": { "siblings_only": true },
 
   // Allow duplicate H1 across pages (one per file is fine).
   "MD025": { "front_matter_title": "" },
@@ -3278,11 +3435,80 @@ appropriate).>
 - <bullet 3: cross-reference to a deeper concepts page>
 ```
 
-Each recipe page is 30–80 lines. Drafting all 20 in one commit is too
-large to attempt step-by-step here; use the existing `examples/*.php`
-files and `aiogram` upstream docs as content references. The
-manual-content checklist in `docs/superpowers/specs/2026-05-15-narrative-docs-design.md`
-§"Manual content review checklist" enforces the structure.
+**Per-recipe content contract** — each file must satisfy ALL of:
+
+1. Single H1 with the recipe title.
+2. Exactly three H2s: `When to use this`, `Solution`, `Pitfalls` (in that
+   order). The manual-review checklist in the spec rejects any deviation.
+3. At least one fenced `php` block with a working code snippet drawn from
+   the source-of-truth file. `scripts/lint-docs.php` will fail the build
+   if any `php` fence emits a parse error.
+4. At least one sentinel-URL hyperlink
+   (`https://api.phpbotgram.local/Gruven-PhpBotGram-...`) into the API
+   reference. Use the longest-symbol-name form
+   (`Gruven-PhpBotGram-Client-Session-BaseSession.html#method_request`)
+   rather than a short alias.
+5. The Pitfalls section has 2–4 bullets — empty bullets fail review,
+   and more than 4 should be split into a Concepts page.
+6. Total length: 30–80 lines (excluding the H1 line and trailing newline).
+
+**Worked example — `error-handling.md`** (use this as the formal
+template for the other 19 recipes; one filled-in example beats 20
+skeletons):
+
+```markdown
+# Handle errors globally
+
+## When to use this
+
+Bots that run unattended need to log uncaught exceptions instead of
+losing them to the polling loop. Register an error observer once on
+the dispatcher and every handler — across every router — inherits it.
+
+## Solution
+
+```php
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\Event\ErrorEvent;
+
+$dispatcher = new Dispatcher();
+$dispatcher->errors->register(static function (ErrorEvent $event): void {
+    error_log(sprintf(
+        '[%s] uncaught: %s — %s',
+        date('c'),
+        get_class($event->exception),
+        $event->exception->getMessage(),
+    ));
+});
+```
+
+The `errors` observer fires whenever a handler raises an uncaught
+exception. The
+[`ErrorEvent`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Event-ErrorEvent.html)
+carries both the original update and the raised throwable. Returning
+without re-raising swallows the exception; rethrowing escalates to the
+polling loop's exit path.
+
+## Pitfalls
+
+- The error observer runs in the same fiber as the failing handler. If
+  it raises again, the dispatcher logs and continues — but the update
+  is lost. Keep error handlers free of network I/O.
+- Errors raised inside `outerMiddleware` *before* dispatch reach
+  `Dispatcher::errors` only if the middleware re-enters the observer
+  loop. See [Middlewares](../concepts/middlewares.md) for the call
+  order.
+- `TelegramRetryAfter` is *not* delivered to `errors`; the polling
+  loop's backoff (`PollingOptions::$backoff`) handles it directly.
+```
+
+Each remaining recipe page is 30–80 lines and follows the same shape.
+Use the existing `examples/*.php` files as content sources (column 2 of
+the table below). The manual-content checklist in
+`docs/superpowers/specs/2026-05-15-narrative-docs-design.md`
+§"Manual content review checklist" enforces the structure during review;
+batch authoring is acceptable provided every file satisfies the
+six-point content contract above.
 
 **Specific recipe-to-source-of-truth mapping:**
 
@@ -3417,6 +3643,85 @@ that should run multiple processes behind nginx.">
 - [Dispatcher](dispatcher.md)
 - [API reference: Bot](https://api.phpbotgram.local/Gruven-PhpBotGram-Bot.html)
 ```
+
+**Per-concept content contract** — each file must satisfy ALL of:
+
+1. Single H1 with the concept title.
+2. Lead paragraph immediately after the H1 (one sentence, no fence,
+   no bullet list).
+3. Exactly three H2s: `How it works`, `Trade-offs`, `See also` (in that
+   order).
+4. At least two sentinel-URL hyperlinks into the API reference; at
+   least one in `How it works` (per spec's checklist) and one in
+   `See also`.
+5. The `See also` section has 2–5 bullets, each either a relative
+   link to another concept page (`../how-to/...md` or `dispatcher.md`)
+   or a sentinel-URL API link.
+6. Total length: 100–200 lines.
+7. No fenced `php-fragment` blocks unless the pilot pass (Task 1 Step
+   4b) confirmed they render distinguishably; otherwise use plain `php`
+   fences.
+
+**Worked example — `dispatcher.md`** (use this as the formal template
+for the other 15 concept pages; one filled-in example beats 16
+skeletons):
+
+```markdown
+# Dispatcher
+
+The dispatcher is the heart of a phpbotgram bot. It owns the polling
+loop, the update-type observer map, and the router cascade.
+
+## How it works
+
+[`Dispatcher`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Dispatcher.html)
+extends `Router`, so the same registration API (`->message->register`,
+`->callbackQuery->register`, …) is available at the top level. When
+you call `runPolling`, the dispatcher opens an
+[`AmphpSession`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-Session-AmphpSession.html)
+on the bot, then enters a fiber that calls `getUpdates` in a loop. Each
+returned update is fed through `feedUpdate`, which walks the
+25-observer map and resolves the correct observer
+(`message`, `callbackQuery`, `chatMember`, etc.) by attribute presence.
+
+For each observer the dispatcher applies the global filter chain,
+then per-handler filters, then enters the middleware stack
+(`outerMiddleware` → handler → `innerMiddleware`). The handler's
+return value is ignored; side effects (`$event->answer(...)`) are
+the contract.
+
+Graceful shutdown: the dispatcher registers `SIGINT`/`SIGTERM`
+handlers on `runPolling`. On signal it stops fetching new updates,
+lets in-flight handlers finish, and exits with code 0. This means
+production bots running under systemd can be restarted without
+losing updates already delivered.
+
+## Trade-offs
+
+The dispatcher is the *only* update-fetching entry point in the
+framework. Webhook mode also goes through `feedUpdate`, just from
+a different fiber. The duplication aiogram has (`Dispatcher` vs.
+`Bot.start_webhook`) is collapsed; this trades flexibility (you
+can't have a separate "command bot" object) for a single source of
+truth.
+
+`runPolling` is blocking. If you need to mix the bot with other
+amphp services, use the lower-level `startPolling` and join its
+future yourself. See [Webhook](webhook.md) for the long-running
+mode.
+
+## See also
+
+- [Routers](routers.md)
+- [Middlewares](middlewares.md)
+- [API reference: Dispatcher](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Dispatcher.html)
+- [API reference: PollingOptions](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-PollingOptions.html)
+```
+
+Each remaining concept page is 100–200 lines and follows the same
+shape. Use the source-class column of the table below as the read-the-
+code anchor. Batch authoring is acceptable provided every file
+satisfies the seven-point content contract above.
 
 **Source-of-truth mapping:**
 
