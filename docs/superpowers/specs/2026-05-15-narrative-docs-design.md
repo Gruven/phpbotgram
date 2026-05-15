@@ -190,18 +190,32 @@ Empirically verified by feeding a guide fixture through phpdoc 3.10:
 
 | Markdown source | What survives |
 | --- | --- |
-| `[A](other-page.md)` (in-narrative `.md` link) | Routed through `DocReferenceResolver`; rewritten to the rendered HTML path of the target doc. **Use this for guide ↔ guide links.** |
-| `[B](classes/Foo.html)` (relative `.html`) | Falls to fallback resolver; `<a>` stripped. CI gate's `could not be resolved` pattern catches this. |
+| `[A](other-page.md)` (in-narrative `.md` link, **whole-page**) | Routed through `DocReferenceResolver`; rewritten to the rendered HTML path of the target doc. |
+| `[A2](other-page.md#section)` (`.md` link with fragment) | **DROPPED.** `DocReferenceResolver` looks up the whole `other-page.md#section` string as a single doc name and fails to match. Fragment is not peeled off. CI gate fires `could not be resolved`. |
+| `[B](classes/Foo.html)` (relative `.html`) | Falls to fallback resolver; `<a>` stripped. CI gate fires `could not be resolved`. |
 | `[C](https://example.com/x)` (external HTTPS) | `ExternalReferenceResolver` allow-lists `http/https/mailto`; `<a>` preserved verbatim. |
-| `<a href="classes/Foo.html">D</a>` (inline raw HTML) | Symfony `HtmlSanitizer` discards the relative `href` attribute; `<a>` collapses to text. |
+| `<a href="classes/Foo.html">D</a>` (inline raw HTML) | Symfony `HtmlSanitizer` discards the relative `href` attribute silently — **no warning logged**, `<a>` collapses to bare text. Caught only by a positive regex check inside `scripts/lint-docs.php` (see below); the CI gate's grep patterns do NOT catch this. |
 | `[E](#anchor)` (in-page anchor) | Treated as same-page fragment; `<a>` preserved verbatim. |
 
 **Authoring rules:**
 
-- **Guide → guide:** write `[Other](../concepts/dispatcher.md)`.
+- **Guide → guide (whole page):** write `[Other](../concepts/dispatcher.md)`.
   phpdoc handles the rewrite. `scripts/check-internal-links.php`
   validates the rendered output.
+- **Guide → guide (section deep-link):** **NOT supported in
+  phpDocumentor 3.10's Markdown plugin.** Link to the whole target
+  page and let the reader scroll, or use phpdoc's RST extension
+  (out of scope). The CI gate fires `could not be resolved` if an
+  author writes `[X](other.md#section)`.
 - **Guide → API:** write the **sentinel HTTPS URL** (see below).
+- **No raw inline `<a>` HTML.** Symfony's sanitizer silently
+  discards relative hrefs and phpdoc emits no warning, so the CI
+  gate based on grep patterns cannot catch this case.
+  `scripts/lint-docs.php` performs a positive regex check on every
+  `.md` source: any line outside fenced code blocks matching
+  `</?(?:a|div|span|table|tr|td|th|img|iframe|script|style)\b` is
+  rejected with a clear message ("use a Markdown construct or the
+  sentinel HTTPS URL instead").
 - **Anything else:** disallowed; the CI gate fails the build with a
   `could not be resolved` message pointing at the offending file.
 
@@ -308,26 +322,55 @@ script's shebang is explicit `#!/usr/bin/env bash` to avoid
 empirically against phpdoc 3.10 with deliberately-broken Markdown):
 
 phpDocumentor's default-verbosity output for doc-quality issues is
-prose, not Monolog-prefixed. Observed substrings on a failing build:
+prose, not Monolog-prefixed. Empirically observed substrings on
+deliberately-broken fixtures (3.10.0, May 2026):
 
-- `could not be resolved` (emitted by
+- `could not be resolved` — emitted by
   `phpdocumentor/guides/src/ReferenceResolvers/ReferenceResolverPreRender.php`'s
-  `logger->warning(...)`)
-- `No parent found for file` (emitted when an `index.md` is missing
-  from a directory)
-- `Document with name` (emitted by `DocReferenceResolver` for an
-  in-narrative `.md` link whose target doesn't exist)
-- `Failed to ` (catastrophic builder/template/diagram failures —
-  always implementer error, never authoring)
-- `We do not support plain HTML` (raw inline HTML in Markdown — would
-  silently strip `<a>` tags the author intended; surface it loudly)
+  `logger->warning(...)` for any unresolved reference. The most
+  common surface (most relative `.html` paths, sentinel-URL typos,
+  bad `.md` doc names with fragments, dead `:ref:` directives).
+- `Document with name` — emitted by `DocReferenceResolver` for an
+  in-narrative `.md` link whose target doesn't exist. Sometimes
+  shadowed by the fallback `could not be resolved` message; pin
+  both.
+- `No parent found for file` — emitted as a warning by
+  `AutomaticMenuPass` when an orphan document fails to attach to
+  any menu/parent. Real-world cause: a `.md` page exists outside
+  any `index.md`'s `toctree`/parent path.
+- `Document has no title` — emitted by
+  `DocumentEntryRegistrationTransformer` when a `.md` page has no
+  H1. The resulting page has an empty title/nav entry; catch
+  loudly.
 
-Monolog level keywords (` ERROR `, ` WARNING `, ` CRITICAL `) **do
-NOT** appear in default phpdoc output; the spec does not gate on them.
-The implementation plan's first task is a pilot pass that re-confirms
-these substrings on the latest phar at implementation time and pins
-them into `check-docs-build-log.php` constants. If phpdoc adds new
-warning surfaces between versions, the pilot catches them.
+**Patterns explicitly NOT used as gates:**
+
+- `Failed to ` — a phar-wide grep matches ≥30 unrelated exception
+  strings (Twig, Symfony, Monolog, dependencies). When phpdoc
+  exits non-zero on a true catastrophic failure, the script's
+  `set -euo pipefail` already kills the build; the pattern would
+  only fire on backtrace lines and risks false-positive gating.
+- `We do not support plain HTML` — exists in `RawNodeEscapeTransformer`
+  but only fires for `RawNode` instances which Markdown does not
+  produce in 3.10. Verified empirically: inline `<a>` and
+  block-level `<div>` HTML pass through phpdoc without any warning.
+  `scripts/lint-docs.php` catches this case via a positive regex
+  on the Markdown source (see §"Code examples" / §"Cross-references").
+- Monolog level keywords (` ERROR `, ` WARNING `, ` CRITICAL `) —
+  do NOT appear in default phpdoc output.
+
+`Could not find an index file` (a hard exception thrown by
+`ParseDirectoryHandler` when a guide subdirectory lacks
+`index.md`) exits phpdoc with code 1 directly — `set -euo pipefail`
+catches that natively. Listed in the gate patterns anyway as
+belt-and-braces in case a future phpdoc switches the surface from
+exception to warning.
+
+The implementation plan's first task is a pilot pass that
+re-confirms these substrings on the latest phar at implementation
+time and pins them into `check-docs-build-log.php` constants. If
+phpdoc adds new warning surfaces between versions, the pilot
+catches them.
 
 ### Code examples (hybrid pattern)
 
@@ -499,32 +542,73 @@ branch).
 | `deploy` job (entire job) | present (`needs: build`) | **remove the entire job** |
 | `actions/deploy-pages@v4` step | present in `deploy` | **remove** (lives in the deleted job) |
 
-**Phase 10 fields added to the single `build` job:**
+**Phase 10 steps added to the single `build` job** (in this order
+after `composer docs-api`):
 
-- A final step using `peaceiris/actions-gh-pages@v4` (current major,
-  verified 2026-05) with these inputs:
-  - `publish_branch: gh-pages`
-  - `publish_dir: build/docs/api`
-  - `destination_dir: en/dev`
-  - `keep_files: true`
-  - `commit_message: "publish ${{ github.sha }} → en/dev"` (so
-    `gh-pages` history is greppable)
-  - No explicit `github_token:` — the action auto-picks up
-    `GITHUB_TOKEN` exposed in `permissions.contents: write`.
-- A step *before* peaceiris that runs
-  `scripts/update-versions-json.php gh-pages-worktree/versions.json
-  --upsert id=dev path=en/dev/ label="dev (master)" stable=false`,
-  staging the updated `versions.json` into the same scratch dir
-  peaceiris will publish. (See §"`docs-release.yml`" for the same
-  pattern for tag publishes.)
+1. **Checkout `gh-pages` into a worktree**:
+   ```yaml
+   - name: Checkout gh-pages
+     uses: actions/checkout@v5
+     with:
+       ref: gh-pages
+       path: gh-pages-worktree
+   ```
+   Provides a writable view of the current `gh-pages` tip so the
+   versions.json update can run locally.
+2. **Update `versions.json`** for the `dev` entry:
+   ```yaml
+   - name: Update versions.json with dev entry
+     run: |
+       php scripts/update-versions-json.php \
+         gh-pages-worktree/versions.json \
+         --upsert id=dev path=en/dev/ label='dev (master)' stable=false
+       mkdir -p build/docs/root-publish
+       cp gh-pages-worktree/versions.json build/docs/root-publish/versions.json
+   ```
+   `update-versions-json.php` parses each `key=value` arg with
+   `explode('=', $arg, 2)` so label values containing `=` survive.
+3. **Publish the rendered site** to `en/dev/`:
+   ```yaml
+   - name: Publish en/dev
+     uses: peaceiris/actions-gh-pages@v4
+     with:
+       github_token: ${{ secrets.GITHUB_TOKEN }}
+       publish_branch: gh-pages
+       publish_dir: build/docs/api
+       destination_dir: en/dev
+       keep_files: false   # let peaceiris wipe en/dev/ before re-upload
+       commit_message: "publish ${{ github.sha }} → en/dev"
+   ```
+   peaceiris' internal git-rm wipe runs only inside `destination_dir`,
+   so `en/dev/` is replaced atomically while other version dirs and
+   root files are preserved unconditionally. `keep_files: false`
+   prevents stale dead files (deleted classes/pages/assets) from
+   accumulating across builds.
+4. **Publish the updated `versions.json`** to gh-pages root:
+   ```yaml
+   - name: Publish versions.json
+     uses: peaceiris/actions-gh-pages@v4
+     with:
+       github_token: ${{ secrets.GITHUB_TOKEN }}
+       publish_branch: gh-pages
+       publish_dir: build/docs/root-publish
+       destination_dir: ''
+       keep_files: true    # PRESERVE other root files (index.html, languages.json, en/, …)
+       commit_message: "update versions.json → dev=${{ github.sha }}"
+   ```
+   Here `destination_dir: ''` means "the branch root" — peaceiris
+   would wipe the entire branch if `keep_files: false`. `keep_files:
+   true` restricts the rewrite to files in `publish_dir`, which is
+   the scratch dir containing only the new `versions.json`.
 
-`peaceiris/actions-gh-pages@v4` with `keep_files: true`: files inside
-`destination_dir` that the new build also produces are **overwritten**;
-files inside `destination_dir` that the new build no longer produces
-are **kept** (i.e. stale dead files accumulate if `build/docs/api/`
-content shrinks between runs — acceptable trade-off, not blocking).
-Files in *other* directories (different versions or top-level root)
-are preserved unconditionally.
+**Critical: `peaceiris/actions-gh-pages@v4` requires explicit
+`github_token: ${{ secrets.GITHUB_TOKEN }}`.** The action does NOT
+auto-pick up the environment-exposed token; verified by reading the
+action's `get-inputs.ts`. Every peaceiris step in both workflows
+must set this input.
+
+`commit_message` per step gives `gh-pages` a greppable history of
+which workflow run touched which path.
 
 #### `docs-release.yml` (new)
 
@@ -549,26 +633,36 @@ atomically:
      gh-pages-worktree/versions.json \
      --upsert id="${GITHUB_REF_NAME}" \
               path="en/${GITHUB_REF_NAME}/" \
-              label="${GITHUB_REF_NAME} (latest)" \
+              label="${GITHUB_REF_NAME}" \
               stable=true
    ```
    The contract (see below) dedups by `id` and flips prior entries
    to `stable: false`.
 3. **Publish three things via three peaceiris invocations**, all
    serialised behind the shared `concurrency.group: pages-write`:
-   - `build/docs/api/` → `gh-pages/en/<tag>/` (`keep_files: true`).
-   - `build/docs/api/` → `gh-pages/en/latest/` (`keep_files: true`).
-   - Just the freshly-edited `versions.json` → `gh-pages/`
-     (`publish_dir: gh-pages-worktree`, `destination_dir: ''`,
-     `keep_files: true`, but only with a path-allowlist via the
-     action's `exclude_assets` input — or simpler, copy ONLY
-     `versions.json` into a fresh scratch dir and publish that dir).
+   - `build/docs/api/` → `gh-pages/en/<tag>/`: `keep_files: false`
+     (re-upload the version dir atomically; peaceiris wipes inside
+     `destination_dir` only).
+   - `build/docs/api/` → `gh-pages/en/latest/`: `keep_files: false`
+     (same reasoning).
+   - Updated `versions.json` → `gh-pages/`: copy `gh-pages-worktree/versions.json`
+     into a scratch `build/docs/root-publish/` directory, then publish
+     with `publish_dir: build/docs/root-publish`,
+     `destination_dir: ''`, `keep_files: true`. Here
+     `keep_files: true` is **required** — `destination_dir: ''`
+     means "branch root", which would wipe `en/`, `index.html`, and
+     `languages.json` if `keep_files` were false. With it true, the
+     rewrite is scoped to files present in `publish_dir` (the single
+     `versions.json` file).
 
-All four peaceiris invocations use:
+All four peaceiris invocations (one in `docs.yml`, three in
+`docs-release.yml`) use:
 
-- `commit_message: "release ${{ github.ref_name }}: en/<tag>/"` (and
-  similar per step for grep-friendliness).
-- No explicit `github_token`.
+- `github_token: ${{ secrets.GITHUB_TOKEN }}` — the action does NOT
+  auto-pick up the env-exposed token; verified by reading
+  `peaceiris/actions-gh-pages` source.
+- `commit_message: "release ${{ github.ref_name }}: <destination>"`
+  (per-step, for grep-friendliness in `gh-pages` history).
 
 Race analysis: the `gh-pages` worktree captured in step 1 is a
 snapshot. If a concurrent `docs.yml` master-push run modifies
@@ -643,11 +737,16 @@ This redirect works before `v0.1.0`: visitors are redirected to
 ```json
 {
   "versions": [
-    { "id": "v0.1.0",  "label": "v0.1.0 (latest)", "path": "en/v0.1.0/", "stable": true  },
-    { "id": "dev",     "label": "dev (master)",    "path": "en/dev/",    "stable": false }
+    { "id": "v0.1.0",  "label": "v0.1.0",       "path": "en/v0.1.0/", "stable": true  },
+    { "id": "dev",     "label": "dev (master)", "path": "en/dev/",    "stable": false }
   ]
 }
 ```
+
+`label` is the static display name. The switcher Twig partial
+appends `(latest)` dynamically by reading the entry's `stable` flag,
+so labels stay correct as new releases land (no need to rewrite
+prior entries' labels when their `stable` flips to `false`).
 
 `scripts/update-versions-json.php` contract:
 
@@ -833,6 +932,7 @@ docs/guide/
       dependency-injection.md
       callback-answer.md
       chat-action-typing.md
+      chat-member-updated.md          # bot-was-added-to-group transition handling
     concepts/
       index.md
       bot-and-session.md
@@ -864,10 +964,10 @@ docs/guide/
       code-snippets/                  # *.php fragments, included into .md
 ```
 
-**Page count (honest):** 5 tutorial pages + 19 how-to pages + 15
+**Page count (honest):** 5 tutorial pages + 20 how-to pages + 15
 concept pages + 4 Diataxis index pages (one of which is the
 reference-stub) + top-level landing + changelog + contributing =
-**46 pages**. Plus a `.gitkeep` placeholder in `migration/`
+**47 pages**. Plus a `.gitkeep` placeholder in `migration/`
 (phpDocumentor scans the directory but emits nothing from a hidden
 file — verified harmless on a real build).
 
@@ -1081,10 +1181,10 @@ have changed between phpdoc point releases.
 
 ## Definition of done
 
-- `docs/guide/en/` populated per the content tree (5 tutorial + 19
+- `docs/guide/en/` populated per the content tree (5 tutorial + 20
   how-to + 15 concepts + 4 Diataxis index pages including
   `reference/index.md` + top-level landing + `changelog.md` +
-  `contributing.md` = **46 pages**, plus a `migration/.gitkeep`).
+  `contributing.md` = **47 pages**, plus a `migration/.gitkeep`).
 - `phpdoc.dist.xml.tpl` produces a single site combining narrative +
   API reference; sentinel cross-link strategy validates end-to-end
   (sentinel survives phpdoc rendering, rewrite produces correct
@@ -1114,9 +1214,16 @@ have changed between phpdoc point releases.
 - Phase 9's `permissions:` block updated to `contents: write` only
   (drop `pages: write` and `id-token: write`); `environment:
   github-pages` block removed.
+- `composer.json` script `docs-api` rewritten to invoke
+  `scripts/build-docs.sh` (replaces `phpdoc -c phpdoc.dist.xml`).
 - Makefile `docs-api` target rewritten to invoke
   `scripts/build-docs.sh` (kept in sync with the `composer docs-api`
   script so local and CI behave identically).
+- `composer.json` constraint for `phpdocumentor/shim` tightened from
+  `^3` to `~3.10` (composer-level guard against an undisclosed phpdoc
+  major bump).
+- `.gitignore` extended with `/phpdoc.dist.xml`,
+  `/docs/guide/en/changelog.md`, `/docs/guide/en/contributing.md`.
 - `https://gruven.github.io/phpbotgram/en/dev/index.html` renders
   with navbar showing language + version switchers (currently `[en]`
   and `[dev]` entries only).
