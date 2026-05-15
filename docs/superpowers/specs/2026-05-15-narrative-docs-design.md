@@ -209,7 +209,7 @@ Empirically verified by feeding a guide fixture through phpdoc 3.10:
 | `[A2](other-page.md#section)` (`.md` link with fragment) | **DROPPED.** `DocReferenceResolver` looks up the whole `other-page.md#section` string as a single doc name and fails to match. Fragment is not peeled off. CI gate fires `could not be resolved`. |
 | `[B](classes/Foo.html)` (relative `.html`) | Falls to fallback resolver; `<a>` stripped. CI gate fires `could not be resolved`. |
 | `[C](https://example.com/x)` (external HTTPS) | `ExternalReferenceResolver` allow-lists `http/https/mailto`; `<a>` preserved verbatim. |
-| `<a href="classes/Foo.html">D</a>` (inline raw HTML) | Symfony `HtmlSanitizer` discards the relative `href` attribute silently — **no warning logged**, `<a>` collapses to bare text. Caught only by a positive regex check inside `scripts/lint-docs.php` (see below); the CI gate's grep patterns do NOT catch this. |
+| `<a href="...">D</a>` (inline raw HTML, ANY href scheme) | Silently stripped. Empirically the entire `<a>` element is dropped regardless of href shape — relative, absolute https, sentinel https, mailto, fragment — all collapse to bare text. **No warning logged.** Caught only by a positive regex check inside `scripts/lint-docs.php` (see below); the CI gate's grep patterns do NOT catch this. Don't try to "use raw `<a>` for the sentinel because the href is https" — the entire element is stripped. |
 | `[E](#anchor)` (in-page anchor) | Treated as same-page fragment; `<a>` preserved verbatim. |
 
 **Authoring rules:**
@@ -986,12 +986,13 @@ The switcher partial:
   URL (`fetch('/versions.json')`) would 404 on user-pages because it
   resolves to `https://gruven.github.io/versions.json` (owner root,
   not project root). The partial computes the repo root by stripping
-  exactly two trailing path segments from `document.baseURI` —
-  phpDocumentor's `<base href>` always resolves to
-  `<repo-root>/<lang>/<version>/<page-dir>/`, so stripping
-  `<page-dir>` and `<version>` lands on the language root, and one
-  more strip lands on the repo root. This holds for any language
-  code (`en`, `ru`, future others) without re-tuning the algorithm:
+  exactly two trailing path segments from `document.baseURI`.
+  phpDocumentor's depth-adaptive `<base href>` resolves to
+  `<repo-root>/<lang>/<version>/` from any rendered page (the `../`
+  chain compensates so the resolved baseURI does NOT include the
+  page's own directory). Stripping `<version>/` then `<lang>/`
+  reaches the repo root. This holds for any language code (`en`,
+  `ru`, future others) without re-tuning the algorithm:
 
   ```js
   // document.baseURI for guide/concepts/test.html with <base href="../../">
@@ -1358,7 +1359,14 @@ pilot:
    expects.
 7. Verify `php-fragment` fence syntax-highlighting on the rendered
    page (acceptable or fallback-to-plain noted in §Code examples).
-8. Remove the deliberately-broken page.
+8. Verify shared-asset image resolution: place a sentinel SVG at
+   `docs/guide/shared/_pilot.svg`, reference it from a concepts page
+   as `![](../shared/_pilot.svg)`, build, and confirm the rendered
+   `<img src=…>` href resolves under `<base href>` to
+   `build/docs/api/guide/shared/_pilot.svg`. This validates the
+   in-`build-docs.sh` `cp -r docs/guide/shared/.` step actually
+   lands assets where the rendered HTML expects them.
+9. Remove the deliberately-broken page.
 
 This avoids guessing at log formats or template behaviour that may
 have changed between phpdoc point releases.
@@ -1474,6 +1482,8 @@ invalidate the spec):
 - The `<base href>` depth-adaptivity at every Diataxis page depth.
 - Sentinel-URL passthrough behaviour.
 - `php-fragment` fence rendering on the rendered docs site.
+- Shared-asset image resolution from `docs/guide/shared/` under
+  `<base href>` after the in-build copy step.
 
 ## References
 
