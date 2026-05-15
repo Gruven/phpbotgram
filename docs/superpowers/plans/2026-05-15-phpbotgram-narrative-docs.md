@@ -746,7 +746,7 @@ mkdir -p /Users/gruven/repository/github/phpbotgram/docs/guide/en
 - [ ] **Step 5: Run test, verify it passes**
 
 Run: `vendor/bin/phpunit tests/Scripts/CopyRootDocsTest.php`
-Expected: PASS (3 tests, 7 assertions).
+Expected: PASS (3 tests, 8 assertions — `testCopiesSourceFileWithBanner` contributes 4 in-body asserts plus 1 in the `runScript` helper, the two failure tests contribute 1 each, plus the helpers as needed).
 
 - [ ] **Step 6: Commit**
 
@@ -2770,6 +2770,29 @@ Narrative docs live under `docs/guide/en/`. The build:
   `https://api.phpbotgram.local/<Namespace-with-dashes>-<Class>.html`,
   rewritten post-build to `classes/...`.
 
+### Fenced-block conventions
+
+Two fence languages carry meaning for the lint gate:
+
+- **`\`\`\`php`** — a complete, parseable PHP snippet. `scripts/lint-docs.php`
+  auto-prepends `<?php\n` and runs `php -l`. Parse errors fail the build.
+  Use this fence for full files, top-level scripts, and any snippet that
+  forms a syntactically valid program on its own.
+- **`\`\`\`php-fragment`** — a class-body or method-body fragment that
+  cannot be parsed standalone (e.g. `public function send(): void { ... }`
+  without a class wrapper). `scripts/lint-docs.php` skips these blocks;
+  authors are responsible for keeping the code correct.
+
+The Phase 10 pilot pass (Task 1 Step 4b, notes at
+`docs/superpowers/notes/2026-05-15-phase-10-pilot.md`) recorded how
+phpDocumentor's renderer treats each fence. If the pilot notes say the
+two render identically (no syntax-highlight distinction), prefer `php`
+and wrap fragments in a synthetic class — that keeps the lint gate
+active even for snippet authors.
+
+Other languages (`yaml`, `bash`, `json`, `dot`, `text`, …) are
+allowed and pass through the linter unchanged.
+
 ## Commit message convention
 
 ```
@@ -3014,8 +3037,8 @@ jobs:
         env:
           REF_NAME: ${{ github.ref_name }}
         run: |
-          if ! printf '%s' "$REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$'; then
-            echo "::error::Tag '$REF_NAME' does not match the strict semver shape v\d+.\d+.\d+(-prerelease)?; refusing to publish."
+          if ! printf '%s' "$REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?(\+[A-Za-z0-9.-]+)?$'; then
+            echo "::error::Tag '$REF_NAME' does not match the strict semver shape v\d+.\d+.\d+(-prerelease)?(+meta)?; refusing to publish."
             exit 1
           fi
 
@@ -3521,7 +3544,7 @@ deep dive.
 VERSION=0.1.0-dev bash scripts/build-docs.sh 2>&1 | tail -25
 ```
 
-Expected: phpdoc, `lint-docs`, and `check-docs-examples` pass. **`check-docs-build-log` will emit unresolved-reference warnings** for any cross-link the tutorial pages make into `../how-to/<name>.md` or `../concepts/<name>.md`, because Tasks 17 and 18 haven't run yet. That is expected and acceptable at this stage; do NOT fix the warnings by removing the cross-links. The same gate runs cleanly at the end of Task 18 (concepts) and again at the end of Task 17 (how-to), at which point every cross-link target exists.
+Expected: phpdoc, `lint-docs`, `check-docs-examples`, and `rewrite-api-links` pass. **`check-docs-build-log` will fail** with `could not be resolved` / `Document with name ... not found` entries for any cross-link the tutorial pages make into `../how-to/<name>.md` or `../concepts/<name>.md`, because Tasks 17 and 18 haven't run yet. That is expected and acceptable at this stage; do NOT fix the warnings by removing the cross-links. The same gate runs cleanly at the end of Task 18 (concepts) and again at the end of Task 17 (how-to), at which point every cross-link target exists.
 
 If you need a clean local run before Task 18 / 17 complete (e.g. to verify a separate change to one of the gate scripts), temporarily comment out the cross-link in the tutorial page and revert the change before commit. The cross-links are content; they must remain in the final commit.
 
