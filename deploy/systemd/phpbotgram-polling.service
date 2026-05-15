@@ -28,13 +28,18 @@ Restart=on-failure
 RestartSec=5s
 
 # Hardening — drop privileges and read-only filesystem outside of the
-# working directory. Tweak to taste; bots that download files via
-# `Bot::downloadFile` need write access to their target paths.
+# working directory. The polling echo bot has no on-disk state (it uses
+# MemoryStorage), so no ReadWritePaths is required. If your bot needs to
+# write — e.g. downloads via `Bot::downloadFile`, FSM via
+# `RedisStorage` cache files, or logs to a custom path — uncomment
+# ReadWritePaths and create the directory beforehand:
+#   sudo install -d -o phpbotgram -g phpbotgram -m 0750 /srv/phpbotgram/var
+# then uncomment the line below.
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
 NoNewPrivileges=true
-ReadWritePaths=/srv/phpbotgram/var
+#ReadWritePaths=/srv/phpbotgram/var
 CapabilityBoundingSet=
 AmbientCapabilities=
 RestrictNamespaces=true

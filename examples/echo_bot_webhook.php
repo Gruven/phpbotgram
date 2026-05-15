@@ -57,11 +57,20 @@ $handler = new SimpleRequestHandler(
     bot: $bot,
 );
 
-// Blocks until the server is stopped (SIGTERM/SIGINT).
+// `host: '127.0.0.1'` is the safe default: the bot listens only on the
+// loopback interface and expects a reverse proxy (e.g. the nginx config
+// at `deploy/nginx/phpbotgram-webhook.conf`) to terminate TLS and forward
+// authenticated traffic. Change to `'0.0.0.0'` ONLY if you intentionally
+// expose the bot directly to the public internet (rare; Telegram requires
+// HTTPS, so you would also need a TLS-terminating wrapper).
+//
+// The call returns once the event loop is set up; the amphp runtime keeps
+// processing requests until the dispatcher's shutdown observer fires
+// (SIGTERM/SIGINT or explicit `$dispatcher->stop()`).
 AmphpServer::run(
     handler: $handler,
     dispatcher: $dispatcher,
-    host: '0.0.0.0',
+    host: '127.0.0.1',
     port: 8080,
     path: '/webhook',
 );

@@ -40,6 +40,8 @@ need real liveness.
   so the same image can run unprivileged under Kubernetes without
   `runAsUser` overrides.
 - nginx's `client_max_body_size 16k` is intentionally tight — Telegram
-  update payloads are small JSON dicts. If you start accepting file
-  uploads via `setWebhook(..., max_connections: …, allowed_updates: …)`,
-  raise this.
+  webhook payloads are JSON-serialised metadata, not file blobs (any
+  attachment comes through as a `file_id` you later fetch via
+  `Bot::downloadFile`). 16k accommodates the largest realistic
+  Update + entities + reply markup; if you see legitimate 413s in
+  your logs, raise to 32k or 64k.

@@ -2,11 +2,21 @@
 #
 # Brings up:
 #   - bot        long-polling echo bot built from deploy/docker/Dockerfile
-#   - redis      optional FSM storage backend (set FSM_STORAGE=redis to use it)
-#   - mongo      optional FSM storage backend (set FSM_STORAGE=mongo to use it)
+#   - redis      optional FSM storage backend (compose profile `redis`)
+#   - mongo      optional FSM storage backend (compose profile `mongo`)
 #
-# Quickstart:
+# Quickstart (polling only):
 #   BOT_TOKEN=123:abc docker compose -f deploy/docker/compose.yaml up --build
+#
+# With Redis-backed FSM (note the DSN is the compose-internal hostname):
+#   BOT_TOKEN=123:abc \
+#   PHPBOTGRAM_REDIS_DSN=redis://redis:6379 \
+#   docker compose -f deploy/docker/compose.yaml --profile redis up --build
+#
+# With MongoDB-backed FSM:
+#   BOT_TOKEN=123:abc \
+#   PHPBOTGRAM_MONGO_DSN=mongodb://mongo:27017 \
+#   docker compose -f deploy/docker/compose.yaml --profile mongo up --build
 #
 # The bot reads BOT_TOKEN from the environment. Optional FSM backends are
 # off by default — the echo bot uses MemoryStorage which needs no external

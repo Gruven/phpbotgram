@@ -22,11 +22,12 @@ documented inline at the call site (`# Divergence:` comments) and in
   ReturnsType discriminator.
 - `AmphpSession` production HTTP adapter built on `amphp/http-client ^5`
   (form-urlencoded bodies; multipart deferred).
-- Typed exception hierarchy: `TelegramAPIError`, `TelegramBadRequest`,
-  `TelegramConflictError`, `TelegramForbiddenError`,
-  `TelegramNetworkException`, `TelegramNotFound`, `TelegramRetryAfter`,
-  `TelegramServerException`, `TelegramUnauthorizedError`,
-  `TelegramEntityTooLarge`.
+- Typed exception hierarchy: `TelegramApiException`,
+  `TelegramBadRequestException`, `TelegramConflictException`,
+  `TelegramForbiddenException`, `TelegramNetworkException`,
+  `TelegramNotFoundException`, `TelegramRetryAfter`,
+  `TelegramServerException`, `TelegramUnauthorizedException`,
+  `TelegramEntityTooLarge`, `TelegramMigrateToChat`, `RestartingTelegram`.
 - `DefaultBotProperties` (parseMode, link-preview aggregation,
   `ArrayAccess` read-only surface).
 - `TelegramApiServer` production / test / fromBase factories for the
@@ -81,10 +82,11 @@ documented inline at the call site (`# Divergence:` comments) and in
 
 #### FSM
 
-- `FsmContext` with state / data accessors, `setState`, `setData`,
-  `updateData`, `getData`, `clear`.
-- `FsmStrategy` (USER, CHAT, USER_IN_CHAT, GLOBAL_USER) plus
-  `StorageKey` resolver covering chat / user / message thread isolation.
+- `FsmContext` with state/value accessors (`getState`, `setState`,
+  `getValue`, `setData`, `updateData`, `getData`, `clear`).
+- `FsmStrategy` (`UserInChat`, `Chat`, `GlobalUser`, `UserInTopic`,
+  `ChatTopic`) plus `StorageKey` resolver covering chat / user /
+  message thread isolation.
 - Storage backends:
   - `MemoryStorage` (in-process default).
   - `RedisStorage` (env-gated by `PHPBOTGRAM_REDIS_DSN`).
@@ -127,6 +129,9 @@ documented inline at the call site (`# Divergence:` comments) and in
   for Ed25519 and `hash_equals` for HMAC compare.
 - `AuthWidget` for the Telegram Login Widget data validation.
 - `Payload`, `Link`, `Token` parsing utilities.
+- `Backoff` + `BackoffConfig` for exponential-with-jitter retry pacing
+  used by the polling loop.
+- `DeepLinkType` enum classifying `/start` payload kinds.
 
 #### Tooling
 

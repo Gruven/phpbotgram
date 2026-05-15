@@ -1,7 +1,8 @@
 .PHONY: test stan lint fix regenerate coverage coverage-gate docs-api docs-tools-fetch
 
-PHPDOC_PHAR := build/tools/phpDocumentor.phar
-PHPDOC_URL := https://phpdoc.org/phpDocumentor.phar
+PHPDOC_VERSION := v3.10.0
+PHPDOC_PHAR := build/tools/phpDocumentor-$(PHPDOC_VERSION).phar
+PHPDOC_URL := https://github.com/phpDocumentor/phpDocumentor/releases/download/$(PHPDOC_VERSION)/phpDocumentor.phar
 
 test:
 	vendor/bin/phpunit
