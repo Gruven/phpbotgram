@@ -47,8 +47,6 @@ use Throwable;
  * an Amp fiber and the 200 response is sent immediately.  In-flight fibers
  * are tracked in `$backgroundTasks` so callers can wait for them on
  * shutdown.
- *
- * @internal
  */
 abstract class BaseRequestHandler implements RequestHandler
 {

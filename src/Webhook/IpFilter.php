@@ -35,8 +35,6 @@ use InvalidArgumentException;
  * network address (`0.0.0.0`) and broadcast address (`255.255.255.255`) are
  * excluded, matching the same rule applied consistently across all non-/31/32
  * prefix lengths.
- *
- * @internal
  */
 final class IpFilter
 {

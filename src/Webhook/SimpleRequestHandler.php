@@ -31,8 +31,6 @@ use Gruven\PhpBotGram\Dispatcher\Dispatcher;
  * `$handleInBackground` defaults to `true` here (upstream default), whereas
  * {@see BaseRequestHandler} defaults to `false`. Callers that need
  * synchronous dispatch can pass `handleInBackground: false` explicitly.
- *
- * @internal
  */
 final class SimpleRequestHandler extends BaseRequestHandler
 {

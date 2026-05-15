@@ -50,8 +50,6 @@ use InvalidArgumentException;
  *
  * `resolveBot` lazily instantiates `Bot` objects via the factory on first use
  * for each token, then caches them for the lifetime of the handler.
- *
- * @internal
  */
 final class TokenBasedRequestHandler extends BaseRequestHandler
 {

@@ -114,8 +114,9 @@ documented inline at the call site (`# Divergence:` comments) and in
 
 #### Utils
 
-- `TextDecoration` with HTML / Markdown / MarkdownV2 implementations
-  (entity-aware escaping + expandable-blockquote support).
+- `TextDecoration` with `HtmlDecoration` and `MarkdownDecoration`
+  (Markdown V2) strategies — entity-aware escaping, full V2 special-char
+  coverage, expandable-blockquote support.
 - `DeepLinking` for `/start` payload encode/decode with WeakMap-cached
   bot binding.
 - Keyboard builders: `InlineKeyboardBuilder`, `ReplyKeyboardBuilder`,

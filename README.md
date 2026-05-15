@@ -206,6 +206,13 @@ control over an existing `amphp/http-server` instance, use
 `Webhook\Setup::register()` to splice the bot lifecycle into your own
 startup/shutdown hooks.
 
+`amphp/http-server` is a suggested dependency — install it explicitly
+before using webhook mode:
+
+```bash
+composer require amphp/http-server
+```
+
 ```php
 use Gruven\PhpBotGram\Webhook\Server\AmphpServer;
 use Gruven\PhpBotGram\Webhook\SimpleRequestHandler;
@@ -214,7 +221,10 @@ $handler = new SimpleRequestHandler(dispatcher: $dispatcher, bot: $bot);
 AmphpServer::run(
   handler: $handler,
   dispatcher: $dispatcher,
-  host: '0.0.0.0',
+  // Bind to 127.0.0.1 when sitting behind a reverse proxy (recommended).
+  // Use 0.0.0.0 only if exposing the bot directly to the internet — see
+  // deploy/nginx/phpbotgram-webhook.conf for the proxy template.
+  host: '127.0.0.1',
   port: 8080,
   path: '/webhook',
 );
@@ -247,7 +257,7 @@ src/
   Client/             Bot defaults, Session, Serializer, HTTP transport
   Dispatcher/         Router cascade, observers, middleware chain
   Enums/              Telegram-side enums (ParseMode, ChatType, …)
-  Exceptions/         TelegramAPIError hierarchy + transport exceptions
+  Exceptions/         TelegramApiException hierarchy + transport exceptions
   F.php               `const F` MagicFilter root for the F-DSL
   Filters/            Built-in filters + F-DSL field wrappers
   Fsm/                Storage backends, Strategy, Scenes
