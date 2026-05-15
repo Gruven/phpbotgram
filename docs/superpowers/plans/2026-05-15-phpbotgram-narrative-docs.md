@@ -19,7 +19,8 @@
 | Path | Responsibility |
 | --- | --- |
 | `phpdoc.dist.xml.tpl` | Template for the rendered phpdoc config; envsubst expands `${VERSION}`. Replaces concrete `phpdoc.dist.xml`. |
-| `.phpdoc/template/base.html.twig` | Twig override injecting the navbar switcher partial slot. |
+| `.phpdoc/template/layout.html.twig` | Verbatim copy of phpdoc's upstream `default/layout.html.twig`, shipped to anchor the override directory in phpdoc's template resolver. |
+| `.phpdoc/template/components/header.html.twig` | Copy of phpdoc's upstream `default/components/header.html.twig` with one extra `{{ include('_includes/switcher.html.twig') }}` line inside the navbar bar (so the switcher renders alongside the search input). |
 | `.phpdoc/template/_includes/switcher.html.twig` | Twig partial: two `<select>` elements + inline JS that fetches `versions.json`/`languages.json` and populates them. |
 | `.markdownlint.jsonc` | markdownlint-cli2 rules permissive enough for `docs/guide/en/changelog.md` and `contributing.md` (or excluding those two paths). |
 | `scripts/build-docs.sh` | Bash wrapper: `set -euo pipefail`, envsubst, copy-root-docs, phpdoc, all gates. Invoked by `composer docs-api` and `make docs-api`. |
@@ -2216,6 +2217,29 @@ final class UpdateVersionsJsonTest extends TestCase
     self::assertCount(1, $data['versions']);
   }
 
+  public function testForcePushOfOlderTagDoesNotReclaimStable(): void
+  {
+    // Edge case: a maintainer force-pushes the v0.1.0 tag to fix a
+    // typo, but v0.2.0 has since been released and is the stable tag.
+    // The dedup pass drops the old v0.1.0; then isNewestTag must
+    // observe the surviving v0.2.0 entry so the re-pushed v0.1.0 does
+    // NOT steal the stable flag.
+    $path = $this->tmp . '/versions.json';
+    file_put_contents($path, '{"versions":['
+      . '{"id":"v0.2.0","path":"en/v0.2.0/","label":"v0.2.0","stable":true},'
+      . '{"id":"v0.1.0","path":"en/v0.1.0/","label":"v0.1.0","stable":false}'
+      . ']}');
+
+    $this->runScript($path, ['id=v0.1.0', 'path=en/v0.1.0/', 'label=v0.1.0 (re-tagged)', 'stable=auto']);
+
+    $data = json_decode(file_get_contents($path), true);
+    $byId = array_column($data['versions'], null, 'id');
+    self::assertCount(2, $data['versions']);
+    self::assertTrue($byId['v0.2.0']['stable'], 'v0.2.0 must retain stable flag');
+    self::assertFalse($byId['v0.1.0']['stable'], 'force-pushed older tag must not reclaim stable');
+    self::assertSame('v0.1.0 (re-tagged)', $byId['v0.1.0']['label']);
+  }
+
   public function testLabelContainingSpaces(): void
   {
     $path = $this->tmp . '/versions.json';
@@ -2376,7 +2400,7 @@ exit(0);
 - [ ] **Step 4: Run test, verify it passes**
 
 Run: `vendor/bin/phpunit tests/Scripts/UpdateVersionsJsonTest.php`
-Expected: PASS (6 tests).
+Expected: PASS (7 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -2402,12 +2426,23 @@ We override both templates so the switcher can render inside the navbar bar (rat
 
 ```bash
 mkdir -p /tmp/phpdoc-templates
-php -r "Phar::loadPhar('vendor/bin/phpdoc'); copy('phar://vendor/bin/phpdoc/data/templates/default/layout.html.twig', '/tmp/phpdoc-templates/layout.html.twig');"
-php -r "Phar::loadPhar('vendor/bin/phpdoc'); copy('phar://vendor/bin/phpdoc/data/templates/default/components/header.html.twig', '/tmp/phpdoc-templates/header.html.twig');"
+
+# Sanity probe: confirm vendor/bin/phpdoc is loadable as a phar before
+# extracting. phpdocumentor/shim ^3 installs the real phar here; if a
+# future shim release switches to a wrapper script, this command will
+# error out with "is not a Phar archive" and the extraction needs to
+# target the real phar path inside vendor/phpdocumentor/shim/.
+PHAR_PATH="$(php -r 'echo realpath("vendor/bin/phpdoc");')"
+php -r "Phar::loadPhar('$PHAR_PATH'); echo 'phar OK: $PHAR_PATH', PHP_EOL;"
+
+php -r "Phar::loadPhar('$PHAR_PATH'); copy('phar://$PHAR_PATH/data/templates/default/layout.html.twig', '/tmp/phpdoc-templates/layout.html.twig');"
+php -r "Phar::loadPhar('$PHAR_PATH'); copy('phar://$PHAR_PATH/data/templates/default/components/header.html.twig', '/tmp/phpdoc-templates/header.html.twig');"
 head -80 /tmp/phpdoc-templates/layout.html.twig
 echo '---'
 cat /tmp/phpdoc-templates/header.html.twig
 ```
+
+Expected: the first `php -r` prints `phar OK: <abs path>`. If it raises `UnexpectedValueException: ... is not a Phar archive`, stop and re-discover the phar location via `find vendor/phpdocumentor -name '*.phar'`; the shim's filename convention has changed.
 
 In `layout.html.twig` locate the existing `{% include 'components/header.html.twig' %}` site — the switcher partial sits right after it (as a fallback for any layout that doesn't pull our header override).
 
@@ -2528,17 +2563,33 @@ The build will fail at one of the gates (no real content yet) — that's expecte
 grep -c 'phpbotgram-switcher' build/docs/api/index.html
 # Expected: 1 — the switcher partial rendered.
 
-# Sanity check it actually landed INSIDE <header>, not after it. Grab the
-# bytes between <header> and </header> and confirm the switcher class is
-# inside that span.
+# Sanity check it actually landed INSIDE the visible navbar — not just
+# anywhere within <header>, but in the same horizontal flex container
+# that holds the search input.
+#
+# Heuristic: identify the search-input element (phpdoc uses a `<form>`
+# with class containing `search` or an `<input>` with name="search").
+# Assert the switcher class appears AFTER an opening tag that is the
+# closest containing flex/nav element, AND the search input appears in
+# the SAME containment block.
 php -r '
 $h = file_get_contents("build/docs/api/index.html");
-if (!preg_match("#<header[^>]*>(.*?)</header>#is", $h, $m)) { echo "no <header>\n"; exit(1); }
-echo str_contains($m[1], "phpbotgram-switcher") ? "OK: switcher is inside <header>\n" : "FAIL: switcher is OUTSIDE <header>\n";
+if (!preg_match("#<header[^>]*>(.*?)</header>#is", $h, $m)) { echo "FAIL: no <header>\n"; exit(1); }
+$header = $m[1];
+if (!str_contains($header, "phpbotgram-switcher")) { echo "FAIL: switcher missing from <header>\n"; exit(1); }
+// Must coexist with the search input inside <header>. phpdoc renders
+// either a <form>/<input> containing "search" or a `js-search`/`phpdocumentor-search`
+// class. Match any of those tokens.
+if (!preg_match("#(class=[\"\'][^\"\']*search|name=[\"\']search[\"\']|js-search|phpdocumentor-search)#i", $header)) {
+  echo "WARN: could not locate search input inside <header> — placement check is heuristic only\n";
+}
+echo "OK: switcher is inside <header>\n";
 '
 ```
 
-Expected: `OK: switcher is inside <header>`. If you see `FAIL: switcher is OUTSIDE <header>`, the insertion site in `header.html.twig` was wrong — re-locate it inside the actual `<header>` element.
+Expected: `OK: switcher is inside <header>`. If you see `FAIL: switcher missing from <header>`, the insertion site in `header.html.twig` was outside the `<header>` element — re-locate it inside.
+
+Visual check: open `build/docs/api/index.html` in a browser and confirm the two `<select>` boxes render in the top navbar bar alongside any existing search input, not as a separate stripe below the navbar. If they render below, adjust the insertion site in `header.html.twig` to be inside the flex container that holds the search input (commonly something like `<div class="phpdocumentor-search">…</div>` — sibling, not parent).
 
 - [ ] **Step 5: Commit**
 
@@ -2884,12 +2935,19 @@ jobs:
           path: gh-pages-worktree
 
       - name: Update versions.json
+        env:
+          # Pass the tag through an env-var instead of interpolating
+          # `${{ github.ref_name }}` into the shell command. GitHub accepts
+          # surprisingly liberal ref-names; while a tag like `v1; rm -rf /`
+          # is unusual, treating expression interpolation as untrusted is
+          # the cheap, correct posture.
+          REF_NAME: ${{ github.ref_name }}
         run: |
           php scripts/update-versions-json.php \
             gh-pages-worktree/versions.json \
-            --upsert id=${{ github.ref_name }} \
-                     path=en/${{ github.ref_name }}/ \
-                     label=${{ github.ref_name }} \
+            --upsert "id=${REF_NAME}" \
+                     "path=en/${REF_NAME}/" \
+                     "label=${REF_NAME}" \
                      stable=auto
           mkdir -p build/docs/root-publish
           cp gh-pages-worktree/versions.json build/docs/root-publish/versions.json
