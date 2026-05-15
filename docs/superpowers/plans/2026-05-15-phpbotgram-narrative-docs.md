@@ -83,7 +83,7 @@
 7. **Content authoring (Tasks 16–20)** — landing, tutorial, how-to, concepts, reference stub. One task per Diataxis section. Numbering reflects Diataxis order, but the physical execution order swaps Tasks 17 and 18: author concepts first so cross-links from recipes find existing targets (see the note at the top of each task).
 8. **One-time manual setup (Task 21)** — gh-pages bootstrap + Pages UI flip, documented but not executed by the automation.
 9. **CHANGELOG + README polish (Task 22)** — final commit polish.
-10. **Phase 10 acceptance + tag (Task 23)** — verify all gates green, smoke-test, tag `phase-10-complete`.
+10. **Phase 10 acceptance + tag (Task 23)** — verify all gates green, smoke-test deployed docs, tag `phase-10-complete` (engineering checkpoint), then tag `v0.1.0` (the initial public release ships with both the API and narrative documentation; Phase 9 deferred the v0.1.0 tag for this purpose).
 
 ---
 
@@ -4101,17 +4101,21 @@ the narrative:
   (tutorial, cookbook, concepts).
 ```
 
-- [ ] **Step 2: Add Phase 10 CHANGELOG entry**
+- [ ] **Step 2: Expand the v0.1.0 CHANGELOG entry with Phase 10 surface**
 
-Open `/Users/gruven/repository/github/phpbotgram/CHANGELOG.md`. Insert
-the block below immediately above the first existing `## [` heading
-(today that is `## [0.1.0] — Initial release`, but tolerate any
-heading-text variation — anchor on the `## [` literal, not the rest).
+v0.1.0 has NOT been tagged yet — Phase 10 ships **together** with the
+v0.1.0 release, so its surface belongs inside the existing
+`## [0.1.0] — Initial release` section, not a separate `## [Unreleased]`
+block. (Phase 9 deferred the tag specifically to let docs land in the
+same release.)
+
+Open `/Users/gruven/repository/github/phpbotgram/CHANGELOG.md`. Inside
+the `## [0.1.0] — Initial release` section, append a new `### Added`
+subsection (after the existing `### Added`, `### Known divergences`,
+etc. blocks — let the existing subsections stand untouched):
 
 ```markdown
-## [Unreleased]
-
-### Added — Phase 10 narrative documentation
+### Added — narrative documentation
 
 - Diataxis-structured narrative site under `docs/guide/en/` (46 committed pages + 2 build-time copies of CHANGELOG / CONTRIBUTING → 48 rendered)
   (5 tutorial, 20 how-to, 16 concept pages, plus indexes, reference
@@ -4153,7 +4157,6 @@ heading-text variation — anchor on the `## [` literal, not the rest).
   `^3` to `~3.10.0`.
 - `composer docs-api` and `make docs-api` both delegate to
   `bash scripts/build-docs.sh`.
-
 ```
 
 - [ ] **Step 3: Commit**
@@ -4387,12 +4390,61 @@ See `docs/superpowers/notes/2026-05-15-phase-10-deploy-runbook.md`:
 Walk steps 1-5 of `docs/superpowers/notes/2026-05-15-phase-10-deploy-runbook.md`.
 Smoke-test the deployed site.
 
-- [ ] **Step 5: Tag phase-10-complete**
+- [ ] **Step 5: Tag phase-10-complete (engineering checkpoint)**
 
 ```bash
-git tag phase-10-complete master
+git checkout master
+git pull origin master
+git tag phase-10-complete
 git push origin phase-10-complete
 ```
+
+This is an internal engineering tag marking the merge SHA; it is NOT a release.
+
+- [ ] **Step 6: Tag v0.1.0 (initial public release)**
+
+Phase 9 deferred the v0.1.0 tag specifically to release the framework
+together with the narrative documentation. Phase 10's merge is the
+trigger. Before tagging, verify the release blockers:
+
+```bash
+# All three must be clean on the merge commit:
+composer test                  # 2109 tests passing
+composer coverage-gate         # per-module floors hold
+composer stan                  # PHPStan level 9 clean
+
+# And the docs deploy is live:
+curl -sI https://gruven.github.io/phpbotgram/en/dev/ | head -1   # HTTP/2 200
+curl -s  https://gruven.github.io/phpbotgram/ | grep -F "location.replace"  # JS redirect present
+```
+
+Update CHANGELOG.md to stamp the release date:
+
+```bash
+# Replace "## [0.1.0] — Initial release" with "## [0.1.0] — YYYY-MM-DD"
+# (use today's date — the date this tag actually lands).
+```
+
+Commit the date stamp, then tag and push:
+
+```bash
+git add CHANGELOG.md
+git commit -m "release: stamp v0.1.0 release date"
+git tag -a v0.1.0 -m "v0.1.0 — initial public release (API + narrative docs)"
+git push origin master
+git push origin v0.1.0
+```
+
+The `docs-release.yml` workflow (Task 15) fires on the tag push and
+publishes `/en/v0.1.0/` + `/en/latest/` + updates `versions.json` to
+mark v0.1.0 as `stable`. Verify in the gh-pages branch and at
+<https://gruven.github.io/phpbotgram/en/latest/>.
+
+Finally, if the repo is meant to be installable via Packagist, ensure
+the v0.1.0 tag is published there (Packagist auto-syncs from the
+GitHub webhook within minutes; confirm with
+`composer show gruven/phpbotgram --available | head -10` from a
+sibling project).
 
 ---
 
