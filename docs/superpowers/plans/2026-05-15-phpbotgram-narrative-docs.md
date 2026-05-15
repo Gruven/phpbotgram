@@ -2633,6 +2633,18 @@ Pseudo-edit (apply to the real extracted file — the exact insertion site depen
 
 The full file is a verbatim copy of the phar's `components/header.html.twig` plus this one extra include placed inside the visible navbar bar so the switcher is right-aligned alongside the existing search input (and inherits the navbar's flex layout). Do not invent any other changes. If the upstream version's header markup looks different on a future phpdoc bump, adjust the insertion site and bump the phpdoc-version pin checklist note in §"Version + language switcher" of the spec.
 
+**Fall-back recipe when the search input is NOT in `components/header.html.twig`:** in phpdoc v3.10 the search markup may live in a sibling partial (e.g. `components/search.html.twig` or inlined into `layout.html.twig`). If `cat /tmp/phpdoc-templates/header.html.twig` shows no `<form>`, no `<input>`, and no `js-search` / `phpdocumentor-search` class names, do the following instead:
+
+1. Re-extract the sibling partial that DOES contain the search markup:
+   ```bash
+   php -r "Phar::loadPhar('$PHAR_PATH'); copy('phar://$PHAR_PATH/data/templates/default/components/search.html.twig', '/tmp/phpdoc-templates/search.html.twig');"
+   ```
+   If the file doesn't exist, also try `layout.html.twig` from the phar (the search may be inlined).
+2. Whichever file actually contains the search input becomes your override target instead of (or in addition to) `header.html.twig`. Copy it verbatim to `.phpdoc/template/components/<name>.html.twig` and place the switcher include in the same flex container as the search input.
+3. Update the file-structure table at the top of this plan to reflect the actual override file(s) you shipped, and add a one-line note in the Phase 10 CHANGELOG entry (Task 20) so a future maintainer reading the diff understands why the override set diverged from this plan's defaults.
+
+The goal is constant: switcher visually inside the navbar, alongside the search input. The specific Twig partial that hosts the search input is upstream-determined; pick the partial that does, override it, and ship just that one file.
+
 - [ ] **Step 4: Verify the override compiles AND renders inside the navbar**
 
 Build the API docs (with the new config + no narrative content yet — phpdoc tolerates an empty `docs/guide/en/`):
@@ -3590,9 +3602,17 @@ appropriate).>
 1. Single H1 with the recipe title.
 2. Exactly three H2s: `When to use this`, `Solution`, `Pitfalls` (in that
    order). The manual-review checklist in the spec rejects any deviation.
-3. At least one fenced `php` block with a working code snippet drawn from
-   the source-of-truth file. `scripts/lint-docs.php` will fail the build
-   if any `php` fence emits a parse error.
+3. At least one fenced code block with a working code snippet drawn from
+   the source-of-truth file. **Fence-language choice:**
+   - Full file or full top-level script → `php` (must contain `<?php`
+     or `declare(strict_types=1);` — `lint-docs.php` prepends `<?php\n`
+     and runs `php -l`).
+   - Method body / class-body fragment (`public function foo() { ... }`
+     not wrapped in a class) → `php-fragment` (skipped by `lint-docs.php`;
+     authors are on their own for syntax). The pilot pass (Task 1
+     Step 4b) decided whether `php-fragment` renders distinguishably;
+     if the pilot notes say "render identically", prefer `php` and
+     wrap the body in a synthetic class.
 4. At least one sentinel-URL hyperlink
    (`https://api.phpbotgram.local/Gruven-PhpBotGram-...`) into the API
    reference. Use the longest-symbol-name form
@@ -3649,7 +3669,7 @@ polling loop's exit path.
   loop. See [Middlewares](../concepts/middlewares.md) for the call
   order.
 - `TelegramRetryAfter` is *not* delivered to `errors`; the polling
-  loop's backoff (`PollingOptions::$backoff`) handles it directly.
+  loop's backoff (`PollingOptions::$backoffConfig`) handles it directly.
 ```
 
 Each remaining recipe page is 30–80 lines and follows the same shape.
@@ -3810,9 +3830,17 @@ that should run multiple processes behind nginx.">
    link to another concept page (`../how-to/...md` or `dispatcher.md`)
    or a sentinel-URL API link.
 6. Total length: 100–200 lines.
-7. No fenced `php-fragment` blocks unless the pilot pass (Task 1 Step
-   4b) confirmed they render distinguishably; otherwise use plain `php`
-   fences.
+7. **Fence-language choice** (same rule as recipes):
+   - Full file or full top-level script → `php` (must contain `<?php`
+     or `declare(...)`). `lint-docs.php` prepends `<?php\n` and runs
+     `php -l`; method-body snippets without a class wrapper will
+     therefore fail the lint gate.
+   - Method body / class-body fragment → `php-fragment` (skipped by
+     `lint-docs.php`). Use this whenever the snippet isn't a
+     standalone parseable file.
+   - If the pilot (Task 1 Step 4b) showed `php-fragment` renders
+     identically to `php`, prefer `php` and wrap fragments in a
+     synthetic class to keep the lint gate active.
 
 **Worked example — `dispatcher.md`** (use this as the formal template
 for the other 15 concept pages; one filled-in example beats 16
@@ -4002,8 +4030,10 @@ the narrative:
 
 - [ ] **Step 2: Add Phase 10 CHANGELOG entry**
 
-Open `/Users/gruven/repository/github/phpbotgram/CHANGELOG.md`. Above
-the existing `## [0.1.0] — Initial release` section, add:
+Open `/Users/gruven/repository/github/phpbotgram/CHANGELOG.md`. Insert
+the block below immediately above the first existing `## [` heading
+(today that is `## [0.1.0] — Initial release`, but tolerate any
+heading-text variation — anchor on the `## [` literal, not the rest).
 
 ```markdown
 ## [Unreleased]
@@ -4186,9 +4216,13 @@ git commit -m "phase-10: deploy runbook (manual one-time setup)"
 
 - [ ] **Step 1: Update the master implementation plan**
 
-Open `/Users/gruven/repository/github/phpbotgram/docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md`,
-find the `## Phase 10` section (currently empty placeholder — verify),
-and add a one-line entry referencing this plan:
+Open `/Users/gruven/repository/github/phpbotgram/docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md`.
+The current top-level section list ends `## Phase 9 — Polish + v0.1.0` →
+`## Self-Review Checklist`; there is **no** `## Phase 10` placeholder.
+**Insert** a new section between the existing `## Phase 9` block and
+`## Self-Review Checklist`. The insertion site is the `---` separator
+that currently sits immediately above `## Self-Review Checklist`
+(file line ~3788). New section body:
 
 ```markdown
 ## Phase 10 — Narrative documentation
@@ -4197,6 +4231,10 @@ See `docs/superpowers/plans/2026-05-15-phpbotgram-narrative-docs.md`.
 
 Status: implementation in progress / complete (update when shipped).
 ```
+
+Keep the surrounding `---` separators intact. Do **not** alter the
+`## Self-Review Checklist` heading or its content — only the
+preceding region changes.
 
 - [ ] **Step 2: Commit**
 
