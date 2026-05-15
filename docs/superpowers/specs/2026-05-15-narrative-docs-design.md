@@ -56,7 +56,7 @@ Phase 9 already shipped:
 
 - `phpdocumentor/shim ^3` (composer dev-dep) drops the official
   phpDocumentor v3.10 phar into `vendor/bin/phpdoc`. Phase 10 narrows
-  this constraint to `phpdocumentor/shim: ~3.10` (a composer-level
+  this constraint to `phpdocumentor/shim: ~3.10.0` (a composer-level
   guard) so a future shim major that bumps the phar doesn't silently
   break `<source dsn=".">` resolution, the navbar template overrides,
   or the Markdown-link survival behaviour described below (verified
@@ -129,12 +129,18 @@ Notes verified against the v3.10.0 phar (`/Users/gruven/repository/github/phpbot
 - `<source dsn=".">` matches the Phase 9 working file exactly; verified
   buildable.
 
-`${VERSION}` is substituted via `envsubst < phpdoc.dist.xml.tpl >
-phpdoc.dist.xml` immediately before each phpdoc invocation. `envsubst`
-is part of GNU `gettext`, preinstalled on `ubuntu-latest` runners. On
-macOS, Homebrew installs gettext keg-only — the build wrapper script
-falls back to `/usr/local/opt/gettext/bin/envsubst` or
-`/opt/homebrew/opt/gettext/bin/envsubst` if the default `envsubst`
+`${VERSION}` is substituted via the **allow-listed** form
+`envsubst '${VERSION}' < phpdoc.dist.xml.tpl > phpdoc.dist.xml`
+immediately before each phpdoc invocation. The single-quoted argument
+restricts substitution to that one variable; without it, `envsubst`
+expands every `${VAR}` in the input — including things like `$HOME`,
+`$PATH`, or `$GITHUB_REF_NAME` that happen to appear in the runner
+environment, which would silently corrupt the file.
+
+`envsubst` is part of GNU `gettext`, preinstalled on `ubuntu-latest`
+runners. On macOS, Homebrew installs gettext keg-only — the build
+wrapper script falls back to `/usr/local/opt/gettext/bin/envsubst`
+or `/opt/homebrew/opt/gettext/bin/envsubst` if the default `envsubst`
 isn't on `$PATH`.
 
 `VERSION` values:
@@ -212,10 +218,33 @@ Empirically verified by feeding a guide fixture through phpdoc 3.10:
   discards relative hrefs and phpdoc emits no warning, so the CI
   gate based on grep patterns cannot catch this case.
   `scripts/lint-docs.php` performs a positive regex check on every
-  `.md` source: any line outside fenced code blocks matching
-  `</?(?:a|div|span|table|tr|td|th|img|iframe|script|style)\b` is
-  rejected with a clear message ("use a Markdown construct or the
-  sentinel HTTPS URL instead").
+  `.md` source. The algorithm must avoid two false-positive classes
+  (fenced code blocks; inline backtick spans like `` `<a href>` ``
+  in narrative prose):
+  ```
+  for each source file under docs/guide/en/**/*.md:
+    inside_fence = false
+    for each line in source:
+      if line matches ^```: inside_fence = !inside_fence; continue
+      if inside_fence: continue
+      # Strip every inline backtick span — pairs of single-`,
+      # double-``, or n-` (CommonMark) — before applying the regex.
+      stripped = preg_replace('/`+[^`]*`+/', '', line)
+      if stripped matches </?(?:a|div|span|table|tr|td|th|img|iframe|script|style)\b:
+        record (file, line, match)
+  exit 1 if any matches recorded; print structured summary
+  ```
+  Authors who need to **show** an HTML tag as code (in a tutorial
+  explaining what NOT to do) place it inside backticks; the lint
+  skips them. Authors who genuinely write inline HTML get a clear
+  rejection message ("use a Markdown construct or the sentinel
+  HTTPS URL instead").
+  Only `<a>` is currently a documented stripping case; the rest
+  (`<div>`, `<span>`, `<table>`, `<tr>`, `<td>`, `<th>`, `<img>`,
+  `<iframe>`, `<script>`, `<style>`) are defensive — added because
+  Symfony's sanitizer has its own allow-list that may or may not
+  match phpdoc's `<base href>` machinery; safer to reject all and
+  prompt the author for an explicit decision.
 - **Anything else:** disallowed; the CI gate fails the build with a
   `could not be resolved` message pointing at the offending file.
 
@@ -236,21 +265,44 @@ The sentinel host has no DNS record (`.local` is reserved by
 RFC 6762). phpDocumentor emits the link verbatim:
 `<a href="https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Router.html#method_propagateEvent">Router::propagateEvent</a>`.
 
-**Post-build rewrite.** `scripts/rewrite-api-links.php` walks every
-`*.html` under `build/docs/api/guide/` and rewrites every occurrence
-of `https://api.phpbotgram.local/<rest>` to:
+**Post-build rewrite.** `scripts/rewrite-api-links.php` is
+**HTML-aware**, not a naive string replacement. A code sample that
+demonstrates the sentinel convention (a tutorial showing what to
+type, or a `<pre><code>` block containing a literal sentinel URL)
+would be silently corrupted by a `sed`-style rewrite. The script:
 
-1. Parse the page's `<base href>` value (e.g. `../../`).
-2. Resolve `classes/<rest>` against that base in the browser's URL
-   model — i.e. emit `<base href><rest's classes-relative path>`.
-3. For our depth conventions: from `guide/concepts/foo.html` with
-   `<base href="../../">`, the rewrite becomes `classes/<rest>`. The
-   browser will resolve `classes/X` against `../../` to
-   `build/docs/api/classes/X.html`. Identical result for any page
-   depth — that's the whole point of `<base>`.
+1. Loads each `*.html` under `build/docs/api/guide/` with
+   `DOMDocument` (or `Symfony\Component\DomCrawler`).
+2. Iterates over every `<a>` element only.
+3. For each `<a>` whose `href` starts with
+   `https://api.phpbotgram.local/`: rewrites the `href` attribute
+   only — text content, `<pre>`/`<code>`/`<kbd>`/`<samp>` descendants,
+   and any other attributes stay untouched.
+4. Asserts no sentinel-URL substring remains in any rendered
+   page **after the rewrite, excluding text content of `<pre>` and
+   `<code>` descendants** (a literal sentinel inside a code block
+   is intentional and must survive).
 
-So the actual rewrite is uniform: replace `https://api.phpbotgram.local/`
-with `classes/`. Browsers handle the depth via `<base href>`.
+Rewrite math: from a page at `guide/concepts/foo.html` with
+`<base href="../../">`, replacing `href="https://api.phpbotgram.local/X"`
+with `href="classes/X"` produces a browser-resolvable URL: the
+browser resolves `classes/X` against `<base href="../../">` to
+`build/docs/api/classes/X`. The same rule applies at every depth —
+the depth-adaptive `<base href>` does the work.
+
+**Author-visible footgun: bare sentinel URLs in narrative prose
+become CommonMark autolinks.** `Use https://api.phpbotgram.local/Foo.html`
+in prose renders as a clickable `<a>` whose text and href both
+display the sentinel — and the rewrite then changes the **href but
+not the text**, leaving the visible URL as the literal sentinel
+even though the click goes to the rewritten target. The script
+optionally rewrites text content of `<a>` elements that match its
+own previous text (i.e. autolink case), but the safer convention
+in §"Authoring rules" is to never paste a bare sentinel; always
+wrap as `[label](https://api.phpbotgram.local/...)`. If a tutorial
+needs to **show** a sentinel URL as text, use an inline backtick
+span: `` `https://api.phpbotgram.local/Foo.html` `` — this renders
+as `<code>` and is skipped by the rewriter.
 
 **Path-pattern contract.** phpDocumentor's default template renders
 each API class to `classes/<Namespace-with-dashes>-<ClassName>.html`
@@ -431,10 +483,17 @@ create an extended broken-site window):
 1. **Bootstrap the orphan `gh-pages` branch with production root
    files**, not a placeholder. peaceiris with `keep_files: true`
    never overwrites top-level `gh-pages/index.html`, so this commit
-   becomes the permanent landing-page payload:
+   becomes the permanent landing-page payload.
+
+   Use `git worktree add` so the main working tree is never
+   touched (no `git rm -rf .` inside the live repo, no race window
+   where the working tree is empty):
 
    ```bash
-   mkdir -p /tmp/phpbotgram-gh-pages-init && cd /tmp/phpbotgram-gh-pages-init
+   # Inside the main repo working tree (master checked out, unchanged):
+   git worktree add --orphan -B gh-pages /tmp/phpbotgram-gh-pages
+
+   cd /tmp/phpbotgram-gh-pages
 
    # Production gh-pages/index.html — JS redirect (see "Branch layout" below for the algorithm).
    cat > index.html <<'HTML'
@@ -460,15 +519,22 @@ create an extended broken-site window):
    {"languages": [{"id": "en", "label": "English"}]}
    JSON
 
-   cd /Users/gruven/repository/github/phpbotgram
-   git checkout --orphan gh-pages
-   git rm -rf .
-   cp /tmp/phpbotgram-gh-pages-init/{index.html,versions.json,languages.json} .
    git add index.html versions.json languages.json
    git commit -m "Bootstrap gh-pages with JS redirect + empty versions/languages inventories"
-   git push origin gh-pages
-   git checkout master
+   git push -u origin gh-pages
+
+   # Clean up the worktree; the main repo's working tree was untouched.
+   cd /Users/gruven/repository/github/phpbotgram
+   git worktree remove /tmp/phpbotgram-gh-pages
    ```
+
+   The `git worktree --orphan -B gh-pages` flag (git 2.42+) is the
+   safe way to materialise an orphan branch in a sibling directory.
+   On older git, fall back to a tempdir clone:
+   `git clone --no-checkout . /tmp/phpbotgram-gh-pages && cd
+   /tmp/phpbotgram-gh-pages && git checkout --orphan gh-pages && git
+   reset --hard && ...`. Document the fallback in the
+   implementation plan.
 
    The first peaceiris run (step 3 below) will publish `/en/dev/`
    alongside this root content; the JS redirect resolves to `/en/dev/`
@@ -524,9 +590,24 @@ branch).
   `php-version: "8.5"`, `extensions: mbstring, sodium, json`,
   `tools: composer:v2`, `coverage: none`
 - `actions/cache@v4` step caching `vendor/` keyed on `composer.lock`
+- `actions/setup-node@v4` step with `node-version: '20'` — required
+  by `npx markdownlint-cli2 …` in `scripts/build-docs.sh`. Phase 9
+  did not need Node because the docs gate was `composer docs-api`
+  with no Markdown lint step; Phase 10 introduces this dependency.
 - `composer install --no-interaction --no-progress --prefer-dist`
 - `composer docs-api` (whose internals are rewritten per
-  §"CI gate strategy" but the workflow line stays the same)
+  §"CI gate strategy" but the workflow line stays the same) —
+  with one new addition: the step gains an `env: VERSION: dev`
+  block (or `env: VERSION: ${{ github.ref_name }}` in
+  `docs-release.yml`) so `scripts/build-docs.sh`'s
+  `: "${VERSION:?...}"` assertion is satisfied. Step shape:
+  ```yaml
+  - name: Build docs
+    env:
+      VERSION: dev                 # docs.yml
+      # VERSION: ${{ github.ref_name }}   # docs-release.yml
+    run: composer docs-api
+  ```
 
 **Phase 9 fields modified or removed:**
 
@@ -678,9 +759,13 @@ be re-run by hand.
 
 #### Concurrency
 
-Both workflows share **one** concurrency group:
+Both workflows share **one** concurrency group, declared at the
+**workflow top level** (outside `jobs:`, in both `docs.yml` and
+`docs-release.yml`). Job-level concurrency would only serialise
+jobs within the same workflow, not across workflows:
 
 ```yaml
+# Top-level, alongside `name:`, `on:`, `permissions:`
 concurrency:
   group: pages-write
   cancel-in-progress: false
@@ -751,7 +836,10 @@ prior entries' labels when their `stable` flips to `false`).
 `scripts/update-versions-json.php` contract:
 
 CLI: `php scripts/update-versions-json.php <path-to-versions.json>
---upsert id=<id> path=<path> label=<label> stable=<true|false>`.
+--upsert id=<id> path=<path> label=<label> stable=<true|false|auto>`.
+
+Each `key=value` arg is parsed with `explode('=', $arg, 2)` so values
+containing `=` survive intact.
 
 Algorithm:
 
@@ -761,19 +849,37 @@ Algorithm:
    one (handles tag force-push / re-publish without producing
    duplicate dropdown rows).
 3. **Stable flag handling:**
-   - If new entry's `stable` is `true`: flip every other entry's
-     `stable` to `false`.
-   - If new entry's `stable` is `false` (e.g. dev push): leave
-     other entries' flags alone (don't unflip a real release).
+   - If `stable=auto` (used for tag pushes): use `version_compare`
+     to check the new `id` against every existing tag-shaped `id`
+     in the file (entries whose `id` matches `/^v\d+\.\d+\.\d+/`,
+     so the `dev` entry is excluded). If the new id is strictly
+     greater than all existing tag ids, set this entry to `stable:
+     true` AND flip every other entry's `stable` to `false`.
+     Otherwise (the new tag is older than an existing one — a
+     backport / out-of-order publish) keep this entry's `stable`
+     at the current "newest" value's stable state, and leave
+     other entries' `stable` flags alone.
+   - If `stable=true` (explicit override): flip every other
+     entry's `stable` to `false`, set this entry stable.
+   - If `stable=false` (used for dev pushes): leave all other
+     entries alone.
 4. **Insertion order:** insert the new entry as the first array
-   element so the dropdown lists newest-on-top.
+   element so the dropdown lists newest-on-top. Authors who care
+   about explicit ordering can post-process the JSON manually.
 5. Write atomically (write-to-temp + rename) to the same path.
 
 This guarantees: (a) the redirect on `gh-pages/index.html` always
 points at the newest stable version (when one exists); (b) force-
 pushing a tag doesn't produce a phantom duplicate row in the
 switcher; (c) the `dev` entry is appended on the first master push
-post-bootstrap without poisoning any later `stable: true` flags.
+post-bootstrap without poisoning any later `stable: true` flags;
+(d) an out-of-order backport publish (e.g. v0.1.0 after v0.2.0 is
+already shipped) does not demote the actual newest release to
+`stable: false`.
+
+The `docs-release.yml` workflow uses `stable=auto` so the semver
+comparison runs unconditionally; the `docs.yml` workflow uses
+`stable=false` for the `dev` entry.
 
 `languages.json` schema:
 
@@ -949,6 +1055,7 @@ docs/guide/
       text-decoration.md
       keyboards.md
       error-model.md
+      serialization.md                # Bot DTO ↔ wire JSON: Serializer::dump/load, BotContextController
       architecture-decisions.md       # phpbotgram-specific; divergences from aiogram
     reference/
       index.md                        # stub linking to ../../classes/ (API)
@@ -964,12 +1071,12 @@ docs/guide/
       code-snippets/                  # *.php fragments, included into .md
 ```
 
-**Page count (honest):** 5 tutorial pages + 20 how-to pages + 15
-concept pages + 4 Diataxis index pages (one of which is the
-reference-stub) + top-level landing + changelog + contributing =
-**47 pages**. Plus a `.gitkeep` placeholder in `migration/`
-(phpDocumentor scans the directory but emits nothing from a hidden
-file — verified harmless on a real build).
+**Page count (honest):** 5 tutorial pages + 20 how-to pages + 16
+concept pages (adds `serialization.md`) + 4 Diataxis index pages
+(one of which is the reference-stub) + top-level landing + changelog
++ contributing = **48 pages**. Plus a `.gitkeep` placeholder in
+`migration/` (phpDocumentor scans the directory but emits nothing
+from a hidden file — verified harmless on a real build).
 
 **`docs/guide/en/changelog.md` and `docs/guide/en/contributing.md`:**
 Markdown has no `include::` directive. `scripts/copy-root-docs.php`
@@ -1182,9 +1289,9 @@ have changed between phpdoc point releases.
 ## Definition of done
 
 - `docs/guide/en/` populated per the content tree (5 tutorial + 20
-  how-to + 15 concepts + 4 Diataxis index pages including
+  how-to + 16 concepts + 4 Diataxis index pages including
   `reference/index.md` + top-level landing + `changelog.md` +
-  `contributing.md` = **47 pages**, plus a `migration/.gitkeep`).
+  `contributing.md` = **48 pages**, plus a `migration/.gitkeep`).
 - `phpdoc.dist.xml.tpl` produces a single site combining narrative +
   API reference; sentinel cross-link strategy validates end-to-end
   (sentinel survives phpdoc rendering, rewrite produces correct
@@ -1220,8 +1327,10 @@ have changed between phpdoc point releases.
   `scripts/build-docs.sh` (kept in sync with the `composer docs-api`
   script so local and CI behave identically).
 - `composer.json` constraint for `phpdocumentor/shim` tightened from
-  `^3` to `~3.10` (composer-level guard against an undisclosed phpdoc
-  major bump).
+  `^3` to `~3.10.0` (`>=3.10.0 <3.11.0`; composer-level guard pinning
+  to the 3.10.x minor against an undisclosed phpdoc minor bump). The
+  bare `~3.10` form expands to `>=3.10.0 <4.0.0` and is identical
+  to `^3.10`, which is NOT the intended guard.
 - `.gitignore` extended with `/phpdoc.dist.xml`,
   `/docs/guide/en/changelog.md`, `/docs/guide/en/contributing.md`.
 - `https://gruven.github.io/phpbotgram/en/dev/index.html` renders
