@@ -26,4 +26,4 @@ coverage-gate: coverage
 # phar into `vendor/bin/phpdoc` on `composer install` — no extra fetch step.
 # Output is gitignored; CI publishes it to gh-pages via .github/workflows.
 docs-api:
-	vendor/bin/phpdoc -c phpdoc.dist.xml
+	VERSION=0.1.0-dev bash scripts/build-docs.sh

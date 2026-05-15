@@ -33,7 +33,7 @@
 		"amphp/redis": "^2",
 		"friendsofphp/php-cs-fixer": "^3.95",
 		"mongodb/mongodb": "^2",
-		"phpdocumentor/shim": "^3",
+		"phpdocumentor/shim": "~3.10.0",
 		"phpstan/phpstan": "^2.1",
 		"phpunit/phpunit": "^13.1",
 		"symfony/yaml": "^7.3",
@@ -65,7 +65,7 @@
 		"stan" : "phpstan analyze",
 		"lint" : "php-cs-fixer fix --dry-run --diff",
 		"fix" : "php-cs-fixer fix",
-		"docs-api" : "phpdoc -c phpdoc.dist.xml",
+		"docs-api" : "bash scripts/build-docs.sh",
 		"coverage" : "XDEBUG_MODE=coverage phpunit --coverage-clover=build/coverage/clover.xml",
 		"coverage-gate" : ["@coverage", "php scripts/coverage-gate.php build/coverage/clover.xml"]
 	},
