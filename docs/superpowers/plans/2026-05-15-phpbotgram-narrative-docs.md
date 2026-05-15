@@ -495,17 +495,19 @@ chmod +x scripts/build-docs.sh
 
 - [ ] **Step 3: Rewrite `composer.json`'s `docs-api` script**
 
-Open `/Users/gruven/repository/github/phpbotgram/composer.json` and find the `scripts` section. Replace the `docs-api` line. Current Phase 9 form:
+Open `/Users/gruven/repository/github/phpbotgram/composer.json` and find the `scripts` section. The repo uses **tab indentation** and **space-padded colons** (`"docs-api" : "value"`, with a space before the colon). Preserve that style on the rewrite. Current Phase 9 form (exact bytes, including the leading tab and space-around-colon):
 
-```json
-"docs-api": "phpdoc -c phpdoc.dist.xml"
+```text
+	"docs-api" : "phpdoc -c phpdoc.dist.xml",
 ```
 
 New Phase 10 form (plain delegation; inherits `VERSION` from caller env):
 
-```json
-"docs-api": "bash scripts/build-docs.sh"
+```text
+	"docs-api" : "bash scripts/build-docs.sh",
 ```
+
+If you edit with the `Edit` tool, the `old_string` must contain the leading tab character AND the space before the colon — copy from the source rather than retyping. The same `space-before-colon` shape applies to the matching description in the `scripts-descriptions` block (no edit needed there; the description is still accurate).
 
 CI workflows export `VERSION` via the step-level `env:` block (Tasks 14–15). Local contributors set it inline: `VERSION=0.1.0-dev composer docs-api`. Document this in `CONTRIBUTING.md` (Task 13).
 
@@ -531,11 +533,16 @@ docs-api:
 
 ```bash
 NO_PROXY='*' no_proxy='*' composer update phpdocumentor/shim --no-interaction --ignore-platform-req=ext-mongodb
-composer show phpdocumentor/shim | grep -E '^versions\s*:.*3\.10\.' \
+# `composer show <pkg>` prints `versions : * v3.10.0` where the leading
+# `*` on a version token marks the currently-installed (resolved) version.
+# Require the `* v3.10.` shape so a future composer that changes line
+# layout, OR a state where 3.10.x exists in the registry but composer
+# resolved 3.9.x, fails the grep instead of false-passing.
+composer show phpdocumentor/shim | grep -E '^versions\s*:.*\*\s*v?3\.10\.' \
   || { echo "ERROR: phpdocumentor/shim resolved outside 3.10.x — check composer.json constraint"; exit 1; }
 ```
 
-Expected: lock entry for `phpdocumentor/shim` pins to a 3.10.x version AND the grep verifies the resolved version is 3.10.x. Composer only touches the named package's lock entry (no global re-resolution). If composer reports network errors, see Phase 9 §"NO_PROXY workaround" for the proxy bypass.
+Expected: lock entry for `phpdocumentor/shim` pins to a 3.10.x version AND the grep matches the installed-marker (`*`) on a `3.10.x` token. Composer only touches the named package's lock entry (no global re-resolution). If composer reports network errors, see Phase 9 §"NO_PROXY workaround" for the proxy bypass.
 
 - [ ] **Step 6: Verify the wrapper exits with a clear error before any script exists**
 
@@ -2652,12 +2659,24 @@ The goal is constant: switcher visually inside the navbar, alongside the search 
 
 - [ ] **Step 4: Verify the override compiles AND renders inside the navbar**
 
-Build the API docs (with the new config + no narrative content yet — phpdoc tolerates an empty `docs/guide/en/`):
+Build the API docs. `scripts/copy-root-docs.php` (invoked inside `scripts/build-docs.sh`) needs `/CONTRIBUTING.md` to exist at repo root, but Task 13 hasn't run yet. Stub it ahead of the build so the wrapper reaches phpdoc; the real file will overwrite the stub in Task 13.
 
 ```bash
 mkdir -p docs/guide/en
-touch docs/guide/en/index.md && echo "# phpbotgram" > docs/guide/en/index.md
+echo "# phpbotgram" > docs/guide/en/index.md
+
+# Temporary stub so `scripts/build-docs.sh` can reach phpdoc.
+[ -f CONTRIBUTING.md ] || echo "# Contributing (Phase 10 placeholder)" > CONTRIBUTING.md
+__stubbed_contributing=$([ "$(stat -f %z CONTRIBUTING.md 2>/dev/null || wc -c < CONTRIBUTING.md)" -lt 80 ] && echo "yes")
+
 VERSION=0.1.0-dev bash scripts/build-docs.sh 2>&1 | tail -10 || true
+
+# Remove the stub if we created it (i.e. if the file is still under ~80 bytes).
+# Task 13 writes the real file later.
+if [ "$__stubbed_contributing" = "yes" ]; then
+  rm CONTRIBUTING.md
+fi
+unset __stubbed_contributing
 ```
 
 The build will fail at one of the gates (no real content yet) — that's expected. What matters is that the phpdoc step itself completed and rendered the template. Inspect `build/docs/api/index.html`:
@@ -4269,8 +4288,10 @@ The current top-level section list ends `## Phase 9 — Polish + v0.1.0` →
 `## Self-Review Checklist`; there is **no** `## Phase 10` placeholder.
 **Insert** a new section between the existing `## Phase 9` block and
 `## Self-Review Checklist`. The insertion site is the `---` separator
-that currently sits immediately above `## Self-Review Checklist`
-(file line ~3788). New section body:
+that sits immediately above `## Self-Review Checklist` — locate it
+with `grep -n '^## Self-Review Checklist' docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md`
+(line numbers drift as the master plan grows; rely on the textual
+anchor, not on any committed line number). New section body:
 
 ```markdown
 ## Phase 10 — Narrative documentation
