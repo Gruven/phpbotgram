@@ -91,9 +91,10 @@
 
 **Files:**
 - Create (temporary): `/tmp/phpdoc-pilot/{src,docs/guide,phpdoc.xml}`
-- Modify (later, in Task 8): `scripts/check-docs-build-log.php` — pin patterns observed here.
+- Create: `docs/superpowers/notes/2026-05-15-phase-10-pilot.md` (checked in).
+- Will inform (later, in Task 5 Step 5): `scripts/check-docs-build-log.php` — patterns pinned from the notes written here.
 
-This task does NOT produce a commit yet — it's a research pass. Document the empirical observations in a checked-in `docs/superpowers/notes/2026-05-15-phase-10-pilot.md` so reviewers can audit.
+This task does not change runtime behavior — it produces a research notes commit only.
 
 - [ ] **Step 1: Build the pilot fixture**
 
@@ -258,15 +259,16 @@ Create `/Users/gruven/repository/github/phpbotgram/phpdoc.dist.xml.tpl`:
   <version number="${VERSION}">
     <api format="php">
       <source dsn="."><path>src</path></source>
+      <ignore-tags>
+        <!-- Preserved from Phase 9: codegen-output classes carry
+             @generated; suppress to keep API docs readable. Per the
+             v3 XSD, <ignore-tags> is a child of <api>, not <version>. -->
+        <ignore-tag>generated</ignore-tag>
+      </ignore-tags>
     </api>
     <guide format="md" output="guide">
       <source dsn="."><path>docs/guide/en</path></source>
     </guide>
-    <ignore-tags>
-      <!-- Preserved from Phase 9: codegen-output classes carry
-           @generated; suppress to keep API docs readable. -->
-      <ignore-tag>generated</ignore-tag>
-    </ignore-tags>
   </version>
   <!-- Template overrides live at .phpdoc/template/ (next to this XML),
        auto-discovered by phpDocumentor's
@@ -341,8 +343,14 @@ cd "$(dirname "$0")/.."
 # build/docs is created AFTER the cd so it lands at repo/build/docs/.
 mkdir -p build/docs build/docs/root-publish
 
+# Resolve envsubst. macOS gettext is keg-only; fall back to common paths.
+ENVSUBST_BIN="$(command -v envsubst 2>/dev/null || true)"
+[ -z "$ENVSUBST_BIN" ] && [ -x /usr/local/opt/gettext/bin/envsubst ] && ENVSUBST_BIN=/usr/local/opt/gettext/bin/envsubst
+[ -z "$ENVSUBST_BIN" ] && [ -x /opt/homebrew/opt/gettext/bin/envsubst ] && ENVSUBST_BIN=/opt/homebrew/opt/gettext/bin/envsubst
+[ -z "$ENVSUBST_BIN" ] && { echo "envsubst not found (install with: brew install gettext)" >&2; exit 1; }
+
 # Expand ${VERSION} only; the allow-list quote keeps $HOME/$PATH/etc. untouched.
-envsubst '${VERSION}' < phpdoc.dist.xml.tpl > phpdoc.dist.xml
+"$ENVSUBST_BIN" '${VERSION}' < phpdoc.dist.xml.tpl > phpdoc.dist.xml
 
 # Copy project-root CHANGELOG/CONTRIBUTING into the narrative tree.
 php scripts/copy-root-docs.php
@@ -384,11 +392,13 @@ Open `/Users/gruven/repository/github/phpbotgram/composer.json` and find the `sc
 "docs-api": "phpdoc -c phpdoc.dist.xml"
 ```
 
-New Phase 10 form:
+New Phase 10 form (plain delegation; inherits `VERSION` from caller env):
 
 ```json
-"docs-api": "@php -r \"putenv('VERSION=0.1.0-dev'); passthru('bash scripts/build-docs.sh', \\$rc); exit(\\$rc);\""
+"docs-api": "bash scripts/build-docs.sh"
 ```
+
+CI workflows export `VERSION` via the step-level `env:` block (Tasks 14–15). Local contributors set it inline: `VERSION=0.1.0-dev composer docs-api`. Document this in `CONTRIBUTING.md` (Task 13).
 
 Also tighten the `phpdocumentor/shim` constraint in `require-dev` from `"^3"` to `"~3.10.0"`. Run `composer update --lock phpdocumentor/shim` afterwards (Step 5).
 
@@ -408,13 +418,15 @@ docs-api:
 	VERSION=0.1.0-dev bash scripts/build-docs.sh
 ```
 
-- [ ] **Step 5: Refresh `composer.lock`**
+- [ ] **Step 5: Refresh `composer.lock` and verify the pin**
 
 ```bash
 NO_PROXY='*' no_proxy='*' composer update --lock phpdocumentor/shim --no-interaction --ignore-platform-req=ext-mongodb
+composer show phpdocumentor/shim | grep -E '^versions\s*:.*3\.10\.' \
+  || { echo "ERROR: phpdocumentor/shim resolved outside 3.10.x — check composer.json constraint"; exit 1; }
 ```
 
-Expected: lock entry for `phpdocumentor/shim` pins to a 3.10.x version. If composer reports network errors, see Phase 9 §"NO_PROXY workaround" for the proxy bypass.
+Expected: lock entry for `phpdocumentor/shim` pins to a 3.10.x version AND the grep verifies the resolved version is 3.10.x. If composer reports network errors, see Phase 9 §"NO_PROXY workaround" for the proxy bypass.
 
 - [ ] **Step 6: Verify the wrapper exits with a clear error before any script exists**
 
@@ -689,6 +701,14 @@ final class CheckDocsBuildLogTest extends TestCase
     self::assertSame(1, $this->runScript($log));
   }
 
+  public function testFailsOnMissingIndexFile(): void
+  {
+    // Belt-and-braces: ParseDirectoryHandler usually throws hard, but the
+    // pattern is gated in case a future phpdoc switches to warning surface.
+    $log = $this->makeTempLog("Could not find an index file 'docs/guide/en/orphan/'\n");
+    self::assertSame(1, $this->runScript($log));
+  }
+
   public function testIgnoresAllowedSubstrings(): void
   {
     // Image reference not found is on the allow-list (cp runs after phpdoc).
@@ -818,13 +838,35 @@ exit(1);
 - [ ] **Step 4: Run test, verify it passes**
 
 Run: `vendor/bin/phpunit tests/Scripts/CheckDocsBuildLogTest.php`
-Expected: PASS (7 tests).
+Expected: PASS (8 tests).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Reconcile patterns with pilot pass notes (Task 1)**
+
+Re-read `docs/superpowers/notes/2026-05-15-phase-10-pilot.md` (produced
+in Task 1). For each warning substring the pilot observed:
+
+- If it is in the spec's gate list (`could not be resolved`,
+  `Document with name`, `No parent found for file`,
+  `Document has no title`, `Could not find an index file`): leave
+  it in `GATE_PATTERNS`.
+- If it is in the spec's allow-list (`Image reference not found`):
+  leave it in `ALLOW_PATTERNS`.
+- If the pilot observed a **new** doc-quality substring not on either
+  list, decide explicitly (add to gate or allow) and edit the script.
+- If the pilot showed a listed pattern is **never** emitted by the
+  installed phpdoc, remove it from the array.
+
+If the pilot's `Image reference not found` decision was "reorder cp
+before phpdoc", drop the `'Image reference not found'` entry from
+`ALLOW_PATTERNS` AND swap the cp ordering in `scripts/build-docs.sh`
+(Task 3). Document the chosen branch in a comment at the top of the
+patterns constants.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add scripts/check-docs-build-log.php tests/Scripts/CheckDocsBuildLogTest.php
-git commit -m "phase-10: check-docs-build-log.php + test"
+git commit -m "phase-10: check-docs-build-log.php + test (pilot-reconciled)"
 ```
 
 ---
@@ -2235,21 +2277,23 @@ git commit -m "phase-10: update-versions-json.php + test (semver-aware)"
 ## Task 12: `.phpdoc/template/` Twig override — navbar switcher
 
 **Files:**
-- Create: `.phpdoc/template/base.html.twig`
+- Create: `.phpdoc/template/layout.html.twig`
 - Create: `.phpdoc/template/_includes/switcher.html.twig`
 
-phpDocumentor auto-loads `.phpdoc/template/` relative to the config file. We override `base.html.twig` to inject our switcher partial; phpdoc composes the rest of the template from upstream defaults.
+phpDocumentor auto-loads `.phpdoc/template/` relative to the config file. The visible chrome (header, sidebar, footer) lives in `layout.html.twig` — `base.html.twig` is a one-liner `{% extends 'layout.html.twig' %}`. We override `layout.html.twig` and add our switcher partial; phpdoc composes the rest of the template from upstream defaults.
 
-- [ ] **Step 1: Extract the upstream `base.html.twig` for reference**
+- [ ] **Step 1: Extract the upstream `layout.html.twig` for reference**
 
 ```bash
 mkdir -p /tmp/phpdoc-templates
-unzip -o vendor/bin/phpdoc data/templates/default/base.html.twig -d /tmp/phpdoc-templates 2>/dev/null \
-  || php -r "Phar::loadPhar('vendor/bin/phpdoc'); copy('phar://vendor/bin/phpdoc/data/templates/default/base.html.twig', '/tmp/phpdoc-templates/base.html.twig');"
-head -50 /tmp/phpdoc-templates/base.html.twig
+php -r "Phar::loadPhar('vendor/bin/phpdoc'); copy('phar://vendor/bin/phpdoc/data/templates/default/layout.html.twig', '/tmp/phpdoc-templates/layout.html.twig');"
+head -80 /tmp/phpdoc-templates/layout.html.twig
 ```
 
-Locate the `<nav>` or `<header>` block where the navbar lives. We extend the template by overriding the same file path under `.phpdoc/template/`.
+Locate the `<header>` block (or wherever the existing
+`{% include 'components/header.html.twig' %}` lives) — that's the
+insertion point for the switcher partial. We copy the upstream file
+verbatim and add ONE line.
 
 - [ ] **Step 2: Write the switcher partial**
 
@@ -2312,22 +2356,20 @@ Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/_includes/sw
 </script>
 ```
 
-- [ ] **Step 3: Write the base override**
+- [ ] **Step 3: Write the layout override**
 
-Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/base.html.twig` by **copying** the upstream `data/templates/default/base.html.twig` extracted in Step 1 and adding ONE include of the switcher partial. The exact insertion point depends on the upstream template; aim for inside the existing navbar/header so the switcher renders top-right.
+Create `/Users/gruven/repository/github/phpbotgram/.phpdoc/template/layout.html.twig` by **copying** the upstream `data/templates/default/layout.html.twig` extracted in Step 1 and adding ONE include of the switcher partial right after the existing `<header>` include so the switcher renders inside the header bar.
 
 Pseudo-edit (apply to the real extracted file):
 
 ```twig
 {# ...existing upstream content... #}
-<nav class="phpdocumentor-navigation">
-  {{ include('_includes/switcher.html.twig') }}    {# ← Phase 10 addition #}
-  {# ...existing nav links... #}
-</nav>
-{# ...existing upstream content... #}
+{% include 'components/header.html.twig' %}
+{{ include('_includes/switcher.html.twig') }}    {# ← Phase 10 addition: navbar switcher #}
+{# ...existing upstream content (sidebar, main, footer)... #}
 ```
 
-The full file is a verbatim copy of the phar's `base.html.twig` plus this one extra include. Do not invent any other changes.
+The full file is a verbatim copy of the phar's `layout.html.twig` plus this one extra include. Do not invent any other changes. If the upstream version's header include site looks different on a future phpdoc bump, adjust the insertion site and bump the phpdoc-version pin checklist note in §"Version + language switcher" of the spec.
 
 - [ ] **Step 4: Verify the override compiles**
 
@@ -3415,6 +3457,20 @@ git commit -m "phase-10: 16 concept pages + concepts landing"
 
 ---
 
+### Page-count sanity check (after Tasks 16-18)
+
+Before moving on, verify file counts match the spec:
+
+```bash
+test "$(find docs/guide/en/tutorial -name '*.md' | wc -l | tr -d ' ')" -eq 6  # 5 numbered + index
+test "$(find docs/guide/en/how-to -name '*.md' | wc -l | tr -d ' ')" -eq 21  # 20 recipes + index
+test "$(find docs/guide/en/concepts -name '*.md' | wc -l | tr -d ' ')" -eq 17  # 16 concepts + index
+```
+
+Any failure means a page is missing from the relevant authoring task — locate the gap by `diff`-ing the spec's content-tree list against `ls docs/guide/en/<section>/`.
+
+---
+
 ## Task 19: Author reference stub + migration placeholder + shared assets
 
 **Files:**
@@ -3603,7 +3659,7 @@ git add index.html versions.json languages.json
 git commit -m "Bootstrap gh-pages with JS redirect + empty inventories"
 git push -u origin gh-pages
 
-cd $REPO_ROOT
+cd /Users/gruven/repository/github/phpbotgram
 git worktree remove /tmp/phpbotgram-gh-pages
 ```
 
@@ -3635,13 +3691,16 @@ Save. Brief downtime (seconds-to-minutes) during the flip is normal.
 ## 5. Smoke test
 
 ```bash
-curl -sI https://gruven.github.io/phpbotgram/ | head -3
-curl -sI https://gruven.github.io/phpbotgram/en/dev/index.html | head -3
+# Root: HTML with inline JS redirect (200 OK, body contains location.replace).
+curl -s https://gruven.github.io/phpbotgram/ | grep -F "location.replace"
+# Version page: 200 OK (direct serve, no redirect).
+curl -sI https://gruven.github.io/phpbotgram/en/dev/index.html | head -1
 ```
 
-Expected: the first redirects (302) to `/en/dev/` (after the JS in
-`index.html` fires; if you `curl` you'll see the raw redirect-page
-HTML); the second returns 200.
+Expected: the first command's output contains `location.replace(...)`
+inside the `<script>` block — open the URL in a browser to see the
+client-side redirect to `/en/dev/`. The second command's first
+header is `HTTP/2 200`.
 ```
 
 - [ ] **Step 2: Commit the runbook**
