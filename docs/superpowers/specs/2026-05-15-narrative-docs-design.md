@@ -101,6 +101,11 @@ is gitignored.
     <guide format="md" output="guide">
       <source dsn="."><path>docs/guide/en</path></source>
     </guide>
+    <ignore-tags>
+      <!-- Preserved from Phase 9: codegen-output classes carry
+           @generated; suppress to keep API docs readable. -->
+      <ignore-tag>generated</ignore-tag>
+    </ignore-tags>
   </version>
   <!-- Template overrides live at .phpdoc/template/ (next to this XML),
        auto-discovered by phpDocumentor's
@@ -174,23 +179,35 @@ scripts only need one rule: **relative paths are relative to
 `build/docs/api/`**. The check-docs-links script reads `<base href>`
 per-page; it does not assume a constant.
 
-### Cross-references (guide → API): sentinel-URL post-build rewrite
+### Cross-references: three link kinds, one rendering pipeline
 
-phpDocumentor v3.10's Markdown plugin silently **discards** any `<a>`
-whose `href` is not an http/https/mailto/anchor URL. Empirically
-verified by feeding a guide page through phpdoc with one of each link
-shape:
+phpDocumentor v3.10's Markdown plugin routes every CommonMark `Link`
+node through a reference-resolver chain
+(`phpdocumentor/guides/src/ReferenceResolvers/`). Three kinds of
+links survive rendering; everything else is logged as `Reference X
+could not be resolved` and the `<a>` is dropped from the AST.
+Empirically verified by feeding a guide fixture through phpdoc 3.10:
 
-| Markdown source | Rendered HTML |
+| Markdown source | What survives |
 | --- | --- |
-| `[A](classes/Foo.html)` | `A` — `<a>` stripped |
-| `[B](../classes/Foo.html)` | `B` — `<a>` stripped |
-| `[C](https://example.com/x.html)` | `<a href="https://example.com/x.html">C</a>` — kept |
-| `<a href="classes/Foo.html">E</a>` | `E` — sanitizer stripped href, then merged text |
-| `[H](#anchor)` | `<a href="#anchor">H</a>` — kept (in-page anchors are allowed) |
+| `[A](other-page.md)` (in-narrative `.md` link) | Routed through `DocReferenceResolver`; rewritten to the rendered HTML path of the target doc. **Use this for guide ↔ guide links.** |
+| `[B](classes/Foo.html)` (relative `.html`) | Falls to fallback resolver; `<a>` stripped. CI gate's `could not be resolved` pattern catches this. |
+| `[C](https://example.com/x)` (external HTTPS) | `ExternalReferenceResolver` allow-lists `http/https/mailto`; `<a>` preserved verbatim. |
+| `<a href="classes/Foo.html">D</a>` (inline raw HTML) | Symfony `HtmlSanitizer` discards the relative `href` attribute; `<a>` collapses to text. |
+| `[E](#anchor)` (in-page anchor) | Treated as same-page fragment; `<a>` preserved verbatim. |
 
-Relative paths to API pages cannot be written directly in Markdown.
-Phase 10 uses a **sentinel HTTPS URL + post-build rewrite**:
+**Authoring rules:**
+
+- **Guide → guide:** write `[Other](../concepts/dispatcher.md)`.
+  phpdoc handles the rewrite. `scripts/check-internal-links.php`
+  validates the rendered output.
+- **Guide → API:** write the **sentinel HTTPS URL** (see below).
+- **Anything else:** disallowed; the CI gate fails the build with a
+  `could not be resolved` message pointing at the offending file.
+
+Phase 10's guide → API mechanism uses a **sentinel HTTPS URL +
+post-build rewrite** because relative `.html` and inline raw `<a>`
+both fail:
 
 **Authoring convention.** API cross-links use the reserved sentinel
 host `https://api.phpbotgram.local/` followed by the rendered API
@@ -298,6 +315,12 @@ prose, not Monolog-prefixed. Observed substrings on a failing build:
   `logger->warning(...)`)
 - `No parent found for file` (emitted when an `index.md` is missing
   from a directory)
+- `Document with name` (emitted by `DocReferenceResolver` for an
+  in-narrative `.md` link whose target doesn't exist)
+- `Failed to ` (catastrophic builder/template/diagram failures —
+  always implementer error, never authoring)
+- `We do not support plain HTML` (raw inline HTML in Markdown — would
+  silently strip `<a>` tags the author intended; surface it loudly)
 
 Monolog level keywords (` ERROR `, ` WARNING `, ` CRITICAL `) **do
 NOT** appear in default phpdoc output; the spec does not gate on them.
@@ -359,73 +382,205 @@ directories. Phase 10 migrates to **branch mode**.
 
 #### One-time setup (recorded explicitly in the Phase 10 implementation plan)
 
-**Required sequence** (out-of-order operations break the migration):
+**Required sequence** (out-of-order operations break the migration or
+create an extended broken-site window):
 
-1. **Bootstrap the orphan `gh-pages` branch** locally:
+1. **Bootstrap the orphan `gh-pages` branch with production root
+   files**, not a placeholder. peaceiris with `keep_files: true`
+   never overwrites top-level `gh-pages/index.html`, so this commit
+   becomes the permanent landing-page payload:
+
    ```bash
+   mkdir -p /tmp/phpbotgram-gh-pages-init && cd /tmp/phpbotgram-gh-pages-init
+
+   # Production gh-pages/index.html — JS redirect (see "Branch layout" below for the algorithm).
+   cat > index.html <<'HTML'
+   <!doctype html><html><head><meta charset="utf-8"><title>phpbotgram</title></head>
+   <body><script>
+   fetch('versions.json', {cache: 'no-store'}).then(r => r.json()).then(data => {
+     const stable = (data.versions || []).find(v => v.stable);
+     const pick = stable || (data.versions || []).find(v => v.id === 'dev')
+                         || (data.versions || [])[0];
+     if (pick) location.replace(pick.path);
+     else document.body.textContent = 'No versions published yet.';
+   }).catch(() => document.body.textContent = 'Failed to load versions.json.');
+   </script><noscript>This site requires JavaScript to pick a docs version.</noscript></body></html>
+   HTML
+
+   # Initial versions.json — empty until the first workflow run appends `dev`.
+   cat > versions.json <<'JSON'
+   {"versions": []}
+   JSON
+
+   # Initial languages.json — only `en` for now; future RU will append.
+   cat > languages.json <<'JSON'
+   {"languages": [{"id": "en", "label": "English"}]}
+   JSON
+
+   cd /Users/gruven/repository/github/phpbotgram
    git checkout --orphan gh-pages
    git rm -rf .
-   echo '<html><body>bootstrap</body></html>' > index.html
-   git add index.html && git commit -m "Init gh-pages"
+   cp /tmp/phpbotgram-gh-pages-init/{index.html,versions.json,languages.json} .
+   git add index.html versions.json languages.json
+   git commit -m "Bootstrap gh-pages with JS redirect + empty versions/languages inventories"
    git push origin gh-pages
    git checkout master
    ```
-   `peaceiris/actions-gh-pages@v4` with `keep_files: true` requires
-   the branch to exist; without bootstrap the first workflow run
-   fails.
-2. **Flip the repo Pages source via the GitHub UI**: settings → Pages
-   → "Source" from "GitHub Actions" to "Deploy from a branch", branch
-   `gh-pages`, folder `/`. GitHub explicitly warns about brief
-   downtime during this flip; the Phase 10 plan acknowledges it.
-3. **Merge the Phase 10 PR**, which contains:
+
+   The first peaceiris run (step 3 below) will publish `/en/dev/`
+   alongside this root content; the JS redirect resolves to `/en/dev/`
+   because `versions.json` will then contain an entry with `id: dev`.
+2. **Merge the Phase 10 PR**, which contains:
    - The reworked `docs.yml` (see below).
    - The new `docs-release.yml`.
    - `scripts/build-docs.sh` plus the gate scripts.
    - The `.phpdoc/template/` overrides.
-4. **Smoke test:** after the first `master` push post-merge, verify
-   `https://gruven.github.io/phpbotgram/en/dev/index.html` returns
-   `HTTP 200`. The smoke-test step is part of the implementation
-   plan's DoD verification (manual, one-time).
+   - Updated workflow that on its first `master` push run also calls
+     `scripts/update-versions-json.php` to add a `{"id":"dev",
+     "path":"en/dev/", "stable": false}` entry to the bootstrapped
+     `versions.json` (so the redirect picks it up immediately).
+3. **Verify** `git ls-tree origin/gh-pages -r --name-only` lists
+   `en/dev/index.html` after the first `master` workflow run
+   completes.
+4. **Flip the repo Pages source via the GitHub UI**: settings → Pages
+   → "Source" from "GitHub Actions" to "Deploy from a branch", branch
+   `gh-pages`, folder `/`. By doing this AFTER `gh-pages` already
+   carries the production landing-page payload and at least one
+   `/en/dev/` version, the public site never serves the placeholder
+   string. GitHub may take seconds-to-minutes to reflect the new
+   source; brief Pages downtime during the flip is acknowledged.
+5. **Smoke test:** verify `https://gruven.github.io/phpbotgram/`
+   redirects to `/en/dev/index.html` (which returns `HTTP 200`). The
+   smoke-test step is part of the implementation plan's DoD
+   verification (manual, one-time).
+
+This order eliminates the "site shows literal `bootstrap` string"
+window that an obvious-but-wrong ordering would produce.
 
 #### `docs.yml` migration (Phase 9 → Phase 10)
 
-Concrete edits to `.github/workflows/docs.yml`:
+The Phase 9 workflow has **two jobs** — `build` (composer install +
+phpdoc + `actions/upload-pages-artifact@v3`) and `deploy` (`needs:
+build` + `environment: github-pages` + `actions/deploy-pages@v4`).
+
+Phase 10 **collapses these into a single `build` job** with peaceiris
+as the final step. The `deploy` job and the artifact upload/download
+disappear. This is the cleaner of the two viable structures (the
+alternative — keep two jobs, pass `build/docs/api/` via
+`actions/upload-artifact` + `actions/download-artifact` — adds I/O
+overhead without any benefit since peaceiris commits directly to the
+branch).
+
+**Phase 9 fields preserved unchanged in the rewritten workflow:**
+
+- `name: API documentation`
+- `on: { push: { branches: [master] }, workflow_dispatch: {} }`
+- `runs-on: ubuntu-latest` on the (single) `build` job
+- `actions/checkout@v5` step
+- `shivammathur/setup-php@v2` step with
+  `php-version: "8.5"`, `extensions: mbstring, sodium, json`,
+  `tools: composer:v2`, `coverage: none`
+- `actions/cache@v4` step caching `vendor/` keyed on `composer.lock`
+- `composer install --no-interaction --no-progress --prefer-dist`
+- `composer docs-api` (whose internals are rewritten per
+  §"CI gate strategy" but the workflow line stays the same)
+
+**Phase 9 fields modified or removed:**
 
 | Field | Phase 9 value | Phase 10 value |
 | --- | --- | --- |
-| `permissions.contents` | `read` | `write` (needed to push gh-pages) |
+| `permissions.contents` | `read` | `write` (peaceiris pushes gh-pages) |
 | `permissions.pages` | `write` | **remove** (branch mode doesn't use Pages API) |
 | `permissions.id-token` | `write` | **remove** (no OIDC token needed) |
-| `environment.name` | `github-pages` | **remove the whole `environment` block** |
+| `environment` block | `name: github-pages` + `url: …page_url` | **remove the entire block** |
 | `concurrency.group` | `pages` | `pages-write` |
-| `concurrency.cancel-in-progress` | `true` | `false` (queue, don't cancel — see below) |
-| Deploy steps | `actions/upload-pages-artifact@v3` + `actions/deploy-pages@v4` | **remove both**; replace with `peaceiris/actions-gh-pages@v4` (verified current major as of audit date 2026-05) with `publish_branch: gh-pages`, `publish_dir: build/docs/api`, `destination_dir: en/dev`, `keep_files: true` |
+| `concurrency.cancel-in-progress` | `true` | `false` (queue, don't cancel) |
+| `actions/upload-pages-artifact@v3` step | present | **remove** |
+| `deploy` job (entire job) | present (`needs: build`) | **remove the entire job** |
+| `actions/deploy-pages@v4` step | present in `deploy` | **remove** (lives in the deleted job) |
 
-`peaceiris/actions-gh-pages@v4` auto-picks up `GITHUB_TOKEN`; no
-explicit token wiring needed. With `keep_files: true`, files inside
+**Phase 10 fields added to the single `build` job:**
+
+- A final step using `peaceiris/actions-gh-pages@v4` (current major,
+  verified 2026-05) with these inputs:
+  - `publish_branch: gh-pages`
+  - `publish_dir: build/docs/api`
+  - `destination_dir: en/dev`
+  - `keep_files: true`
+  - `commit_message: "publish ${{ github.sha }} → en/dev"` (so
+    `gh-pages` history is greppable)
+  - No explicit `github_token:` — the action auto-picks up
+    `GITHUB_TOKEN` exposed in `permissions.contents: write`.
+- A step *before* peaceiris that runs
+  `scripts/update-versions-json.php gh-pages-worktree/versions.json
+  --upsert id=dev path=en/dev/ label="dev (master)" stable=false`,
+  staging the updated `versions.json` into the same scratch dir
+  peaceiris will publish. (See §"`docs-release.yml`" for the same
+  pattern for tag publishes.)
+
+`peaceiris/actions-gh-pages@v4` with `keep_files: true`: files inside
 `destination_dir` that the new build also produces are **overwritten**;
-files in *other* directories (different versions) are preserved.
+files inside `destination_dir` that the new build no longer produces
+are **kept** (i.e. stale dead files accumulate if `build/docs/api/`
+content shrinks between runs — acceptable trade-off, not blocking).
+Files in *other* directories (different versions or top-level root)
+are preserved unconditionally.
 
 #### `docs-release.yml` (new)
 
-Triggered on `push: tags: 'v*.*.*'`. Same build pipeline, then three
-serialised peaceiris invocations:
+Triggered on `push: tags: 'v*.*.*'`. Same build pipeline as
+`docs.yml`, then a sequence of steps that handles versions.json
+atomically:
 
-1. Publish `build/docs/api/` → `gh-pages/en/<tag>/` (keep_files: true).
-2. Publish `build/docs/api/` → `gh-pages/en/latest/` (keep_files: true).
-3. Run `scripts/update-versions-json.php` on a fresh `gh-pages`
-   checkout, then publish the modified `versions.json` only (via a
-   fourth peaceiris invocation with `publish_dir` pointing at a
-   single-file scratch directory and `destination_dir: ''`,
-   keep_files: true). This keeps all gh-pages writes routed through
-   the same action, all serialised behind the shared concurrency
-   group.
+1. **Materialise the `gh-pages` worktree** via a second
+   `actions/checkout@v5` step:
+   ```yaml
+   - name: Checkout gh-pages
+     uses: actions/checkout@v5
+     with:
+       ref: gh-pages
+       path: gh-pages-worktree
+   ```
+   This gives the workflow a read-write filesystem view of the
+   current `gh-pages` tip.
+2. **Update `versions.json`** in the worktree:
+   ```bash
+   php scripts/update-versions-json.php \
+     gh-pages-worktree/versions.json \
+     --upsert id="${GITHUB_REF_NAME}" \
+              path="en/${GITHUB_REF_NAME}/" \
+              label="${GITHUB_REF_NAME} (latest)" \
+              stable=true
+   ```
+   The contract (see below) dedups by `id` and flips prior entries
+   to `stable: false`.
+3. **Publish three things via three peaceiris invocations**, all
+   serialised behind the shared `concurrency.group: pages-write`:
+   - `build/docs/api/` → `gh-pages/en/<tag>/` (`keep_files: true`).
+   - `build/docs/api/` → `gh-pages/en/latest/` (`keep_files: true`).
+   - Just the freshly-edited `versions.json` → `gh-pages/`
+     (`publish_dir: gh-pages-worktree`, `destination_dir: ''`,
+     `keep_files: true`, but only with a path-allowlist via the
+     action's `exclude_assets` input — or simpler, copy ONLY
+     `versions.json` into a fresh scratch dir and publish that dir).
 
-Race analysis: step 3 reads `gh-pages` after step 2's push has
-completed (peaceiris waits for its own push). A concurrent `master`
-push touching `en/dev/` cannot collide with `versions.json` since
-they are different paths and the shared concurrency group queues
-both workflows anyway.
+All four peaceiris invocations use:
+
+- `commit_message: "release ${{ github.ref_name }}: en/<tag>/"` (and
+  similar per step for grep-friendliness).
+- No explicit `github_token`.
+
+Race analysis: the `gh-pages` worktree captured in step 1 is a
+snapshot. If a concurrent `docs.yml` master-push run modifies
+`versions.json` between step 1 and step 3's third invocation, the
+release run's `versions.json` write will succeed but lose the
+master-push entry. **The shared `concurrency.group: pages-write`
+with `cancel-in-progress: false` serialises both workflows at the
+workflow level**, so this race cannot happen unless GitHub silently
+drops the queue ordering. peaceiris does not auto-rebase on push
+conflict (verified at the action's source); if a manual rerun
+out-of-order produces a push conflict, the failing workflow must
+be re-run by hand.
 
 #### Concurrency
 
@@ -496,14 +651,30 @@ This redirect works before `v0.1.0`: visitors are redirected to
 
 `scripts/update-versions-json.php` contract:
 
-1. Load existing `gh-pages/versions.json` (or initialise if missing).
-2. **Flip `stable: false` on every existing entry.**
-3. Append the new entry as the first array element with `stable:
-   true`.
-4. Write atomically (write-to-temp + rename).
+CLI: `php scripts/update-versions-json.php <path-to-versions.json>
+--upsert id=<id> path=<path> label=<label> stable=<true|false>`.
 
-This guarantees the redirect on `gh-pages/index.html` always points
-at the newest stable version, not the first-ever published one.
+Algorithm:
+
+1. Load existing JSON (or initialise to `{"versions": []}` if
+   missing/empty).
+2. **Dedup:** remove any existing entry whose `id` equals the new
+   one (handles tag force-push / re-publish without producing
+   duplicate dropdown rows).
+3. **Stable flag handling:**
+   - If new entry's `stable` is `true`: flip every other entry's
+     `stable` to `false`.
+   - If new entry's `stable` is `false` (e.g. dev push): leave
+     other entries' flags alone (don't unflip a real release).
+4. **Insertion order:** insert the new entry as the first array
+   element so the dropdown lists newest-on-top.
+5. Write atomically (write-to-temp + rename) to the same path.
+
+This guarantees: (a) the redirect on `gh-pages/index.html` always
+points at the newest stable version (when one exists); (b) force-
+pushing a tag doesn't produce a phantom duplicate row in the
+switcher; (c) the `dev` entry is appended on the first master push
+post-bootstrap without poisoning any later `stable: true` flags.
 
 `languages.json` schema:
 
@@ -543,24 +714,38 @@ The switcher partial:
 - Renders two `<select>` elements in the navbar.
 - Inline-`<script>` fetches `versions.json` and `languages.json` at
   page load.
-- **Path resolution avoids leading-slash absolute URLs.** Instead of
-  `fetch('/versions.json')` (which 404s on user-pages — see above),
-  the partial fetches via a path computed from `document.baseURI`:
+- **Path resolution is language-agnostic.** A leading-slash absolute
+  URL (`fetch('/versions.json')`) would 404 on user-pages because it
+  resolves to `https://gruven.github.io/versions.json` (owner root,
+  not project root). The partial computes the repo root by stripping
+  exactly two trailing path segments from `document.baseURI` —
+  phpDocumentor's `<base href>` always resolves to
+  `<repo-root>/<lang>/<version>/<page-dir>/`, so stripping
+  `<page-dir>` and `<version>` lands on the language root, and one
+  more strip lands on the repo root. This holds for any language
+  code (`en`, `ru`, future others) without re-tuning the algorithm:
 
   ```js
-  // base is e.g. https://gruven.github.io/phpbotgram/en/dev/guide/concepts/
-  // We want      https://gruven.github.io/phpbotgram/versions.json
-  // i.e. ../../../../versions.json from this page, but easier: walk up
-  // from baseURI until we find a segment matching /en/.
+  // document.baseURI for guide/concepts/test.html with <base href="../../">
+  // resolves to https://gruven.github.io/phpbotgram/en/dev/
+  // After stripping the last two segments we land on /phpbotgram/.
   const base = new URL(document.baseURI);
-  const parts = base.pathname.split('/').filter(Boolean);
-  const enIdx = parts.indexOf('en');
-  const repoRoot = base.origin + '/' + (enIdx > 0 ? parts.slice(0, enIdx).join('/') + '/' : '');
-  fetch(repoRoot + 'versions.json').then(r => r.json()).then(...);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');  // strip /<version>/
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');       // strip /<lang>/
+  // For project-as-root deployments (no /phpbotgram/ subpath),
+  // repoRoot is '/'. For subpath deployments it's '/phpbotgram/'.
+  const repoRootUrl = base.origin + repoRoot;
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(([versions, languages]) => /* populate selects */);
   ```
 
+  The algorithm is language-name-blind, so adding RU later requires
+  zero switcher-code changes.
+
 - Populates options, marks the current selection, disables
-  unavailable cross-products (e.g. ru/v0.1.0/ before RU is
+  unavailable cross-products (e.g. `ru/v0.1.0/` before RU is
   translated).
 
 **Maintenance burden:** on each phpDocumentor major bump, diff
@@ -679,11 +864,12 @@ docs/guide/
       code-snippets/                  # *.php fragments, included into .md
 ```
 
-**Page count (honest):** 5 tutorial + 19 how-to + 15 concepts + 4
-Diataxis index pages + top-level landing + changelog + contributing +
-reference-stub = **45 pages**. Plus a `.gitkeep` placeholder in
-`migration/` (phpDocumentor scans the directory but emits nothing
-from a hidden file — verified harmless on a real build).
+**Page count (honest):** 5 tutorial pages + 19 how-to pages + 15
+concept pages + 4 Diataxis index pages (one of which is the
+reference-stub) + top-level landing + changelog + contributing =
+**46 pages**. Plus a `.gitkeep` placeholder in `migration/`
+(phpDocumentor scans the directory but emits nothing from a hidden
+file — verified harmless on a real build).
 
 **`docs/guide/en/changelog.md` and `docs/guide/en/contributing.md`:**
 Markdown has no `include::` directive. `scripts/copy-root-docs.php`
@@ -702,9 +888,10 @@ and copies the project-root `CHANGELOG.md` and `CONTRIBUTING.md` into
 
 Phase 10 scope also includes:
 
-- Adding two explicit `.gitignore` lines (anchored with leading `/`
+- Adding three explicit `.gitignore` lines (anchored with leading `/`
   to the repo root):
   ```
+  /phpdoc.dist.xml
   /docs/guide/en/changelog.md
   /docs/guide/en/contributing.md
   ```
@@ -894,9 +1081,10 @@ have changed between phpdoc point releases.
 
 ## Definition of done
 
-- `docs/guide/en/` populated per the content tree (5 + 19 + 15 + 4
-  index + landing + changelog + contributing + reference-stub = **45
-  pages**, plus a `migration/.gitkeep`).
+- `docs/guide/en/` populated per the content tree (5 tutorial + 19
+  how-to + 15 concepts + 4 Diataxis index pages including
+  `reference/index.md` + top-level landing + `changelog.md` +
+  `contributing.md` = **46 pages**, plus a `migration/.gitkeep`).
 - `phpdoc.dist.xml.tpl` produces a single site combining narrative +
   API reference; sentinel cross-link strategy validates end-to-end
   (sentinel survives phpdoc rendering, rewrite produces correct
