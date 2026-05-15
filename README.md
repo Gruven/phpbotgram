@@ -1,5 +1,12 @@
 # phpbotgram
 
+[![PHP version](https://img.shields.io/badge/php-%5E8.5-777bb4.svg?logo=php)](https://www.php.net/releases/8.5/)
+[![PHPStan level](https://img.shields.io/badge/PHPStan-level%209-2563eb.svg)](https://phpstan.org/)
+[![Tests](https://img.shields.io/badge/tests-2109%20passing-3fb950.svg)](#testing)
+[![Coverage gate](https://img.shields.io/badge/coverage--gate-passing-3fb950.svg)](scripts/coverage-gate.php)
+[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![Upstream](https://img.shields.io/badge/aiogram-3.28-blueviolet.svg?logo=python)](https://github.com/aiogram/aiogram)
+
 A modern PHP 8.5 port of the [aiogram](https://github.com/aiogram/aiogram) Telegram Bot framework.
 
 `phpbotgram` keeps the layered architecture of the Python upstream — `Bot`,
@@ -7,6 +14,16 @@ A modern PHP 8.5 port of the [aiogram](https://github.com/aiogram/aiogram) Teleg
 coroutines for [amphp](https://amphp.org/) v3 fibers and uses native PHP 8.5
 features (readonly classes, asymmetric visibility, property hooks, attributes,
 native enums) throughout.
+
+## Links
+
+- **API documentation** — `make docs-api` regenerates the phpDocumentor
+  site under `build/docs/api/index.html`.
+- **Design spec** — [`docs/superpowers/specs/`](docs/superpowers/specs/).
+- **Implementation plan** — [`docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md`](docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md).
+- **Changelog** — [`CHANGELOG.md`](CHANGELOG.md).
+- **Deployment templates** — [`deploy/`](deploy/) (nginx, systemd, Docker compose).
+- **Runnable examples** — [`examples/`](examples/) (see table below).
 
 ## Requirements
 
@@ -229,15 +246,20 @@ src/
   Bot.php             Bot facade (codegen — regenerate via `make regenerate`)
   Client/             Bot defaults, Session, Serializer, HTTP transport
   Dispatcher/         Router cascade, observers, middleware chain
-  Filters/            Built-in filters + F-DSL
+  Enums/              Telegram-side enums (ParseMode, ChatType, …)
+  Exceptions/         TelegramAPIError hierarchy + transport exceptions
+  F.php               `const F` MagicFilter root for the F-DSL
+  Filters/            Built-in filters + F-DSL field wrappers
   Fsm/                Storage backends, Strategy, Scenes
   Methods/            Typed API method DTOs (codegen output)
   Types/              Telegram type DTOs (codegen output)
   Utils/              TextDecoration, Keyboard builders, WebApp, …
   Webhook/            amphp/http-server runner + IP filter
-tools/generator/      Phase 2 codegen producing Methods/ and Types/
+tools/generator/      Phase 2 codegen producing Methods/, Types/, Enums/
+scripts/              coverage-gate.php
 tests/                Mirrors src/ — unit + integration cases
 examples/             Runnable bots (see table above)
+deploy/               nginx / systemd / Docker compose templates
 docs/superpowers/     Specs + implementation plan
 ```
 

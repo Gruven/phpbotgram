@@ -1,18 +1,26 @@
 {
 	"name" : "gruven/phpbotgram",
+	"description" : "Modern PHP 8.5 port of the aiogram Telegram Bot framework. Fiber-based runtime, codegen-driven typed methods/types, FSM with scenes, webhook + long-polling.",
 	"type" : "library",
 	"license" : "MIT",
+	"keywords" : ["telegram", "bot", "telegram-bot", "aiogram", "amphp", "fsm", "scenes", "webhook"],
+	"homepage" : "https://github.com/Gruven/phpbotgram",
 	"authors" : [
 		{
 			"name" : "Gruven",
 			"email" : "igruven@gmail.com"
 		}
 	],
+	"support" : {
+		"issues" : "https://github.com/Gruven/phpbotgram/issues",
+		"source" : "https://github.com/Gruven/phpbotgram"
+	},
 	"require" : {
 		"php": "^8.5",
 		"php-64bit": "^8.5",
 		"ext-mbstring": "*",
 		"ext-json": "*",
+		"ext-sodium": "*",
 		"amphp/amp": "^3",
 		"amphp/byte-stream": "^2",
 		"amphp/http-client": "^5",
