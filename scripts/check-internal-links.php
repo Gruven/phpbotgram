@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Walks every *.html under <build>/guide/, validates every <a href> internal link:
+ * Walks <build>/index.html plus every *.html under <build>/guide/, validates
+ * every <a href> internal link:
  *
  *   - http://, https://, mailto: → skipped (out of scope).
  *   - Fragment-only (#…) → checked against the same page's id="…" attributes.
@@ -30,6 +31,11 @@ if (!is_dir($guideRoot)) {
 }
 
 $errors = [];
+
+$rootIndex = $buildRoot . '/index.html';
+if (is_file($rootIndex)) {
+  check_page($rootIndex, $buildRoot, $errors);
+}
 
 $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($guideRoot, RecursiveDirectoryIterator::SKIP_DOTS));
 foreach ($it as $file) {

@@ -88,6 +88,16 @@ final class CheckInternalLinksTest extends TestCase
     self::assertSame(0, $this->runScript());
   }
 
+  public function testFailsOnMissingRootLandingLink(): void
+  {
+    file_put_contents(
+      $this->apiRoot . '/index.html',
+      '<html><head><base href="./"></head><body><a href="guide/missing.html">missing</a></body></html>',
+    );
+
+    self::assertSame(1, $this->runScript());
+  }
+
   private function runScript(): int
   {
     $script = dirname(__DIR__, 2) . '/scripts/check-internal-links.php';
