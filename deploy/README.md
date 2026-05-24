@@ -1,6 +1,6 @@
 # Deployment configs
 
-Production-ready templates for the three common deployment shapes. Each file
+Production-ready templates for the common deployment shapes. Each file
 is a self-contained starting point — copy, edit the paths/tokens, and
 deploy.
 
@@ -9,6 +9,7 @@ deploy.
 | Path | Use when |
 | --- | --- |
 | `systemd/phpbotgram-polling.service` | Long-polling bot on a bare Linux host. Single process, restarts on failure, hardened with the standard systemd sandbox flags. |
+| `systemd/phpbotgram-webhook.service` | Webhook bot on a bare Linux host: runs the amphp/http-server listener on `127.0.0.1:8080`. Pair with the `nginx/` template below for TLS termination. Same sandbox as the polling unit; needs `composer require amphp/http-server` (a polling-only install does not pull it). |
 | `nginx/phpbotgram-webhook.conf` | Webhook bot behind nginx. TLS termination at the edge, Telegram CIDR allow-list, secret-token header forwarded to the framework's `SimpleRequestHandler`. |
 | `docker/Dockerfile` + `docker/compose.yaml` | Containerised bot for local development or Kubernetes. Multi-stage build produces a `php:8.5-cli-alpine` runtime carrying `src/`, `examples/`, and the full `vendor/` (including `amphp/http-server` for webhook mode). Trim to polling-only with a one-line `--no-dev` edit — see the inline comment in the Dockerfile. |
 
@@ -17,6 +18,11 @@ deploy.
 - `systemd/phpbotgram-polling.service` — `User`, `WorkingDirectory`,
   `EnvironmentFile`, `ExecStart`. The default points at
   `examples/echo_bot.php`; change to your own entrypoint.
+- `systemd/phpbotgram-webhook.service` — same fields as the polling unit
+  (`User`, `WorkingDirectory`, `EnvironmentFile`, `ExecStart`); the default
+  `ExecStart` runs `examples/echo_bot_webhook.php` on `127.0.0.1:8080`. Run
+  `composer require amphp/http-server` first — it is not in a polling-only
+  install.
 - `nginx/phpbotgram-webhook.conf` — `server_name`, TLS cert paths, upstream
   `127.0.0.1:8080` if you bind a different port, and the `allow` CIDRs if
   Telegram has rotated their ranges (check

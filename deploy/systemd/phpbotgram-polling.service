@@ -51,6 +51,10 @@ SystemCallArchitectures=native
 SystemCallFilter=@system-service
 SystemCallFilter=~@privileged @resources
 
+# NOTE: MemoryDenyWriteExecute=true is incompatible with PHP opcache JIT. If you
+# enable JIT, set opcache.jit_buffer_size=0 or comment the directive out, or the
+# runtime is killed at boot with SIGSYS. See deploy/README.md hardening notes.
+
 # Log to journald.
 StandardOutput=journal
 StandardError=journal

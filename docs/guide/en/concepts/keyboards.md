@@ -7,10 +7,12 @@ button limits and produce the typed `InlineKeyboardMarkup` /
 
 ## How it works
 
+### Builder base and subclasses
+
 [`KeyboardBuilder`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html)
 is the abstract base. It owns a two-dimensional `list<list<T>>` button
 grid and exposes `add(T ...$buttons)` (append to the current row),
-`row(T ...$buttons)` (start a new row), and `adjust(int ...$sizes)`
+`row(list<T> $buttons)` (start a new row), and `adjust(int ...$sizes)`
 (re-flow the linear button stream into rows of the given widths). The
 generic `T` is bound at the subclass level:
 [`InlineKeyboardBuilder`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html)
@@ -22,6 +24,8 @@ binds to
 The `@template T of object` PHPDoc tag keeps PHPStan honest across
 the abstract API.
 
+### Limits
+
 Limits are enforced at build time. `MAX_WIDTH`, `MIN_WIDTH`, and
 `MAX_BUTTONS` are class constants on each subclass —
 `InlineKeyboardBuilder::MAX_WIDTH` is 8 (Telegram's documented per-row
@@ -32,20 +36,73 @@ registration time, not in the wild. `adjust()` validates against
 (`adjust(0)`) surfaces immediately rather than producing a malformed
 markup that Telegram rejects later. The reply-keyboard limits are
 different from inline — reply keyboards permit more buttons per row
-(12) but fewer total buttons (300); the per-subclass constants
+(10) and more total buttons (300); the per-subclass constants
 encode each variant's actual limit.
 
-`asMarkup()` is the terminal call. Each subclass narrows the abstract
-return type — inline returns
-[`InlineKeyboardMarkup`](https://api.phpbotgram.local/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html),
-reply returns
-[`ReplyKeyboardMarkup`](https://api.phpbotgram.local/Gruven-PhpBotGram-Types-ReplyKeyboardMarkup.html).
-Both are codegen-output Telegram type DTOs ready to assign to a
-`SendMessage::$replyMarkup`. The builders are throwaway — call
+### Inline keyboard
+
+Build an inline keyboard with `InlineKeyboardBuilder`, then pass
+`asMarkup()` to `$event->answer(..., replyMarkup: ...)`:
+
+```php
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Utils\Keyboard\InlineKeyboardBuilder;
+
+$dispatcher->message->register(static function (Message $event): void {
+    $kb = new InlineKeyboardBuilder();
+    $kb->button(text: 'Option A', callbackData: 'choice:a');
+    $kb->button(text: 'Option B', callbackData: 'choice:b');
+    $kb->adjust(2);
+
+    $event->answer('Pick one:', replyMarkup: $kb->asMarkup())->emit();
+});
+```
+
+`button()` is the convenience factory: it constructs an
+`InlineKeyboardButton` from named parameters and calls `add()`.
+`adjust(2)` re-flows the buttons into rows of width 2. `asMarkup()`
+wraps the grid in an
+[`InlineKeyboardMarkup`](https://api.phpbotgram.local/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html)
+DTO ready for the API.
+
+### Reply keyboard
+
+`ReplyKeyboardBuilder` works the same way; `asMarkup()` accepts
+display options (`resizeKeyboard`, `oneTimeKeyboard`, …) and returns a
+[`ReplyKeyboardMarkup`](https://api.phpbotgram.local/Gruven-PhpBotGram-Types-ReplyKeyboardMarkup.html):
+
+```php
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Utils\Keyboard\ReplyKeyboardBuilder;
+
+$dispatcher->message->register(static function (Message $event): void {
+    $kb = new ReplyKeyboardBuilder();
+    $kb->button(text: 'Yes');
+    $kb->button(text: 'No');
+    $kb->button(text: 'Share contact', requestContact: true);
+    $kb->adjust(2);   // Yes / No on the first row, Share contact on the second
+
+    $markup = $kb->asMarkup(resizeKeyboard: true, oneTimeKeyboard: true);
+    $event->answer('Choose:', replyMarkup: $markup)->emit();
+});
+```
+
+Reply-specific button capabilities (`requestContact`, `requestLocation`,
+`requestPoll`, `requestUsers`, `requestChat`) are typed parameters on
+the `button()` factory, so the construction site reads
+`$kb->button(text: 'Share', requestContact: true)` — no separate
+builder method needed. The same typed-parameter pattern applies to
+`InlineKeyboardButton` fields (`url`, `callbackData`, `webApp`,
+`loginUrl`, …).
+
+### Terminal call and inspection
+
+`asMarkup()` is the terminal call. The builders are throwaway — call
 `asMarkup()` once when you're done and the resulting markup is
-immutable. The markup's `keyboard` property is a fresh deep copy of
-the builder's grid, so further mutation on the builder doesn't leak
-into the produced markup.
+immutable. The markup's button-grid property (`inlineKeyboard` for
+inline keyboards, `keyboard` for reply) is a fresh deep copy of the
+builder's grid, so further mutation on the builder doesn't leak into
+the produced markup.
 
 `buttons()` returns a flat `Generator<int, T>` over every cell in the
 grid; `export()` returns a deep-copy of the grid as `list<list<T>>`.
@@ -54,14 +111,6 @@ button overflow 64 bytes?); the export is useful for tests that
 want a stable assertion target. Both expose the grid without
 preserving the builder reference, so they're safe to hand to a
 consumer that might mutate.
-
-The `ReplyKeyboardBuilder` adds reply-specific button types via
-the `KeyboardButton` constructor — `requestContact`, `requestLocation`,
-`requestPoll`, `requestUsers`, `requestChat`. Each is a typed
-parameter on `KeyboardButton`, not a separate builder method, so the
-construction site reads `new KeyboardButton(text: 'Share', requestContact: true)`.
-The same pattern applies to `InlineKeyboardButton`'s typed
-parameters (`url`, `callbackData`, `webApp`, `loginUrl`, …).
 
 ## Trade-offs
 

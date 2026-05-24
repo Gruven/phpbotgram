@@ -9,19 +9,29 @@ host.
 
 ## Solution
 
+### Redis
+
 ```php
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
-use Gruven\PhpBotGram\Fsm\Storage\MongoStorage;
 use Gruven\PhpBotGram\Fsm\Storage\RedisStorage;
 
-// Redis — TTL applies to state and data separately.
+// TTL applies to state and data separately.
 $storage = RedisStorage::fromUrl(
     url: 'redis://localhost:6379/0',
     stateTtl: 3600,
     dataTtl: 7200,
 );
 
-// MongoDB — one document per FSM context.
+$dispatcher = new Dispatcher(storage: $storage);
+```
+
+### MongoDB
+
+```php
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Fsm\Storage\MongoStorage;
+
+// One document per FSM context.
 $storage = MongoStorage::fromUrl(
     url: 'mongodb://localhost:27017',
     database: 'phpbotgram_fsm',
@@ -33,6 +43,7 @@ $dispatcher = new Dispatcher(storage: $storage);
 
 [`RedisStorage`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Storage-RedisStorage.html)
 serialises state as plain Redis strings and data payloads as JSON.
+
 [`MongoStorage`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Storage-MongoStorage.html)
 stores a single document per FSM context with `state` and `data`
 fields; its `updateData` uses atomic `$set` so concurrent writes don't

@@ -6,19 +6,105 @@ in one update and remember the answer when the next update arrives.
 
 ## How it works
 
+### Declaring states
+
+State names are declared as `public static State` properties on a
+[`StatesGroup`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-StatesGroup.html)
+subclass. The class is passive at definition time; call `bootstrap()`
+(or rely on `bootstrapIfNeeded()`, which `StateFilter` calls automatically)
+to let the framework discover the properties via reflection and wire
+their qualified names.
+
+```php
+use Gruven\PhpBotGram\Fsm\State;
+use Gruven\PhpBotGram\Fsm\StatesGroup;
+
+class Form extends StatesGroup
+{
+    public static State $name;
+    public static State $age;
+}
+Form::bootstrap();
+```
+
+After bootstrap, `Form::$name->state()` resolves to `'Form:name'` and
+`Form::$age->state()` to `'Form:age'`. A typo in a property name
+surfaces as a class-resolution or reflection error — not a silent
+string mismatch at runtime.
+
+Nested groups are declared via the `CHILDREN` class constant:
+`public const array CHILDREN = [SubGroup::class]`. The parent group's
+`bootstrap()` call recurses into all children automatically.
+
+### Reading and writing state via FsmContext
+
 [`FsmContext`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-FsmContext.html)
 is the per-request handle a handler receives. It carries a
 [`StorageKey`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Storage-StorageKey.html)
 (the address: bot + chat + user + optional thread)
 and a [`BaseStorage`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Storage-BaseStorage.html)
 reference, and exposes `setState`, `getState`, `setData`, `getData`,
-`updateData`, `clearData`, `clearState` — sync-style methods that
+`updateData`, `getValue`, `clear` — sync-style methods that
 delegate to the storage. Storage backends may suspend internally on
 Redis or Mongo I/O, but the public surface returns concrete values,
 never `Future`s. The handle is short-lived: it's constructed by
 `FsmContextMiddleware` from the resolved address and the dispatcher's
 storage reference at the start of each dispatch, and discarded when
 the handler returns.
+
+A typical multi-step form reads and writes state like this (adapted
+from `examples/finite_state_machine.php`):
+
+```php
+use Gruven\PhpBotGram\Filters\Command;
+use Gruven\PhpBotGram\Filters\StateFilter;
+use Gruven\PhpBotGram\Fsm\FsmContext;
+use Gruven\PhpBotGram\Fsm\State;
+use Gruven\PhpBotGram\Fsm\StatesGroup;
+use Gruven\PhpBotGram\Types\Message;
+
+class Form extends StatesGroup
+{
+    public static State $name;
+    public static State $age;
+}
+Form::bootstrap();
+
+// /start — enter the form by setting the initial state.
+$dispatcher->message->register(
+    static function (Message $event, FsmContext $state): void {
+        $state->setState(Form::$name);
+        $event->answer("What's your name?")->emit();
+    },
+    filters: [new Command('start')],
+);
+
+// Collect name — only fires when state === Form:name.
+$dispatcher->message->register(
+    static function (Message $event, FsmContext $state): void {
+        $state->updateData(['name' => $event->text ?? '']);
+        $state->setState(Form::$age);
+        $event->answer("How old are you?")->emit();
+    },
+    filters: [new StateFilter(Form::$name)],
+);
+```
+
+`updateData` merges new keys into the existing payload without wiping
+previously stored keys. Use `setData` when you want to replace the
+payload entirely. Pass `null` to `setState` to clear the state and
+end the flow.
+
+### Gating handlers with StateFilter
+
+[`StateFilter`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-StateFilter.html)
+accepts a `State` instance, a raw string, or the wildcard `'*'`.
+[`FsmContextMiddleware`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-FsmContextMiddleware.html)
+wires automatically when the dispatcher is constructed without
+`disableFsm: true`, so every handler can declare `function (Message
+$event, FsmContext $state)` to receive a ready-to-use context.
+
+### Choosing a storage backend and strategy
 
 The address shape is driven by
 [`FsmStrategy`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-FsmStrategy.html).
@@ -47,19 +133,29 @@ Mongo backends each ship with their own
 adapter so the `StorageKey` triple becomes a backend-appropriate
 identifier (a Redis key prefix vs. a Mongo document `_id`).
 
-State predicates use the [`StateFilter`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-StateFilter.html).
-A handler registered with
-`filters: [new StateFilter(MyStates::WaitingForName)]` runs only
-when the user's current state matches.
-[`State`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-State.html)
-and [`StatesGroup`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-StatesGroup.html)
-classes give you compile-checked state references — a typo in a
-state name surfaces as a class-resolution error, not silent
-mismatch.
-[`FsmContextMiddleware`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-FsmContextMiddleware.html)
-wires automatically when the dispatcher is constructed without
-`disableFsm: true`, so every handler can declare `function (Message
-$event, FsmContext $state)` to receive a ready-to-use context.
+Swap to Redis by passing `storage` and optionally `fsmStrategy` to
+the `Dispatcher` constructor:
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\PollingOptions;
+use Gruven\PhpBotGram\Fsm\FsmStrategy;
+use Gruven\PhpBotGram\Fsm\Storage\RedisStorage;
+
+$bot = new Bot(getenv('BOT_TOKEN'));
+$storage = RedisStorage::fromUrl('redis://localhost:6379');
+$dispatcher = new Dispatcher(
+    storage: $storage,
+    fsmStrategy: FsmStrategy::UserInChat,
+);
+$dispatcher->runPolling(new PollingOptions(), $bot);
+```
+
+`RedisStorage::fromUrl` accepts any URI accepted by
+`Amp\Redis\RedisConfig::fromUri` (`redis://`, `tcp://`, `unix://`).
+
+### Event isolation
 
 Event isolation prevents the FSM from racing against itself when
 two updates for the same key arrive concurrently.

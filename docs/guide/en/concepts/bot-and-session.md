@@ -5,6 +5,8 @@ the HTTP transport that turns a typed method DTO into a wire call.
 
 ## How it works
 
+### Constructing a Bot and making calls
+
 [`Bot`](https://api.phpbotgram.local/Gruven-PhpBotGram-Bot.html) is a
 codegen-produced facade with one typed method per Telegram Bot API
 endpoint (`sendMessage`, `getChat`, `editMessageText`, … plus the
@@ -16,6 +18,59 @@ DTO carries no I/O logic — it is a pure value object with a
 during `make regenerate` and writes both the `Bot.php` facade and the
 `Methods/*.php` shape classes, so a Bot API schema bump is one
 regenerate cycle away from a typed PHP surface.
+
+The simplest usage is constructing a `Bot` from a token and handing it
+to a `Dispatcher`:
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\PollingOptions;
+use Gruven\PhpBotGram\Types\Message;
+
+$bot = new Bot(getenv('BOT_TOKEN') ?: '123:abc');
+$dispatcher = new Dispatcher();
+
+$dispatcher->message->register(static function (Message $event): void {
+    $text = $event->text ?? '';
+    if ($text === '') {
+        return;
+    }
+    $event->answer($text)->emit();
+});
+
+$dispatcher->runPolling(new PollingOptions(), $bot);
+```
+
+When you need raw access without a dispatcher — for scripts, probes, or
+migrations — call `$bot(new MethodDTO(...))` directly:
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Methods\GetUpdates;
+use Gruven\PhpBotGram\Methods\SendMessage;
+
+$bot = new Bot(getenv('BOT_TOKEN') ?: '123:abc');
+$offset = null;
+
+while (true) {
+    $updates = $bot(new GetUpdates(offset: $offset, timeout: 10));
+
+    foreach ($updates as $update) {
+        $offset = $update->updateId + 1;
+        $message = $update->message;
+        if ($message === null || $message->text === null) {
+            continue;
+        }
+        $bot(new SendMessage(
+            chatId: $message->chat->id,
+            text: "You said: {$message->text}",
+        ));
+    }
+}
+```
+
+### The session layer
 
 The default session is
 [`AmphpSession`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-Session-AmphpSession.html),
@@ -30,7 +85,9 @@ amphp implementation only contributes the actual HTTP call —
 constructor accepts a custom session by argument, so testing
 substitutes a recording session and production sites with a local
 Bot API server can point at a self-hosted host through
-`TelegramApiServer::local()`.
+`TelegramApiServer::fromBase('http://localhost:8081', isLocal: true)`.
+
+### The `$event->answer(...)` shortcut
 
 The `Bot::setCurrent` FiberLocal is what makes `$message->answer($text)`
 work without the caller threading a `$bot` parameter through every
@@ -40,17 +97,47 @@ leaves a stale binding. Nested `TelegramObject`s also carry an explicit
 `?Bot $bot` constructor parameter — the serializer threads the bot when
 hydrating the `Update`, so shortcuts on nested types (e.g.
 `CallbackQuery::message->answer(...)`) work without a global lookup.
+
 Revolt's `FiberLocal` is per-fiber storage; a per-update concurrent
 dispatch (`PollingOptions::$handleAsTasks > 0`) gets its own bound
 slot in its own fiber, so cross-bot contamination is structurally
 impossible.
 
+### Sharing a session across multiple bots
+
 Sessions are designed to be reusable. Multiple bots can share the same
 session — for example, a multi-tenant deployment hands one
 `AmphpSession` to every `Bot` so they pool the underlying
-`HttpClient`'s connection pool. Bots are not coupled to their session
-beyond the constructor handshake; calling `$bot->session` returns the
-attached instance and tests can swap it via reflection if necessary.
+`HttpClient`'s connection pool:
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\Session\AmphpSession;
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\PollingOptions;
+use Gruven\PhpBotGram\Types\Message;
+
+// Share one session — pools the HTTP connection across both tokens.
+$session = new AmphpSession();
+$bot1 = new Bot(getenv('BOT_TOKEN') ?: '111:aaa', $session);
+$bot2 = new Bot(getenv('BOT_TOKEN_2') ?: '222:bbb', $session);
+
+$dispatcher = new Dispatcher();
+
+$dispatcher->message->register(static function (Message $event, Bot $bot): void {
+    $tokenId = explode(':', $bot->token)[0];
+    $event->answer("Bot #{$tokenId} received: " . ($event->text ?? ''))->emit();
+});
+
+// runPolling accepts variadic bots; each gets its own polling fiber.
+$dispatcher->runPolling(new PollingOptions(), $bot1, $bot2);
+```
+
+Bots are not coupled to their session beyond the constructor handshake;
+calling `$bot->session` returns the attached instance and tests can
+swap it via reflection if necessary.
+
+### Shortcut generation
 
 The shortcut layer is generated alongside the facade. Codegen reads
 the Bot API schema's response types and emits `Message::answer`,
@@ -70,9 +157,9 @@ each response walks the typed `ReturnsType` to hydrate the result. This
 costs one `ReflectionClass` per shape per request but trades the
 runtime cost for codegen simplicity — Phase 2's generator produces the
 Methods/Types tree without also having to emit per-method
-serializers. Hot paths are cached inside `Serializer::reflectMeta`,
-and the cache survives the request lifetime. For a typical bot the
-cache stabilises within the first dozen distinct shapes seen.
+serializers. The serializer reflects on every `dump`/`load` rather
+than caching type metadata; only the camelCase→snake_case name
+conversion is memoised (`Serializer::$camelToSnakeCache`).
 
 `BaseSession::__invoke` always runs the request through the middleware
 manager, even when the chain is empty. That single closure compose is

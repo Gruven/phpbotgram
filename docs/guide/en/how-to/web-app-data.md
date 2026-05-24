@@ -36,9 +36,9 @@ echo "Hello, {$parsed->user->firstName}";
 ```
 
 [`WebApp::safeParseInitData`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-WebApp-WebApp.html)
-runs the HMAC-SHA-256 check against the bot token and returns a
-typed
+runs the HMAC-SHA-256 check against the bot token and returns a typed
 [`WebAppInitData`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-WebApp-WebAppInitData.html).
+
 [`WebAppSignature::check`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-WebApp-WebAppSignature.html)
 verifies the `signature` field against the Telegram Ed25519 public
 key — pick this when the validating service doesn't have the bot

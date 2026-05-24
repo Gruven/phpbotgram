@@ -36,7 +36,9 @@ http_response_code(200);
 
 [`Dispatcher::feedWebhookUpdate`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Dispatcher.html)
 accepts a raw decoded array or an `Update` instance and runs the
-full dispatch chain. For the amphp-http path,
+full dispatch chain.
+
+For the amphp-http path,
 [`SimpleRequestHandler`](https://api.phpbotgram.local/Gruven-PhpBotGram-Webhook-SimpleRequestHandler.html)
 already wraps secret-token validation with `hash_equals`; replicate
 the comparison manually in non-amphp deployments.

@@ -6,6 +6,8 @@ apply per-handler behaviour (auth, throttling, chat actions, …).
 
 ## How it works
 
+### The Flag primitive
+
 [`Flag`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Flags-Flag.html)
 is a small readonly value object plus a PHP attribute. As an attribute
 it can be repeated on a method, function, or class, so a single handler
@@ -18,6 +20,38 @@ declarative (`#[Flag(...)]` on the method) and imperative
 `#[Attribute(...IS_REPEATABLE...)]` tagging is what makes "stack any
 number of flags" work; aiogram uses a `dict[str, Any]` because Python
 has no equivalent attribute mechanism.
+
+### Attaching flags at registration time
+
+Both the attribute style and the imperative (array) style are available.
+The imperative `flags:` argument is the simpler option for closures,
+where PHP attributes cannot be applied:
+
+```php
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\Flags\Flag;
+use Gruven\PhpBotGram\Types\Message;
+
+$dispatcher = new Dispatcher();
+
+// Imperative style: pass a flags array at registration time.
+$dispatcher->message->register(
+    static function (Message $event): void {
+        $event->answer('hello')->emit();
+    },
+    flags: ['chat_action' => 'upload_photo'],
+);
+
+// Attribute style: annotate the handler function with #[Flag].
+$dispatcher->message->register(
+    #[Flag('admin_only')]
+    static function (Message $event): void {
+        $event->answer('admin only')->emit();
+    },
+);
+```
+
+### Storage and lookup
 
 Attribute-driven flags are read via PHP reflection. Imperative flags
 are stored in a process-wide
@@ -41,17 +75,91 @@ the `HandlerObject` itself bakes the read into the dispatch hot path
 so a per-event lookup costs one `getFlag` call against a typically-small
 list.
 
+### Reading flags inside a middleware
+
+The handler's resolved flags are available in `$data['handler']->flags`
+(an `array<string, mixed>`) inside any inner middleware. A middleware
+that gates on `admin_only` would look like:
+
+```php
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\Event\HandlerObject;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
+
+final class AdminGateMiddleware extends BaseMiddleware
+{
+    public function __invoke(\Closure $handler, object $event, array $data): mixed
+    {
+        $handlerObj = $data['handler'] ?? null;
+        if (!$handlerObj instanceof HandlerObject) {
+            return $handler($event, $data);
+        }
+        $flag = $handlerObj->flags['admin_only'] ?? null;
+        if ($flag === true && !$this->isAdmin($event)) {
+            return null; // short-circuit — do not invoke the handler
+        }
+        return $handler($event, $data);
+    }
+
+    private function isAdmin(object $event): bool
+    {
+        // your admin-check logic here
+        return false;
+    }
+}
+
+$dispatcher = new Dispatcher();
+$dispatcher->message->innerMiddleware(new AdminGateMiddleware());
+```
+
+### Framework-shipped flag-aware utilities
+
 The framework ships two flag-aware utilities.
-`CallbackAnswerMiddleware` (in `Utils/CallbackAnswer/`) reads
-`#[Flag('callback_answer')]` and auto-acknowledges the callback query
-before the handler runs, with the parameters from the flag's value
-shaping the acknowledgement text. `ChatActionMiddleware` (in
-`Utils/ChatAction/`) reads `#[Flag('chat_action', 'typing')]` and
-sends a `chat_action` API call that loops in the background until the
-handler returns — visible to the user as the "typing..." indicator
-during long-running operations. Both follow the same pattern: read the
-flag, optionally do prep work, delegate to the handler, then run
-cleanup.
+`CallbackAnswerMiddleware` (in `Utils/CallbackAnswer/`) reads the
+`callback_answer` flag and auto-acknowledges the callback query before
+the handler runs, with the parameters from the flag's value shaping
+the acknowledgement text. `ChatActionMiddleware` (in
+`Utils/ChatAction/`) reads the `chat_action` flag and sends a
+`chat_action` API call that loops in the background until the handler
+returns — visible to the user as the "typing..." indicator during
+long-running operations. Both follow the same pattern: read the flag,
+optionally do prep work, delegate to the handler, then run cleanup.
+
+The `chat_action` flag supports several forms. Absent means default
+`'typing'`; a string overrides the action; `false` opts the handler
+out entirely:
+
+```php
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Utils\ChatAction\ChatActionMiddleware;
+
+$dispatcher = new Dispatcher();
+// Flag-aware middleware must be INNER — per-handler flags live on the
+// HandlerObject ($data['handler']), which only inner middleware can see.
+$dispatcher->message->innerMiddleware(new ChatActionMiddleware());
+
+// Default: typing indicator sent automatically.
+$dispatcher->message->register(static function (Message $event): void {
+    $event->answer('hello')->emit();
+});
+
+// Custom action for a slow photo handler.
+$dispatcher->message->register(
+    static function (Message $event): void {
+        $event->answer('photo coming')->emit();
+    },
+    flags: ['chat_action' => 'upload_photo'],
+);
+
+// Opt out entirely — no indicator for this handler.
+$dispatcher->message->register(
+    static function (Message $event): void {
+        $event->answer('instant')->emit();
+    },
+    flags: ['chat_action' => false],
+);
+```
 
 [`FlagGenerator`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Flags-FlagGenerator.html)
 is the helper that converts a flag list into a normalised form for

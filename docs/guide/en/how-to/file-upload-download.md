@@ -8,11 +8,12 @@ modes and exposes `downloadFile`/`download` for the reverse trip.
 
 ## Solution
 
+### Uploading files
+
 ```php
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Types\BufferedInputFile;
 use Gruven\PhpBotGram\Types\FsInputFile;
-use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Types\UrlInputFile;
 
 // Upload from disk.
@@ -26,6 +27,13 @@ $bot->sendDocument(
 
 // Upload from URL (Telegram fetches it).
 $bot->sendPhoto(chatId: $chatId, photo: new UrlInputFile('https://example.com/x.jpg'));
+```
+
+### Downloading files
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Types\Message;
 
 // Download what the user sent.
 $dispatcher->message->register(static function (Message $event, Bot $bot): void {

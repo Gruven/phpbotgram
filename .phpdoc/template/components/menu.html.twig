@@ -1,0 +1,72 @@
+{# phpbotgram template override.
+
+   phpDocumentor's Markdown guides have no `toctree` directive (it is
+   reStructuredText-only), so the sidebar menu is built by AutomaticMenuPass,
+   which orders entries alphabetically by FILE NAME. That scrambles our
+   intended reading order (e.g. "Architecture decisions" floats to the top of
+   Concepts; the How-to recipes sort by slug, not by intent group).
+
+   This override reorders the children of each guide section by an explicit
+   rank map (`guideOrder`, keyed by the rendered `entry.url` minus its #anchor).
+   Children with no rank fall back to 500 and keep their original, stable order
+   (PHP 8 sort is stable) — so numbered tutorial pages stay 01..05 and any new
+   page renders alphabetically until it is given a rank here.
+
+   Maintenance: when you add a Concepts/How-to page, give it a rank below. The
+   ranks leave gaps (10, 11, 20…) so pages can be slotted between siblings. #}
+{% if depth == 1 %}
+<h4 class="phpdocumentor-sidebar__root-namespace">
+    <a href="{{ entry.url }}" class="{{ destinationPath|trim('/', 'left') == entry.url ? '-active' }}">{{ entry.title | shortFQSEN }}</a>
+</h4>
+{% endif %}
+{% if entry.children.count > 0 %}
+    {% set guideOrder = {
+        'guide/concepts/bot-and-session.html': 10,
+        'guide/concepts/dispatcher.html': 11,
+        'guide/concepts/routers.html': 12,
+        'guide/concepts/middlewares.html': 13,
+        'guide/concepts/flags.html': 14,
+        'guide/concepts/filters.html': 20,
+        'guide/concepts/f-dsl.html': 21,
+        'guide/concepts/callback-data.html': 22,
+        'guide/concepts/fsm.html': 30,
+        'guide/concepts/scenes.html': 31,
+        'guide/concepts/webhook.html': 40,
+        'guide/concepts/keyboards.html': 41,
+        'guide/concepts/text-decoration.html': 42,
+        'guide/concepts/error-model.html': 50,
+        'guide/concepts/serialization.html': 51,
+        'guide/concepts/architecture-decisions.html': 60,
+        'guide/how-to/custom-filter.html': 110,
+        'guide/how-to/dependency-injection.html': 111,
+        'guide/how-to/scenes-wizard.html': 120,
+        'guide/how-to/deep-linking.html': 121,
+        'guide/how-to/chat-member-updated.html': 122,
+        'guide/how-to/redis-mongo-fsm.html': 130,
+        'guide/how-to/custom-storage.html': 131,
+        'guide/how-to/file-upload-download.html': 140,
+        'guide/how-to/media-group.html': 141,
+        'guide/how-to/chat-action-typing.html': 142,
+        'guide/how-to/telegram-stars-payment.html': 150,
+        'guide/how-to/web-app-data.html': 151,
+        'guide/how-to/webhook-without-amphp-server.html': 160,
+        'guide/how-to/multi-bot.html': 161,
+        'guide/how-to/rate-limiting.html': 162,
+        'guide/how-to/callback-answer.html': 163,
+        'guide/how-to/background-tasks.html': 164,
+        'guide/how-to/error-handling.html': 170,
+        'guide/how-to/testing-bots.html': 171,
+        'guide/how-to/i18n-payloads.html': 172
+    } %}
+    {% set orderedChildren = entry.children|sort((a, b) =>
+        (guideOrder[a.url|split('#')|first]|default(500)) - (guideOrder[b.url|split('#')|first]|default(500))
+    ) %}
+    <ul class="phpdocumentor-list">
+        {% for child in orderedChildren %}
+            <li>
+                <a href="{{ child.url }}" class="{{ destinationPath|trim('/', 'left') == child.url ? '-active' }}">{{ child.title | shortFQSEN }}</a>
+                {{ toc(child, 'components/menu.html.twig', maxDepth, depth) }}
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}

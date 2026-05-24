@@ -6,6 +6,8 @@ difference is where the `Update` comes from.
 
 ## How it works
 
+### Request handlers
+
 [`BaseRequestHandler`](https://api.phpbotgram.local/Gruven-PhpBotGram-Webhook-BaseRequestHandler.html)
 is the `amphp/http-server` request handler that owns the conversion
 from HTTP request to `feedWebhookUpdate`. The default behaviour reads
@@ -29,6 +31,48 @@ multi-tenant story. Both override the abstract `resolveBot()` hook on
 `BaseRequestHandler`; the rest of the request handling (body buffering,
 JSON decode, deadline race, response shape) lives in the base class.
 
+The minimal single-bot setup wires `SimpleRequestHandler` directly
+into `AmphpServer::run`, as shown in `examples/echo_bot_webhook.php`:
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Webhook\Server\AmphpServer;
+use Gruven\PhpBotGram\Webhook\SimpleRequestHandler;
+
+$bot = new Bot(getenv('BOT_TOKEN'));
+$dispatcher = new Dispatcher();
+
+$dispatcher->message->register(static function (Message $event): void {
+    $text = $event->text ?? '';
+    if ($text !== '') {
+        $event->answer($text)->emit();
+    }
+});
+
+$handler = new SimpleRequestHandler(
+    dispatcher: $dispatcher,
+    bot: $bot,
+);
+
+AmphpServer::run(
+    handler: $handler,
+    dispatcher: $dispatcher,
+    host: '127.0.0.1',
+    port: 8080,
+    path: '/webhook',
+);
+```
+
+`AmphpServer::run` wires `$dispatcher->emitStartup` / `emitShutdown`
+onto the server's `onStart` / `onStop` hooks, so the dispatcher
+lifecycle observers fire correctly. It returns the running
+`SocketHttpServer`; capture the return value if you need to stop it
+explicitly from another fiber.
+
+### 55-second deadline
+
 The 55-second deadline lives in `Dispatcher::feedWebhookUpdate`.
 Telegram closes the webhook connection at 60s; the 5s headroom lets
 the HTTP write-back land. When the dispatch finishes before the
@@ -43,6 +87,8 @@ against the dispatch task and a delay timer; the timer task is
 dispatch wins immediately) doesn't surface an "unhandled future"
 warning at GC time.
 
+### IP filtering
+
 [`IpFilter`](https://api.phpbotgram.local/Gruven-PhpBotGram-Webhook-IpFilter.html)
 is the CIDR-based IP allowlist for direct exposure (no reverse proxy
 in front). Telegram publishes its source ranges
@@ -53,6 +99,21 @@ allowlist, n=2 in the default config. For a deployment behind a
 reverse proxy (the recommended shape), the filter is unnecessary
 because the proxy already enforces network-level access control.
 
+Pass `IpFilter::default()` to `AmphpServer::run` to enable the filter
+in one call:
+
+```php
+use Gruven\PhpBotGram\Webhook\IpFilter;
+
+$filter = IpFilter::default();
+// $filter now accepts only Telegram's documented source ranges:
+// 149.154.160.0/20 and 91.108.4.0/22
+```
+
+Then pass it as `ipFilter: $filter` to `AmphpServer::run(...)`.
+
+### Integrating into an existing server
+
 [`Setup`](https://api.phpbotgram.local/Gruven-PhpBotGram-Webhook-Setup.html)
 wires the handler into an existing `amphp/http-server` (or any
 caller-owned server) and attaches the dispatcher's startup/shutdown
@@ -60,7 +121,27 @@ hooks to the server lifecycle. `Setup::register()` accepts a
 `callable(string, RequestHandler): void` instead of a concrete router
 type — `amphp/http-server-router` is not a project dependency, so we
 take any caller's route registration shape and forward through it.
-The
+
+```php
+use Amp\Http\Server\RequestHandler;
+use Gruven\PhpBotGram\Webhook\Setup;
+
+// $server is a caller-owned HttpServer (e.g. SocketHttpServer).
+// $handler is a SimpleRequestHandler or TokenBasedRequestHandler.
+// $dispatcher is your Dispatcher instance.
+Setup::register(
+    server: $server,
+    registerRoute: static function (string $path, RequestHandler $handler) use ($router): void {
+        $router->addRoute('POST', $path, $handler);
+    },
+    dispatcher: $dispatcher,
+    handler: $handler,
+    path: '/webhook',
+);
+```
+
+`Setup::register()` does **not** call `expose()` or `start()` — the
+caller retains full control of the server lifecycle. The
 [`AmphpServer`](https://api.phpbotgram.local/Gruven-PhpBotGram-Webhook-Server-AmphpServer.html)
 wrapper is the one-line "I just want a webhook server running" helper
 that constructs the server, binds the path, and joins on shutdown.

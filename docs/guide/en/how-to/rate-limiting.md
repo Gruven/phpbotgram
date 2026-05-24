@@ -9,11 +9,10 @@ with a `retry_after` payload. The framework's polling loop and the
 
 ## Solution
 
+### Configure the polling backoff
+
 ```php
 use Gruven\PhpBotGram\Dispatcher\PollingOptions;
-use Gruven\PhpBotGram\Exceptions\TelegramRetryAfter;
-use Gruven\PhpBotGram\Types\Message;
-use Gruven\PhpBotGram\Utils\Backoff;
 use Gruven\PhpBotGram\Utils\BackoffConfig;
 
 // Tune the long-poll retry budget (polling fibers).
@@ -25,6 +24,15 @@ $options = new PollingOptions(
         jitter: 0.5,
     ),
 );
+```
+
+### Retry inside a handler
+
+```php
+use Gruven\PhpBotGram\Exceptions\TelegramRetryAfter;
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Utils\Backoff;
+use Gruven\PhpBotGram\Utils\BackoffConfig;
 
 // Hand-rolled backoff inside a handler when Telegram answers 429.
 $backoff = new Backoff(new BackoffConfig());
@@ -46,8 +54,9 @@ $dispatcher->message->register(static function (Message $event) use ($backoff): 
 stages exponential delays from a
 [`BackoffConfig`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-BackoffConfig.html);
 `asleep()` suspends the current fiber for `currentDelay` seconds, then
-advances. The polling loop uses the same primitive for `getUpdates`
-retries via
+advances.
+
+The polling loop uses the same primitive for `getUpdates` retries via
 [`PollingOptions::$backoffConfig`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-PollingOptions.html).
 
 ## Pitfalls

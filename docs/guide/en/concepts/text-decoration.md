@@ -7,6 +7,8 @@ produce the wire string.
 
 ## How it works
 
+### Strategy and subclasses
+
 [`TextDecoration`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-Text-TextDecoration.html)
 is the abstract strategy. Concrete subclasses
 [`HtmlDecoration`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-Text-HtmlDecoration.html)
@@ -19,6 +21,41 @@ function (`quote`). The recursive emitter `applyEntity` dispatches on
 `bold()`, code goes to `code()`, and so on. Pass-through types
 (`Url`, `Mention`, `Hashtag`, `Email`, …) return the inner text
 unchanged because escaping would corrupt them.
+
+Both subclasses expose a singleton via `instance()` so you never need
+to construct them manually:
+
+```php
+use Gruven\PhpBotGram\Enums\MessageEntityType;
+use Gruven\PhpBotGram\Enums\ParseMode;
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Types\MessageEntity;
+use Gruven\PhpBotGram\Utils\Text\HtmlDecoration;
+
+$dispatcher->message->register(static function (Message $event): void {
+    $text = 'Hello world visit us';
+    $entities = [
+        new MessageEntity(type: MessageEntityType::Bold->value,   offset: 0, length: 5),
+        new MessageEntity(type: MessageEntityType::Italic->value,  offset: 6, length: 5),
+        new MessageEntity(
+            type: MessageEntityType::TextLink->value,
+            offset: 18,
+            length: 2,
+            url: 'https://example.com',
+        ),
+    ];
+
+    $wire = HtmlDecoration::instance()->unparse($text, $entities);
+    // $wire === '<b>Hello</b> <i>world</i> visit <a href="https://example.com">us</a>'
+
+    $event->answer($wire, parseMode: ParseMode::Html->value)->emit();
+});
+```
+
+Pass the result to `$event->answer(..., parseMode: ParseMode::Html->value)` or
+`ParseMode::MarkdownV2->value` to tell Telegram how to interpret the wire string.
+
+### unparse and UTF-16 offsets
 
 `unparse(string $text, ?list<MessageEntity> $entities)` is the top-level
 entry. It sorts the entities by offset, then walks them. Telegram's
@@ -41,6 +78,8 @@ to handle them. The recursive walk is a `Generator` that yields
 decorated segments in order; `unparse` joins them once at the top
 level.
 
+### quote — escaping plain text
+
 The `quote` method on each subclass is the escape function for the
 target dialect. `MarkdownDecoration::quote` escapes the Markdown V2
 special-character set defined by the Telegram Bot API
@@ -52,21 +91,41 @@ it to any text segment that is not already inside an entity emitter —
 `unparse` does this automatically for untagged gaps between entities,
 so user code rarely calls `quote` directly.
 
-Each subclass also exposes the per-entity emitters publicly via
-`unparse` and friends. A handler that wants to compose a Markdown V2
-message manually can build the wire string with
-[`MarkdownDecoration::quote`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-Text-MarkdownDecoration.html)
-for safe substitution and concatenate boldened pieces with the
-subclass's emitters. The framework's preferred path is to assemble
-the structured form (text + entities) and let `unparse` produce the
-wire string — but the lower-level seam exists for callers who need
-it.
+When you need to embed user-supplied text safely in a Markdown V2
+message without constructing `MessageEntity` objects, call `quote`
+yourself before concatenating:
+
+```php
+use Gruven\PhpBotGram\Enums\ParseMode;
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Utils\Text\MarkdownDecoration;
+
+$dispatcher->message->register(static function (Message $event): void {
+    $md = MarkdownDecoration::instance();
+
+    // quote() escapes special Markdown V2 characters in plain text.
+    $username = $event->fromUser?->username ?? 'stranger';
+    $safe = $md->quote("Hello, @{$username}! (your score: 100%)");
+
+    $event->answer($safe, parseMode: ParseMode::MarkdownV2->value)->emit();
+});
+```
+
+### Entity dispatch and extensibility
 
 The `MessageEntityType` enum drives the dispatch. Each Telegram
 entity type maps to a method on the decoration subclass. Adding a
 new entity type (which Telegram does occasionally) is a Phase 2
 codegen update plus two method overrides on each decoration
 subclass — small, mechanical work.
+
+The public surface is `unparse()` plus `quote()`; the per-entity
+emitters (`bold`, `italic`, …) stay `protected`. A handler that wants
+to compose a Markdown V2 message manually can escape user input with
+[`MarkdownDecoration::quote`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-Text-MarkdownDecoration.html)
+and concatenate it with its own markup. The framework's preferred path
+is to assemble the structured form (text + entities) and let `unparse`
+produce the wire string.
 
 ## Trade-offs
 

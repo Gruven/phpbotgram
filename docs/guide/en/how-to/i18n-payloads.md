@@ -46,10 +46,11 @@ $dispatcher->message->register(
 A locale filter that returns `['locale' => …, 'strings' => …]`
 injects both keys into every handler — see
 [`CallableObject`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Event-CallableObject.html)
-for the binding rules. Use `ext-intl`'s `IntlDateFormatter` and
-`MessageFormatter` for plural/format-correct strings, and `mbstring`
-(`mb_strtoupper`, `mb_substr`) when Latin-1 functions would mangle
-Unicode.
+for the binding rules.
+
+Use `ext-intl`'s `IntlDateFormatter` and `MessageFormatter` for
+plural/format-correct strings, and `mbstring` (`mb_strtoupper`,
+`mb_substr`) when Latin-1 functions would mangle Unicode.
 
 ## Pitfalls
 

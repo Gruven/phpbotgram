@@ -6,6 +6,8 @@ domain model and the dynamic-typed Bot API.
 
 ## How it works
 
+### Dump and load
+
 [`Serializer`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-Serializer.html)
 is reflection-driven. `Serializer::dump($object)` iterates the public
 properties of any
@@ -30,16 +32,75 @@ walks union types correctly via PHP's `ReflectionUnionType` — a
 parameter typed `Message|null` decodes the wire payload's expected
 shape and accepts the `null` case if the wire delivers a `null`.
 
+### Method DTOs and the ApiMethod / ReturnsType constants
+
+Every generated method class carries two constants that drive the
+serialization pipeline. `ApiMethod` is the wire-level Bot API method
+name; `ReturnsType` is either a `class-string<TelegramObject>`, a
+scalar type name (`'bool'`, `'int'`, `'string'`), or a composite
+sentinel (`'list:<inner>'`, `'union:<A>|<B>'`). The session reads
+both constants at call time so there is no per-method dispatch table.
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
+use Gruven\PhpBotGram\Methods\TelegramMethod;
+use Gruven\PhpBotGram\Types\Message;
+
+// Illustrative shape of a generated method DTO.
+// Real class lives at src/Methods/SendMessage.php.
+final class SendMessage extends TelegramMethod
+{
+    public const string ApiMethod = 'sendMessage';
+    public const string ReturnsType = Message::class;
+
+    public function __construct(
+        public readonly int|string $chatId,
+        public readonly string $text,
+        public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+        ?Bot $bot = null,
+    ) {
+        parent::__construct($bot);
+    }
+}
+```
+
+### Wire-name overrides
+
 Per-class wire-name overrides live in a class-level `WireNames`
 constant. Phase 2 codegen produces them when a Telegram field
 name doesn't camelCase cleanly to a valid PHP identifier — the
 upstream `from` reserved-word collision becomes `$fromUser` in PHP
 with `const WireNames = ['fromUser' => 'from']` driving the
-serializer mapping. The override mechanism keeps the default
-`camelToSnake` cheap and pushes special cases to the per-class
-metadata where they belong. The serializer reads the constant via
-reflection at class-load time; subsequent dumps/loads hit a cached
-copy.
+serializer mapping.
+
+The override mechanism keeps the default `camelToSnake` cheap and
+pushes special cases to the per-class metadata where they belong. The
+serializer reads the constant via reflection at class-load time;
+subsequent dumps/loads hit a cached copy. A concrete example from
+`src/Types/CallbackQuery.php`:
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Types\TelegramObject;
+use Gruven\PhpBotGram\Types\User;
+
+final class CallbackQuery extends TelegramObject
+{
+    /** @var array<string, string> */
+    public const array WireNames = ['fromUser' => 'from'];
+
+    public function __construct(
+        public readonly string $id,
+        public readonly User $fromUser,
+        ?Bot $bot = null,
+    ) {
+        parent::__construct($bot);
+    }
+}
+```
+
+### prepareValue / checkResponse round-trip
 
 [`BaseSession`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-Session-BaseSession.html)
 owns two adjacent hooks. `prepareValue` runs after `Serializer::dump`
@@ -52,6 +113,29 @@ matching `TelegramApiException` subclass on `ok: false`, and routes
 the success payload through `Serializer::load` for the typed return.
 The two hooks bracket the network round-trip: dump → prepareValue
 → HTTP → checkResponse → load.
+
+### Custom JSON encoder/decoder injection
+
+[`AmphpSession`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-Session-AmphpSession.html)
+(and any `BaseSession` subclass) accepts optional `$jsonLoads` and
+`$jsonDumps` closures so you can swap in a faster library or add
+tracing without subclassing the session:
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\Session\AmphpSession;
+
+$session = new AmphpSession(
+    jsonLoads: fn(string $raw): mixed => json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR),
+    jsonDumps: fn(mixed $value): string => (string) json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+);
+$bot = new Bot(getenv('BOT_TOKEN'), session: $session);
+```
+
+The defaults shown above are what the session uses when no closures are
+supplied; drop in any callable with the same signatures.
+
+### DateTime fields and BotDefault
 
 DateTime fields use a dedicated wrapper. The framework's
 [`Types\Custom\DateTime`](https://api.phpbotgram.local/Gruven-PhpBotGram-Types-Custom-DateTime.html)
@@ -76,14 +160,14 @@ each bot independently.
 ## Trade-offs
 
 Reflection-based serialization costs one `ReflectionClass` per shape
-per request. The serializer caches a `reflectMeta` table internally
-so repeated dumps of the same class skip the work, but the cache is
-not exposed and grows with the number of distinct types seen. For a
-typical bot that touches 20–30 type shapes the cache is bounded;
-synthetic-test scenarios that build hundreds of one-off subclasses
-can grow it unboundedly. We considered exposing the cache for
-manual eviction and decided the complexity wasn't worth it — bots
-that hit the issue can null out `static` state directly via tests.
+per request — the serializer reflects on every `dump`/`load` rather
+than caching type metadata. The only memoised path is the
+camelCase→snake_case property-name conversion
+(`Serializer::$camelToSnakeCache`), bounded by the number of distinct
+property names, not by request volume. We considered caching reflected
+shape metadata and decided the complexity wasn't worth it — the
+per-call reflection is cheap next to the network round-trip, and a
+stateless serializer is simpler to reason about.
 
 Codegen-output serializers would be faster. Aiogram uses Pydantic,
 which builds a fast-path validator at class definition time. The PHP

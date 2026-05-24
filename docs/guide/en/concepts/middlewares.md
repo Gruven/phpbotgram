@@ -6,26 +6,71 @@ skipping it short-circuits.
 
 ## How it works
 
+### The middleware contract
+
 [`BaseMiddleware`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html)
 is an abstract one-method class: `__invoke(Closure $handler, object
 $event, array $data): mixed`. Concrete subclasses run code before
 delegating to `$handler($event, $data)`, after the delegate returns, or
 both. Returning without invoking `$handler` cancels the dispatch —
-useful for throttling, auth gates, or cache hits. The `$event` is
-typed as `object` rather than `TelegramObject` so the same chain can
-transport the dispatcher-synthetic `ErrorEvent`, which deliberately
-does not extend `TelegramObject` (see [Error model](error-model.md)).
+useful for throttling, auth gates, or cache hits.
+
+The `$event` is typed as `object` rather than `TelegramObject` so the
+same chain can transport the dispatcher-synthetic `ErrorEvent`, which
+deliberately does not extend `TelegramObject` (see [Error model](error-model.md)).
+
+A minimal logging middleware looks like:
+
+```php
+use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
+
+final class LoggingMiddleware extends BaseMiddleware
+{
+    public function __invoke(\Closure $handler, object $event, array $data): mixed
+    {
+        // Code here runs before the handler.
+        $result = $handler($event, $data);
+        // Code here runs after the handler returns.
+        return $result;
+    }
+}
+```
+
+### Outer vs inner attachment
 
 There are two attachment points per observer. `outerMiddleware` wraps
 the *whole* observer — global filter chain plus handler iteration plus
 sub-router recursion. `innerMiddleware` wraps each *individual* handler
 invocation. The split matters: outer middlewares run once per event,
-inner middlewares run once per handler-call. A throttling middleware
-typically goes on `outer` (you want the gate to fire before filters
-even run); a logging-per-handler middleware goes on `inner`. The
-[`MiddlewareManager`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Middlewares-MiddlewareManager.html)
+inner middlewares run once per handler-call.
+
+A throttling middleware typically goes on `outer` (you want the gate to
+fire before filters even run); a logging-per-handler middleware goes on
+`inner`.
+
+The [`MiddlewareManager`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Middlewares-MiddlewareManager.html)
 class owns both lists and provides the `wrap()` primitive that
-composes a terminal closure with the registered links.
+composes a terminal closure with the registered links:
+
+```php
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\Router;
+
+$dispatcher = new Dispatcher();
+
+// Outer middleware — runs once per event, before global filters.
+$dispatcher->message->outerMiddleware(new LoggingMiddleware());
+
+// Inner middleware — runs once per handler invocation.
+$dispatcher->message->innerMiddleware(new LoggingMiddleware());
+
+// Child-router inner middleware inherits into the composed chain.
+$subRouter = new Router('sub');
+$subRouter->message->innerMiddleware(new LoggingMiddleware());
+$dispatcher->includeRouter($subRouter);
+```
+
+### Framework-wired middlewares
 
 The dispatcher pre-wires three middlewares automatically.
 [`UserContextMiddleware`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Middlewares-UserContextMiddleware.html)
@@ -36,11 +81,14 @@ catches handler throws and re-dispatches them through the `errors`
 observer. `FsmContextMiddleware` (when FSM is enabled, which is the
 default) materialises an
 [`FsmContext`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-FsmContext.html)
-and injects `state`, `raw_state`, and `fsm_storage` keys. These three
-wire in at construction; user middlewares stack above them. The order
-matters: `UserContextMiddleware` is first so subsequent links see the
-canonical context keys populated, `ErrorsMiddleware` is second so its
-catch wraps user-context resolution.
+and injects `state`, `raw_state`, and `fsm_storage` keys.
+
+These three wire in at construction; user middlewares stack above them.
+The order matters: `UserContextMiddleware` is first so subsequent links
+see the canonical context keys populated, `ErrorsMiddleware` is second
+so its catch wraps user-context resolution.
+
+### Inner middleware inheritance along the router chain
 
 Inner middlewares compose along the router chain. When a leaf router's
 observer dispatches, its `resolveMiddlewares()` walks parent-to-root
@@ -48,9 +96,12 @@ and collects every ancestor router's matching inner-middleware stack.
 The root's middlewares end up outermost in the composed chain — so a
 tenant-scope middleware attached to the dispatcher wraps a logging
 middleware attached to a sub-router, which wraps the leaf handler.
+
 This is the same shape aiogram has via `chain_head`; the PHP port
 walks `parentRouter` references because that's idiomatic and avoids
 the implicit MRO Python-style introspection.
+
+### Ingress attachment
 
 The dispatcher-level middleware chain (the wiring of `UserContext` +
 `Errors`) is attached at the *ingress* in `Dispatcher::feedUpdate`,

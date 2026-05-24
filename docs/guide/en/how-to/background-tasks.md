@@ -32,8 +32,9 @@ $dispatcher->message->register(static function (Message $event, Bot $bot): void 
 
 `async()` queues the closure on the Revolt event loop; control
 returns to the handler immediately. `delay()` suspends the
-background fiber without blocking other fibers. The same pattern
-powers
+background fiber without blocking other fibers.
+
+The same pattern powers
 [`ChatActionSender::raceDelay()`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-ChatAction-ChatActionSender.html)
 — a private helper that races a `delay` against a cancellation
 future so the loop can stop cleanly.

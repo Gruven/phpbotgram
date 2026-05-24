@@ -1,0 +1,48 @@
+<input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button" />
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+    {# phpbotgram template override: pin the TOP-LEVEL guide section order.
+       Markdown guides have no toctree, so AutomaticMenuPass lists the root
+       sections alphabetically by file/dir name (Changelog first, Getting
+       started last). rootOrder restores the Diataxis reading order. Roots not
+       in the map (the API "Namespaces"/"Packages" tocs) default to 99 and keep
+       their original, stable order. Within-section order lives in
+       components/menu.html.twig. #}
+    {% set rootOrder = {
+        'guide/tutorial/index.html': 1,
+        'guide/how-to/index.html': 2,
+        'guide/concepts/index.html': 3,
+        'guide/reference/index.html': 4,
+        'guide/changelog.html': 5,
+        'guide/contributing.html': 6
+    } %}
+    {% for version in project.versions %}
+        {% for toc in version.tableOfContents %}
+        <section class="phpdocumentor-sidebar__category -{{ toc.name|lower }}">
+            <h2 class="phpdocumentor-sidebar__category-header">{{ toc.name|title }}</h2>
+                {% for root in toc.roots|sort((a, b) =>
+                    (rootOrder[a.url|split('#')|first]|default(99)) - (rootOrder[b.url|split('#')|first]|default(99))
+                ) %}
+                    {{ toc(root, 'components/menu.html.twig', 1) }}
+                {% endfor %}
+        </section>
+        {% endfor %}
+    {% endfor %}
+
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+        {% if project.settings.custom['graphs.enabled'] %}
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="graphs/classes.html">Class Diagram</a></h3>
+        {% endif %}
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>

@@ -28,11 +28,12 @@ $dispatcher->message->register(static function (Message $event, Bot $bot): void 
 
 [`ChatActionSender`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-ChatAction-ChatActionSender.html)
 spins a fiber that re-sends the action every `interval` seconds (5 by
-default) until `scope()`'s closure returns or throws. Eleven factory
-methods cover every Telegram action — `typing`, `uploadPhoto`,
-`recordVoice`, `uploadDocument`, `chooseSticker`, etc. The handle
-returned by `start()` lets you control the loop manually if `scope` is
-too restrictive.
+default) until `scope()`'s closure returns or throws.
+
+Eleven factory methods cover every Telegram action — `typing`,
+`uploadPhoto`, `recordVoice`, `uploadDocument`, `chooseSticker`, etc.
+The handle returned by `start()` lets you control the loop manually if
+`scope` is too restrictive.
 
 ## Pitfalls
 

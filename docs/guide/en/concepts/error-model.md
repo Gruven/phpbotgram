@@ -7,6 +7,8 @@ selectively.
 
 ## How it works
 
+### Telegram API exceptions
+
 API failures are
 [`TelegramApiException`](https://api.phpbotgram.local/Gruven-PhpBotGram-Exceptions-TelegramApiException.html)
 subclasses. The session inspects the HTTP status and the response
@@ -28,6 +30,23 @@ wraps transport-level failures (connection refused, TLS handshake
 errors). The hierarchy mirrors aiogram one-for-one so catch-by-type
 ports without surprise.
 
+Catching a specific subclass in a handler is straightforward:
+
+```php
+use Gruven\PhpBotGram\Exceptions\TelegramForbiddenException;
+use Gruven\PhpBotGram\Types\Message;
+
+$handler = static function (Message $event): void {
+    try {
+        $event->answer('Hello!')->emit();
+    } catch (TelegramForbiddenException $e) {
+        // bot was blocked by the user; log and move on
+    }
+};
+```
+
+### Handler errors and the errors observer
+
 Handler exceptions take a different path.
 [`ErrorsMiddleware`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Middlewares-ErrorsMiddleware.html),
 wired into the dispatcher automatically, catches any throw inside a
@@ -35,12 +54,53 @@ handler and constructs an
 [`ErrorEvent`](https://api.phpbotgram.local/Gruven-PhpBotGram-Types-ErrorEvent.html)
 holding the original `Update` plus the `Throwable`. It then re-enters
 `propagateEvent('error', ...)` so a registered error observer can claim
-the failure. Unlike Telegram update events, `ErrorEvent` does **not**
-extend `TelegramObject` — it lives in `Types/` only because aiogram
-puts it there, but it's a standalone readonly value object with no
-serializer / bot plumbing. Error handlers register on
-`$dispatcher->errors` (or `$router->errors`) and follow the same
-filter/middleware contract as any other observer.
+the failure.
+
+Unlike Telegram update events, `ErrorEvent` does **not** extend
+`TelegramObject` — it lives in `Types/` only because aiogram puts it
+there, but it's a standalone readonly value object with no serializer /
+bot plumbing. Error handlers register on `$dispatcher->errors` (or
+`$router->errors`) and follow the same filter/middleware contract as any
+other observer.
+
+[`ExceptionTypeFilter`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-ExceptionTypeFilter.html)
+matches by `instanceof`;
+[`ExceptionMessageFilter`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-ExceptionMessageFilter.html)
+matches by regex against `getMessage()`. Together they let an error
+observer chain handlers selectively — the example below fires only on
+`TelegramRetryAfter`, not on every error:
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\PollingOptions;
+use Gruven\PhpBotGram\Exceptions\TelegramRetryAfter;
+use Gruven\PhpBotGram\Filters\ExceptionTypeFilter;
+use Gruven\PhpBotGram\Types\ErrorEvent;
+
+$bot = new Bot(getenv('BOT_TOKEN'));
+$dispatcher = new Dispatcher();
+
+$dispatcher->errors->register(
+    static function (ErrorEvent $event): void {
+        // Narrow for static analysis; the filter already guarantees the type.
+        $exception = $event->exception;
+        if ($exception instanceof TelegramRetryAfter) {
+            fwrite(STDERR, "Flood wait {$exception->retryAfter}s on this bot.\n");
+        }
+    },
+    filters: [new ExceptionTypeFilter(TelegramRetryAfter::class)],
+);
+
+$dispatcher->runPolling(new PollingOptions(), $bot);
+```
+
+The framework also ships a
+[`TokenValidationException`](https://api.phpbotgram.local/Gruven-PhpBotGram-Exceptions-TokenValidationException.html)
+for malformed tokens at bot construction time, distinct from the
+runtime API exceptions.
+
+### Control-flow exceptions
 
 Two control-flow exceptions are internal signalling primitives, not
 errors.
@@ -53,32 +113,43 @@ handler is the supported way to fall through or abort —
 without converting to an `ErrorEvent`. The naming follows aiogram's
 `SkipHandler` / `CancelHandler` exceptions verbatim.
 
+```php
+use Gruven\PhpBotGram\Dispatcher\Event\CancelHandlerException;
+use Gruven\PhpBotGram\Dispatcher\Event\SkipHandlerException;
+use Gruven\PhpBotGram\Types\Message;
+
+// Skip this handler; the dispatcher tries the next registered handler.
+$skipHandler = static function (Message $event): void {
+    if (($event->text ?? '') === '') {
+        throw new SkipHandlerException();
+    }
+    $event->answer('Got text!')->emit();
+};
+
+// Abandon the entire dispatch for this update; no further handlers run.
+$cancelHandler = static function (Message $event): void {
+    if (($event->fromUser?->isBot ?? false)) {
+        throw new CancelHandlerException();
+    }
+    $event->answer('Hello, human!')->emit();
+};
+```
+
+### Polling-loop failures
+
 Polling-loop failures have their own contract. A
 [`RestartingTelegram`](https://api.phpbotgram.local/Gruven-PhpBotGram-Exceptions-RestartingTelegram.html)
-or `TelegramNetworkException` in `getUpdates`
-routes through
+or `TelegramNetworkException` in `getUpdates` routes through
 [`Backoff`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-Backoff.html)
 — exponential delay with jitter, configured per dispatcher via
 `PollingOptions::$backoffConfig` (note the field is `$backoffConfig`,
-not `$backoff`). `TelegramRetryAfter` is special-cased: the loop
-sleeps for the *exact* `retryAfter` seconds the API advertised, then
-retries without consulting the backoff. The distinction matters:
-backoff is for unknown network trouble, `retry_after` is an explicit
-flood-wait contract and growing the delay beyond the advertised
-value would just waste throughput.
+not `$backoff`).
 
-Two filters specialise to the error channel.
-[`ExceptionTypeFilter`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-ExceptionTypeFilter.html)
-matches by `instanceof`;
-[`ExceptionMessageFilter`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-ExceptionMessageFilter.html)
-matches by regex against `getMessage()`. They let an error observer
-chain handlers like
-`->errors->register($alertHandler, filters: [new ExceptionTypeFilter(TelegramRetryAfter::class)])` —
-so the alert handler only fires on flood-wait specifically, not
-every error. The framework also ships a
-[`TokenValidationException`](https://api.phpbotgram.local/Gruven-PhpBotGram-Exceptions-TokenValidationException.html)
-for malformed tokens at bot construction time, distinct from the
-runtime API exceptions.
+`TelegramRetryAfter` is special-cased: the loop sleeps for the *exact*
+`retryAfter` seconds the API advertised, then retries without consulting
+the backoff. The distinction matters: backoff is for unknown network
+trouble, `retry_after` is an explicit flood-wait contract and growing
+the delay beyond the advertised value would just waste throughput.
 
 ## Trade-offs
 

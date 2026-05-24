@@ -7,17 +7,32 @@ wire string Telegram allows in `CallbackQuery::$data`.
 
 ## How it works
 
+### Defining a payload type
+
 [`CallbackData`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-CallbackData.html)
 is an abstract base. A subclass tags itself with
 [`#[CallbackPrefix('order')]`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-CallbackPrefix.html)
-and exposes constructor-promoted readonly properties — `public function
-__construct(public readonly int $id, public readonly string $action)`
-is the canonical shape. `pack()` walks the constructor's parameter
-list (not the property set) to build the wire string
-`prefix:val1:val2:...`. Iterating parameters guarantees field order
-matches across encode and decode, and excludes derived properties
-assigned in the constructor body — matching Pydantic's `model_dump()`
-semantic of "fields, not attributes".
+and exposes constructor-promoted readonly properties. `pack()` walks
+the constructor's parameter list (not the property set) to build the
+wire string `prefix:val1:val2:...`. Iterating parameters guarantees
+field order matches across encode and decode, and excludes derived
+properties assigned in the constructor body — matching Pydantic's
+`model_dump()` semantic of "fields, not attributes".
+
+```php
+use Gruven\PhpBotGram\Filters\CallbackData;
+use Gruven\PhpBotGram\Filters\CallbackPrefix;
+
+#[CallbackPrefix('order')]
+final class OrderCallback extends CallbackData
+{
+    public function __construct(
+        public readonly int    $id,
+        public readonly string $action,
+        public readonly bool   $deleted = false,
+    ) {}
+}
+```
 
 The type-encoding table is fixed: `null → ''`, `bool → '1'/'0'`,
 `int|float → (string)$value`, `string → as-is`, `\Stringable →
@@ -39,17 +54,52 @@ programming error (you chose the field shape), not user input. The
 limit is hard-coded on Telegram's side; the framework cannot soften
 it without breaking the wire contract.
 
-The matching filter is `MyCallback::filter()` — a class-method that
-returns a
+### Packing a payload into a button
+
+[`InlineKeyboardBuilder::button()`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html)
+accepts a `CallbackData` instance directly and calls `pack()` for you:
+
+```php
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Utils\Keyboard\InlineKeyboardBuilder;
+
+// Pack a payload into a button.
+$keyboard = (new InlineKeyboardBuilder())
+    ->button('Confirm',  callbackData: new OrderCallback(id: 42, action: 'confirm'))
+    ->button('Cancel',   callbackData: new OrderCallback(id: 42, action: 'cancel'))
+    ->asMarkup();
+
+// Attach to a reply.
+// $event->answer('Pick an action:', replyMarkup: $keyboard)->emit();
+```
+
+### Registering a handler and unpacking the payload
+
+The matching filter is `OrderCallback::filter()` — a static factory
+that returns a
 [`CallbackQueryFilter`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-CallbackQueryFilter.html)
 configured to match the subclass's prefix. Handlers receive the
-unpacked object via the `callback_data` kwarg, so
-`function (CallbackQuery $q, OrderCallback $callback_data)` works
-out of the box. The filter also supports magic-filter post-validation
-— `MyCallback::filter(F->id->equals(42))` combines prefix matching
-with an F-DSL test on the parsed payload. The combined check rejects
-without consulting the magic filter if the prefix doesn't match, so
-the F-DSL evaluation only runs against well-shaped payloads.
+unpacked object via the `callback_data` kwarg:
+
+```php
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Types\CallbackQuery;
+
+$dispatcher = new Dispatcher();
+
+// Register a handler that fires only for OrderCallback payloads.
+$dispatcher->callbackQuery->register(
+    static function (CallbackQuery $event, OrderCallback $callback_data): void {
+        $event->answer("Order #{$callback_data->id} — {$callback_data->action}")->emit();
+    },
+    filters: [OrderCallback::filter()],
+);
+```
+
+`$callback_data` is already unpacked — no manual `CallbackData::unpack()`
+call needed. The filter rejects any `CallbackQuery` whose `data` string
+does not begin with the `order:` prefix, so the handler only runs for
+well-shaped payloads.
 
 The separator defaults to `:` but can be overridden via the
 attribute: `#[CallbackPrefix('order', sep: '|')]`. Choose the separator

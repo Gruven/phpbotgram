@@ -6,6 +6,8 @@ one class so the flow reads top-down.
 
 ## How it works
 
+### Defining a scene
+
 [`Scene`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene.html)
 is the abstract base. A subclass declares its state via the
 [`#[SceneState('name')]`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-Attribute-SceneState.html)
@@ -18,6 +20,40 @@ reflects the class once at registration time, builds a
 [`SceneConfig`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-SceneConfig.html)
 recording every handler and its target lifecycle stage, and caches
 the config per class.
+
+The following scene echoes every message back to the user and exits
+when the user sends `/done` (from `examples/scene.php`):
+
+```php
+use Gruven\PhpBotGram\Fsm\Scene;
+use Gruven\PhpBotGram\Fsm\Scene\Attribute\OnMessage;
+use Gruven\PhpBotGram\Fsm\Scene\Attribute\SceneState;
+use Gruven\PhpBotGram\Types\Message;
+
+#[SceneState('greeting')]
+final class GreetingScene extends Scene
+{
+    #[OnMessage]
+    public function onMessage(Message $event): void
+    {
+        $text = $event->text ?? '';
+
+        if ($text === '/done') {
+            $this->wizard->exit();
+            $event->answer("Goodbye! You have left the greeting scene.")->emit();
+            return;
+        }
+
+        $event->answer("(Greeting scene) You said: {$text}\nSend /done to exit.")->emit();
+    }
+}
+```
+
+`$this->wizard` is a [`SceneWizard`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-SceneWizard.html)
+instance injected by the framework. Its `exit()`, `goto()`, `back()`,
+and `retake()` methods drive all transitions.
+
+### Registering scenes and entering them
 
 Registration goes through
 [`SceneRegistry`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-SceneRegistry.html).
@@ -33,20 +69,46 @@ handler attaches as a regular per-handler registration on the matching
 observer, just with a `StateFilter` pre-baked so the dispatch only
 fires when the FSM state matches.
 
-[`SceneWizard`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-SceneWizard.html)
-is the imperative API exposed inside scene methods.
-`$this->wizard->goto(NextScene::class)` transitions to another scene;
-`$this->wizard->retake()` re-enters the current scene;
-`$this->wizard->back()` rolls back to the previous one via the
-history manager; `$this->wizard->exit()` clears the FSM and runs the
-scene's `exit()` lifecycle hook. History tracking is owned by
-[`HistoryManager`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-HistoryManager.html);
-each push records the previous scene plus a copy of its FSM data, so
-`back()` restores both state and payload. The `HistoryManager`
-implementation is swappable via the
-[`HistoryManagerInterface`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-HistoryManagerInterface.html)
-seam — a no-op manager works fine for flat scenes that don't need
-rollback.
+The
+[`ScenesManager`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html)
+is the per-request handle injected into handlers as the `scenes` kwarg.
+Handlers call `$scenes->enter(MyScene::class)` to transition from a
+non-scene handler into a scene, or `$scenes->close()` to abandon any
+in-flight scene. The manager threads through the dispatcher's
+middleware chain alongside `FsmContext`, so a handler can declare
+both `function (Message $event, FsmContext $state, ScenesManager
+$scenes)` and receive both.
+
+The full wiring for the greeting scene above (from `examples/scene.php`):
+
+```php
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\PollingOptions;
+use Gruven\PhpBotGram\Filters\Command;
+use Gruven\PhpBotGram\Fsm\Scene\SceneRegistry;
+use Gruven\PhpBotGram\Fsm\Scene\ScenesManager;
+use Gruven\PhpBotGram\Types\Message;
+
+$bot = new Bot(getenv('BOT_TOKEN'));
+$dispatcher = new Dispatcher();
+
+$registry = new SceneRegistry($dispatcher);
+$registry->add([GreetingScene::class]);
+
+// /start — enter the scene from a plain message handler.
+$dispatcher->message->register(
+    static function (Message $event, ScenesManager $scenes): void {
+        $event->answer("Welcome! Entering the greeting scene.")->emit();
+        $scenes->enter(GreetingScene::class);
+    },
+    filters: [new Command('start')],
+);
+
+$dispatcher->runPolling(new PollingOptions(), $bot);
+```
+
+### Lifecycle hooks and multi-step wizards
 
 Lifecycle hooks let scenes react to transitions. Override `enter()`,
 `leave()`, `exit()`, `back()`, or `retake()` on the subclass; the
@@ -60,15 +122,89 @@ The default `enter()` / `leave()` / `exit()` / `back()` /
 `retake()` implementations return `null`; subclasses override only the
 hooks they need.
 
-The
-[`ScenesManager`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html)
-is the per-request handle injected into handlers as the `scenes` kwarg.
-Handlers call `$scenes->enter(MyScene::class)` to transition from a
-non-scene handler into a scene, or `$scenes->exit()` to abandon any
-in-flight scene. The manager threads through the dispatcher's
-middleware chain alongside `FsmContext`, so a handler can declare
-both `function (Message $event, FsmContext $state, ScenesManager
-$scenes)` and receive both.
+The `after:` parameter on `#[OnMessage]` specifies what the framework
+should do automatically after the handler returns. The
+[`After`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-After.html)
+value wraps a `SceneAction` constant and an optional target state.
+The following two-question quiz wires this up end-to-end (from
+`examples/quiz_scene.php`):
+
+```php
+use Gruven\PhpBotGram\Fsm\After;
+use Gruven\PhpBotGram\Fsm\Scene;
+use Gruven\PhpBotGram\Fsm\Scene\Attribute\OnMessage;
+use Gruven\PhpBotGram\Fsm\Scene\Attribute\SceneState;
+use Gruven\PhpBotGram\Fsm\SceneAction;
+use Gruven\PhpBotGram\Types\Message;
+
+#[SceneState('quiz:q1')]
+final class QuestionOneScene extends Scene
+{
+    // Ask Q1 when this scene is entered.
+    #[OnMessage(action: SceneAction::Enter)]
+    public function onEnter(Message $event): void
+    {
+        $event->answer("Question 1: What is 2 + 2?")->emit();
+    }
+
+    // Store the answer then automatically move to Q2.
+    // new After(SceneAction::Enter, 'quiz:q2') is equivalent to After::goto('quiz:q2')
+    #[OnMessage(after: new After(SceneAction::Enter, 'quiz:q2'))]
+    public function onAnswer(Message $event): void
+    {
+        $this->wizard->updateData(['q1' => $event->text ?? '']);
+    }
+}
+
+#[SceneState('quiz:q2')]
+final class QuestionTwoScene extends Scene
+{
+    #[OnMessage(action: SceneAction::Enter)]
+    public function onEnter(Message $event): void
+    {
+        $event->answer("Question 2: What is the capital of France?")->emit();
+    }
+
+    // Store the answer, show results, then exit the FSM.
+    // new After(SceneAction::Exit) is equivalent to After::exit()
+    #[OnMessage(after: new After(SceneAction::Exit))]
+    public function onAnswer(Message $event): void
+    {
+        $this->wizard->updateData(['q2' => $event->text ?? '']);
+        $data = $this->wizard->getData();
+        $q1 = is_string($data['q1'] ?? null) ? $data['q1'] : '(no answer)';
+        $q2 = is_string($data['q2'] ?? null) ? $data['q2'] : '(no answer)';
+        $event->answer("Quiz complete!\nQ1: {$q1}\nQ2: {$q2}")->emit();
+    }
+}
+```
+
+Register both scenes together and enter the first one from `/start`:
+
+```php
+use Gruven\PhpBotGram\Fsm\Scene\SceneRegistry;
+use Gruven\PhpBotGram\Fsm\Scene\ScenesManager;
+
+$registry = new SceneRegistry($dispatcher);
+$registry->add([QuestionOneScene::class, QuestionTwoScene::class]);
+
+$dispatcher->message->register(
+    static function (Message $event, ScenesManager $scenes): void {
+        $scenes->enter(QuestionOneScene::class);
+    },
+    filters: [new Command('start')],
+);
+```
+
+`SceneWizard` also exposes `goto(NextScene::class)` for imperative
+transitions, `retake()` to re-enter the current scene, and `back()`
+to roll back via the history manager. The
+[`HistoryManager`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-HistoryManager.html)
+records the previous scene plus a copy of its FSM data on each
+`goto()`, so `back()` restores both state and payload. The
+[`HistoryManagerInterface`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-HistoryManagerInterface.html)
+seam lets you swap in a no-op manager for flat scenes that don't need
+rollback.
 
 ## Trade-offs
 
@@ -107,11 +243,12 @@ repeated registrations of the same class (rare in production, common
 in tests) share the reflection result. Tests that spin up the scene
 registry many times benefit from this caching.
 
-`SceneAction` covers `Enter` and `Leave` but not `Exit` /
-`Back` / `Retake`. Those transitions don't have an associated
-event-binding because they happen *between* events; they're imperative
-calls on the wizard. If you need a handler to fire on `back()`,
-override the scene's `back()` method directly.
+`SceneAction` has `Enter`, `Leave`, `Exit`, and `Back` cases — there
+is no `Retake`. `Enter` and `Leave` are the lifecycle points you bind
+to with the `#[On*](action:)` marker; `Exit` and `Back` are driven
+imperatively via the wizard (`$wizard->exit()`, `$wizard->back()`). If
+you need logic on `back()`, override the scene's `back()` method
+directly.
 
 ## See also
 

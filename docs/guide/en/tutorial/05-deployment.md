@@ -23,13 +23,17 @@ interaction).
 
 Best for higher traffic or when you want subsecond latency.
 
-1. Run [`examples/echo_bot_webhook.php`](https://github.com/Gruven/phpbotgram/blob/master/examples/echo_bot_webhook.php)
-   bound to `127.0.0.1:8080` (the example default).
-2. Install `deploy/nginx/phpbotgram-webhook.conf` to
+1. Install `deploy/systemd/phpbotgram-webhook.service` to
+   `/etc/systemd/system/`. It runs
+   [`examples/echo_bot_webhook.php`](https://github.com/Gruven/phpbotgram/blob/master/examples/echo_bot_webhook.php)
+   on `127.0.0.1:8080`. Webhook mode needs the suggested dependency:
+   `composer require amphp/http-server`.
+2. `systemctl daemon-reload && systemctl enable --now phpbotgram-webhook`.
+3. Install `deploy/nginx/phpbotgram-webhook.conf` to
    `/etc/nginx/sites-available/` and link from `sites-enabled/`.
-3. Provision a TLS cert (Let's Encrypt). The provided config terminates
+4. Provision a TLS cert (Let's Encrypt). The provided config terminates
    TLS and proxies to the loopback.
-4. Register the webhook with Telegram via `setWebhook` (the framework's
+5. Register the webhook with Telegram via `setWebhook` (the framework's
    [`Setup::register()`](https://api.phpbotgram.local/Gruven-PhpBotGram-Webhook-Setup.html#method_register)
    helper handles this).
 

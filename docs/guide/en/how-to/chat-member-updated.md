@@ -9,6 +9,8 @@ filter that matches by old/new status pairs.
 
 ## Solution
 
+### Using a pre-built transition
+
 ```php
 use Gruven\PhpBotGram\Filters\ChatMemberUpdatedFilter;
 use Gruven\PhpBotGram\Types\ChatMemberUpdated;
@@ -24,6 +26,13 @@ $dispatcher->chatMember->register(
     },
     filters: [ChatMemberUpdatedFilter::join()],
 );
+```
+
+### Using a custom transition
+
+```php
+use Gruven\PhpBotGram\Filters\ChatMemberUpdatedFilter;
+use Gruven\PhpBotGram\Types\ChatMemberUpdated;
 
 // Custom transition: any member becoming an administrator.
 $dispatcher->chatMember->register(

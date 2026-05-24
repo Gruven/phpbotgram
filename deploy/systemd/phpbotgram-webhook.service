@@ -1,0 +1,80 @@
+# systemd unit for a webhook phpbotgram bot (amphp/http-server).
+#
+# Install:
+#   sudo cp deploy/systemd/phpbotgram-webhook.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now phpbotgram-webhook.service
+#
+# This runs the amphp/http-server webhook listener (examples/echo_bot_webhook.php)
+# bound to 127.0.0.1:8080. Terminate TLS in a reverse proxy in front of it — the
+# companion template is deploy/nginx/phpbotgram-webhook.conf. Telegram requires
+# HTTPS for webhooks, so this unit is NOT meant to face the public internet
+# directly (the example binds the loopback interface on purpose).
+#
+# Webhook mode needs the SUGGESTED dependency amphp/http-server, which a
+# polling-only install does not pull:
+#   composer require amphp/http-server
+#
+# Update the User, WorkingDirectory, EnvironmentFile, and ExecStart paths to
+# match your deployment. The example assumes:
+#   - source checkout at /srv/phpbotgram (then `composer require amphp/http-server`)
+#   - non-root service account "phpbotgram"
+#   - /etc/phpbotgram/webhook.env holding BOT_TOKEN= (and any other env vars)
+
+[Unit]
+Description=phpbotgram webhook bot (amphp/http-server)
+Documentation=https://github.com/Gruven/phpbotgram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=phpbotgram
+Group=phpbotgram
+WorkingDirectory=/srv/phpbotgram
+EnvironmentFile=/etc/phpbotgram/webhook.env
+ExecStart=/usr/bin/php examples/echo_bot_webhook.php
+Restart=on-failure
+RestartSec=5s
+
+# Hardening — mirrors the polling unit's sandbox. The webhook echo bot has no
+# on-disk state (it uses MemoryStorage), so no ReadWritePaths is required. If
+# your bot needs to write — e.g. downloads via `Bot::downloadFile`, FSM via
+# `RedisStorage` cache files, or logs to a custom path — uncomment
+# ReadWritePaths and create the directory beforehand:
+#   sudo install -d -o phpbotgram -g phpbotgram -m 0750 /srv/phpbotgram/var
+# then uncomment the line below.
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+#ReadWritePaths=/srv/phpbotgram/var
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# The listener binds 127.0.0.1:8080 — a non-privileged port, so no
+# CAP_NET_BIND_SERVICE is needed. The server speaks IPv4/IPv6 sockets and the
+# bot opens outbound HTTPS to the Telegram API, so AF_INET/AF_INET6 must stay
+# allowed. Uncomment to also forbid every other socket family (extra hardening;
+# verify your amphp build still starts — some event-loop drivers use AF_UNIX
+# socketpairs internally):
+#RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# NOTE: MemoryDenyWriteExecute=true is incompatible with PHP opcache JIT. If you
+# enable JIT, set opcache.jit_buffer_size=0 or comment the directive out, or the
+# runtime is killed at boot with SIGSYS. See deploy/README.md hardening notes.
+
+# Log to journald.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
