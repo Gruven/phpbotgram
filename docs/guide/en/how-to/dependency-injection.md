@@ -2,10 +2,7 @@
 
 ## When to use this
 
-Resolve per-request data — current user, db handle, parsed payload —
-once in a filter and let downstream filters and the handler receive
-it as named parameters. This avoids global state and keeps the
-handler signature self-documenting.
+Resolve per-request data — current user, db handle, parsed payload — once in a filter and let downstream filters and the handler receive it as named parameters. This avoids global state and keeps the handler signature self-documenting.
 
 ## Solution
 
@@ -44,20 +41,10 @@ $dispatcher->message->register(
 );
 ```
 
-A filter that returns an array merges its keys into the dispatcher
-kwargs bag. `Dispatcher::workflowData` seeds bot-wide defaults. The
-[`CallableObject`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Event-CallableObject.html)
-binder calls `array_intersect_key` against the closure's parameter
-names — no snake_case ↔ camelCase translation, names must match
-literally.
+A filter that returns an array merges its keys into the dispatcher kwargs bag. `Dispatcher::workflowData` seeds bot-wide defaults. The [`CallableObject`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Event-CallableObject.html) binder calls `array_intersect_key` against the closure's parameter names — no snake_case ↔ camelCase translation, names must match literally.
 
 ## Pitfalls
 
-- The merge is strict by name. Misspelling `$current_user` as
-  `$currentUser` silently drops the value to `null` and PHP will
-  fatal on a non-nullable parameter. See
-  [Dispatcher](../concepts/dispatcher.md) for the resolution order.
-- Workflow data and filter returns share the same bag — a filter key
-  overrides the workflow default for the rest of the dispatch.
-- Variadic `mixed ...$kwargs` in the filter is required: it captures
-  the upstream bag so injected keys propagate forward.
+- The merge is strict by name. Misspelling `$current_user` as `$currentUser` silently drops the value to `null` and PHP will fatal on a non-nullable parameter. See [Dispatcher](../concepts/dispatcher.md) for the resolution order.
+- Workflow data and filter returns share the same bag — a filter key overrides the workflow default for the rest of the dispatch.
+- Variadic `mixed ...$kwargs` in the filter is required: it captures the upstream bag so injected keys propagate forward.

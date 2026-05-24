@@ -1,7 +1,6 @@
 # How-to recipes
 
-Task-oriented cookbook. Each recipe starts with "When to use this",
-shows working code, and ends with "Pitfalls". Skim by intent group.
+Task-oriented cookbook. Each recipe starts with "When to use this", shows working code, and ends with "Pitfalls". Skim by intent group.
 
 ## Routing and filters
 

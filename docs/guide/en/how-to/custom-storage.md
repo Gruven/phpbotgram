@@ -2,9 +2,7 @@
 
 ## When to use this
 
-You already run a database that isn't Redis or MongoDB — DynamoDB,
-PostgreSQL, your own KV — and you want FSM state stored there. Extend
-`BaseStorage` and provide the five abstract methods.
+You already run a database that isn't Redis or MongoDB — DynamoDB, PostgreSQL, your own KV — and you want FSM state stored there. Extend `BaseStorage` and provide the five abstract methods.
 
 ## Solution
 
@@ -33,21 +31,10 @@ final class PdoStorage extends BaseStorage
 $dispatcher = new Dispatcher(storage: new PdoStorage($pdo));
 ```
 
-A subclass of
-[`BaseStorage`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Storage-BaseStorage.html)
-must implement five methods: `setState`, `getState`, `setData`,
-`getData`, `close`. `getValue` and `updateData` come for free from the
-base — they read-merge-write. Override `updateData` if your store
-supports atomic field updates.
+A subclass of [`BaseStorage`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Storage-BaseStorage.html) must implement five methods: `setState`, `getState`, `setData`, `getData`, `close`. `getValue` and `updateData` come for free from the base — they read-merge-write. Override `updateData` if your store supports atomic field updates.
 
 ## Pitfalls
 
-- The `getData` contract is "empty array when nothing stored", not
-  `null`. Callers `array_key_exists` against the return — `null`
-  breaks the FSM.
-- `setState(null)` clears — implementations must delete or null the
-  row, not store the literal string `"null"`.
-- The default `updateData` is read-merge-write and racy under
-  concurrency. Override it with a single atomic statement if your
-  store allows. See [FSM](../concepts/fsm.md) for the storage key
-  format.
+- The `getData` contract is "empty array when nothing stored", not `null`. Callers `array_key_exists` against the return — `null` breaks the FSM.
+- `setState(null)` clears — implementations must delete or null the row, not store the literal string `"null"`.
+- The default `updateData` is read-merge-write and racy under concurrency. Override it with a single atomic statement if your store allows. See [FSM](../concepts/fsm.md) for the storage key format.

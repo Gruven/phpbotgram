@@ -2,9 +2,7 @@
 
 ## When to use this
 
-Send a photo from disk, a buffer, or a URL; pull a document the user
-sent back to local storage. The bot facade unifies the three upload
-modes and exposes `downloadFile`/`download` for the reverse trip.
+Send a photo from disk, a buffer, or a URL; pull a document the user sent back to local storage. The bot facade unifies the three upload modes and exposes `downloadFile`/`download` for the reverse trip.
 
 ## Solution
 
@@ -43,23 +41,11 @@ $dispatcher->message->register(static function (Message $event, Bot $bot): void 
 });
 ```
 
-[`Bot::downloadFile`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-BotShortcuts.html)
-streams the response body — pass a path string to write to disk, a
-writable resource to fork the stream, or `null` to receive the full
-content as a string. `Bot::download` accepts any `Downloadable`
-(`Document`, `Photo`, `Voice`…) or a raw `file_id` and resolves it via
-`getFile` first.
+[`Bot::downloadFile`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-BotShortcuts.html) streams the response body — pass a path string to write to disk, a writable resource to fork the stream, or `null` to receive the full content as a string. `Bot::download` accepts any `Downloadable` (`Document`, `Photo`, `Voice`…) or a raw `file_id` and resolves it via `getFile` first.
 
 ## Pitfalls
 
-- `BufferedInputFile` holds the bytes in memory — fine for KB-scale
-  reports, expensive for video. Prefer `FsInputFile` for anything over
-  a few MB.
-- `URLInputFile` makes Telegram fetch the URL; the server enforces a
-  5 MB limit for photos and 50 MB for documents. Larger files must be
-  uploaded directly.
-- Local file paths passed as a string to `downloadFile` go through
-  `fopen('wb')` — the directory must exist and be writable, or the
-  call throws `RuntimeException`.
-- See [Serialization](../concepts/serialization.md) for how
-  `InputFile` flavours map to multipart payloads.
+- `BufferedInputFile` holds the bytes in memory — fine for KB-scale reports, expensive for video. Prefer `FsInputFile` for anything over a few MB.
+- `URLInputFile` makes Telegram fetch the URL; the server enforces a 5 MB limit for photos and 50 MB for documents. Larger files must be uploaded directly.
+- Local file paths passed as a string to `downloadFile` go through `fopen('wb')` — the directory must exist and be writable, or the call throws `RuntimeException`.
+- See [Serialization](../concepts/serialization.md) for how `InputFile` flavours map to multipart payloads.

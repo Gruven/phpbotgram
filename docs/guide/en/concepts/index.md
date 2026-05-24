@@ -1,8 +1,6 @@
 # Concepts
 
-Understanding-oriented prose. Each page explains *why* a phpbotgram
-subsystem works the way it does, not just how to use it. Read these
-when you want to know the design intent.
+Understanding-oriented prose. Each page explains *why* a phpbotgram subsystem works the way it does, not just how to use it. Read these when you want to know the design intent.
 
 ## Core runtime
 

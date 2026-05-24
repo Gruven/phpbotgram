@@ -2,10 +2,7 @@
 
 ## When to use this
 
-Telegram Stars (`XTR`) let you charge in-platform without a payment
-processor — useful for premium features, content unlocks, or
-small-amount digital goods. The flow is invoice → pre-checkout
-confirm → successful payment notification.
+Telegram Stars (`XTR`) let you charge in-platform without a payment processor — useful for premium features, content unlocks, or small-amount digital goods. The flow is invoice → pre-checkout confirm → successful payment notification.
 
 ## Solution
 
@@ -45,20 +42,10 @@ $dispatcher->message->register(static function (Message $event): void {
 });
 ```
 
-[`SendInvoice`](https://api.phpbotgram.local/Gruven-PhpBotGram-Methods-SendInvoice.html)
-with `currency: 'XTR'` opens the Stars purchase flow. The
-`preCheckoutQuery` observer MUST answer within 10 seconds or Telegram
-cancels the transaction — keep that handler synchronous. After the
-user pays, a `Message` arrives with a non-null `successfulPayment`.
+[`SendInvoice`](https://api.phpbotgram.local/Gruven-PhpBotGram-Methods-SendInvoice.html) with `currency: 'XTR'` opens the Stars purchase flow. The `preCheckoutQuery` observer MUST answer within 10 seconds or Telegram cancels the transaction — keep that handler synchronous. After the user pays, a `Message` arrives with a non-null `successfulPayment`.
 
 ## Pitfalls
 
-- For Stars, `amount` is the literal Star count — 1 = 1 Star. Other
-  currencies use the smallest unit (cents, kopecks), so don't hard-code
-  100x multipliers.
-- The bot owner must enable payments via @BotFather before any of this
-  works — the framework gives no clearer error than the API's "PAYMENT_PROVIDER_INVALID".
-- The `payload` round-trips through Telegram unchanged — sign or
-  encrypt it if you'd be unhappy with the user editing it. See
-  [Dispatcher](../concepts/dispatcher.md) for observer routing of the
-  three event types.
+- For Stars, `amount` is the literal Star count — 1 = 1 Star. Other currencies use the smallest unit (cents, kopecks), so don't hard-code 100x multipliers.
+- The bot owner must enable payments via @BotFather before any of this works — the framework gives no clearer error than the API's "PAYMENT_PROVIDER_INVALID".
+- The `payload` round-trips through Telegram unchanged — sign or encrypt it if you'd be unhappy with the user editing it. See [Dispatcher](../concepts/dispatcher.md) for observer routing of the three event types.

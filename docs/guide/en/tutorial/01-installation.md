@@ -1,8 +1,6 @@
 # Installation
 
-phpbotgram requires PHP 8.5+ and the `sodium` extension (used by the
-Web App / Login Widget signature verification). composer pulls in
-the rest.
+phpbotgram requires PHP 8.5+ and the `sodium` extension (used by the Web App / Login Widget signature verification). composer pulls in the rest.
 
 ## composer require
 
@@ -20,9 +18,7 @@ phpbotgram declares these as hard requirements in `composer.json`:
 - `ext-json`
 - `ext-sodium`
 
-Standard PHP 8.5 distributions on Linux and macOS ship these by default.
-On Alpine-based Docker images, install them via `apk add php85-mbstring
-php85-sodium`.
+Standard PHP 8.5 distributions on Linux and macOS ship these by default. On Alpine-based Docker images, install them via `apk add php85-mbstring php85-sodium`.
 
 ## Verify the install
 

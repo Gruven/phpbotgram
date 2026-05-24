@@ -1,12 +1,10 @@
 # Your first bot
 
-Build a polling echo bot in 20 lines. Replies to every message with the
-same text.
+Build a polling echo bot in 20 lines. Replies to every message with the same text.
 
 ## Get a token
 
-Talk to [@BotFather](https://t.me/BotFather) on Telegram, create a new
-bot, and copy the token (looks like `123456:ABCdefGHIjklMNOpqrSTUvwxYZ`).
+Talk to [@BotFather](https://t.me/BotFather) on Telegram, create a new bot, and copy the token (looks like `123456:ABCdefGHIjklMNOpqrSTUvwxYZ`).
 
 ## Write the bot
 
@@ -42,17 +40,13 @@ BOT_TOKEN=123456:ABCdef… php echo_bot.php
 
 Send any text to your bot in Telegram; it echoes back.
 
-See the [full example](https://github.com/Gruven/phpbotgram/blob/master/examples/echo_bot.php) for the version with
-graceful-shutdown handling.
+See the [full example](https://github.com/Gruven/phpbotgram/blob/master/examples/echo_bot.php) for the version with graceful-shutdown handling.
 
 ## What just happened
 
-- `new Bot($token)` constructs a [`Bot`](https://api.phpbotgram.local/Gruven-PhpBotGram-Bot.html)
-  with the default `AmphpSession` HTTP transport.
-- `Dispatcher::runPolling()` loops `getUpdates` against Telegram, feeding
-  every update through the registered handlers.
-- `$event->answer(...)` is a codegen-produced shortcut that builds a
-  `SendMessage` already bound to the right chat.
+- `new Bot($token)` constructs a [`Bot`](https://api.phpbotgram.local/Gruven-PhpBotGram-Bot.html) with the default `AmphpSession` HTTP transport.
+- `Dispatcher::runPolling()` loops `getUpdates` against Telegram, feeding every update through the registered handlers.
+- `$event->answer(...)` is a codegen-produced shortcut that builds a `SendMessage` already bound to the right chat.
 
 ## Next step
 

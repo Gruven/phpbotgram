@@ -2,10 +2,7 @@
 
 ## When to use this
 
-You already run nginx + php-fpm, RoadRunner, FrankenPHP, or any
-single-request PHP runtime — you don't want a second event-loop
-server next to it. `feedWebhookUpdate` accepts an `Update` directly,
-so any HTTP entry point can dispatch to the same handlers.
+You already run nginx + php-fpm, RoadRunner, FrankenPHP, or any single-request PHP runtime — you don't want a second event-loop server next to it. `feedWebhookUpdate` accepts an `Update` directly, so any HTTP entry point can dispatch to the same handlers.
 
 ## Solution
 
@@ -34,23 +31,12 @@ $dispatcher->feedWebhookUpdate($bot, $payload);
 http_response_code(200);
 ```
 
-[`Dispatcher::feedWebhookUpdate`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Dispatcher.html)
-accepts a raw decoded array or an `Update` instance and runs the
-full dispatch chain.
+[`Dispatcher::feedWebhookUpdate`](https://api.phpbotgram.local/Gruven-PhpBotGram-Dispatcher-Dispatcher.html) accepts a raw decoded array or an `Update` instance and runs the full dispatch chain.
 
-For the amphp-http path,
-[`SimpleRequestHandler`](https://api.phpbotgram.local/Gruven-PhpBotGram-Webhook-SimpleRequestHandler.html)
-already wraps secret-token validation with `hash_equals`; replicate
-the comparison manually in non-amphp deployments.
+For the amphp-http path, [`SimpleRequestHandler`](https://api.phpbotgram.local/Gruven-PhpBotGram-Webhook-SimpleRequestHandler.html) already wraps secret-token validation with `hash_equals`; replicate the comparison manually in non-amphp deployments.
 
 ## Pitfalls
 
-- `hash_equals` is constant-time; a `===` comparison leaks timing
-  information about the secret. Always use `hash_equals` for header
-  checks.
-- Single-request runtimes (php-fpm, mod_php) tear down the dispatcher
-  per request, so `MemoryStorage` is useless — bind a persistent
-  storage (Redis/Mongo/SQL) or FSM state vanishes between updates.
-- Telegram retries a 5xx response. If your handler may exceed 60
-  seconds, return 200 immediately and process in a queue — see
-  [Webhook](../concepts/webhook.md) for the fall-through model.
+- `hash_equals` is constant-time; a `===` comparison leaks timing information about the secret. Always use `hash_equals` for header checks.
+- Single-request runtimes (php-fpm, mod_php) tear down the dispatcher per request, so `MemoryStorage` is useless — bind a persistent storage (Redis/Mongo/SQL) or FSM state vanishes between updates.
+- Telegram retries a 5xx response. If your handler may exceed 60 seconds, return 200 immediately and process in a queue — see [Webhook](../concepts/webhook.md) for the fall-through model.

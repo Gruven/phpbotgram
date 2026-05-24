@@ -2,10 +2,7 @@
 
 ## When to use this
 
-Send users a `https://t.me/yourbot?start=ref_abc` link and pick up
-the payload server-side. Useful for referral codes, magic-login
-tokens, and product deep-links. The framework builds the URL and the
-`CommandStart` filter extracts the payload on receipt.
+Send users a `https://t.me/yourbot?start=ref_abc` link and pick up the payload server-side. Useful for referral codes, magic-login tokens, and product deep-links. The framework builds the URL and the `CommandStart` filter extracts the payload on receipt.
 
 ## Solution
 
@@ -29,21 +26,11 @@ $dispatcher->message->register(
 );
 ```
 
-[`DeepLinking::createStartLink`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-DeepLinking.html)
-caches the bot's username via a `WeakMap` so subsequent calls don't
-re-hit `getMe`. Pass `encode: true` (or a custom encoder) to base64
-arbitrary payloads — raw payloads are limited to `[A-Za-z0-9_-]` and
-64 characters. On receipt, the `CommandObject` injected by
-`CommandStart` carries the unencoded payload in `$command->args`.
+[`DeepLinking::createStartLink`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-DeepLinking.html) caches the bot's username via a `WeakMap` so subsequent calls don't re-hit `getMe`. Pass `encode: true` (or a custom encoder) to base64 arbitrary payloads — raw payloads are limited to `[A-Za-z0-9_-]` and 64 characters. On receipt, the `CommandObject` injected by `CommandStart` carries the unencoded payload in `$command->args`.
 
 ## Pitfalls
 
-- Telegram caps the raw payload at 64 ASCII characters. Anything
-  outside `[A-Za-z0-9_-]` throws `InvalidArgumentException`. Use
-  `encode: true` for arbitrary strings.
-- `createStartLink` requires the bot to have a username — bots without
-  one (rare) throw `LogicException` from the first call.
-- The payload arrives **after** the `/start` token. Use
-  [`CommandStart`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-CommandStart.html)
-  not plain `Command` so the framework normalises the parse.
+- Telegram caps the raw payload at 64 ASCII characters. Anything outside `[A-Za-z0-9_-]` throws `InvalidArgumentException`. Use `encode: true` for arbitrary strings.
+- `createStartLink` requires the bot to have a username — bots without one (rare) throw `LogicException` from the first call.
+- The payload arrives **after** the `/start` token. Use [`CommandStart`](https://api.phpbotgram.local/Gruven-PhpBotGram-Filters-CommandStart.html) not plain `Command` so the framework normalises the parse.
 - See [Filters](../concepts/filters.md) for `CommandObject` semantics.

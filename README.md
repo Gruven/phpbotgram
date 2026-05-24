@@ -1,28 +1,15 @@
 # phpbotgram
 
-[![PHP version](https://img.shields.io/badge/php-%5E8.5-777bb4.svg?logo=php)](https://www.php.net/releases/8.5/)
-[![PHPStan level](https://img.shields.io/badge/PHPStan-level%209-2563eb.svg)](https://phpstan.org/)
-[![Tests](https://img.shields.io/badge/tests-2109%20passing-3fb950.svg)](#testing)
-[![Coverage gate](https://img.shields.io/badge/coverage--gate-passing-3fb950.svg)](#testing)
-[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
-[![Upstream](https://img.shields.io/badge/aiogram-3.28-blueviolet.svg?logo=python)](https://github.com/aiogram/aiogram)
+[![PHP version](https://img.shields.io/badge/php-%5E8.5-777bb4.svg?logo=php)](https://www.php.net/releases/8.5/) [![PHPStan level](https://img.shields.io/badge/PHPStan-level%209-2563eb.svg)](https://phpstan.org/) [![Tests](https://img.shields.io/badge/tests-2109%20passing-3fb950.svg)](#testing) [![Coverage gate](https://img.shields.io/badge/coverage--gate-passing-3fb950.svg)](#testing) [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE) [![Upstream](https://img.shields.io/badge/aiogram-3.28-blueviolet.svg?logo=python)](https://github.com/aiogram/aiogram)
 
 A modern PHP 8.5 port of the [aiogram](https://github.com/aiogram/aiogram) Telegram Bot framework.
 
-`phpbotgram` keeps the layered architecture of the Python upstream — `Bot`,
-`Session`, `Dispatcher`, `Router`, filters, middlewares, FSM — but trades
-coroutines for [amphp](https://amphp.org/) v3 fibers and uses native PHP 8.5
-features (readonly classes, asymmetric visibility, property hooks, attributes,
-native enums) throughout.
+`phpbotgram` keeps the layered architecture of the Python upstream — `Bot`, `Session`, `Dispatcher`, `Router`, filters, middlewares, FSM — but trades coroutines for [amphp](https://amphp.org/) v3 fibers and uses native PHP 8.5 features (readonly classes, asymmetric visibility, property hooks, attributes, native enums) throughout.
 
 ## Links
 
-- **API documentation** — published at <https://gruven.github.io/phpbotgram/>
-  (GitHub Pages, rebuilt on every push to `master`). Regenerate locally
-  with `composer docs-api` (or `make docs-api`); output lands in
-  `build/docs/api/index.html`.
-- **Narrative documentation:** <https://gruven.github.io/phpbotgram/en/dev/guide/>
-  (tutorial, cookbook, concepts).
+- **API documentation** — published at <https://gruven.github.io/phpbotgram/> (GitHub Pages, rebuilt on every push to `master`). Regenerate locally with `composer docs-api` (or `make docs-api`); output lands in `build/docs/api/index.html`.
+- **Narrative documentation:** <https://gruven.github.io/phpbotgram/en/dev/guide/> (tutorial, cookbook, concepts).
 - **Design spec** — [`docs/superpowers/specs/`](docs/superpowers/specs/).
 - **Implementation plan** — [`docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md`](docs/superpowers/plans/2026-05-12-phpbotgram-implementation.md).
 - **Changelog** — [`CHANGELOG.md`](CHANGELOG.md).
@@ -33,8 +20,7 @@ native enums) throughout.
 
 - PHP 8.5+
 - ext-sodium (Web App / Login Widget signature verification)
-- HTTP transport — `amphp/http-client ^5` (required), used by the default
-  `AmphpSession` adapter
+- HTTP transport — `amphp/http-client ^5` (required), used by the default `AmphpSession` adapter
 - Composer 2.5+
 
 ## Install
@@ -71,14 +57,11 @@ $dispatcher->message->register(static function (Message $event): void {
 $dispatcher->runPolling(new PollingOptions(), $bot);
 ```
 
-Run with `BOT_TOKEN=… php echo_bot.php`. The full example (with extra
-documentation) lives at `examples/echo_bot.php`.
+Run with `BOT_TOKEN=… php echo_bot.php`. The full example (with extra documentation) lives at `examples/echo_bot.php`.
 
 ## Examples
 
-All examples are runnable and self-contained. Set `BOT_TOKEN` before
-launching (and `BOT_TOKEN_2` for `examples/multibot.php`, which adds a
-second bot to the dispatcher when present).
+All examples are runnable and self-contained. Set `BOT_TOKEN` before launching (and `BOT_TOKEN_2` for `examples/multibot.php`, which adds a second bot to the dispatcher when present).
 
 | Path | Demonstrates |
 | --- | --- |
@@ -99,15 +82,7 @@ second bot to the dispatcher when present).
 
 ### Bot and Session
 
-`Bot` is a thin facade that builds typed API method DTOs (`SendMessage`,
-`SendPhoto`, …) and dispatches them through the `BaseSession`. The default
-session is `AmphpSession`, which builds an `amphp/http-client` instance via
-`HttpClientBuilder`, encodes form bodies, and surfaces Telegram error
-responses as typed exceptions (`TelegramRetryAfter`,
-`TelegramServerException`, `TelegramBadRequestException`,
-`TelegramConflictException`, `TelegramForbiddenException`,
-`TelegramNetworkException`, …). Polling-loop backoff on `RetryAfter` lives
-in the dispatcher, not the session itself.
+`Bot` is a thin facade that builds typed API method DTOs (`SendMessage`, `SendPhoto`, …) and dispatches them through the `BaseSession`. The default session is `AmphpSession`, which builds an `amphp/http-client` instance via `HttpClientBuilder`, encodes form bodies, and surfaces Telegram error responses as typed exceptions (`TelegramRetryAfter`, `TelegramServerException`, `TelegramBadRequestException`, `TelegramConflictException`, `TelegramForbiddenException`, `TelegramNetworkException`, …). Polling-loop backoff on `RetryAfter` lives in the dispatcher, not the session itself.
 
 ```php
 use Gruven\PhpBotGram\Bot;
@@ -120,9 +95,7 @@ $bot = new Bot(
 );
 ```
 
-Every typed API method returns its result directly (e.g. `sendMessage(...)`
-returns `Types\Message`). For deferred dispatch use the underlying method
-DTO directly via `emit()`:
+Every typed API method returns its result directly (e.g. `sendMessage(...)` returns `Types\Message`). For deferred dispatch use the underlying method DTO directly via `emit()`:
 
 ```php
 use Gruven\PhpBotGram\Methods\SendMessage;
@@ -134,9 +107,7 @@ $alsoResult = $send->emit($bot);    // equivalent — TelegramMethod::emit()
 
 ### Dispatcher and Router
 
-`Dispatcher` is a `Router` that owns the polling loop. Routers cascade — a
-parent router runs its own filters and middlewares before delegating to
-included child routers (`$dispatcher->includeRouter($shopRouter)`).
+`Dispatcher` is a `Router` that owns the polling loop. Routers cascade — a parent router runs its own filters and middlewares before delegating to included child routers (`$dispatcher->includeRouter($shopRouter)`).
 
 ```php
 use Gruven\PhpBotGram\Dispatcher\Router;
@@ -150,13 +121,7 @@ $dispatcher->includeRouter($router);
 
 ### Filters and the F-DSL
 
-`Filter` instances are invokable; they may return `false`, `true`, or a
-kwargs array merged into the handler arguments. Built-in filters cover
-commands (`Command`), magic field tests via the `F` constant
-(`use const Gruven\PhpBotGram\F;`), `CallbackData::filter()`, state
-predicates (`StateFilter`; a bare `State` instance is also directly
-usable as a filter), and combinators
-(`Filter::all()`, `Filter::any()`, `Filter::invertOf()`).
+`Filter` instances are invokable; they may return `false`, `true`, or a kwargs array merged into the handler arguments. Built-in filters cover commands (`Command`), magic field tests via the `F` constant (`use const Gruven\PhpBotGram\F;`), `CallbackData::filter()`, state predicates (`StateFilter`; a bare `State` instance is also directly usable as a filter), and combinators (`Filter::all()`, `Filter::any()`, `Filter::invertOf()`).
 
 ```php
 use Gruven\PhpBotGram\Filters\Command;
@@ -176,10 +141,7 @@ $router->message->register(
 
 ### FSM scenes
 
-Scenes are explicit (no metaclass auto-discovery): subclass `Scene`, declare
-state methods with `#[OnMessage]` / `#[OnCallbackQuery]`, and register
-through `SceneRegistry`. Scene history, state, and storage isolation are
-all driven by `FsmContext`.
+Scenes are explicit (no metaclass auto-discovery): subclass `Scene`, declare state methods with `#[OnMessage]` / `#[OnCallbackQuery]`, and register through `SceneRegistry`. Scene history, state, and storage isolation are all driven by `FsmContext`.
 
 ```php
 use Gruven\PhpBotGram\Fsm\Scene\SceneRegistry;
@@ -198,20 +160,13 @@ $dispatcher->message->register(
 );
 ```
 
-The framework injects `ScenesManager $scenes` as a handler kwarg when
-`SceneRegistry` has been attached to the dispatcher.
+The framework injects `ScenesManager $scenes` as a handler kwarg when `SceneRegistry` has been attached to the dispatcher.
 
 ### Webhook
 
-`Webhook\Server\AmphpServer::run()` boots an `amphp/http-server` listener
-that routes inbound `Update` payloads through `SimpleRequestHandler`
-(single bot) or `TokenBasedRequestHandler` (multi-tenant). For full
-control over an existing `amphp/http-server` instance, use
-`Webhook\Setup::register()` to splice the bot lifecycle into your own
-startup/shutdown hooks.
+`Webhook\Server\AmphpServer::run()` boots an `amphp/http-server` listener that routes inbound `Update` payloads through `SimpleRequestHandler` (single bot) or `TokenBasedRequestHandler` (multi-tenant). For full control over an existing `amphp/http-server` instance, use `Webhook\Setup::register()` to splice the bot lifecycle into your own startup/shutdown hooks.
 
-`amphp/http-server` is a suggested dependency — install it explicitly
-before using webhook mode:
+`amphp/http-server` is a suggested dependency — install it explicitly before using webhook mode:
 
 ```bash
 composer require amphp/http-server
@@ -245,12 +200,9 @@ composer coverage-gate             # XDEBUG_MODE=coverage + per-module floors
 composer docs-api                  # generate API docs into build/docs/api/
 ```
 
-Equivalent `make test / make stan / make lint / make coverage-gate /
-make docs-api` targets exist for contributors who prefer the Makefile
-interface.
+Equivalent `make test / make stan / make lint / make coverage-gate / make docs-api` targets exist for contributors who prefer the Makefile interface.
 
-Tests against live external services are env-gated to keep CI offline by
-default:
+Tests against live external services are env-gated to keep CI offline by default:
 
 | Variable | What it unlocks |
 | --- | --- |
@@ -287,6 +239,4 @@ MIT. See `LICENSE`.
 
 ## Upstream
 
-Tracks aiogram 3.28. Behaviour divergences from upstream are documented
-inline at the call site (search for `# Divergence:` in the source) and in
-`docs/superpowers/specs/`.
+Tracks aiogram 3.28. Behaviour divergences from upstream are documented inline at the call site (search for `# Divergence:` in the source) and in `docs/superpowers/specs/`.

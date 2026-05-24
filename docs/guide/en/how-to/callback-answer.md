@@ -2,10 +2,7 @@
 
 ## When to use this
 
-Every inline-button tap fires a `callback_query` that you MUST answer
-within ~15 seconds or the button spins forever. Installing the
-`CallbackAnswerMiddleware` once answers every query automatically —
-post-handler by default, pre-handler when you want instant feedback.
+Every inline-button tap fires a `callback_query` that you MUST answer within ~15 seconds or the button spins forever. Installing the `CallbackAnswerMiddleware` once answers every query automatically — post-handler by default, pre-handler when you want instant feedback.
 
 ## Solution
 
@@ -32,22 +29,10 @@ $dispatcher->callbackQuery->register(
 );
 ```
 
-[`CallbackAnswerMiddleware`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-CallbackAnswer-CallbackAnswerMiddleware.html)
-injects a
-[`CallbackAnswer`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-CallbackAnswer-CallbackAnswer.html)
-DTO into every handler. Post-mode (default) answers after the handler
-returns or throws; pre-mode answers first and treats the handler as
-"in flight". Per-handler `flags: ['callback_answer' => […]]` override
-the defaults.
+[`CallbackAnswerMiddleware`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-CallbackAnswer-CallbackAnswerMiddleware.html) injects a [`CallbackAnswer`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-CallbackAnswer-CallbackAnswer.html) DTO into every handler. Post-mode (default) answers after the handler returns or throws; pre-mode answers first and treats the handler as "in flight". Per-handler `flags: ['callback_answer' => […]]` override the defaults.
 
 ## Pitfalls
 
-- Setting `disabled = true` makes you responsible for calling
-  `answerCallbackQuery` yourself. Forgetting both leaves the button
-  spinning.
-- Pre-mode and post-mode are mutually exclusive per handler — the
-  middleware never double-answers.
-- Errors in the handler still trigger the post-mode answer (the
-  middleware uses a `finally` block). The `errors` observer sees the
-  exception second. See [Middlewares](../concepts/middlewares.md) for
-  the order.
+- Setting `disabled = true` makes you responsible for calling `answerCallbackQuery` yourself. Forgetting both leaves the button spinning.
+- Pre-mode and post-mode are mutually exclusive per handler — the middleware never double-answers.
+- Errors in the handler still trigger the post-mode answer (the middleware uses a `finally` block). The `errors` observer sees the exception second. See [Middlewares](../concepts/middlewares.md) for the order.

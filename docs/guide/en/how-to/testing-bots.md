@@ -2,11 +2,7 @@
 
 ## When to use this
 
-Unit tests should not call the real Telegram API. `MockedSession`
-captures every outgoing `TelegramMethod`, plays back canned responses,
-and lets you assert on call order, payload, and timeout — all without
-a network. Pair it with `RecordingDispatcher` to verify dispatcher
-fall-through paths.
+Unit tests should not call the real Telegram API. `MockedSession` captures every outgoing `TelegramMethod`, plays back canned responses, and lets you assert on call order, payload, and timeout — all without a network. Pair it with `RecordingDispatcher` to verify dispatcher fall-through paths.
 
 ## Solution
 
@@ -31,22 +27,10 @@ assert($request instanceof SendMessage);
 assert($request->chatId === 100);
 ```
 
-[`MockedSession`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-Session-BaseSession.html)
-extends
-`BaseSession` and records every `makeRequest` call into a FIFO queue;
-`getRequest()` pops the next captured method in dispatch order.
-Queue canned responses with `addResult()` before the call site; if
-`ok: false`, the session routes through `checkResponse` so typed
-exception mapping is exercised.
+[`MockedSession`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-Session-BaseSession.html) extends `BaseSession` and records every `makeRequest` call into a FIFO queue; `getRequest()` pops the next captured method in dispatch order. Queue canned responses with `addResult()` before the call site; if `ok: false`, the session routes through `checkResponse` so typed exception mapping is exercised.
 
 ## Pitfalls
 
-- Responses are FIFO. Queueing two responses then calling once leaves
-  one unconsumed for the next test — reset the session between tests.
-- `Response::result` is typed `mixed`, but the production `BaseSession`
-  builds typed instances. Cast carefully in assertions; helpers like
-  `assertInstanceOf` are safer than `===`.
-- `streamContent` returns the canned bytes registered in
-  `$cannedStreamBodies` keyed by URL. Forgetting the entry returns an
-  empty `ReadableBuffer`. See
-  [Bot and Session](../concepts/bot-and-session.md) for the seam.
+- Responses are FIFO. Queueing two responses then calling once leaves one unconsumed for the next test — reset the session between tests.
+- `Response::result` is typed `mixed`, but the production `BaseSession` builds typed instances. Cast carefully in assertions; helpers like `assertInstanceOf` are safer than `===`.
+- `streamContent` returns the canned bytes registered in `$cannedStreamBodies` keyed by URL. Forgetting the entry returns an empty `ReadableBuffer`. See [Bot and Session](../concepts/bot-and-session.md) for the seam.

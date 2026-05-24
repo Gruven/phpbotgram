@@ -5,9 +5,15 @@ declare(strict_types=1);
 /**
  * HTML-aware sentinel URL rewrite for every *.html under <build>/guide/.
  *
+ * For each <a href> element:
+ *   - Trim whitespace-only text nodes at anchor edges. phpDocumentor can
+ *     serialize inline-code links as `<a><code>Foo</code>\n</a>`, making the
+ *     trailing newline render as an underlined space.
+ *
  * For each <a href="https://api.phpbotgram.local/X..."> element:
  *   - Rewrite the href to "classes/X..." (preserving anchor).
- *   - Leave text content, all other attributes, and other elements untouched.
+ *   - Leave visible text content, all other attributes, and other elements
+ *     untouched.
  *
  * Post-rewrite assertion: no leftover "https://api.phpbotgram.local/" substring
  * in any element OUTSIDE the documented exclusions:
@@ -85,6 +91,8 @@ function rewrite_page(string $path, array &$failures): void
     if (!$a instanceof DOMElement) {
       continue;
     }
+    trim_anchor_edge_whitespace($a);
+
     $href = $a->getAttribute('href');
     if (str_starts_with($href, SENTINEL_PREFIX)) {
       $a->setAttribute('href', REPLACE_PREFIX . substr($href, strlen(SENTINEL_PREFIX)));
@@ -139,5 +147,16 @@ function rewrite_page(string $path, array &$failures): void
     if (str_contains($node->textContent, SENTINEL_PREFIX)) {
       $failures[] = "{$path}: leftover sentinel in text content: " . trim(substr($node->textContent, 0, 80));
     }
+  }
+}
+
+function trim_anchor_edge_whitespace(DOMElement $anchor): void
+{
+  while ($anchor->firstChild instanceof DOMText && preg_match('/^\s+$/u', $anchor->firstChild->textContent)) {
+    $anchor->removeChild($anchor->firstChild);
+  }
+
+  while ($anchor->lastChild instanceof DOMText && preg_match('/^\s+$/u', $anchor->lastChild->textContent)) {
+    $anchor->removeChild($anchor->lastChild);
   }
 }

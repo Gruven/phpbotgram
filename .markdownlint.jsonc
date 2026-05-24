@@ -6,7 +6,8 @@
   // which `scripts/copy-root-docs.php` materialises into docs/guide/en/.
   "default": true,
 
-  // CHANGELOG entries can exceed 80 chars; disable line-length.
+  // Documentation prose is intentionally not hard-wrapped; long lines keep
+  // Markdown source easier to edit and avoid renderer artifacts around links.
   "MD013": false,
 
   // Allow inline HTML in fenced code blocks (the spec forbids it in narrative

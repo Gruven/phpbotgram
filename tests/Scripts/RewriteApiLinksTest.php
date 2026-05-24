@@ -81,6 +81,33 @@ final class RewriteApiLinksTest extends TestCase
     self::assertStringContainsString('href="classes/Foo.html"', $after);
   }
 
+  public function testTrimsWhitespaceOnlyEdgesInsideAnchors(): void
+  {
+    file_put_contents(
+      $this->guideRoot . '/x.html',
+      '<html><body><p><a href="https://api.phpbotgram.local/Foo.html"><code>Foo</code>' . "\n" . '</a> bar</p></body></html>',
+    );
+    self::assertSame(0, $this->runScript());
+
+    $after = file_get_contents($this->guideRoot . '/x.html');
+    self::assertStringContainsString('<a href="classes/Foo.html"><code>Foo</code></a> bar', $after);
+    self::assertStringNotContainsString("<code>Foo</code>\n</a>", $after);
+  }
+
+  public function testTrimsWhitespaceOnlyEdgesInsideNonSentinelAnchors(): void
+  {
+    file_put_contents(
+      $this->guideRoot . '/x.html',
+      '<html><body><p><a href="guide/page.html">' . "\n" . '<code>Guide</code>' . "\n" . '</a> link</p></body></html>',
+    );
+    self::assertSame(0, $this->runScript());
+
+    $after = file_get_contents($this->guideRoot . '/x.html');
+    self::assertStringContainsString('<a href="guide/page.html"><code>Guide</code></a> link', $after);
+    self::assertStringNotContainsString("<a href=\"guide/page.html\">\n", $after);
+    self::assertStringNotContainsString("<code>Guide</code>\n</a>", $after);
+  }
+
   private function runScript(): int
   {
     $script = dirname(__DIR__, 2) . '/scripts/rewrite-api-links.php';

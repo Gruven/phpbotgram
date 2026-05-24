@@ -2,9 +2,7 @@
 
 ## When to use this
 
-Multi-step flows — onboarding, quizzes, checkout — that need to
-remember where the user is and what they answered. Scenes encapsulate
-each step into a class and let you transition with one method call.
+Multi-step flows — onboarding, quizzes, checkout — that need to remember where the user is and what they answered. Scenes encapsulate each step into a class and let you transition with one method call.
 
 ## Solution
 
@@ -37,23 +35,10 @@ $registry = new SceneRegistry($dispatcher);
 $registry->add([QuestionOneScene::class, QuestionTwoScene::class]);
 ```
 
-Each scene subclasses
-[`Scene`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene.html)
-and declares its state with `#[SceneState]`. `#[OnMessage]` binds a
-method to message updates while the scene is active; the optional
-`after:` argument transitions to the next state when the handler
-returns. The wizard exposes `updateData`, `getData`, and `exit`
-imperatively.
+Each scene subclasses [`Scene`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene.html) and declares its state with `#[SceneState]`. `#[OnMessage]` binds a method to message updates while the scene is active; the optional `after:` argument transitions to the next state when the handler returns. The wizard exposes `updateData`, `getData`, and `exit` imperatively.
 
 ## Pitfalls
 
-- `After::goto()` is NOT a valid attribute argument — PHP attributes
-  accept only constant expressions. Use `new After(SceneAction::Enter,
-  'state')` instead.
-- Scenes must be passed to
-  [`SceneRegistry::add()`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-SceneRegistry.html)
-  explicitly — there is no auto-discovery. A class with `#[SceneState]`
-  that nobody registered will silently never fire.
-- State names are global strings — `WaitingForName` in two scenes
-  collides. Namespace manually (`'shop:WaitingForName'`) for large bots.
-  See [Scenes](../concepts/scenes.md) for the lifecycle model.
+- `After::goto()` is NOT a valid attribute argument — PHP attributes accept only constant expressions. Use `new After(SceneAction::Enter, 'state')` instead.
+- Scenes must be passed to [`SceneRegistry::add()`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-SceneRegistry.html) explicitly — there is no auto-discovery. A class with `#[SceneState]` that nobody registered will silently never fire.
+- State names are global strings — `WaitingForName` in two scenes collides. Namespace manually (`'shop:WaitingForName'`) for large bots. See [Scenes](../concepts/scenes.md) for the lifecycle model.
