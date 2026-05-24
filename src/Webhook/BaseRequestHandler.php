@@ -4,13 +4,8 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Webhook;
 
-use function Amp\async;
-
 use Amp\ByteStream\BufferException;
 use Amp\Future;
-
-use function Amp\Future\await;
-
 use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\Response;
@@ -19,6 +14,9 @@ use Gruven\PhpBotGram\Dispatcher\Dispatcher;
 use Gruven\PhpBotGram\Methods\TelegramMethod;
 use JsonException;
 use Throwable;
+
+use function Amp\async;
+use function Amp\Future\await;
 
 /**
  * Abstract base for webhook request handlers.

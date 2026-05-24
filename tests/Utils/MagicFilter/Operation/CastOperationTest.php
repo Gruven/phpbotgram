@@ -12,6 +12,8 @@ use RuntimeException;
 
 /**
  * Unit coverage for `CastOperation` — the simplest unary transform step.
+ *
+ * @internal
  */
 final class CastOperationTest extends TestCase
 {

@@ -4,26 +4,23 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Utils\WebApp;
 
+use InvalidArgumentException;
+use JsonException;
+
 use function explode;
 use function hash_equals;
 use function hash_hmac;
 use function implode;
-
-use InvalidArgumentException;
-
 use function is_array;
 use function is_string;
 use function json_decode;
-
-use const JSON_THROW_ON_ERROR;
-
-use JsonException;
-
 use function ksort;
 use function str_starts_with;
 use function strpos;
 use function substr;
 use function urldecode;
+
+use const JSON_THROW_ON_ERROR;
 
 /**
  * HMAC-SHA256-based standard WebApp signature validation and init data parsing.

@@ -17,11 +17,11 @@ use Gruven\PhpBotGram\Client\BotDefault;
 final class LinkPreviewOptions extends TelegramObject
 {
   public function __construct(
-    public readonly null|bool|BotDefault $isDisabled = new BotDefault('link_preview_is_disabled'),
+    public readonly bool|BotDefault|null $isDisabled = new BotDefault('link_preview_is_disabled'),
     public readonly ?string $url = null,
-    public readonly null|bool|BotDefault $preferSmallMedia = new BotDefault('link_preview_prefer_small_media'),
-    public readonly null|bool|BotDefault $preferLargeMedia = new BotDefault('link_preview_prefer_large_media'),
-    public readonly null|bool|BotDefault $showAboveText = new BotDefault('link_preview_show_above_text'),
+    public readonly bool|BotDefault|null $preferSmallMedia = new BotDefault('link_preview_prefer_small_media'),
+    public readonly bool|BotDefault|null $preferLargeMedia = new BotDefault('link_preview_prefer_large_media'),
+    public readonly bool|BotDefault|null $showAboveText = new BotDefault('link_preview_show_above_text'),
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

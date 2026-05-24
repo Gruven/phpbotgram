@@ -9,6 +9,9 @@ use Gruven\PhpBotGram\Dispatcher\Event\FilterObject;
 use Gruven\PhpBotGram\Dispatcher\Event\HandlerObject;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class HandlerObjectTest extends TestCase
 {
   public function testHandlerObjectIsACallableObject(): void

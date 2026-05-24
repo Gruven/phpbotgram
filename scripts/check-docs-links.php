@@ -12,7 +12,6 @@ declare(strict_types=1);
  *   0 — every sentinel URL resolves.
  *   1 — at least one sentinel URL points at a missing class file or anchor.
  */
-
 const SENTINEL_PREFIX = 'https://api.phpbotgram.local/';
 
 $buildRoot = getenv('PHPBOTGRAM_BUILD_ROOT') ?: (dirname(__DIR__) . '/build/docs/api');
@@ -21,16 +20,23 @@ $classesRoot = $buildRoot . '/classes';
 
 if (!is_dir($guideRoot)) {
   fwrite(STDERR, "check-docs-links: guide root not found: {$guideRoot}\n");
+
   exit(1);
 }
 
 $errors = [];
 
 $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($guideRoot, RecursiveDirectoryIterator::SKIP_DOTS));
+
 foreach ($it as $file) {
-  if (!$file->isFile() || $file->getExtension() !== 'html') continue;
+  if (!$file->isFile() || $file->getExtension() !== 'html') {
+    continue;
+  }
   $body = file_get_contents((string)$file);
-  if ($body === false) continue;
+
+  if ($body === false) {
+    continue;
+  }
 
   if (preg_match_all('~href="' . preg_quote(SENTINEL_PREFIX, '~') . '([^"#]+)(#[^"]+)?"~', $body, $m, PREG_SET_ORDER)) {
     foreach ($m as $hit) {
@@ -40,10 +46,13 @@ foreach ($it as $file) {
 
       if (!is_file($targetPath)) {
         $errors[] = sprintf('%s: sentinel target file not found: classes/%s', (string)$file, $target);
+
         continue;
       }
+
       if ($fragment !== null) {
         $targetBody = file_get_contents($targetPath);
+
         if ($targetBody === false || !preg_match('#\bid=["\']' . preg_quote($fragment, '#') . '["\']#', $targetBody)) {
           $errors[] = sprintf('%s: sentinel anchor not found: classes/%s#%s', (string)$file, $target, $fragment);
         }
@@ -54,11 +63,14 @@ foreach ($it as $file) {
 
 if ($errors === []) {
   echo "check-docs-links: clean\n";
+
   exit(0);
 }
 
-fwrite(STDERR, "check-docs-links: FAIL — " . count($errors) . " broken sentinel URL(s)\n");
+fwrite(STDERR, 'check-docs-links: FAIL — ' . count($errors) . " broken sentinel URL(s)\n");
+
 foreach ($errors as $e) {
   fwrite(STDERR, "  {$e}\n");
 }
+
 exit(1);

@@ -24,7 +24,6 @@ declare(strict_types=1);
  *   0 — rewrite succeeded, assertion passed.
  *   1 — assertion failed (leftover sentinel) or write failure.
  */
-
 const SENTINEL_PREFIX = 'https://api.phpbotgram.local/';
 const REPLACE_PREFIX = 'classes/';
 
@@ -33,36 +32,45 @@ $guideRoot = $buildRoot . '/guide';
 
 if (!is_dir($guideRoot)) {
   fwrite(STDERR, "rewrite-api-links: guide root not found: {$guideRoot}\n");
+
   exit(1);
 }
 
 $failures = [];
 
 $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($guideRoot, RecursiveDirectoryIterator::SKIP_DOTS));
+
 foreach ($it as $file) {
-  if (!$file->isFile() || $file->getExtension() !== 'html') continue;
+  if (!$file->isFile() || $file->getExtension() !== 'html') {
+    continue;
+  }
 
   $path = (string)$file;
   rewrite_page($path, $failures);
 }
 
 if ($failures !== []) {
-  fwrite(STDERR, "rewrite-api-links: FAIL — " . count($failures) . " leftover sentinel(s)\n");
+  fwrite(STDERR, 'rewrite-api-links: FAIL — ' . count($failures) . " leftover sentinel(s)\n");
+
   foreach ($failures as $f) {
     fwrite(STDERR, "  {$f}\n");
   }
+
   exit(1);
 }
 
 echo "rewrite-api-links: clean\n";
+
 exit(0);
 
 /** @param list<string> $failures */
 function rewrite_page(string $path, array &$failures): void
 {
   $body = file_get_contents($path);
+
   if ($body === false) {
     $failures[] = "{$path}: read failed";
+
     return;
   }
 
@@ -71,6 +79,7 @@ function rewrite_page(string $path, array &$failures): void
   // canonical form on serialization. Capturing and re-injecting the original
   // bytes keeps the rewrite a true no-op for the doctype line.
   $originalDoctype = null;
+
   if (preg_match('#^\s*(<!DOCTYPE[^>]*>)#i', $body, $m)) {
     $originalDoctype = $m[1];
   }
@@ -81,12 +90,15 @@ function rewrite_page(string $path, array &$failures): void
   // PUBLIC doctype when the input already declares `<!DOCTYPE html>`.
   $loaded = $dom->loadHTML($body, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_HTML_NODEFDTD);
   libxml_clear_errors();
+
   if (!$loaded) {
     $failures[] = "{$path}: HTML parse failed";
+
     return;
   }
 
   $xpath = new DOMXPath($dom);
+
   foreach ($xpath->query('//a[@href]') as $a) {
     if (!$a instanceof DOMElement) {
       continue;
@@ -94,14 +106,17 @@ function rewrite_page(string $path, array &$failures): void
     trim_anchor_edge_whitespace($a);
 
     $href = $a->getAttribute('href');
+
     if (str_starts_with($href, SENTINEL_PREFIX)) {
       $a->setAttribute('href', REPLACE_PREFIX . substr($href, strlen(SENTINEL_PREFIX)));
     }
   }
 
   $rewritten = $dom->saveHTML();
+
   if ($rewritten === false) {
     $failures[] = "{$path}: write failed";
+
     return;
   }
 
@@ -117,6 +132,7 @@ function rewrite_page(string $path, array &$failures): void
       strlen($body),
       strlen($rewritten),
     );
+
     return;
   }
 
@@ -132,6 +148,7 @@ function rewrite_page(string $path, array &$failures): void
 
   if (file_put_contents($path, $rewritten) === false) {
     $failures[] = "{$path}: write failed";
+
     return;
   }
 
@@ -143,6 +160,7 @@ function rewrite_page(string $path, array &$failures): void
   libxml_clear_errors();
   $xpath = new DOMXPath($reloaded);
   $textNodes = $xpath->query('//text()[not(ancestor::pre or ancestor::code or ancestor::kbd or ancestor::samp)]');
+
   foreach ($textNodes as $node) {
     if (str_contains($node->textContent, SENTINEL_PREFIX)) {
       $failures[] = "{$path}: leftover sentinel in text content: " . trim(substr($node->textContent, 0, 80));

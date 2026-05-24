@@ -71,7 +71,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendMessage {
     return new SendMessage(
       businessConnectionId: $businessConnectionId,
@@ -116,7 +116,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendAnimation {
     return new SendAnimation(
       businessConnectionId: $businessConnectionId,
@@ -165,7 +165,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendAudio {
     return new SendAudio(
       businessConnectionId: $businessConnectionId,
@@ -190,6 +190,7 @@ final class ChatMemberUpdated extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function answerContact(
     string $phoneNumber,
     string $firstName,
@@ -204,7 +205,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendContact {
     return new SendContact(
       businessConnectionId: $businessConnectionId,
@@ -245,7 +246,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendDocument {
     return new SendDocument(
       businessConnectionId: $businessConnectionId,
@@ -268,6 +269,7 @@ final class ChatMemberUpdated extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function answerGame(
     string $gameShortName,
     ?string $businessConnectionId = null,
@@ -365,6 +367,7 @@ final class ChatMemberUpdated extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function answerLocation(
     float $latitude,
     float $longitude,
@@ -381,7 +384,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendLocation {
     return new SendLocation(
       businessConnectionId: $businessConnectionId,
@@ -453,7 +456,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendPhoto {
     return new SendPhoto(
       businessConnectionId: $businessConnectionId,
@@ -507,7 +510,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?array $explanationEntities = null,
     ?InputPollMediaInterface $explanationMedia = null,
     ?int $openPeriod = null,
-    null|DateInterval|DateTime|int $closeDate = null,
+    DateInterval|DateTime|int|null $closeDate = null,
     ?bool $isClosed = null,
     ?string $description = null,
     BotDefault|string $descriptionParseMode = new BotDefault('parse_mode'),
@@ -518,7 +521,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendPoll {
     return new SendPoll(
       businessConnectionId: $businessConnectionId,
@@ -558,6 +561,7 @@ final class ChatMemberUpdated extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function answerDice(
     ?string $businessConnectionId = null,
     ?int $messageThreadId = null,
@@ -569,7 +573,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendDice {
     return new SendDice(
       businessConnectionId: $businessConnectionId,
@@ -587,6 +591,7 @@ final class ChatMemberUpdated extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function answerSticker(
     InputFile|string $sticker,
     ?string $businessConnectionId = null,
@@ -599,7 +604,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendSticker {
     return new SendSticker(
       businessConnectionId: $businessConnectionId,
@@ -618,6 +623,7 @@ final class ChatMemberUpdated extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function answerVenue(
     float $latitude,
     float $longitude,
@@ -636,7 +642,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVenue {
     return new SendVenue(
       businessConnectionId: $businessConnectionId,
@@ -674,8 +680,8 @@ final class ChatMemberUpdated extends TelegramObject
     ?int $width = null,
     ?int $height = null,
     ?InputFile $thumbnail = null,
-    null|InputFile|string $cover = null,
-    null|DateInterval|DateTime|int $startTimestamp = null,
+    InputFile|string|null $cover = null,
+    DateInterval|DateTime|int|null $startTimestamp = null,
     ?string $caption = null,
     BotDefault|string $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
@@ -688,7 +694,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVideo {
     return new SendVideo(
       businessConnectionId: $businessConnectionId,
@@ -718,6 +724,7 @@ final class ChatMemberUpdated extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function answerVideoNote(
     InputFile|string $videoNote,
     ?string $businessConnectionId = null,
@@ -732,7 +739,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVideoNote {
     return new SendVideoNote(
       businessConnectionId: $businessConnectionId,
@@ -772,7 +779,7 @@ final class ChatMemberUpdated extends TelegramObject
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVoice {
     return new SendVoice(
       businessConnectionId: $businessConnectionId,

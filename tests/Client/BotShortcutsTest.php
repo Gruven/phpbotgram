@@ -11,6 +11,9 @@ use Gruven\PhpBotGram\Tests\Support\RunAsyncTrait;
 use Gruven\PhpBotGram\Types\User;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class BotShortcutsTest extends TestCase
 {
   use RunAsyncTrait;

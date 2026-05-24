@@ -22,6 +22,8 @@ use PHPUnit\Framework\TestCase;
  *     API divergence (a): PHP does not expose these helpers; callers
  *     operate on the `$entities` / `$captionEntities` arrays directly.
  *   - effective_attachment computed property — API divergence (a): not ported.
+ *
+ * @internal
  */
 final class MessageTypeTest extends TestCase
 {

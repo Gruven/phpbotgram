@@ -21,6 +21,8 @@ use ReflectionClass;
  * Mirrors upstream's `CallbackData.__init_subclass__` keyword arguments
  * (`aiogram/filters/callback_data.py:50-65`) which capture `prefix` and `sep`
  * (default `:`) as class-level metadata.
+ *
+ * @internal
  */
 final class CallbackPrefixTest extends TestCase
 {

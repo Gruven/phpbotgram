@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Dispatcher;
 
-use function Amp\delay;
-
 use Closure;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
@@ -21,6 +19,8 @@ use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Types\Update;
 use Gruven\PhpBotGram\Types\User;
 use PHPUnit\Framework\TestCase;
+
+use function Amp\delay;
 
 /**
  * Webhook response contract — Task 3.13.

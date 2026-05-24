@@ -35,6 +35,8 @@ use PHPUnit\Framework\TestCase;
  * - `test_attach_not_builder` (attach a bare button): Python's `attach` raises
  *   `TypeError`; PHP raises `InvalidArgumentException` for wrong builder type;
  *   passing a non-builder is caught by type declarations — API divergence (a).
+ *
+ * @internal
  */
 final class InlineKeyboardBuilderTest extends TestCase
 {

@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Support;
 
-use function Amp\async;
-
 use Closure;
 use Error;
 use PHPUnit\Framework\Attributes\After;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Driver\StreamSelectDriver;
 use Throwable;
+
+use function Amp\async;
 
 trait RunAsyncTrait
 {

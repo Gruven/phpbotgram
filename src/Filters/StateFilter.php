@@ -65,7 +65,7 @@ final class StateFilter extends Filter
    *                                                 class-strings of `StatesGroup`
    *                                                 subclasses (detected at runtime).
    */
-  public function __construct(null|State|StatesGroup|string ...$states)
+  public function __construct(State|StatesGroup|string|null ...$states)
   {
     if ($states === []) {
       throw new InvalidArgumentException('At least one state is required.');

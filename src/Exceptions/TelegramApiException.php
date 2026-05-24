@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Exceptions;
 
 use Gruven\PhpBotGram\Methods\TelegramMethod;
+use Stringable;
 
-class TelegramApiException extends DetailedPhpBotGramException
+class TelegramApiException extends DetailedPhpBotGramException implements Stringable
 {
   protected string $label = 'Telegram server says';
 

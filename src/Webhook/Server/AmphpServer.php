@@ -7,9 +7,6 @@ namespace Gruven\PhpBotGram\Webhook\Server;
 use Amp\Http\Server\DefaultErrorHandler;
 use Amp\Http\Server\HttpServer;
 use Amp\Http\Server\Middleware;
-
-use function Amp\Http\Server\Middleware\stackMiddleware;
-
 use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\SocketHttpServer;
@@ -18,6 +15,8 @@ use Gruven\PhpBotGram\Webhook\BaseRequestHandler;
 use Gruven\PhpBotGram\Webhook\IpFilter;
 use Psr\Log\LoggerInterface as PsrLogger;
 use Psr\Log\NullLogger;
+
+use function Amp\Http\Server\Middleware\stackMiddleware;
 
 /**
  * Stand-alone amphp/http-server v3 boot helper.

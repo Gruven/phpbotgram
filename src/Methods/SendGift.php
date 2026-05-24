@@ -24,7 +24,7 @@ final class SendGift extends TelegramMethod
   public function __construct(
     public readonly string $giftId,
     public readonly ?int $userId = null,
-    public readonly null|int|string $chatId = null,
+    public readonly int|string|null $chatId = null,
     public readonly ?bool $payForUpgrade = null,
     public readonly ?string $text = null,
     public readonly ?string $textParseMode = null,

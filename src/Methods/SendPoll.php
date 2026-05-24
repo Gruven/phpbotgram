@@ -39,7 +39,7 @@ final class SendPoll extends TelegramMethod
     public readonly array $options,
     public readonly ?string $businessConnectionId = null,
     public readonly ?int $messageThreadId = null,
-    public readonly null|BotDefault|string $questionParseMode = new BotDefault('parse_mode'),
+    public readonly BotDefault|string|null $questionParseMode = new BotDefault('parse_mode'),
     /** @var list<MessageEntity> */
     public readonly ?array $questionEntities = null,
     public readonly ?bool $isAnonymous = null,
@@ -55,24 +55,24 @@ final class SendPoll extends TelegramMethod
     /** @var list<int> */
     public readonly ?array $correctOptionIds = null,
     public readonly ?string $explanation = null,
-    public readonly null|BotDefault|string $explanationParseMode = new BotDefault('parse_mode'),
+    public readonly BotDefault|string|null $explanationParseMode = new BotDefault('parse_mode'),
     /** @var list<MessageEntity> */
     public readonly ?array $explanationEntities = null,
     public readonly ?InputPollMediaInterface $explanationMedia = null,
     public readonly ?int $openPeriod = null,
-    public readonly null|DateInterval|DateTime|int $closeDate = null,
+    public readonly DateInterval|DateTime|int|null $closeDate = null,
     public readonly ?bool $isClosed = null,
     public readonly ?string $description = null,
-    public readonly null|BotDefault|string $descriptionParseMode = new BotDefault('parse_mode'),
+    public readonly BotDefault|string|null $descriptionParseMode = new BotDefault('parse_mode'),
     /** @var list<MessageEntity> */
     public readonly ?array $descriptionEntities = null,
     public readonly ?InputPollMediaInterface $media = null,
     public readonly ?bool $disableNotification = null,
-    public readonly null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    public readonly bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     public readonly ?bool $allowPaidBroadcast = null,
     public readonly ?string $messageEffectId = null,
     public readonly ?ReplyParameters $replyParameters = null,
-    public readonly null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    public readonly ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

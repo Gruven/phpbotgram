@@ -59,6 +59,8 @@ use Throwable;
  *   - test_add_middleware / test_use_middleware (mock async make_request) — test
  *     infrastructure divergence (c): covered by RequestMiddlewareManagerTest and
  *     BotTest::testInvokeRunsThroughMiddlewareChain.
+ *
+ * @internal
  */
 final class BaseSessionTest extends TestCase
 {

@@ -28,9 +28,9 @@ declare(strict_types=1);
  *   0 — written successfully.
  *   1 — usage / parse / write failure.
  */
-
 if ($argc < 4 || $argv[2] !== '--upsert') {
   fwrite(STDERR, "Usage: update-versions-json.php <path> --upsert id=<id> path=<path> label=<label> stable=<true|false|auto>\n");
+
   exit(1);
 }
 
@@ -38,19 +38,24 @@ $path = $argv[1];
 $argsRaw = array_slice($argv, 3);
 
 $entry = [];
+
 foreach ($argsRaw as $raw) {
   $parts = explode('=', $raw, 2);
+
   if (count($parts) !== 2) {
     fwrite(STDERR, "update-versions-json: malformed arg '{$raw}' (expected key=value)\n");
+
     exit(1);
   }
   $entry[$parts[0]] = $parts[1];
 }
 
 $required = ['id', 'path', 'label', 'stable'];
+
 foreach ($required as $k) {
   if (!isset($entry[$k])) {
     fwrite(STDERR, "update-versions-json: missing required key '{$k}'\n");
+
     exit(1);
   }
 }
@@ -59,6 +64,7 @@ $existingJson = file_exists($path) ? file_get_contents($path) : null;
 $data = ($existingJson === null || trim($existingJson) === '')
   ? ['versions' => []]
   : json_decode($existingJson, true);
+
 if (!is_array($data) || !isset($data['versions']) || !is_array($data['versions'])) {
   $data = ['versions' => []];
 }
@@ -80,11 +86,13 @@ $isNewestTag = static function (string $newId, array $versions) use ($tagShaped)
       return false;
     }
   }
+
   return true;
 };
 
 if ($stableInput === 'auto') {
   $entry['stable'] = $tagShaped($entry['id']) && $isNewestTag($entry['id'], $data['versions']);
+
   if ($entry['stable']) {
     foreach ($data['versions'] as &$v) {
       $v['stable'] = false;
@@ -104,15 +112,20 @@ array_unshift($data['versions'], $entry);
 // 4. Atomic write
 $encoded = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 $tmp = $path . '.tmp';
+
 if (file_put_contents($tmp, $encoded . "\n") === false) {
   fwrite(STDERR, "update-versions-json: write failed: {$tmp}\n");
+
   exit(1);
 }
+
 if (!rename($tmp, $path)) {
   @unlink($tmp);
   fwrite(STDERR, "update-versions-json: rename failed: {$tmp} -> {$path}\n");
+
   exit(1);
 }
 
 echo "update-versions-json: {$path} updated (id={$entry['id']}, stable=" . ($entry['stable'] ? 'true' : 'false') . ")\n";
+
 exit(0);

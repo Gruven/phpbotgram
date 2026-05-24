@@ -52,6 +52,8 @@ final class FormStates extends StatesGroup
  *     subsequently resolve correctly.
  * 16. `StateFilter` extends `Filter`.
  * 17. No rawState kwarg is treated as null.
+ *
+ * @internal
  */
 final class StateFilterTest extends TestCase
 {

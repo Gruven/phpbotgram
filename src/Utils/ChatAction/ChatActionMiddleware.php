@@ -128,7 +128,7 @@ final class ChatActionMiddleware extends BaseMiddleware
    *
    * @return null|array<string, mixed>|bool|string Flag value, or null if not set.
    */
-  private function resolveChatActionFlag(array $data): null|array|bool|string
+  private function resolveChatActionFlag(array $data): array|bool|string|null
   {
     $handler = $data['handler'] ?? null;
 

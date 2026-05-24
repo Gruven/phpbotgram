@@ -17,6 +17,8 @@ use RuntimeException;
  * Sanity check on the exception hierarchy: the magic-filter exceptions
  * must remain a closed family rooted at `MagicFilterException` so
  * callers can catch the whole family with one clause.
+ *
+ * @internal
  */
 final class ExceptionsTest extends TestCase
 {

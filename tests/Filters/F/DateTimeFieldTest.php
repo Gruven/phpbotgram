@@ -16,6 +16,8 @@ use PHPUnit\Framework\TestCase;
  * Coverage for `DateTimeField` — typed wrapper for `\DateTime`-valued
  * Telegram fields (`Message::$date`, `Message::$editDate`, …). Provides
  * temporal comparator helpers (`before`, `after`, `between`).
+ *
+ * @internal
  */
 final class DateTimeFieldTest extends TestCase
 {

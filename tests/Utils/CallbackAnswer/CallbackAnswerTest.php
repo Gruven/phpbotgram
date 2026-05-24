@@ -26,6 +26,8 @@ use PHPUnit\Framework\TestCase;
  * --------------
  * - `test_str` (asserts `str(instance) == "CallbackAnswer(answered=False, …)"`):
  *   PHP does not implement `__toString()` on `CallbackAnswer` — API divergence (a).
+ *
+ * @internal
  */
 final class CallbackAnswerTest extends TestCase
 {

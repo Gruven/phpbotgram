@@ -25,7 +25,7 @@ final class SetChatMenuButton extends TelegramMethod
 
   public function __construct(
     public readonly ?int $chatId = null,
-    public readonly null|MenuButtonCommands|MenuButtonDefault|MenuButtonWebApp $menuButton = null,
+    public readonly MenuButtonCommands|MenuButtonDefault|MenuButtonWebApp|null $menuButton = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

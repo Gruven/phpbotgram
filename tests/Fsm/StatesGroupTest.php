@@ -84,6 +84,8 @@ final class FixtureParentStandalone extends StatesGroup
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class StatesGroupTest extends TestCase
 {

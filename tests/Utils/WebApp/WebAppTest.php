@@ -7,17 +7,14 @@ namespace Gruven\PhpBotGram\Tests\Utils\WebApp;
 use Gruven\PhpBotGram\Utils\WebApp\WebApp;
 use Gruven\PhpBotGram\Utils\WebApp\WebAppInitData;
 use Gruven\PhpBotGram\Utils\WebApp\WebAppUser;
+use InvalidArgumentException;
+use JsonException;
+use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 use function hash_hmac;
 use function implode;
-
-use InvalidArgumentException;
-use JsonException;
-
 use function ksort;
-
-use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 /**
  * Unit tests for {@see WebApp}.
@@ -37,6 +34,8 @@ use ReflectionClass;
  * - `test_parse_web_app_init_data` date check (`parsed.auth_date.year == 2022`):
  *   PHP stores `authDate` as `int` epoch, not a `datetime` object — API
  *   divergence (a); equivalent via `(new \DateTime())->setTimestamp($data->authDate)->format('Y')`.
+ *
+ * @internal
  */
 final class WebAppTest extends TestCase
 {

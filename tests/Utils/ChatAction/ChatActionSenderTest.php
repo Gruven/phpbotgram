@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Utils\ChatAction;
 
-use function Amp\delay;
-
 use Gruven\PhpBotGram\Enums\ChatAction;
 use Gruven\PhpBotGram\Methods\SendChatAction;
 use Gruven\PhpBotGram\Tests\Support\MockedBot;
@@ -14,6 +12,8 @@ use Gruven\PhpBotGram\Utils\ChatAction\ChatActionHandle;
 use Gruven\PhpBotGram\Utils\ChatAction\ChatActionSender;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+
+use function Amp\delay;
 
 /**
  * Unit tests for {@see ChatActionSender} and {@see ChatActionHandle}.
@@ -35,6 +35,8 @@ use PHPUnit\Framework\TestCase;
  * - `test_worker`: patches `Bot.send_chat_action` via `unittest.mock.AsyncMock`
  *   at the class level — test infrastructure divergence (c); equivalent
  *   behavior is covered by `testScopeCallsSendChatActionAtLeastOnce`.
+ *
+ * @internal
  */
 final class ChatActionSenderTest extends TestCase
 {

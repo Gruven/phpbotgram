@@ -48,7 +48,7 @@ final class SendPaidMedia extends TelegramMethod
     public readonly ?bool $allowPaidBroadcast = null,
     public readonly ?SuggestedPostParameters $suggestedPostParameters = null,
     public readonly ?ReplyParameters $replyParameters = null,
-    public readonly null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    public readonly ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

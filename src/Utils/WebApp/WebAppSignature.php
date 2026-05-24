@@ -4,21 +4,16 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Utils\WebApp;
 
+use InvalidArgumentException;
+use JsonException;
+use SodiumException;
+
 use function explode;
 use function extension_loaded;
 use function implode;
-
-use InvalidArgumentException;
-
 use function is_string;
-
-use JsonException;
-
 use function ksort;
 use function sodium_crypto_sign_verify_detached;
-
-use SodiumException;
-
 use function str_repeat;
 use function strlen;
 use function strpos;

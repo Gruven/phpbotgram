@@ -16,6 +16,8 @@ use PHPUnit\Framework\TestCase;
  * signatures so user code can't accidentally pass a non-int and exposes
  * an aggregate `between($lo, $hi)` helper that composes gte+lte under an
  * `AndFilter`.
+ *
+ * @internal
  */
 final class IntFieldTest extends TestCase
 {

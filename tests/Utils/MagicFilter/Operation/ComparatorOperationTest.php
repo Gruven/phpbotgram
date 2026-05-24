@@ -12,6 +12,8 @@ use stdClass;
 /**
  * Unit coverage for `ComparatorOperation` — the binary comparison step
  * shared by all the `equals`/`gt`/`lt`/… chain extensions.
+ *
+ * @internal
  */
 final class ComparatorOperationTest extends TestCase
 {

@@ -25,6 +25,8 @@ use ReflectionMethod;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class BaseStorageTest extends TestCase
 {
@@ -353,7 +355,7 @@ final class InMemoryStorage extends BaseStorage
     return "{$key->botId}:{$key->chatId}:{$key->userId}:{$key->destiny}";
   }
 
-  public function setState(StorageKey $key, null|object|string $state = null): void
+  public function setState(StorageKey $key, object|string|null $state = null): void
   {
     if ($state === null) {
       $this->states[$this->keyStr($key)] = null;

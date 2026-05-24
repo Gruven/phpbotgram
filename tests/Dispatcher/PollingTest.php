@@ -4,12 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Dispatcher;
 
-use function Amp\async;
-
 use Amp\DeferredFuture;
-
-use function Amp\delay;
-
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
 use Gruven\PhpBotGram\Dispatcher\PollingOptions;
@@ -28,6 +23,9 @@ use LogicException;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 use RuntimeException;
+
+use function Amp\async;
+use function Amp\delay;
 
 /**
  * Polling-loop tests for `Dispatcher` — Task 3.12.

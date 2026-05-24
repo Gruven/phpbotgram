@@ -44,6 +44,8 @@ use RuntimeException;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class RedisEventIsolationTest extends TestCase
 {
@@ -293,7 +295,7 @@ final class RedisEventIsolationTest extends TestCase
     // After release, either 'evalsha' (first attempt) or 'eval' (fallback) must appear.
     $evalCalls = array_values(array_filter(
       array_slice($this->calls, $countBefore),
-      static fn($e) => in_array($e['cmd'], ['eval', 'evalsha'], true)
+      static fn($e) => in_array($e['cmd'], ['eval', 'evalsha'], true),
     ));
     self::assertGreaterThanOrEqual(1, count($evalCalls), 'release() must invoke eval for safe unlock');
   }
@@ -315,7 +317,7 @@ final class RedisEventIsolationTest extends TestCase
     self::assertSame(
       $countAfterFirst,
       count($this->calls),
-      'Second release() must not issue additional Redis commands'
+      'Second release() must not issue additional Redis commands',
     );
   }
 
@@ -336,7 +338,7 @@ final class RedisEventIsolationTest extends TestCase
     // The EVAL call (or EVALSHA fallback) should carry the same token as ARGV[1].
     $evalCalls = array_values(array_filter(
       $this->calls,
-      static fn($e) => in_array($e['cmd'], ['eval', 'evalsha'], true)
+      static fn($e) => in_array($e['cmd'], ['eval', 'evalsha'], true),
     ));
     self::assertNotEmpty($evalCalls, 'At least one eval call must have been recorded');
     $lastEvalCall = $evalCalls[count($evalCalls) - 1];

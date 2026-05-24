@@ -9,6 +9,9 @@ use Gruven\PhpBotGram\Dispatcher\Event\EventObserver;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+/**
+ * @internal
+ */
 final class EventObserverTest extends TestCase
 {
   public function testRegisterReturnsTheCallbackUnchanged(): void

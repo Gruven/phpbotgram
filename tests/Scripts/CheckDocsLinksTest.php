@@ -6,6 +6,9 @@ namespace Gruven\PhpBotGram\Tests\Scripts;
 
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class CheckDocsLinksTest extends TestCase
 {
   private string $tmp;

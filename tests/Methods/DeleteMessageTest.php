@@ -14,6 +14,8 @@ use PHPUnit\Framework\TestCase;
  * Upstream skips:
  *   - async infrastructure — API divergence (a)/test infrastructure divergence (c).
  *   - Pydantic model_dump — API divergence (a).
+ *
+ * @internal
  */
 final class DeleteMessageTest extends TestCase
 {

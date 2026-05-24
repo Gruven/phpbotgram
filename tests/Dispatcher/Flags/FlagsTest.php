@@ -19,6 +19,9 @@ final class FlagsTestFixture
   }
 }
 
+/**
+ * @internal
+ */
 final class FlagsTest extends TestCase
 {
   protected function setUp(): void

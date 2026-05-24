@@ -13,6 +13,9 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use stdClass;
 
+/**
+ * @internal
+ */
 final class MiddlewareManagerTest extends TestCase
 {
   public function testEmptyManagerCountAndWrapReturnsTerminal(): void
@@ -47,6 +50,7 @@ final class MiddlewareManagerTest extends TestCase
     $manager->register(new class ($log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = 'before';
@@ -197,6 +201,7 @@ final class MiddlewareManagerTest extends TestCase
     $handlerCalled = false;
     $manager->register(new class ($sentinel) extends BaseMiddleware {
       public function __construct(public stdClass $sentinel) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         return $this->sentinel;
@@ -234,6 +239,7 @@ final class MiddlewareManagerTest extends TestCase
     return new class ($name, $log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public string $name, public array &$log) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = $this->name . '-before';

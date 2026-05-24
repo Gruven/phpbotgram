@@ -4,21 +4,16 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Utils\WebApp;
 
-use function base64_encode;
-use function extension_loaded;
-
 use Gruven\PhpBotGram\Utils\WebApp\WebAppInitData;
 use Gruven\PhpBotGram\Utils\WebApp\WebAppSignature;
-
-use function implode;
-
 use InvalidArgumentException;
-
-use function ksort;
-
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
+use function base64_encode;
+use function extension_loaded;
+use function implode;
+use function ksort;
 use function rtrim;
 use function strtr;
 
@@ -43,6 +38,8 @@ use function strtr;
  * - Upstream uses hardcoded hex private/public key bytes; PHP generates
  *   a fresh keypair per test via `sodium_crypto_sign_keypair()` to avoid
  *   hardcoded secret material — test infrastructure divergence (c).
+ *
+ * @internal
  */
 final class WebAppSignatureTest extends TestCase
 {

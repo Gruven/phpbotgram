@@ -9,6 +9,9 @@ use Gruven\PhpBotGram\Dispatcher\Flags\FlagDecorator;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+/**
+ * @internal
+ */
 final class FlagDecoratorTest extends TestCase
 {
   protected function setUp(): void

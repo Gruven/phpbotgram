@@ -4,12 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Webhook;
 
-use function Amp\ByteStream\buffer as bufferStream;
-
 use Amp\ByteStream\ReadableIterableStream;
-
-use function Amp\delay;
-
 use Amp\Http\Server\Driver\Client;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
@@ -27,6 +22,9 @@ use Gruven\PhpBotGram\Webhook\BaseRequestHandler;
 use League\Uri\Http as LeagueUri;
 use LogicException;
 use PHPUnit\Framework\TestCase;
+
+use function Amp\ByteStream\buffer as bufferStream;
+use function Amp\delay;
 
 /**
  * Tests for {@see BaseRequestHandler}.
@@ -228,7 +226,7 @@ final class BaseRequestHandlerTest extends TestCase
     });
   }
 
-  public function testResponseBodyIs_Unauthorized_On401(): void
+  public function testResponseBodyIsUnauthorizedOn401(): void
   {
     $this->runAsync(function (): void {
       $handler = $this->makeHandler(secretOk: false);

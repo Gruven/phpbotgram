@@ -18,41 +18,49 @@ declare(strict_types=1);
  *   0 — clean.
  *   1 — at least one violation recorded.
  */
-
 const FORBIDDEN_TAGS = '(?:a|div|span|table|tr|td|th|img|iframe|script|style)';
 
 $root = getenv('PHPBOTGRAM_DOCS_ROOT') ?: (dirname(__DIR__) . '/docs/guide/en');
 
 if (!is_dir($root)) {
   fwrite(STDERR, "lint-docs: source directory not found: {$root}\n");
+
   exit(1);
 }
 
 $errors = [];
 
 $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS));
+
 foreach ($it as $file) {
-  if (!$file->isFile() || $file->getExtension() !== 'md') continue;
+  if (!$file->isFile() || $file->getExtension() !== 'md') {
+    continue;
+  }
   lint_file((string)$file, $errors);
 }
 
 if ($errors === []) {
   echo "lint-docs: clean (root={$root})\n";
+
   exit(0);
 }
 
-fwrite(STDERR, "lint-docs: FAIL — " . count($errors) . " issue(s)\n");
+fwrite(STDERR, 'lint-docs: FAIL — ' . count($errors) . " issue(s)\n");
+
 foreach ($errors as $e) {
   fwrite(STDERR, "  {$e}\n");
 }
+
 exit(1);
 
 /** @param list<string> $errors */
 function lint_file(string $path, array &$errors): void
 {
   $lines = file($path, FILE_IGNORE_NEW_LINES);
+
   if ($lines === false) {
     $errors[] = "{$path}: read failed";
+
     return;
   }
 
@@ -82,16 +90,19 @@ function lint_file(string $path, array &$errors): void
         $fence_buffer = [];
         $fence_start_line = $lineno;
       }
+
       continue;
     }
 
     if ($inside_fence) {
       $fence_buffer[] = $line;
+
       continue;
     }
 
     // Inline-HTML check on non-fenced lines.
     $stripped = preg_replace('/`+[^`]*`+/', '', $line);
+
     if (preg_match('#</?' . FORBIDDEN_TAGS . '\b#', $stripped)) {
       $errors[] = "{$path}:{$lineno}: inline raw HTML tag is silently stripped by phpDocumentor; use Markdown syntax or the sentinel HTTPS URL (`https://api.phpbotgram.local/...`).";
     }
@@ -104,6 +115,7 @@ function process_fence(string $path, ?string $info, array $buffer, int $startLin
   if ($info === 'php-fragment') {
     return; // eye-review only
   }
+
   if ($info !== 'php') {
     return;
   }
@@ -114,6 +126,7 @@ function process_fence(string $path, ?string $info, array $buffer, int $startLin
   // care, but preserving the author's indentation makes error messages
   // (which include the file body) easier to map back to the source.
   $body = ltrim($body, "\r\n");
+
   if (!str_starts_with($body, '<?php')) {
     $body = "<?php\n" . $body;
   }

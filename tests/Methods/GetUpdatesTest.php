@@ -21,6 +21,8 @@ use PHPUnit\Framework\TestCase;
  *   - Pydantic model_validate for Update list — API divergence (a): the
  *     `list:Update` return type is handled by Session::checkResponse(); covered
  *     by BaseSessionTest.
+ *
+ * @internal
  */
 final class GetUpdatesTest extends TestCase
 {

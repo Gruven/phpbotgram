@@ -20,6 +20,8 @@ use PHPUnit\Framework\TestCase;
  *   - async multipart upload assertions — API divergence (a): upload path covered
  *     by InputFileTest.
  *   - Pydantic model_dump for InputMedia variants — API divergence (a).
+ *
+ * @internal
  */
 final class SendMediaGroupTest extends TestCase
 {

@@ -93,6 +93,8 @@ final class HtmlDecorationExposer extends HtmlDecoration
  *   `<tg-datetime>` — API divergence (a).
  * - `test_date_time_with_datetime_object`: PHP `dateTime()` accepts
  *   `int $unixTime` only — API divergence (a).
+ *
+ * @internal
  */
 final class HtmlDecorationTest extends TestCase
 {

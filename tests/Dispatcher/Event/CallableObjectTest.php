@@ -10,6 +10,9 @@ use ReflectionClass;
 use RuntimeException;
 use stdClass;
 
+/**
+ * @internal
+ */
 final class CallableObjectTest extends TestCase
 {
   public function testCallableObjectIsNotFinalSoFilterAndHandlerCanExtend(): void

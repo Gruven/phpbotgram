@@ -22,6 +22,8 @@ use ReflectionClass;
  * for terminal use cases that don't need a typed comparator (existence
  * check, raw chain bridge). Subclass-specific behaviour is covered by the
  * sibling test files.
+ *
+ * @internal
  */
 final class BaseFieldTest extends TestCase
 {

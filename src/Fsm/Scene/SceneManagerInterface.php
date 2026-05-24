@@ -36,7 +36,7 @@ interface SceneManagerInterface
    *                         lifecycle methods.
    */
   public function enter(
-    null|State|string $scene,
+    State|string|null $scene,
     bool $checkActive = true,
     mixed ...$kwargs,
   ): void;

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Fsm\Storage;
 
-use function Amp\delay;
-
 use Amp\Redis\Command\Option\SetOptions;
 use Amp\Redis\RedisClient;
 use RuntimeException;
+
+use function Amp\delay;
 
 /**
  * Redis-backed FSM event isolation via a distributed SET NX PX lock.
@@ -140,7 +140,7 @@ LUA;
             'Failed to acquire Redis lock for key "%s" within %d seconds.',
             $lockKey,
             $acquireTimeout,
-          )
+          ),
         );
       }
 

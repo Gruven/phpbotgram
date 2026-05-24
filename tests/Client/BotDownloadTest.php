@@ -10,6 +10,9 @@ use Gruven\PhpBotGram\Types\File;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+/**
+ * @internal
+ */
 final class BotDownloadTest extends TestCase
 {
   public function testDownloadFileReturnsBufferedBody(): void

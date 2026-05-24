@@ -9,6 +9,9 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class BackoffConfigTest extends TestCase
 {
   public function testDefaultsMatchUpstreamSpec(): void

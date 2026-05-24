@@ -24,7 +24,7 @@ final class InputMediaAudio extends InputMedia implements InputPollMediaInterfac
     public readonly string $type = 'audio',
     public readonly ?InputFile $thumbnail = null,
     public readonly ?string $caption = null,
-    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    public readonly BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
     public readonly ?int $duration = null,
     public readonly ?string $performer = null,

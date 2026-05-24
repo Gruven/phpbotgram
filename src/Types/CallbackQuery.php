@@ -37,6 +37,7 @@ final class CallbackQuery extends TelegramObject
   ) {
     parent::__construct($bot);
   }
+
   public function answer(
     ?string $text = null,
     ?bool $showAlert = null,

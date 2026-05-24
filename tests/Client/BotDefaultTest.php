@@ -16,6 +16,8 @@ use PHPUnit\Framework\TestCase;
  *     PHP's `__debugInfo` / `var_dump` output is not part of the public API.
  *   - test_dataclass_creation_3_10_plus — API divergence (a): Python-specific
  *     `dataclass.__dataclass_params__` introspection, no PHP equivalent.
+ *
+ * @internal
  */
 final class BotDefaultTest extends TestCase
 {

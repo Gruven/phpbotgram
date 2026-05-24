@@ -45,33 +45,35 @@ use Gruven\PhpBotGram\Types\Message;
  */
 final class UserResolverFilter extends Filter
 {
-    public function __invoke(object $event, mixed ...$kwargs): array|bool
-    {
-        if (!$event instanceof Message) {
-            return false;
-        }
-
-        $from = $event->fromUser;
-        if ($from === null) {
-            return false;  // no sender, reject
-        }
-
-        // Simulate DB lookup — inject resolved data into the kwargs bag.
-        return [
-            'current_user' => [
-                'id' => $from->id,
-                'name' => trim(($from->firstName ?? '') . ' ' . ($from->lastName ?? '')),
-                'is_premium' => (bool)($from->isPremium ?? false),
-            ],
-        ];
+  public function __invoke(object $event, mixed ...$kwargs): array|bool
+  {
+    if (!$event instanceof Message) {
+      return false;
     }
+
+    $from = $event->fromUser;
+
+    if ($from === null) {
+      return false;  // no sender, reject
+    }
+
+    // Simulate DB lookup — inject resolved data into the kwargs bag.
+    return [
+      'current_user' => [
+        'id' => $from->id,
+        'name' => trim(($from->firstName ?? '') . ' ' . ($from->lastName ?? '')),
+        'is_premium' => (bool)($from->isPremium ?? false),
+      ],
+    ];
+  }
 }
 
 $token = getenv('BOT_TOKEN') ?: ($_ENV['BOT_TOKEN'] ?? '');
 
 if ($token === '') {
-    fwrite(STDERR, "BOT_TOKEN env var is required.\n");
-    exit(1);
+  fwrite(STDERR, "BOT_TOKEN env var is required.\n");
+
+  exit(1);
 }
 
 $bot = new Bot($token);
@@ -85,24 +87,24 @@ $dispatcher->workflowData['db_connection'] = 'pdo:sqlite::memory:';
 // and `$db_connection` from $dispatcher->workflowData. Names must match
 // literally: see the docblock at the top of this file for why.
 $dispatcher->message->register(
-    static function (
-        Message $event,
-        array $current_user,
-        string $db_connection,
-    ): void {
-        $name = $current_user['name'] ?: 'stranger';
-        $premium = $current_user['is_premium'] ? ' (Premium)' : '';
-        $event->answer(
-            "Hello, {$name}{$premium}!\n"
-            . "DB: {$db_connection}"
-        )->emit();
-    },
-    filters: [new UserResolverFilter()],
+  static function (
+    Message $event,
+    array $current_user,
+    string $db_connection,
+  ): void {
+    $name = $current_user['name'] ?: 'stranger';
+    $premium = $current_user['is_premium'] ? ' (Premium)' : '';
+    $event->answer(
+      "Hello, {$name}{$premium}!\n"
+        . "DB: {$db_connection}",
+    )->emit();
+  },
+  filters: [new UserResolverFilter()],
 );
 
 // Fallback for anonymous/channel messages.
 $dispatcher->message->register(static function (Message $event): void {
-    $event->answer("Could not resolve your user profile.")->emit();
+  $event->answer('Could not resolve your user profile.')->emit();
 });
 
 fwrite(STDOUT, "Context-addition-from-filter bot starting...\n");

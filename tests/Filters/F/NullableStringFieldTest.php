@@ -15,6 +15,8 @@ use PHPUnit\Framework\TestCase;
  * `Message::$text`, …). Adds `isSet()` / `isNull()` to the StringField
  * surface so callers can express null-checks without dropping into raw
  * MagicFilter.
+ *
+ * @internal
  */
 final class NullableStringFieldTest extends TestCase
 {

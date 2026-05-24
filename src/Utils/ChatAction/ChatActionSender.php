@@ -4,22 +4,18 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Utils\ChatAction;
 
-use function Amp\async;
-
 use Amp\DeferredCancellation;
 use Amp\DeferredFuture;
-
-use function Amp\delay;
-
 use Amp\Future;
-
-use function Amp\Future\awaitFirst;
-use function Amp\now;
-
 use Closure;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Enums\ChatAction;
 use Throwable;
+
+use function Amp\async;
+use function Amp\delay;
+use function Amp\Future\awaitFirst;
+use function Amp\now;
 
 /**
  * Periodically emits a `sendChatAction` call to Telegram while a long

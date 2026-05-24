@@ -18,6 +18,8 @@ use stdClass;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class StatesTest extends TestCase
 {

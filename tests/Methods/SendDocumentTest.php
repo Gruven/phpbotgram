@@ -19,6 +19,8 @@ use PHPUnit\Framework\TestCase;
  *   - async multipart upload assertions — API divergence (a): upload path covered
  *     by InputFileTest and BotDownloadTest.
  *   - Pydantic model_dump — API divergence (a).
+ *
+ * @internal
  */
 final class SendDocumentTest extends TestCase
 {

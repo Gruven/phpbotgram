@@ -20,6 +20,8 @@ use PHPUnit\Framework\TestCase;
  *     divergence (a): PHP's InputFile upload path is covered by InputFileTest
  *     and BotDownloadTest.
  *   - Pydantic model_dump — API divergence (a).
+ *
+ * @internal
  */
 final class SendPhotoTest extends TestCase
 {

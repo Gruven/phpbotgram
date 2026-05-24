@@ -19,6 +19,8 @@ use PHPUnit\Framework\TestCase;
  *   PyCryptodome AES encryption as a custom codec; no PHP equivalent library
  *   is bundled — test infrastructure divergence (c); the round-trip concept is
  *   covered by `testRoundTripWithCustomEncoderDecoder` using XOR.
+ *
+ * @internal
  */
 final class PayloadTest extends TestCase
 {

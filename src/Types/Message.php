@@ -200,7 +200,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendMessage {
     return new SendMessage(
       businessConnectionId: $this->businessConnectionId,
@@ -236,7 +236,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendMessage {
     return new SendMessage(
       businessConnectionId: $this->businessConnectionId,
@@ -279,7 +279,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendAnimation {
     return new SendAnimation(
       businessConnectionId: $this->businessConnectionId,
@@ -327,7 +327,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendAnimation {
     return new SendAnimation(
       businessConnectionId: $this->businessConnectionId,
@@ -374,7 +374,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendAudio {
     return new SendAudio(
       businessConnectionId: $this->businessConnectionId,
@@ -418,7 +418,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendAudio {
     return new SendAudio(
       businessConnectionId: $this->businessConnectionId,
@@ -443,6 +443,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function answerContact(
     string $phoneNumber,
     string $firstName,
@@ -455,7 +456,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendContact {
     return new SendContact(
       businessConnectionId: $this->businessConnectionId,
@@ -476,6 +477,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function replyContact(
     string $phoneNumber,
     string $firstName,
@@ -487,7 +489,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendContact {
     return new SendContact(
       businessConnectionId: $this->businessConnectionId,
@@ -526,7 +528,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendDocument {
     return new SendDocument(
       businessConnectionId: $this->businessConnectionId,
@@ -566,7 +568,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendDocument {
     return new SendDocument(
       businessConnectionId: $this->businessConnectionId,
@@ -589,6 +591,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function answerGame(
     string $gameShortName,
     ?bool $disableNotification = null,
@@ -612,6 +615,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function replyGame(
     string $gameShortName,
     ?bool $disableNotification = null,
@@ -775,6 +779,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function answerLocation(
     float $latitude,
     float $longitude,
@@ -789,7 +794,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendLocation {
     return new SendLocation(
       businessConnectionId: $this->businessConnectionId,
@@ -812,6 +817,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function replyLocation(
     float $latitude,
     float $longitude,
@@ -825,7 +831,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendLocation {
     return new SendLocation(
       businessConnectionId: $this->businessConnectionId,
@@ -919,7 +925,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendPhoto {
     return new SendPhoto(
       businessConnectionId: $this->businessConnectionId,
@@ -959,7 +965,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendPhoto {
     return new SendPhoto(
       businessConnectionId: $this->businessConnectionId,
@@ -1011,7 +1017,7 @@ final class Message extends MaybeInaccessibleMessage
     ?array $explanationEntities = null,
     ?InputPollMediaInterface $explanationMedia = null,
     ?int $openPeriod = null,
-    null|DateInterval|DateTime|int $closeDate = null,
+    DateInterval|DateTime|int|null $closeDate = null,
     ?bool $isClosed = null,
     ?string $description = null,
     BotDefault|string $descriptionParseMode = new BotDefault('parse_mode'),
@@ -1022,7 +1028,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendPoll {
     return new SendPoll(
       businessConnectionId: $this->businessConnectionId,
@@ -1091,7 +1097,7 @@ final class Message extends MaybeInaccessibleMessage
     ?array $explanationEntities = null,
     ?InputPollMediaInterface $explanationMedia = null,
     ?int $openPeriod = null,
-    null|DateInterval|DateTime|int $closeDate = null,
+    DateInterval|DateTime|int|null $closeDate = null,
     ?bool $isClosed = null,
     ?string $description = null,
     BotDefault|string $descriptionParseMode = new BotDefault('parse_mode'),
@@ -1101,7 +1107,7 @@ final class Message extends MaybeInaccessibleMessage
     bool|BotDefault $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendPoll {
     return new SendPoll(
       businessConnectionId: $this->businessConnectionId,
@@ -1141,6 +1147,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function answerDice(
     ?int $directMessagesTopicId = null,
     ?string $emoji = null,
@@ -1150,7 +1157,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendDice {
     return new SendDice(
       businessConnectionId: $this->businessConnectionId,
@@ -1168,6 +1175,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function replyDice(
     ?int $directMessagesTopicId = null,
     ?string $emoji = null,
@@ -1176,7 +1184,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendDice {
     return new SendDice(
       businessConnectionId: $this->businessConnectionId,
@@ -1194,6 +1202,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function answerSticker(
     InputFile|string $sticker,
     ?int $directMessagesTopicId = null,
@@ -1204,7 +1213,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendSticker {
     return new SendSticker(
       businessConnectionId: $this->businessConnectionId,
@@ -1223,6 +1232,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function replySticker(
     InputFile|string $sticker,
     ?int $directMessagesTopicId = null,
@@ -1232,7 +1242,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendSticker {
     return new SendSticker(
       businessConnectionId: $this->businessConnectionId,
@@ -1251,6 +1261,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function answerVenue(
     float $latitude,
     float $longitude,
@@ -1267,7 +1278,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVenue {
     return new SendVenue(
       businessConnectionId: $this->businessConnectionId,
@@ -1292,6 +1303,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function replyVenue(
     float $latitude,
     float $longitude,
@@ -1307,7 +1319,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVenue {
     return new SendVenue(
       businessConnectionId: $this->businessConnectionId,
@@ -1343,8 +1355,8 @@ final class Message extends MaybeInaccessibleMessage
     ?int $width = null,
     ?int $height = null,
     ?InputFile $thumbnail = null,
-    null|InputFile|string $cover = null,
-    null|DateInterval|DateTime|int $startTimestamp = null,
+    InputFile|string|null $cover = null,
+    DateInterval|DateTime|int|null $startTimestamp = null,
     ?string $caption = null,
     BotDefault|string $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
@@ -1357,7 +1369,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVideo {
     return new SendVideo(
       businessConnectionId: $this->businessConnectionId,
@@ -1398,8 +1410,8 @@ final class Message extends MaybeInaccessibleMessage
     ?int $width = null,
     ?int $height = null,
     ?InputFile $thumbnail = null,
-    null|InputFile|string $cover = null,
-    null|DateInterval|DateTime|int $startTimestamp = null,
+    InputFile|string|null $cover = null,
+    DateInterval|DateTime|int|null $startTimestamp = null,
     ?string $caption = null,
     BotDefault|string $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
@@ -1411,7 +1423,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVideo {
     return new SendVideo(
       businessConnectionId: $this->businessConnectionId,
@@ -1441,6 +1453,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function answerVideoNote(
     InputFile|string $videoNote,
     ?int $directMessagesTopicId = null,
@@ -1453,7 +1466,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVideoNote {
     return new SendVideoNote(
       businessConnectionId: $this->businessConnectionId,
@@ -1474,6 +1487,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function replyVideoNote(
     InputFile|string $videoNote,
     ?int $directMessagesTopicId = null,
@@ -1485,7 +1499,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVideoNote {
     return new SendVideoNote(
       businessConnectionId: $this->businessConnectionId,
@@ -1523,7 +1537,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVoice {
     return new SendVoice(
       businessConnectionId: $this->businessConnectionId,
@@ -1561,7 +1575,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendVoice {
     return new SendVoice(
       businessConnectionId: $this->businessConnectionId,
@@ -1602,7 +1616,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $allowPaidBroadcast = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendPaidMedia {
     return new SendPaidMedia(
       businessConnectionId: $this->businessConnectionId,
@@ -1643,7 +1657,7 @@ final class Message extends MaybeInaccessibleMessage
     ?bool $protectContent = null,
     ?bool $allowPaidBroadcast = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): SendPaidMedia {
     return new SendPaidMedia(
       businessConnectionId: $this->businessConnectionId,
@@ -1674,7 +1688,7 @@ final class Message extends MaybeInaccessibleMessage
     int|string $chatId,
     ?int $messageThreadId = null,
     ?int $directMessagesTopicId = null,
-    null|DateInterval|DateTime|int $videoStartTimestamp = null,
+    DateInterval|DateTime|int|null $videoStartTimestamp = null,
     ?string $caption = null,
     BotDefault|string $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
@@ -1685,7 +1699,7 @@ final class Message extends MaybeInaccessibleMessage
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
   ): CopyMessage {
     return new CopyMessage(
       chatId: $chatId,
@@ -1708,11 +1722,12 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function forward(
     int|string $chatId,
     ?int $messageThreadId = null,
     ?int $directMessagesTopicId = null,
-    null|DateInterval|DateTime|int $videoStartTimestamp = null,
+    DateInterval|DateTime|int|null $videoStartTimestamp = null,
     ?bool $disableNotification = null,
     bool|BotDefault $protectContent = new BotDefault('protect_content'),
     ?string $messageEffectId = null,
@@ -1757,6 +1772,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function editMedia(
     InputMedia $media,
     ?string $inlineMessageId = null,
@@ -1772,6 +1788,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function editReplyMarkup(
     ?string $inlineMessageId = null,
     ?InlineKeyboardMarkup $replyMarkup = null,
@@ -1785,6 +1802,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function deleteReplyMarkup(
     ?string $inlineMessageId = null,
   ): EditMessageReplyMarkup {
@@ -1797,6 +1815,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function editLiveLocation(
     float $latitude,
     float $longitude,
@@ -1822,6 +1841,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function stopLiveLocation(
     ?string $inlineMessageId = null,
     ?InlineKeyboardMarkup $replyMarkup = null,
@@ -1860,6 +1880,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function delete(
   ): DeleteMessage {
     return new DeleteMessage(
@@ -1868,6 +1889,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function pin(
     ?bool $disableNotification = null,
   ): PinChatMessage {
@@ -1879,6 +1901,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function unpin(
   ): UnpinChatMessage {
     return new UnpinChatMessage(
@@ -1904,6 +1927,7 @@ final class Message extends MaybeInaccessibleMessage
       bot: $this->bot,
     );
   }
+
   public function answerGuestQuery(
     InlineQueryResult $result,
   ): AnswerGuestQuery {

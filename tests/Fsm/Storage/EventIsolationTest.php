@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Fsm\Storage;
 
-use function Amp\async;
-
 use Amp\Future;
 use Amp\Sync\LocalMutex;
 use Gruven\PhpBotGram\Fsm\Storage\BaseEventIsolation;
@@ -18,6 +16,8 @@ use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Revolt\EventLoop;
+
+use function Amp\async;
 
 /**
  * Upstream `tests/test_fsm/storage/test_isolation.py` cases deliberately
@@ -34,6 +34,8 @@ use Revolt\EventLoop;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class EventIsolationTest extends TestCase
 {

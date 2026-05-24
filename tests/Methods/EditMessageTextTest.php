@@ -19,6 +19,8 @@ use PHPUnit\Framework\TestCase;
  *   - Pydantic model_dump — API divergence (a).
  *   - BotDefault parse_mode/link_preview propagation — codegen-determined
  *     behavior (b): covered by BaseSessionTest.
+ *
+ * @internal
  */
 final class EditMessageTextTest extends TestCase
 {

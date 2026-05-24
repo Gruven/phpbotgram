@@ -62,7 +62,7 @@ final readonly class PollingOptions
    *
    * @var null|list<string>|Unspecified
    */
-  public null|array|Unspecified $allowedUpdates;
+  public array|Unspecified|null $allowedUpdates;
 
   /**
    * @param int $pollingTimeout Long-poll seconds for `getUpdates`. 0 means
@@ -83,7 +83,7 @@ final readonly class PollingOptions
   public function __construct(
     public int $pollingTimeout = 10,
     ?BackoffConfig $backoffConfig = null,
-    null|array|Unspecified $allowedUpdates = new Unspecified(),
+    array|Unspecified|null $allowedUpdates = new Unspecified(),
     public ?int $handleAsTasks = 100,
   ) {
     // The default `new Unspecified()` is a fresh instance per call by

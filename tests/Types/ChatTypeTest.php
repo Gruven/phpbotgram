@@ -18,6 +18,8 @@ use PHPUnit\Framework\TestCase;
  *     not ported; callers use the raw `id` int property directly.
  *   - full_name / effective_name computed properties — API divergence (a): PHP
  *     does not expose computed name shortcuts on Chat (only UserShortcuts on User).
+ *
+ * @internal
  */
 final class ChatTypeTest extends TestCase
 {

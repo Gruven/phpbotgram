@@ -27,6 +27,8 @@ use PHPUnit\Framework\TestCase;
  * - The upstream tests only cover `check_integrity(token, data)` where `data`
  *   includes a `hash` key. PHP additionally exposes `checkSignature()` and
  *   field-ordering independence tests which are extra coverage, not skips.
+ *
+ * @internal
  */
 final class AuthWidgetTest extends TestCase
 {

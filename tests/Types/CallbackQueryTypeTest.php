@@ -22,6 +22,8 @@ use PHPUnit\Framework\TestCase;
  *   - async answer() shortcut test (coroutine-based) — API divergence (a):
  *     PHP's answer() returns an AnswerCallbackQuery method object that the
  *     caller dispatches; tested below via MockedBot.
+ *
+ * @internal
  */
 final class CallbackQueryTypeTest extends TestCase
 {

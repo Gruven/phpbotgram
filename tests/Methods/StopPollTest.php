@@ -16,6 +16,8 @@ use PHPUnit\Framework\TestCase;
  * Upstream skips:
  *   - async infrastructure — API divergence (a)/test infrastructure divergence (c).
  *   - Pydantic model_dump for Poll — API divergence (a).
+ *
+ * @internal
  */
 final class StopPollTest extends TestCase
 {

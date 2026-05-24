@@ -26,7 +26,7 @@ final class EditMessageLiveLocation extends TelegramMethod
     public readonly float $latitude,
     public readonly float $longitude,
     public readonly ?string $businessConnectionId = null,
-    public readonly null|int|string $chatId = null,
+    public readonly int|string|null $chatId = null,
     public readonly ?int $messageId = null,
     public readonly ?string $inlineMessageId = null,
     public readonly ?int $livePeriod = null,

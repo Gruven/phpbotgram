@@ -20,6 +20,8 @@ use PHPUnit\Framework\TestCase;
  *   `create_channel_bot_link()` is not ported to PHP — phase scope
  *   deferral (b); that helper is an aiogram convenience that combines
  *   admin-rights flags into a query string and is out of Phase 7 scope.
+ *
+ * @internal
  */
 final class LinkTest extends TestCase
 {

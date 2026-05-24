@@ -26,7 +26,7 @@ final class CreateChatInviteLink extends TelegramMethod
   public function __construct(
     public readonly int|string $chatId,
     public readonly ?string $name = null,
-    public readonly null|DateInterval|DateTime|int $expireDate = null,
+    public readonly DateInterval|DateTime|int|null $expireDate = null,
     public readonly ?int $memberLimit = null,
     public readonly ?bool $createsJoinRequest = null,
     ?Bot $bot = null,

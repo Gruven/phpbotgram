@@ -30,6 +30,8 @@ use PHPUnit\Framework\TestCase;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class RedisStorageTest extends TestCase
 {
@@ -225,7 +227,7 @@ final class RedisStorageTest extends TestCase
     self::assertCount(1, $setCalls);
     self::assertSame(
       json_encode($data, JSON_THROW_ON_ERROR),
-      (string)$setCalls[0]['args'][1]
+      (string)$setCalls[0]['args'][1],
     );
   }
 
@@ -268,7 +270,7 @@ final class RedisStorageTest extends TestCase
     $payload = ['name' => 'Bob', 'count' => 7];
     $expectedKey = (new DefaultKeyBuilder())->build($this->key, StoragePart::Data);
     $storage = new RedisStorage(
-      $this->makeRedis([$expectedKey => json_encode($payload, JSON_THROW_ON_ERROR)])
+      $this->makeRedis([$expectedKey => json_encode($payload, JSON_THROW_ON_ERROR)]),
     );
 
     self::assertSame($payload, $storage->getData($this->key));
@@ -306,7 +308,7 @@ final class RedisStorageTest extends TestCase
     $payload = ['foo' => 'bar'];
     $expectedKey = (new DefaultKeyBuilder())->build($this->key, StoragePart::Data);
     $storage = new RedisStorage(
-      $this->makeRedis([$expectedKey => json_encode($payload, JSON_THROW_ON_ERROR)])
+      $this->makeRedis([$expectedKey => json_encode($payload, JSON_THROW_ON_ERROR)]),
     );
 
     self::assertSame('bar', $storage->getValue($this->key, 'foo'));

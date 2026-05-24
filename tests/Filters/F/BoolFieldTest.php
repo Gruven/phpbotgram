@@ -14,6 +14,8 @@ use PHPUnit\Framework\TestCase;
  * (`User::$isPremium`, `Message::$isTopicMessage`, …). Exposes only the
  * two truth-value comparators (`isTrue`, `isFalse`) so call sites stay
  * readable.
+ *
+ * @internal
  */
 final class BoolFieldTest extends TestCase
 {

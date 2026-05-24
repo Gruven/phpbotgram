@@ -25,8 +25,9 @@ use Gruven\PhpBotGram\Methods\SendMessage;
 $token = getenv('BOT_TOKEN') ?: ($_ENV['BOT_TOKEN'] ?? '');
 
 if ($token === '') {
-    fwrite(STDERR, "BOT_TOKEN env var is required.\n");
-    exit(1);
+  fwrite(STDERR, "BOT_TOKEN env var is required.\n");
+
+  exit(1);
 }
 
 $bot = new Bot($token);
@@ -35,29 +36,30 @@ $offset = null;
 fwrite(STDOUT, "Without-dispatcher bot starting (Ctrl+C to stop)...\n");
 
 while (true) {
-    // Raw getUpdates — no dispatcher involved.
-    $updates = $bot(new GetUpdates(
-        offset: $offset,
-        timeout: 10,
-    ));
+  // Raw getUpdates — no dispatcher involved.
+  $updates = $bot(new GetUpdates(
+    offset: $offset,
+    timeout: 10,
+  ));
 
-    foreach ($updates as $update) {
-        $offset = $update->updateId + 1;
+  foreach ($updates as $update) {
+    $offset = $update->updateId + 1;
 
-        $message = $update->message;
-        if ($message === null || $message->text === null) {
-            continue;
-        }
+    $message = $update->message;
 
-        $chatId = $message->chat->id;
-        $text = $message->text;
-
-        fwrite(STDOUT, "Received from chat {$chatId}: {$text}\n");
-
-        // Send a reply directly — no answer() shortcut needed.
-        $bot(new SendMessage(
-            chatId: $chatId,
-            text: "You said: {$text}",
-        ));
+    if ($message === null || $message->text === null) {
+      continue;
     }
+
+    $chatId = $message->chat->id;
+    $text = $message->text;
+
+    fwrite(STDOUT, "Received from chat {$chatId}: {$text}\n");
+
+    // Send a reply directly — no answer() shortcut needed.
+    $bot(new SendMessage(
+      chatId: $chatId,
+      text: "You said: {$text}",
+    ));
+  }
 }

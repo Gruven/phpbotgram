@@ -17,6 +17,8 @@ use PHPUnit\Framework\TestCase;
  * object fields (`Message::$fromUser: ?User`, `Message::$replyToMessage:
  * ?Message`, …). The wrapper exposes only presence-tests because deeper
  * predicates are field-specific and belong on per-type sub-builders.
+ *
+ * @internal
  */
 final class NullableObjectFieldTest extends TestCase
 {

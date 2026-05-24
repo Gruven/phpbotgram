@@ -30,8 +30,8 @@ use Gruven\PhpBotGram\Filters\Command;
 use Gruven\PhpBotGram\Fsm\Scene;
 use Gruven\PhpBotGram\Fsm\Scene\Attribute\OnMessage;
 use Gruven\PhpBotGram\Fsm\Scene\Attribute\SceneState;
-use Gruven\PhpBotGram\Fsm\Scene\ScenesManager;
 use Gruven\PhpBotGram\Fsm\Scene\SceneRegistry;
+use Gruven\PhpBotGram\Fsm\Scene\ScenesManager;
 use Gruven\PhpBotGram\Types\Message;
 
 /**
@@ -42,29 +42,31 @@ use Gruven\PhpBotGram\Types\Message;
 #[SceneState('greeting')]
 final class GreetingScene extends Scene
 {
-    /**
-     * Fire on every message while the scene is active.
-     */
-    #[OnMessage]
-    public function onMessage(Message $event): void
-    {
-        $text = $event->text ?? '';
+  /**
+   * Fire on every message while the scene is active.
+   */
+  #[OnMessage]
+  public function onMessage(Message $event): void
+  {
+    $text = $event->text ?? '';
 
-        if ($text === '/done') {
-            $this->wizard->exit();
-            $event->answer("Goodbye! You have left the greeting scene.")->emit();
-            return;
-        }
+    if ($text === '/done') {
+      $this->wizard->exit();
+      $event->answer('Goodbye! You have left the greeting scene.')->emit();
 
-        $event->answer("(Greeting scene) You said: {$text}\nSend /done to exit.")->emit();
+      return;
     }
+
+    $event->answer("(Greeting scene) You said: {$text}\nSend /done to exit.")->emit();
+  }
 }
 
 $token = getenv('BOT_TOKEN') ?: ($_ENV['BOT_TOKEN'] ?? '');
 
 if ($token === '') {
-    fwrite(STDERR, "BOT_TOKEN env var is required.\n");
-    exit(1);
+  fwrite(STDERR, "BOT_TOKEN env var is required.\n");
+
+  exit(1);
 }
 
 $bot = new Bot($token);
@@ -78,17 +80,17 @@ $registry->add([GreetingScene::class]);
 // /start — enter the scene. The framework injects $scenes (ScenesManager)
 // as a handler kwarg because SceneRegistry registered its outer middleware.
 $dispatcher->message->register(
-    static function (Message $event, ScenesManager $scenes): void {
-        $event->answer("Welcome! Entering the greeting scene.")->emit();
-        // ScenesManager::enter() sets FSM state and fires the Enter lifecycle.
-        $scenes->enter(GreetingScene::class);
-    },
-    filters: [new Command('start')],
+  static function (Message $event, ScenesManager $scenes): void {
+    $event->answer('Welcome! Entering the greeting scene.')->emit();
+    // ScenesManager::enter() sets FSM state and fires the Enter lifecycle.
+    $scenes->enter(GreetingScene::class);
+  },
+  filters: [new Command('start')],
 );
 
 // Catch-all outside the scene.
 $dispatcher->message->register(static function (Message $event): void {
-    $event->answer("Send /start to begin.")->emit();
+  $event->answer('Send /start to begin.')->emit();
 });
 
 fwrite(STDOUT, "Scene bot starting...\n");

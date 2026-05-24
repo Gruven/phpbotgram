@@ -26,7 +26,7 @@ final class InlineQueryResultDocument extends InlineQueryResult
     public readonly string $mimeType,
     public readonly string $type = 'document',
     public readonly ?string $caption = null,
-    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    public readonly BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
     public readonly ?string $description = null,
     public readonly ?InlineKeyboardMarkup $replyMarkup = null,

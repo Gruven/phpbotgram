@@ -25,7 +25,7 @@ final class InlineQueryResultCachedVoice extends InlineQueryResult
     public readonly string $title,
     public readonly string $type = 'voice',
     public readonly ?string $caption = null,
-    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    public readonly BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
     public readonly ?InlineKeyboardMarkup $replyMarkup = null,
     public readonly ?InputMessageContent $inputMessageContent = null,

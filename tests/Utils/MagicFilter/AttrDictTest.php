@@ -11,6 +11,8 @@ use PHPUnit\Framework\TestCase;
  * Coverage for `AttrDict` — the hybrid object/array used by the
  * `MagicData` filter (to wrap middleware data dicts so MagicFilter
  * rules can walk them with either `F->foo` or `F['foo']`).
+ *
+ * @internal
  */
 final class AttrDictTest extends TestCase
 {

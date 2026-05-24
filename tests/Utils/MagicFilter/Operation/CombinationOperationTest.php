@@ -15,6 +15,8 @@ use stdClass;
  * Unit coverage for the combination family — `CombinationOperation` and
  * its `Important` + `R` (reverse) flavours. These power AND/OR/XOR and
  * the upstream r-variants for `'pong' + F.text`-style call sites.
+ *
+ * @internal
  */
 final class CombinationOperationTest extends TestCase
 {

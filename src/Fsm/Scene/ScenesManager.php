@@ -129,7 +129,7 @@ final class ScenesManager implements SceneManagerInterface
    * @param bool $checkActive Skip the "exit active scene" guard when `false`.
    * @param mixed ...$kwargs Additional context merged into the data bag.
    */
-  public function enter(null|State|string $scene, bool $checkActive = true, mixed ...$kwargs): void
+  public function enter(State|string|null $scene, bool $checkActive = true, mixed ...$kwargs): void
   {
     if ($kwargs !== []) {
       /** @var array<string, mixed> $kwargs */
@@ -195,7 +195,7 @@ final class ScenesManager implements SceneManagerInterface
    *
    * @throws SceneException When `$sceneType` cannot be resolved.
    */
-  private function getScene(null|State|string $sceneType): Scene
+  private function getScene(State|string|null $sceneType): Scene
   {
     /** @var class-string<Scene> $class */
     $class = $this->registry->get($sceneType);

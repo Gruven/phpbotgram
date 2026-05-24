@@ -30,8 +30,9 @@ use Gruven\PhpBotGram\Types\Message;
 $token1 = getenv('BOT_TOKEN') ?: ($_ENV['BOT_TOKEN'] ?? '');
 
 if ($token1 === '') {
-    fwrite(STDERR, "BOT_TOKEN env var is required.\n");
-    exit(1);
+  fwrite(STDERR, "BOT_TOKEN env var is required.\n");
+
+  exit(1);
 }
 
 $token2 = getenv('BOT_TOKEN_2') ?: ($_ENV['BOT_TOKEN_2'] ?? '');
@@ -40,10 +41,10 @@ $bot1 = new Bot($token1);
 $bots = [$bot1];
 
 if ($token2 !== '') {
-    $bots[] = new Bot($token2);
-    fwrite(STDOUT, "Starting two bots...\n");
+  $bots[] = new Bot($token2);
+  fwrite(STDOUT, "Starting two bots...\n");
 } else {
-    fwrite(STDOUT, "BOT_TOKEN_2 not set; running single-bot mode.\n");
+  fwrite(STDOUT, "BOT_TOKEN_2 not set; running single-bot mode.\n");
 }
 
 $dispatcher = new Dispatcher();
@@ -51,19 +52,19 @@ $dispatcher = new Dispatcher();
 // The `$bot` kwarg is always the specific bot that received the update.
 // We truncate the token to show just the numeric bot-id portion.
 $dispatcher->message->register(static function (Message $event, Bot $bot): void {
-    $text = $event->text ?? '';
-    // The bot token format is "<bot_id>:<random_part>"; extract the ID prefix.
-    $tokenId = explode(':', $bot->token)[0];
-    $event->answer("Bot #{$tokenId} received: {$text}")->emit();
+  $text = $event->text ?? '';
+  // The bot token format is "<bot_id>:<random_part>"; extract the ID prefix.
+  $tokenId = explode(':', $bot->token)[0];
+  $event->answer("Bot #{$tokenId} received: {$text}")->emit();
 });
 
 $dispatcher->startup->register(static function (array $bots): void {
-    $count = count($bots);
-    fwrite(STDOUT, "Polling started for {$count} bot(s).\n");
+  $count = count($bots);
+  fwrite(STDOUT, "Polling started for {$count} bot(s).\n");
 });
 
 $dispatcher->shutdown->register(static function (): void {
-    fwrite(STDOUT, "Polling stopped.\n");
+  fwrite(STDOUT, "Polling stopped.\n");
 });
 
 // runPolling accepts variadic bots; each gets its own polling fiber.

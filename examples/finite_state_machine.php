@@ -32,16 +32,17 @@ use Gruven\PhpBotGram\Types\Message;
 // Define the states group.
 class Form extends StatesGroup
 {
-    public static State $name;
-    public static State $age;
+  public static State $name;
+  public static State $age;
 }
 Form::bootstrap();
 
 $token = getenv('BOT_TOKEN') ?: ($_ENV['BOT_TOKEN'] ?? '');
 
 if ($token === '') {
-    fwrite(STDERR, "BOT_TOKEN env var is required.\n");
-    exit(1);
+  fwrite(STDERR, "BOT_TOKEN env var is required.\n");
+
+  exit(1);
 }
 
 $bot = new Bot($token);
@@ -50,47 +51,49 @@ $dispatcher = new Dispatcher();
 
 // /start — enter the form.
 $dispatcher->message->register(
-    static function (Message $event, FsmContext $state): void {
-        $state->setState(Form::$name);
-        $event->answer("Hello! What's your name?")->emit();
-    },
-    filters: [new Command('start')],
+  static function (Message $event, FsmContext $state): void {
+    $state->setState(Form::$name);
+    $event->answer("Hello! What's your name?")->emit();
+  },
+  filters: [new Command('start')],
 );
 
 // Collect name — only fires when state === Form:name.
 $dispatcher->message->register(
-    static function (Message $event, FsmContext $state): void {
-        $name = $event->text ?? '';
-        $state->updateData(['name' => $name]);
-        $state->setState(Form::$age);
-        $event->answer("Nice to meet you, {$name}! How old are you?")->emit();
-    },
-    filters: [new StateFilter(Form::$name)],
+  static function (Message $event, FsmContext $state): void {
+    $name = $event->text ?? '';
+    $state->updateData(['name' => $name]);
+    $state->setState(Form::$age);
+    $event->answer("Nice to meet you, {$name}! How old are you?")->emit();
+  },
+  filters: [new StateFilter(Form::$name)],
 );
 
 // Collect age — only fires when state === Form:age.
 $dispatcher->message->register(
-    static function (Message $event, FsmContext $state): void {
-        $text = $event->text ?? '';
-        if (!ctype_digit($text)) {
-            $event->answer("Please enter a valid number for your age.")->emit();
-            return;
-        }
-        $data = $state->getData();
-        $name = is_string($data['name'] ?? null) ? $data['name'] : 'stranger';
-        $state->setState(null);  // clear the state
-        $event->answer("Great! So your name is {$name} and you are {$text} years old.")->emit();
-    },
-    filters: [new StateFilter(Form::$age)],
+  static function (Message $event, FsmContext $state): void {
+    $text = $event->text ?? '';
+
+    if (!ctype_digit($text)) {
+      $event->answer('Please enter a valid number for your age.')->emit();
+
+      return;
+    }
+    $data = $state->getData();
+    $name = is_string($data['name'] ?? null) ? $data['name'] : 'stranger';
+    $state->setState(null);  // clear the state
+    $event->answer("Great! So your name is {$name} and you are {$text} years old.")->emit();
+  },
+  filters: [new StateFilter(Form::$age)],
 );
 
 // /cancel — reset the form.
 $dispatcher->message->register(
-    static function (Message $event, FsmContext $state): void {
-        $state->setState(null);
-        $event->answer("Form cancelled.")->emit();
-    },
-    filters: [new Command('cancel'), new StateFilter('*')],
+  static function (Message $event, FsmContext $state): void {
+    $state->setState(null);
+    $event->answer('Form cancelled.')->emit();
+  },
+  filters: [new Command('cancel'), new StateFilter('*')],
 );
 
 fwrite(STDOUT, "FSM bot starting...\n");

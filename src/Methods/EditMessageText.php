@@ -28,13 +28,13 @@ final class EditMessageText extends TelegramMethod
   public function __construct(
     public readonly string $text,
     public readonly ?string $businessConnectionId = null,
-    public readonly null|int|string $chatId = null,
+    public readonly int|string|null $chatId = null,
     public readonly ?int $messageId = null,
     public readonly ?string $inlineMessageId = null,
-    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    public readonly BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     /** @var list<MessageEntity> */
     public readonly ?array $entities = null,
-    public readonly null|BotDefault|LinkPreviewOptions $linkPreviewOptions = new BotDefault('link_preview'),
+    public readonly BotDefault|LinkPreviewOptions|null $linkPreviewOptions = new BotDefault('link_preview'),
     public readonly ?InlineKeyboardMarkup $replyMarkup = null,
     ?Bot $bot = null,
   ) {

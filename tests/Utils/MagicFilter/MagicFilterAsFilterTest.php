@@ -15,6 +15,8 @@ use PHPUnit\Framework\TestCase;
  * `MagicFilter` chain into a dispatcher-consumable `Filter`. The bridge
  * is the boundary between the chain runtime and the dispatcher protocol;
  * its acceptance contract is documented in the class docblock.
+ *
+ * @internal
  */
 final class MagicFilterAsFilterTest extends TestCase
 {

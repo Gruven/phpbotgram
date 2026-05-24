@@ -28,8 +28,9 @@ use Gruven\PhpBotGram\Types\Message;
 $token = getenv('BOT_TOKEN') ?: ($_ENV['BOT_TOKEN'] ?? '');
 
 if ($token === '') {
-    fwrite(STDERR, "BOT_TOKEN env var is required.\n");
-    exit(1);
+  fwrite(STDERR, "BOT_TOKEN env var is required.\n");
+
+  exit(1);
 }
 
 $bot = new Bot($token);
@@ -37,17 +38,17 @@ $dispatcher = new Dispatcher();
 
 // Only subscribe to messages and callback queries — nothing else.
 $pollingOptions = new PollingOptions(
-    allowedUpdates: ['message', 'callback_query'],
+  allowedUpdates: ['message', 'callback_query'],
 );
 
 $dispatcher->message->register(static function (Message $event): void {
-    $text = $event->text ?? '';
-    $event->answer("You sent a message: {$text}")->emit();
+  $text = $event->text ?? '';
+  $event->answer("You sent a message: {$text}")->emit();
 });
 
 $dispatcher->callbackQuery->register(static function (CallbackQuery $event): void {
-    $data = $event->data ?? '';
-    $event->answer("Callback query data: {$data}")->emit();
+  $data = $event->data ?? '';
+  $event->answer("Callback query data: {$data}")->emit();
 });
 
 fwrite(STDOUT, "Specify-updates bot starting (message + callback_query only)...\n");

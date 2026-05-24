@@ -23,9 +23,9 @@ final class InputMediaPhoto extends InputMedia implements InputPollMediaInterfac
     public readonly InputFile|string $media,
     public readonly string $type = 'photo',
     public readonly ?string $caption = null,
-    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    public readonly BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
-    public readonly null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
+    public readonly bool|BotDefault|null $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     public readonly ?bool $hasSpoiler = null,
     ?Bot $bot = null,
   ) {

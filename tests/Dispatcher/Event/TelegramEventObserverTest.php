@@ -16,9 +16,6 @@ use Gruven\PhpBotGram\Dispatcher\Flags\FlagDecorator;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager;
 use Gruven\PhpBotGram\Dispatcher\Router;
-
-use const Gruven\PhpBotGram\F;
-
 use Gruven\PhpBotGram\Filters\Command;
 use Gruven\PhpBotGram\Filters\Filter;
 use Gruven\PhpBotGram\Types\Chat;
@@ -28,6 +25,11 @@ use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Utils\MagicFilter\MagicFilter;
 use PHPUnit\Framework\TestCase;
 
+use const Gruven\PhpBotGram\F;
+
+/**
+ * @internal
+ */
 final class TelegramEventObserverTest extends TestCase
 {
   protected function setUp(): void
@@ -418,6 +420,7 @@ final class TelegramEventObserverTest extends TestCase
     $observer->outerMiddleware(new class ($log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = 'outer-before';
@@ -488,6 +491,7 @@ final class TelegramEventObserverTest extends TestCase
     $outerCalled = false;
     $observer->outerMiddleware(new class ($outerCalled) extends BaseMiddleware {
       public function __construct(public bool &$called) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->called = true;
@@ -518,6 +522,7 @@ final class TelegramEventObserverTest extends TestCase
     $observer->innerMiddleware(new class ($log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = 'inner-before';
@@ -563,6 +568,7 @@ final class TelegramEventObserverTest extends TestCase
     $innerCalled = false;
     $observer->innerMiddleware(new class ($innerCalled) extends BaseMiddleware {
       public function __construct(public bool &$called) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->called = true;
@@ -591,6 +597,7 @@ final class TelegramEventObserverTest extends TestCase
     $count = 0;
     $observer->innerMiddleware(new class ($count) extends BaseMiddleware {
       public function __construct(public int &$count) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         ++$this->count;
@@ -628,6 +635,7 @@ final class TelegramEventObserverTest extends TestCase
     $parent->message->innerMiddleware(new class ($log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = 'parent-mw-before';
@@ -664,6 +672,7 @@ final class TelegramEventObserverTest extends TestCase
     $parent->message->innerMiddleware(new class ($log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = 'parent-before';
@@ -676,6 +685,7 @@ final class TelegramEventObserverTest extends TestCase
     $child->message->innerMiddleware(new class ($log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = 'child-before';

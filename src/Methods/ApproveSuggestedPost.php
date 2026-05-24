@@ -25,7 +25,7 @@ final class ApproveSuggestedPost extends TelegramMethod
   public function __construct(
     public readonly int $chatId,
     public readonly int $messageId,
-    public readonly null|DateInterval|DateTime|int $sendDate = null,
+    public readonly DateInterval|DateTime|int|null $sendDate = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

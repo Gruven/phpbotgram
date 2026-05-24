@@ -11,6 +11,9 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\Message;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class BotSmokeTest extends TestCase
 {
   public function testSendMessageRoundtrip(): void

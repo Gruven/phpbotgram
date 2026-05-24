@@ -15,6 +15,8 @@ use PHPUnit\Framework\TestCase;
  * Coverage for `NullableIntField` — typed wrapper for `?int`-valued
  * fields like `Message::$messageThreadId`. Adds `isSet()` / `isNull()`
  * to the IntField comparator surface.
+ *
+ * @internal
  */
 final class NullableIntFieldTest extends TestCase
 {

@@ -33,6 +33,8 @@ use stdClass;
  *     built-in middleware in upstream aiogram; the PHP port currently ships
  *     only BaseRequestMiddleware and RequestMiddlewareManager).
  *   - test_ignore_methods — same as above.
+ *
+ * @internal
  */
 final class RequestMiddlewareManagerTest extends TestCase
 {
@@ -52,6 +54,7 @@ final class RequestMiddlewareManagerTest extends TestCase
     $manager->register(new class ($log) extends BaseRequestMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
+
       public function __invoke(Closure $next, Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
       {
         $this->log[] = 'A-before';
@@ -65,6 +68,7 @@ final class RequestMiddlewareManagerTest extends TestCase
     $manager->register(new class ($log) extends BaseRequestMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
+
       public function __invoke(Closure $next, Bot $bot, TelegramMethod $method, ?int $timeout = null): mixed
       {
         $this->log[] = 'B-before';

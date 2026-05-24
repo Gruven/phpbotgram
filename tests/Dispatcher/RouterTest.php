@@ -15,6 +15,9 @@ use LogicException;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
+/**
+ * @internal
+ */
 final class RouterTest extends TestCase
 {
   public function testConstructionAutoDerivesNameFromObjectHash(): void
@@ -576,6 +579,7 @@ final class RouterTest extends TestCase
     $spy = new class ($log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = 'parent-outer-before';

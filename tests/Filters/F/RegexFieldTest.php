@@ -13,6 +13,8 @@ use PHPUnit\Framework\TestCase;
  * Coverage for `RegexField` — typed wrapper that surfaces PCRE-pattern
  * matching over a string-valued chain. Direct port of the regex-filter
  * behaviour aiogram exposes via `F.text.regexp(...)`.
+ *
+ * @internal
  */
 final class RegexFieldTest extends TestCase
 {

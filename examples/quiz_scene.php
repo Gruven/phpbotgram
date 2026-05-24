@@ -54,28 +54,28 @@ use Gruven\PhpBotGram\Types\Message;
 #[SceneState('quiz:q1')]
 final class QuestionOneScene extends Scene
 {
-    /**
-     * Ask the first question when entering this scene. Mirrors upstream
-     * `@on.message.enter()` — the lifecycle handler is a separately-named
-     * method tagged with `#[OnMessage(action: SceneAction::Enter)]`, not
-     * an override of the base `Scene::enter()` method (which only sets
-     * FSM state and dispatches the lifecycle event).
-     */
-    #[OnMessage(action: SceneAction::Enter)]
-    public function onEnter(Message $event): void
-    {
-        $event->answer("Question 1: What is 2 + 2?")->emit();
-    }
+  /**
+   * Ask the first question when entering this scene. Mirrors upstream
+   * `@on.message.enter()` — the lifecycle handler is a separately-named
+   * method tagged with `#[OnMessage(action: SceneAction::Enter)]`, not
+   * an override of the base `Scene::enter()` method (which only sets
+   * FSM state and dispatches the lifecycle event).
+   */
+  #[OnMessage(action: SceneAction::Enter)]
+  public function onEnter(Message $event): void
+  {
+    $event->answer('Question 1: What is 2 + 2?')->emit();
+  }
 
-    /**
-     * Store the answer then move to question 2.
-     * `new After(SceneAction::Enter, 'quiz:q2')` ≡ `After::goto('quiz:q2')`.
-     */
-    #[OnMessage(after: new After(SceneAction::Enter, 'quiz:q2'))]
-    public function onAnswer(Message $event): void
-    {
-        $this->wizard->updateData(['q1' => $event->text ?? '']);
-    }
+  /**
+   * Store the answer then move to question 2.
+   * `new After(SceneAction::Enter, 'quiz:q2')` ≡ `After::goto('quiz:q2')`.
+   */
+  #[OnMessage(after: new After(SceneAction::Enter, 'quiz:q2'))]
+  public function onAnswer(Message $event): void
+  {
+    $this->wizard->updateData(['q1' => $event->text ?? '']);
+  }
 }
 
 /**
@@ -87,40 +87,41 @@ final class QuestionOneScene extends Scene
 #[SceneState('quiz:q2')]
 final class QuestionTwoScene extends Scene
 {
-    /**
-     * Ask the second question when entering this scene. See QuestionOneScene
-     * for the lifecycle-attribute pattern.
-     */
-    #[OnMessage(action: SceneAction::Enter)]
-    public function onEnter(Message $event): void
-    {
-        $event->answer("Question 2: What is the capital of France?")->emit();
-    }
+  /**
+   * Ask the second question when entering this scene. See QuestionOneScene
+   * for the lifecycle-attribute pattern.
+   */
+  #[OnMessage(action: SceneAction::Enter)]
+  public function onEnter(Message $event): void
+  {
+    $event->answer('Question 2: What is the capital of France?')->emit();
+  }
 
-    /**
-     * Store the answer, show results, then exit the FSM.
-     * `new After(SceneAction::Exit)` ≡ `After::exit()`.
-     */
-    #[OnMessage(after: new After(SceneAction::Exit))]
-    public function onAnswer(Message $event): void
-    {
-        $this->wizard->updateData(['q2' => $event->text ?? '']);
-        $data = $this->wizard->getData();
-        $q1 = is_string($data['q1'] ?? null) ? $data['q1'] : '(no answer)';
-        $q2 = is_string($data['q2'] ?? null) ? $data['q2'] : '(no answer)';
-        $event->answer(
-            "Quiz complete!\n"
-            . "Q1 answer: {$q1}\n"
-            . "Q2 answer: {$q2}"
-        )->emit();
-    }
+  /**
+   * Store the answer, show results, then exit the FSM.
+   * `new After(SceneAction::Exit)` ≡ `After::exit()`.
+   */
+  #[OnMessage(after: new After(SceneAction::Exit))]
+  public function onAnswer(Message $event): void
+  {
+    $this->wizard->updateData(['q2' => $event->text ?? '']);
+    $data = $this->wizard->getData();
+    $q1 = is_string($data['q1'] ?? null) ? $data['q1'] : '(no answer)';
+    $q2 = is_string($data['q2'] ?? null) ? $data['q2'] : '(no answer)';
+    $event->answer(
+      "Quiz complete!\n"
+        . "Q1 answer: {$q1}\n"
+        . "Q2 answer: {$q2}",
+    )->emit();
+  }
 }
 
 $token = getenv('BOT_TOKEN') ?: ($_ENV['BOT_TOKEN'] ?? '');
 
 if ($token === '') {
-    fwrite(STDERR, "BOT_TOKEN env var is required.\n");
-    exit(1);
+  fwrite(STDERR, "BOT_TOKEN env var is required.\n");
+
+  exit(1);
 }
 
 $bot = new Bot($token);
@@ -131,24 +132,24 @@ $registry->add([QuestionOneScene::class, QuestionTwoScene::class]);
 
 // /start — enter the first question scene.
 $dispatcher->message->register(
-    static function (Message $event, ScenesManager $scenes): void {
-        $scenes->enter(QuestionOneScene::class);
-    },
-    filters: [new Command('start')],
+  static function (Message $event, ScenesManager $scenes): void {
+    $scenes->enter(QuestionOneScene::class);
+  },
+  filters: [new Command('start')],
 );
 
 // /cancel — exit FSM from anywhere.
 $dispatcher->message->register(
-    static function (Message $event, ScenesManager $scenes): void {
-        $scenes->close();
-        $event->answer("Quiz cancelled.")->emit();
-    },
-    filters: [new Command('cancel')],
+  static function (Message $event, ScenesManager $scenes): void {
+    $scenes->close();
+    $event->answer('Quiz cancelled.')->emit();
+  },
+  filters: [new Command('cancel')],
 );
 
 // Default handler outside the scene.
 $dispatcher->message->register(static function (Message $event): void {
-    $event->answer("Send /start to begin the quiz.")->emit();
+  $event->answer('Send /start to begin the quiz.')->emit();
 });
 
 fwrite(STDOUT, "Quiz scene bot starting...\n");

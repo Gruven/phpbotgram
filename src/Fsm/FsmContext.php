@@ -54,7 +54,7 @@ final class FsmContext
    *
    * Mirrors `FSMContext.set_state` (`aiogram/fsm/context.py`).
    */
-  public function setState(null|State|string $state = null): void
+  public function setState(State|string|null $state = null): void
   {
     $this->storage->setState($this->key, $state instanceof State ? $state->state() : $state);
   }

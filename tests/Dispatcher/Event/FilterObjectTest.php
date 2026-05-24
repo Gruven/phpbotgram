@@ -8,6 +8,9 @@ use Gruven\PhpBotGram\Dispatcher\Event\CallableObject;
 use Gruven\PhpBotGram\Dispatcher\Event\FilterObject;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class FilterObjectTest extends TestCase
 {
   public function testFilterObjectIsACallableObject(): void

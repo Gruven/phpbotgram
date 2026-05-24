@@ -4,17 +4,8 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Dispatcher;
 
-use function Amp\async;
-
 use Amp\DeferredFuture;
-
-use function Amp\delay;
-
 use Amp\Future;
-
-use function Amp\Future\await;
-use function Amp\Future\awaitFirst;
-
 use Amp\Sync\LocalMutex;
 use Amp\Sync\LocalSemaphore;
 use BadMethodCallException;
@@ -47,6 +38,11 @@ use Revolt\EventLoop\FiberLocal;
 use Revolt\EventLoop\UnsupportedFeatureException;
 use RuntimeException;
 use Throwable;
+
+use function Amp\async;
+use function Amp\delay;
+use function Amp\Future\await;
+use function Amp\Future\awaitFirst;
 
 /**
  * Root router with polling/webhook entry points — port of

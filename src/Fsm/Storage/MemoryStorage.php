@@ -43,7 +43,7 @@ final class MemoryStorage extends BaseStorage
    * self.storage[key].state = state.state if isinstance(state, State) else state
    * ```
    */
-  public function setState(StorageKey $key, null|State|string $state = null): void
+  public function setState(StorageKey $key, State|string|null $state = null): void
   {
     if ($state instanceof State) {
       $this->record($key)->state = $state->state();

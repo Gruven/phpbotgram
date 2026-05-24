@@ -15,6 +15,8 @@ use PHPUnit\Framework\TestCase;
  * Telegram fields (`Message::$text`, `User::$firstName`, …). Each method
  * either returns a terminal `Filter` for direct dispatcher consumption or
  * a further chainable field for transforms like `lower()` / `len()`.
+ *
+ * @internal
  */
 final class StringFieldTest extends TestCase
 {

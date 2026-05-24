@@ -37,6 +37,8 @@ use stdClass;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class SceneTest extends TestCase
 {
@@ -214,7 +216,7 @@ final class SceneTest extends TestCase
         return $this->h;
       }
 
-      public function enter(null|State|string $scene, bool $checkActive = true, mixed ...$kwargs): void {}
+      public function enter(State|string|null $scene, bool $checkActive = true, mixed ...$kwargs): void {}
     };
 
     $ctx = new FsmContext(

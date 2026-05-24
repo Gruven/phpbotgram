@@ -14,6 +14,8 @@ use stdClass;
  * "invoke a named method on the value" step that backs `F->lower()`
  * chain extensions (PHP-side collapse of upstream's `__getattr__` then
  * `__call__` pair).
+ *
+ * @internal
  */
 final class MethodCallOperationTest extends TestCase
 {

@@ -21,6 +21,8 @@ use PHPUnit\Framework\TestCase;
  *   guard is a concern for typed storage layers, not the bare memory impl.
  *
  * All other upstream `memory_storage` cases are ported in this file.
+ *
+ * @internal
  */
 final class MemoryStorageTest extends TestCase
 {

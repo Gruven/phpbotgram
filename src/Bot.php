@@ -353,6 +353,7 @@ class Bot implements BotShortcutsContract
       secretToken: $secretToken,
     ), $timeout);
   }
+
   public function deleteWebhook(
     ?bool $dropPendingUpdates = null,
     ?int $timeout = null,
@@ -361,24 +362,28 @@ class Bot implements BotShortcutsContract
       dropPendingUpdates: $dropPendingUpdates,
     ), $timeout);
   }
+
   public function getWebhookInfo(
     ?int $timeout = null,
   ): WebhookInfo {
     return $this(new GetWebhookInfo(
     ), $timeout);
   }
+
   public function getMe(
     ?int $timeout = null,
   ): User {
     return $this(new GetMe(
     ), $timeout);
   }
+
   public function logOut(
     ?int $timeout = null,
   ): bool {
     return $this(new LogOut(
     ), $timeout);
   }
+
   public function close(
     ?int $timeout = null,
   ): bool {
@@ -395,16 +400,16 @@ class Bot implements BotShortcutsContract
     ?string $businessConnectionId = null,
     ?int $messageThreadId = null,
     ?int $directMessagesTopicId = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $entities = null,
-    null|BotDefault|LinkPreviewOptions $linkPreviewOptions = new BotDefault('link_preview'),
+    BotDefault|LinkPreviewOptions|null $linkPreviewOptions = new BotDefault('link_preview'),
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendMessage(
@@ -425,15 +430,16 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function forwardMessage(
     int|string $chatId,
     int|string $fromChatId,
     int $messageId,
     ?int $messageThreadId = null,
     ?int $directMessagesTopicId = null,
-    null|DateInterval|DateTime|int $videoStartTimestamp = null,
+    DateInterval|DateTime|int|null $videoStartTimestamp = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?int $timeout = null,
@@ -488,18 +494,18 @@ class Bot implements BotShortcutsContract
     int $messageId,
     ?int $messageThreadId = null,
     ?int $directMessagesTopicId = null,
-    null|DateInterval|DateTime|int $videoStartTimestamp = null,
+    DateInterval|DateTime|int|null $videoStartTimestamp = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
-    null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
+    bool|BotDefault|null $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): MessageId {
     return $this(new CopyMessage(
@@ -562,17 +568,17 @@ class Bot implements BotShortcutsContract
     ?int $messageThreadId = null,
     ?int $directMessagesTopicId = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
-    null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
+    bool|BotDefault|null $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     ?bool $hasSpoiler = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendPhoto(
@@ -617,7 +623,7 @@ class Bot implements BotShortcutsContract
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendLivePhoto(
@@ -652,19 +658,19 @@ class Bot implements BotShortcutsContract
     ?int $messageThreadId = null,
     ?int $directMessagesTopicId = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
     ?int $duration = null,
     ?string $performer = null,
     ?string $title = null,
     ?InputFile $thumbnail = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendAudio(
@@ -701,16 +707,16 @@ class Bot implements BotShortcutsContract
     ?int $directMessagesTopicId = null,
     ?InputFile $thumbnail = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
     ?bool $disableContentTypeDetection = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendDocument(
@@ -747,21 +753,21 @@ class Bot implements BotShortcutsContract
     ?int $width = null,
     ?int $height = null,
     ?InputFile $thumbnail = null,
-    null|InputFile|string $cover = null,
-    null|DateInterval|DateTime|int $startTimestamp = null,
+    InputFile|string|null $cover = null,
+    DateInterval|DateTime|int|null $startTimestamp = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
-    null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
+    bool|BotDefault|null $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     ?bool $hasSpoiler = null,
     ?bool $supportsStreaming = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendVideo(
@@ -806,17 +812,17 @@ class Bot implements BotShortcutsContract
     ?int $height = null,
     ?InputFile $thumbnail = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
-    null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
+    bool|BotDefault|null $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     ?bool $hasSpoiler = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendAnimation(
@@ -854,16 +860,16 @@ class Bot implements BotShortcutsContract
     ?int $messageThreadId = null,
     ?int $directMessagesTopicId = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
     ?int $duration = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendVoice(
@@ -885,6 +891,7 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function sendVideoNote(
     int|string $chatId,
     InputFile|string $videoNote,
@@ -895,12 +902,12 @@ class Bot implements BotShortcutsContract
     ?int $length = null,
     ?InputFile $thumbnail = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendVideoNote(
@@ -943,7 +950,7 @@ class Bot implements BotShortcutsContract
     ?bool $allowPaidBroadcast = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendPaidMedia(
@@ -979,7 +986,7 @@ class Bot implements BotShortcutsContract
     ?int $messageThreadId = null,
     ?int $directMessagesTopicId = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?ReplyParameters $replyParameters = null,
@@ -999,6 +1006,7 @@ class Bot implements BotShortcutsContract
       replyParameters: $replyParameters,
     ), $timeout);
   }
+
   public function sendLocation(
     int|string $chatId,
     float $latitude,
@@ -1011,12 +1019,12 @@ class Bot implements BotShortcutsContract
     ?int $heading = null,
     ?int $proximityAlertRadius = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendLocation(
@@ -1039,6 +1047,7 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function sendVenue(
     int|string $chatId,
     float $latitude,
@@ -1053,12 +1062,12 @@ class Bot implements BotShortcutsContract
     ?string $googlePlaceId = null,
     ?string $googlePlaceType = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendVenue(
@@ -1083,6 +1092,7 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function sendContact(
     int|string $chatId,
     string $phoneNumber,
@@ -1093,12 +1103,12 @@ class Bot implements BotShortcutsContract
     ?string $lastName = null,
     ?string $vcard = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendContact(
@@ -1134,7 +1144,7 @@ class Bot implements BotShortcutsContract
     array $options,
     ?string $businessConnectionId = null,
     ?int $messageThreadId = null,
-    null|BotDefault|string $questionParseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $questionParseMode = new BotDefault('parse_mode'),
     ?array $questionEntities = null,
     ?bool $isAnonymous = null,
     ?string $type = null,
@@ -1147,22 +1157,22 @@ class Bot implements BotShortcutsContract
     ?array $countryCodes = null,
     ?array $correctOptionIds = null,
     ?string $explanation = null,
-    null|BotDefault|string $explanationParseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $explanationParseMode = new BotDefault('parse_mode'),
     ?array $explanationEntities = null,
     ?InputPollMediaInterface $explanationMedia = null,
     ?int $openPeriod = null,
-    null|DateInterval|DateTime|int $closeDate = null,
+    DateInterval|DateTime|int|null $closeDate = null,
     ?bool $isClosed = null,
     ?string $description = null,
-    null|BotDefault|string $descriptionParseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $descriptionParseMode = new BotDefault('parse_mode'),
     ?array $descriptionEntities = null,
     ?InputPollMediaInterface $media = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendPoll(
@@ -1202,6 +1212,7 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function sendChecklist(
     string $businessConnectionId,
     int|string $chatId,
@@ -1224,6 +1235,7 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function sendDice(
     int|string $chatId,
     ?string $businessConnectionId = null,
@@ -1231,12 +1243,12 @@ class Bot implements BotShortcutsContract
     ?int $directMessagesTopicId = null,
     ?string $emoji = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendDice(
@@ -1276,6 +1288,7 @@ class Bot implements BotShortcutsContract
       entities: $entities,
     ), $timeout);
   }
+
   public function sendChatAction(
     int|string $chatId,
     string $action,
@@ -1308,6 +1321,7 @@ class Bot implements BotShortcutsContract
       isBig: $isBig,
     ), $timeout);
   }
+
   public function getUserProfilePhotos(
     int $userId,
     ?int $offset = null,
@@ -1320,6 +1334,7 @@ class Bot implements BotShortcutsContract
       limit: $limit,
     ), $timeout);
   }
+
   public function getUserProfileAudios(
     int $userId,
     ?int $offset = null,
@@ -1332,10 +1347,11 @@ class Bot implements BotShortcutsContract
       limit: $limit,
     ), $timeout);
   }
+
   public function setUserEmojiStatus(
     int $userId,
     ?string $emojiStatusCustomEmojiId = null,
-    null|DateInterval|DateTime|int $emojiStatusExpirationDate = null,
+    DateInterval|DateTime|int|null $emojiStatusExpirationDate = null,
     ?int $timeout = null,
   ): bool {
     return $this(new SetUserEmojiStatus(
@@ -1344,6 +1360,7 @@ class Bot implements BotShortcutsContract
       emojiStatusExpirationDate: $emojiStatusExpirationDate,
     ), $timeout);
   }
+
   public function getFile(
     string $fileId,
     ?int $timeout = null,
@@ -1352,10 +1369,11 @@ class Bot implements BotShortcutsContract
       fileId: $fileId,
     ), $timeout);
   }
+
   public function banChatMember(
     int|string $chatId,
     int $userId,
-    null|DateInterval|DateTime|int $untilDate = null,
+    DateInterval|DateTime|int|null $untilDate = null,
     ?bool $revokeMessages = null,
     ?int $timeout = null,
   ): bool {
@@ -1366,6 +1384,7 @@ class Bot implements BotShortcutsContract
       revokeMessages: $revokeMessages,
     ), $timeout);
   }
+
   public function unbanChatMember(
     int|string $chatId,
     int $userId,
@@ -1378,12 +1397,13 @@ class Bot implements BotShortcutsContract
       onlyIfBanned: $onlyIfBanned,
     ), $timeout);
   }
+
   public function restrictChatMember(
     int|string $chatId,
     int $userId,
     ChatPermissions $permissions,
     ?bool $useIndependentChatPermissions = null,
-    null|DateInterval|DateTime|int $untilDate = null,
+    DateInterval|DateTime|int|null $untilDate = null,
     ?int $timeout = null,
   ): bool {
     return $this(new RestrictChatMember(
@@ -1394,6 +1414,7 @@ class Bot implements BotShortcutsContract
       untilDate: $untilDate,
     ), $timeout);
   }
+
   public function promoteChatMember(
     int|string $chatId,
     int $userId,
@@ -1438,6 +1459,7 @@ class Bot implements BotShortcutsContract
       canManageTags: $canManageTags,
     ), $timeout);
   }
+
   public function setChatAdministratorCustomTitle(
     int|string $chatId,
     int $userId,
@@ -1450,6 +1472,7 @@ class Bot implements BotShortcutsContract
       customTitle: $customTitle,
     ), $timeout);
   }
+
   public function setChatMemberTag(
     int|string $chatId,
     int $userId,
@@ -1462,6 +1485,7 @@ class Bot implements BotShortcutsContract
       tag: $tag,
     ), $timeout);
   }
+
   public function banChatSenderChat(
     int|string $chatId,
     int $senderChatId,
@@ -1472,6 +1496,7 @@ class Bot implements BotShortcutsContract
       senderChatId: $senderChatId,
     ), $timeout);
   }
+
   public function unbanChatSenderChat(
     int|string $chatId,
     int $senderChatId,
@@ -1482,6 +1507,7 @@ class Bot implements BotShortcutsContract
       senderChatId: $senderChatId,
     ), $timeout);
   }
+
   public function setChatPermissions(
     int|string $chatId,
     ChatPermissions $permissions,
@@ -1494,6 +1520,7 @@ class Bot implements BotShortcutsContract
       useIndependentChatPermissions: $useIndependentChatPermissions,
     ), $timeout);
   }
+
   public function exportChatInviteLink(
     int|string $chatId,
     ?int $timeout = null,
@@ -1502,10 +1529,11 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function createChatInviteLink(
     int|string $chatId,
     ?string $name = null,
-    null|DateInterval|DateTime|int $expireDate = null,
+    DateInterval|DateTime|int|null $expireDate = null,
     ?int $memberLimit = null,
     ?bool $createsJoinRequest = null,
     ?int $timeout = null,
@@ -1518,11 +1546,12 @@ class Bot implements BotShortcutsContract
       createsJoinRequest: $createsJoinRequest,
     ), $timeout);
   }
+
   public function editChatInviteLink(
     int|string $chatId,
     string $inviteLink,
     ?string $name = null,
-    null|DateInterval|DateTime|int $expireDate = null,
+    DateInterval|DateTime|int|null $expireDate = null,
     ?int $memberLimit = null,
     ?bool $createsJoinRequest = null,
     ?int $timeout = null,
@@ -1536,6 +1565,7 @@ class Bot implements BotShortcutsContract
       createsJoinRequest: $createsJoinRequest,
     ), $timeout);
   }
+
   public function createChatSubscriptionInviteLink(
     int|string $chatId,
     DateInterval|DateTime|int $subscriptionPeriod,
@@ -1550,6 +1580,7 @@ class Bot implements BotShortcutsContract
       name: $name,
     ), $timeout);
   }
+
   public function editChatSubscriptionInviteLink(
     int|string $chatId,
     string $inviteLink,
@@ -1562,6 +1593,7 @@ class Bot implements BotShortcutsContract
       name: $name,
     ), $timeout);
   }
+
   public function revokeChatInviteLink(
     int|string $chatId,
     string $inviteLink,
@@ -1572,6 +1604,7 @@ class Bot implements BotShortcutsContract
       inviteLink: $inviteLink,
     ), $timeout);
   }
+
   public function approveChatJoinRequest(
     int|string $chatId,
     int $userId,
@@ -1582,6 +1615,7 @@ class Bot implements BotShortcutsContract
       userId: $userId,
     ), $timeout);
   }
+
   public function declineChatJoinRequest(
     int|string $chatId,
     int $userId,
@@ -1592,6 +1626,7 @@ class Bot implements BotShortcutsContract
       userId: $userId,
     ), $timeout);
   }
+
   public function setChatPhoto(
     int|string $chatId,
     InputFile $photo,
@@ -1602,6 +1637,7 @@ class Bot implements BotShortcutsContract
       photo: $photo,
     ), $timeout);
   }
+
   public function deleteChatPhoto(
     int|string $chatId,
     ?int $timeout = null,
@@ -1610,6 +1646,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function setChatTitle(
     int|string $chatId,
     string $title,
@@ -1620,6 +1657,7 @@ class Bot implements BotShortcutsContract
       title: $title,
     ), $timeout);
   }
+
   public function setChatDescription(
     int|string $chatId,
     ?string $description = null,
@@ -1630,6 +1668,7 @@ class Bot implements BotShortcutsContract
       description: $description,
     ), $timeout);
   }
+
   public function pinChatMessage(
     int|string $chatId,
     int $messageId,
@@ -1644,6 +1683,7 @@ class Bot implements BotShortcutsContract
       disableNotification: $disableNotification,
     ), $timeout);
   }
+
   public function unpinChatMessage(
     int|string $chatId,
     ?string $businessConnectionId = null,
@@ -1656,6 +1696,7 @@ class Bot implements BotShortcutsContract
       messageId: $messageId,
     ), $timeout);
   }
+
   public function unpinAllChatMessages(
     int|string $chatId,
     ?int $timeout = null,
@@ -1664,6 +1705,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function leaveChat(
     int|string $chatId,
     ?int $timeout = null,
@@ -1672,6 +1714,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function getChat(
     int|string $chatId,
     ?int $timeout = null,
@@ -1695,6 +1738,7 @@ class Bot implements BotShortcutsContract
       returnBots: $returnBots,
     ), $timeout);
   }
+
   public function getChatMemberCount(
     int|string $chatId,
     ?int $timeout = null,
@@ -1703,6 +1747,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function getChatMember(
     int|string $chatId,
     int $userId,
@@ -1728,6 +1773,7 @@ class Bot implements BotShortcutsContract
       limit: $limit,
     ), $timeout);
   }
+
   public function setChatStickerSet(
     int|string $chatId,
     string $stickerSetName,
@@ -1738,6 +1784,7 @@ class Bot implements BotShortcutsContract
       stickerSetName: $stickerSetName,
     ), $timeout);
   }
+
   public function deleteChatStickerSet(
     int|string $chatId,
     ?int $timeout = null,
@@ -1757,6 +1804,7 @@ class Bot implements BotShortcutsContract
     return $this(new GetForumTopicIconStickers(
     ), $timeout);
   }
+
   public function createForumTopic(
     int|string $chatId,
     string $name,
@@ -1771,6 +1819,7 @@ class Bot implements BotShortcutsContract
       iconCustomEmojiId: $iconCustomEmojiId,
     ), $timeout);
   }
+
   public function editForumTopic(
     int|string $chatId,
     int $messageThreadId,
@@ -1785,6 +1834,7 @@ class Bot implements BotShortcutsContract
       iconCustomEmojiId: $iconCustomEmojiId,
     ), $timeout);
   }
+
   public function closeForumTopic(
     int|string $chatId,
     int $messageThreadId,
@@ -1795,6 +1845,7 @@ class Bot implements BotShortcutsContract
       messageThreadId: $messageThreadId,
     ), $timeout);
   }
+
   public function reopenForumTopic(
     int|string $chatId,
     int $messageThreadId,
@@ -1805,6 +1856,7 @@ class Bot implements BotShortcutsContract
       messageThreadId: $messageThreadId,
     ), $timeout);
   }
+
   public function deleteForumTopic(
     int|string $chatId,
     int $messageThreadId,
@@ -1815,6 +1867,7 @@ class Bot implements BotShortcutsContract
       messageThreadId: $messageThreadId,
     ), $timeout);
   }
+
   public function unpinAllForumTopicMessages(
     int|string $chatId,
     int $messageThreadId,
@@ -1825,6 +1878,7 @@ class Bot implements BotShortcutsContract
       messageThreadId: $messageThreadId,
     ), $timeout);
   }
+
   public function editGeneralForumTopic(
     int|string $chatId,
     string $name,
@@ -1835,6 +1889,7 @@ class Bot implements BotShortcutsContract
       name: $name,
     ), $timeout);
   }
+
   public function closeGeneralForumTopic(
     int|string $chatId,
     ?int $timeout = null,
@@ -1843,6 +1898,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function reopenGeneralForumTopic(
     int|string $chatId,
     ?int $timeout = null,
@@ -1851,6 +1907,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function hideGeneralForumTopic(
     int|string $chatId,
     ?int $timeout = null,
@@ -1859,6 +1916,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function unhideGeneralForumTopic(
     int|string $chatId,
     ?int $timeout = null,
@@ -1867,6 +1925,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function unpinAllGeneralForumTopicMessages(
     int|string $chatId,
     ?int $timeout = null,
@@ -1875,6 +1934,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function answerCallbackQuery(
     string $callbackQueryId,
     ?string $text = null,
@@ -1891,6 +1951,7 @@ class Bot implements BotShortcutsContract
       cacheTime: $cacheTime,
     ), $timeout);
   }
+
   public function answerGuestQuery(
     string $guestQueryId,
     InlineQueryResult $result,
@@ -1901,6 +1962,7 @@ class Bot implements BotShortcutsContract
       result: $result,
     ), $timeout);
   }
+
   public function getUserChatBoosts(
     int|string $chatId,
     int $userId,
@@ -1911,6 +1973,7 @@ class Bot implements BotShortcutsContract
       userId: $userId,
     ), $timeout);
   }
+
   public function getBusinessConnection(
     string $businessConnectionId,
     ?int $timeout = null,
@@ -1919,6 +1982,7 @@ class Bot implements BotShortcutsContract
       businessConnectionId: $businessConnectionId,
     ), $timeout);
   }
+
   public function getManagedBotToken(
     int $userId,
     ?int $timeout = null,
@@ -1927,6 +1991,7 @@ class Bot implements BotShortcutsContract
       userId: $userId,
     ), $timeout);
   }
+
   public function replaceManagedBotToken(
     int $userId,
     ?int $timeout = null,
@@ -1935,6 +2000,7 @@ class Bot implements BotShortcutsContract
       userId: $userId,
     ), $timeout);
   }
+
   public function getManagedBotAccessSettings(
     int $userId,
     ?int $timeout = null,
@@ -1975,6 +2041,7 @@ class Bot implements BotShortcutsContract
       languageCode: $languageCode,
     ), $timeout);
   }
+
   public function deleteMyCommands(
     ?BotCommandScope $scope = null,
     ?string $languageCode = null,
@@ -2000,6 +2067,7 @@ class Bot implements BotShortcutsContract
       languageCode: $languageCode,
     ), $timeout);
   }
+
   public function setMyName(
     ?string $name = null,
     ?string $languageCode = null,
@@ -2010,6 +2078,7 @@ class Bot implements BotShortcutsContract
       languageCode: $languageCode,
     ), $timeout);
   }
+
   public function getMyName(
     ?string $languageCode = null,
     ?int $timeout = null,
@@ -2018,6 +2087,7 @@ class Bot implements BotShortcutsContract
       languageCode: $languageCode,
     ), $timeout);
   }
+
   public function setMyDescription(
     ?string $description = null,
     ?string $languageCode = null,
@@ -2028,6 +2098,7 @@ class Bot implements BotShortcutsContract
       languageCode: $languageCode,
     ), $timeout);
   }
+
   public function getMyDescription(
     ?string $languageCode = null,
     ?int $timeout = null,
@@ -2036,6 +2107,7 @@ class Bot implements BotShortcutsContract
       languageCode: $languageCode,
     ), $timeout);
   }
+
   public function setMyShortDescription(
     ?string $shortDescription = null,
     ?string $languageCode = null,
@@ -2046,6 +2118,7 @@ class Bot implements BotShortcutsContract
       languageCode: $languageCode,
     ), $timeout);
   }
+
   public function getMyShortDescription(
     ?string $languageCode = null,
     ?int $timeout = null,
@@ -2054,6 +2127,7 @@ class Bot implements BotShortcutsContract
       languageCode: $languageCode,
     ), $timeout);
   }
+
   public function setMyProfilePhoto(
     InputProfilePhoto $photo,
     ?int $timeout = null,
@@ -2062,15 +2136,17 @@ class Bot implements BotShortcutsContract
       photo: $photo,
     ), $timeout);
   }
+
   public function removeMyProfilePhoto(
     ?int $timeout = null,
   ): bool {
     return $this(new RemoveMyProfilePhoto(
     ), $timeout);
   }
+
   public function setChatMenuButton(
     ?int $chatId = null,
-    null|MenuButtonCommands|MenuButtonDefault|MenuButtonWebApp $menuButton = null,
+    MenuButtonCommands|MenuButtonDefault|MenuButtonWebApp|null $menuButton = null,
     ?int $timeout = null,
   ): bool {
     return $this(new SetChatMenuButton(
@@ -2078,6 +2154,7 @@ class Bot implements BotShortcutsContract
       menuButton: $menuButton,
     ), $timeout);
   }
+
   public function getChatMenuButton(
     ?int $chatId = null,
     ?int $timeout = null,
@@ -2086,6 +2163,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function setMyDefaultAdministratorRights(
     ?ChatAdministratorRights $rights = null,
     ?bool $forChannels = null,
@@ -2096,6 +2174,7 @@ class Bot implements BotShortcutsContract
       forChannels: $forChannels,
     ), $timeout);
   }
+
   public function getMyDefaultAdministratorRights(
     ?bool $forChannels = null,
     ?int $timeout = null,
@@ -2104,6 +2183,7 @@ class Bot implements BotShortcutsContract
       forChannels: $forChannels,
     ), $timeout);
   }
+
   public function getAvailableGifts(
     ?int $timeout = null,
   ): Gifts {
@@ -2117,7 +2197,7 @@ class Bot implements BotShortcutsContract
   public function sendGift(
     string $giftId,
     ?int $userId = null,
-    null|int|string $chatId = null,
+    int|string|null $chatId = null,
     ?bool $payForUpgrade = null,
     ?string $text = null,
     ?string $textParseMode = null,
@@ -2156,6 +2236,7 @@ class Bot implements BotShortcutsContract
       textEntities: $textEntities,
     ), $timeout);
   }
+
   public function verifyUser(
     int $userId,
     ?string $customDescription = null,
@@ -2166,6 +2247,7 @@ class Bot implements BotShortcutsContract
       customDescription: $customDescription,
     ), $timeout);
   }
+
   public function verifyChat(
     int|string $chatId,
     ?string $customDescription = null,
@@ -2176,6 +2258,7 @@ class Bot implements BotShortcutsContract
       customDescription: $customDescription,
     ), $timeout);
   }
+
   public function removeUserVerification(
     int $userId,
     ?int $timeout = null,
@@ -2184,6 +2267,7 @@ class Bot implements BotShortcutsContract
       userId: $userId,
     ), $timeout);
   }
+
   public function removeChatVerification(
     int|string $chatId,
     ?int $timeout = null,
@@ -2192,6 +2276,7 @@ class Bot implements BotShortcutsContract
       chatId: $chatId,
     ), $timeout);
   }
+
   public function readBusinessMessage(
     string $businessConnectionId,
     int $chatId,
@@ -2218,6 +2303,7 @@ class Bot implements BotShortcutsContract
       messageIds: $messageIds,
     ), $timeout);
   }
+
   public function setBusinessAccountName(
     string $businessConnectionId,
     string $firstName,
@@ -2230,6 +2316,7 @@ class Bot implements BotShortcutsContract
       lastName: $lastName,
     ), $timeout);
   }
+
   public function setBusinessAccountUsername(
     string $businessConnectionId,
     ?string $username = null,
@@ -2240,6 +2327,7 @@ class Bot implements BotShortcutsContract
       username: $username,
     ), $timeout);
   }
+
   public function setBusinessAccountBio(
     string $businessConnectionId,
     ?string $bio = null,
@@ -2250,6 +2338,7 @@ class Bot implements BotShortcutsContract
       bio: $bio,
     ), $timeout);
   }
+
   public function setBusinessAccountProfilePhoto(
     string $businessConnectionId,
     InputProfilePhoto $photo,
@@ -2262,6 +2351,7 @@ class Bot implements BotShortcutsContract
       isPublic: $isPublic,
     ), $timeout);
   }
+
   public function removeBusinessAccountProfilePhoto(
     string $businessConnectionId,
     ?bool $isPublic = null,
@@ -2272,6 +2362,7 @@ class Bot implements BotShortcutsContract
       isPublic: $isPublic,
     ), $timeout);
   }
+
   public function setBusinessAccountGiftSettings(
     string $businessConnectionId,
     bool $showGiftButton,
@@ -2284,6 +2375,7 @@ class Bot implements BotShortcutsContract
       acceptedGiftTypes: $acceptedGiftTypes,
     ), $timeout);
   }
+
   public function getBusinessAccountStarBalance(
     string $businessConnectionId,
     ?int $timeout = null,
@@ -2292,6 +2384,7 @@ class Bot implements BotShortcutsContract
       businessConnectionId: $businessConnectionId,
     ), $timeout);
   }
+
   public function transferBusinessAccountStars(
     string $businessConnectionId,
     int $starCount,
@@ -2302,6 +2395,7 @@ class Bot implements BotShortcutsContract
       starCount: $starCount,
     ), $timeout);
   }
+
   public function getBusinessAccountGifts(
     string $businessConnectionId,
     ?bool $excludeUnsaved = null,
@@ -2330,6 +2424,7 @@ class Bot implements BotShortcutsContract
       limit: $limit,
     ), $timeout);
   }
+
   public function getUserGifts(
     int $userId,
     ?bool $excludeUnlimited = null,
@@ -2354,6 +2449,7 @@ class Bot implements BotShortcutsContract
       limit: $limit,
     ), $timeout);
   }
+
   public function getChatGifts(
     int|string $chatId,
     ?bool $excludeUnsaved = null,
@@ -2382,6 +2478,7 @@ class Bot implements BotShortcutsContract
       limit: $limit,
     ), $timeout);
   }
+
   public function convertGiftToStars(
     string $businessConnectionId,
     string $ownedGiftId,
@@ -2392,6 +2489,7 @@ class Bot implements BotShortcutsContract
       ownedGiftId: $ownedGiftId,
     ), $timeout);
   }
+
   public function upgradeGift(
     string $businessConnectionId,
     string $ownedGiftId,
@@ -2406,6 +2504,7 @@ class Bot implements BotShortcutsContract
       starCount: $starCount,
     ), $timeout);
   }
+
   public function transferGift(
     string $businessConnectionId,
     string $ownedGiftId,
@@ -2449,6 +2548,7 @@ class Bot implements BotShortcutsContract
       protectContent: $protectContent,
     ), $timeout);
   }
+
   public function repostStory(
     string $businessConnectionId,
     int $fromChatId,
@@ -2492,6 +2592,7 @@ class Bot implements BotShortcutsContract
       areas: $areas,
     ), $timeout);
   }
+
   public function deleteStory(
     string $businessConnectionId,
     int $storyId,
@@ -2502,6 +2603,7 @@ class Bot implements BotShortcutsContract
       storyId: $storyId,
     ), $timeout);
   }
+
   public function answerWebAppQuery(
     string $webAppQueryId,
     InlineQueryResult $result,
@@ -2512,6 +2614,7 @@ class Bot implements BotShortcutsContract
       result: $result,
     ), $timeout);
   }
+
   public function savePreparedInlineMessage(
     int $userId,
     InlineQueryResult $result,
@@ -2530,6 +2633,7 @@ class Bot implements BotShortcutsContract
       allowChannelChats: $allowChannelChats,
     ), $timeout);
   }
+
   public function savePreparedKeyboardButton(
     int $userId,
     KeyboardButton $button,
@@ -2547,12 +2651,12 @@ class Bot implements BotShortcutsContract
   public function editMessageText(
     string $text,
     ?string $businessConnectionId = null,
-    null|int|string $chatId = null,
+    int|string|null $chatId = null,
     ?int $messageId = null,
     ?string $inlineMessageId = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $entities = null,
-    null|BotDefault|LinkPreviewOptions $linkPreviewOptions = new BotDefault('link_preview'),
+    BotDefault|LinkPreviewOptions|null $linkPreviewOptions = new BotDefault('link_preview'),
     ?InlineKeyboardMarkup $replyMarkup = null,
     ?int $timeout = null,
   ): bool|Message {
@@ -2574,13 +2678,13 @@ class Bot implements BotShortcutsContract
    */
   public function editMessageCaption(
     ?string $businessConnectionId = null,
-    null|int|string $chatId = null,
+    int|string|null $chatId = null,
     ?int $messageId = null,
     ?string $inlineMessageId = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
-    null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
+    bool|BotDefault|null $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     ?InlineKeyboardMarkup $replyMarkup = null,
     ?int $timeout = null,
   ): bool|Message {
@@ -2596,10 +2700,11 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function editMessageMedia(
     InputMedia $media,
     ?string $businessConnectionId = null,
-    null|int|string $chatId = null,
+    int|string|null $chatId = null,
     ?int $messageId = null,
     ?string $inlineMessageId = null,
     ?InlineKeyboardMarkup $replyMarkup = null,
@@ -2614,11 +2719,12 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function editMessageLiveLocation(
     float $latitude,
     float $longitude,
     ?string $businessConnectionId = null,
-    null|int|string $chatId = null,
+    int|string|null $chatId = null,
     ?int $messageId = null,
     ?string $inlineMessageId = null,
     ?int $livePeriod = null,
@@ -2642,9 +2748,10 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function stopMessageLiveLocation(
     ?string $businessConnectionId = null,
-    null|int|string $chatId = null,
+    int|string|null $chatId = null,
     ?int $messageId = null,
     ?string $inlineMessageId = null,
     ?InlineKeyboardMarkup $replyMarkup = null,
@@ -2658,6 +2765,7 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function editMessageChecklist(
     string $businessConnectionId,
     int|string $chatId,
@@ -2674,9 +2782,10 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function editMessageReplyMarkup(
     ?string $businessConnectionId = null,
-    null|int|string $chatId = null,
+    int|string|null $chatId = null,
     ?int $messageId = null,
     ?string $inlineMessageId = null,
     ?InlineKeyboardMarkup $replyMarkup = null,
@@ -2690,6 +2799,7 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function stopPoll(
     int|string $chatId,
     int $messageId,
@@ -2704,10 +2814,11 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function approveSuggestedPost(
     int $chatId,
     int $messageId,
-    null|DateInterval|DateTime|int $sendDate = null,
+    DateInterval|DateTime|int|null $sendDate = null,
     ?int $timeout = null,
   ): bool {
     return $this(new ApproveSuggestedPost(
@@ -2716,6 +2827,7 @@ class Bot implements BotShortcutsContract
       sendDate: $sendDate,
     ), $timeout);
   }
+
   public function declineSuggestedPost(
     int $chatId,
     int $messageId,
@@ -2728,6 +2840,7 @@ class Bot implements BotShortcutsContract
       comment: $comment,
     ), $timeout);
   }
+
   public function deleteMessage(
     int|string $chatId,
     int $messageId,
@@ -2752,6 +2865,7 @@ class Bot implements BotShortcutsContract
       messageIds: $messageIds,
     ), $timeout);
   }
+
   public function deleteMessageReaction(
     int|string $chatId,
     int $messageId,
@@ -2766,6 +2880,7 @@ class Bot implements BotShortcutsContract
       actorChatId: $actorChatId,
     ), $timeout);
   }
+
   public function deleteAllMessageReactions(
     int|string $chatId,
     ?int $userId = null,
@@ -2778,6 +2893,7 @@ class Bot implements BotShortcutsContract
       actorChatId: $actorChatId,
     ), $timeout);
   }
+
   public function sendSticker(
     int|string $chatId,
     InputFile|string $sticker,
@@ -2786,12 +2902,12 @@ class Bot implements BotShortcutsContract
     ?int $directMessagesTopicId = null,
     ?string $emoji = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
     ?ReplyParameters $replyParameters = null,
-    null|ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove $replyMarkup = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
     ?int $timeout = null,
   ): Message {
     return $this(new SendSticker(
@@ -2810,6 +2926,7 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function getStickerSet(
     string $name,
     ?int $timeout = null,
@@ -2833,6 +2950,7 @@ class Bot implements BotShortcutsContract
       customEmojiIds: $customEmojiIds,
     ), $timeout);
   }
+
   public function uploadStickerFile(
     int $userId,
     InputFile $sticker,
@@ -2867,6 +2985,7 @@ class Bot implements BotShortcutsContract
       needsRepainting: $needsRepainting,
     ), $timeout);
   }
+
   public function addStickerToSet(
     int $userId,
     string $name,
@@ -2879,6 +2998,7 @@ class Bot implements BotShortcutsContract
       sticker: $sticker,
     ), $timeout);
   }
+
   public function setStickerPositionInSet(
     string $sticker,
     int $position,
@@ -2889,6 +3009,7 @@ class Bot implements BotShortcutsContract
       position: $position,
     ), $timeout);
   }
+
   public function deleteStickerFromSet(
     string $sticker,
     ?int $timeout = null,
@@ -2897,6 +3018,7 @@ class Bot implements BotShortcutsContract
       sticker: $sticker,
     ), $timeout);
   }
+
   public function replaceStickerInSet(
     int $userId,
     string $name,
@@ -2939,6 +3061,7 @@ class Bot implements BotShortcutsContract
       keywords: $keywords,
     ), $timeout);
   }
+
   public function setStickerMaskPosition(
     string $sticker,
     ?MaskPosition $maskPosition = null,
@@ -2949,6 +3072,7 @@ class Bot implements BotShortcutsContract
       maskPosition: $maskPosition,
     ), $timeout);
   }
+
   public function setStickerSetTitle(
     string $name,
     string $title,
@@ -2959,11 +3083,12 @@ class Bot implements BotShortcutsContract
       title: $title,
     ), $timeout);
   }
+
   public function setStickerSetThumbnail(
     string $name,
     int $userId,
     string $format,
-    null|InputFile|string $thumbnail = null,
+    InputFile|string|null $thumbnail = null,
     ?int $timeout = null,
   ): bool {
     return $this(new SetStickerSetThumbnail(
@@ -2973,6 +3098,7 @@ class Bot implements BotShortcutsContract
       thumbnail: $thumbnail,
     ), $timeout);
   }
+
   public function setCustomEmojiStickerSetThumbnail(
     string $name,
     ?string $customEmojiId = null,
@@ -2983,6 +3109,7 @@ class Bot implements BotShortcutsContract
       customEmojiId: $customEmojiId,
     ), $timeout);
   }
+
   public function deleteStickerSet(
     string $name,
     ?int $timeout = null,
@@ -3044,7 +3171,7 @@ class Bot implements BotShortcutsContract
     ?bool $sendEmailToProvider = null,
     ?bool $isFlexible = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?SuggestedPostParameters $suggestedPostParameters = null,
@@ -3159,6 +3286,7 @@ class Bot implements BotShortcutsContract
       errorMessage: $errorMessage,
     ), $timeout);
   }
+
   public function answerPreCheckoutQuery(
     string $preCheckoutQueryId,
     bool $ok,
@@ -3171,12 +3299,14 @@ class Bot implements BotShortcutsContract
       errorMessage: $errorMessage,
     ), $timeout);
   }
+
   public function getMyStarBalance(
     ?int $timeout = null,
   ): StarAmount {
     return $this(new GetMyStarBalance(
     ), $timeout);
   }
+
   public function getStarTransactions(
     ?int $offset = null,
     ?int $limit = null,
@@ -3187,6 +3317,7 @@ class Bot implements BotShortcutsContract
       limit: $limit,
     ), $timeout);
   }
+
   public function refundStarPayment(
     int $userId,
     string $telegramPaymentChargeId,
@@ -3197,6 +3328,7 @@ class Bot implements BotShortcutsContract
       telegramPaymentChargeId: $telegramPaymentChargeId,
     ), $timeout);
   }
+
   public function editUserStarSubscription(
     int $userId,
     string $telegramPaymentChargeId,
@@ -3223,13 +3355,14 @@ class Bot implements BotShortcutsContract
       errors: $errors,
     ), $timeout);
   }
+
   public function sendGame(
     int|string $chatId,
     string $gameShortName,
     ?string $businessConnectionId = null,
     ?int $messageThreadId = null,
     ?bool $disableNotification = null,
-    null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     ?bool $allowPaidBroadcast = null,
     ?string $messageEffectId = null,
     ?ReplyParameters $replyParameters = null,
@@ -3249,6 +3382,7 @@ class Bot implements BotShortcutsContract
       replyMarkup: $replyMarkup,
     ), $timeout);
   }
+
   public function setGameScore(
     int $userId,
     int $score,

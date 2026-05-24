@@ -30,6 +30,8 @@ use stdClass;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class ScenesManagerTest extends TestCase
 {
@@ -67,7 +69,7 @@ final class ScenesManagerTest extends TestCase
       public function __construct(private array $map) {}
 
       /** @return class-string<Scene> */
-      public function get(null|State|string $sceneType): string
+      public function get(State|string|null $sceneType): string
       {
         if ($sceneType === null) {
           throw new SceneException('Cannot resolve null scene type.');

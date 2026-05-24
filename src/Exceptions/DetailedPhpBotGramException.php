@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Exceptions;
 
-class DetailedPhpBotGramException extends PhpBotGramException
+use Stringable;
+
+class DetailedPhpBotGramException extends PhpBotGramException implements Stringable
 {
   /** Subclasses set this in their constructor before the message is rendered. */
   public ?string $url = null;

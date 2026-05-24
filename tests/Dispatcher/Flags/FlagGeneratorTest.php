@@ -8,6 +8,9 @@ use Gruven\PhpBotGram\Dispatcher\Flags\Flag;
 use Gruven\PhpBotGram\Dispatcher\Flags\FlagGenerator;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class FlagGeneratorTest extends TestCase
 {
   public function testMagicCallWithNoArgumentsDefaultsToBooleanTrue(): void

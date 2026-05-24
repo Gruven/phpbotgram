@@ -194,7 +194,7 @@ final class AmphpServerTest extends TestCase
 
     $router = new PathRouter('/webhook/{bot_token}', $inner);
     $response = $router->handleRequest(
-      $this->makeRequest('http://localhost/webhook/42:ABC')
+      $this->makeRequest('http://localhost/webhook/42:ABC'),
     );
 
     self::assertTrue($inner->called);
@@ -484,7 +484,7 @@ final class AmphpServerTest extends TestCase
     $this->markTestSkipped(
       'AmphpServer::run() binds a real TCP socket via SocketHttpServer::start() '
         . 'which is too heavy for a unit-test run. '
-        . 'Lifecycle wiring is verified by testLifecycleCallbacksFireDispatcherObservers().'
+        . 'Lifecycle wiring is verified by testLifecycleCallbacksFireDispatcherObservers().',
     );
   }
 
@@ -557,7 +557,7 @@ final class AmphpServerTest extends TestCase
     $dispatcher->startup->register(
       static function (mixed ...$rest) use (&$capturedStartup): void {
         $capturedStartup = $rest;
-      }
+      },
     );
 
     $spy = new SpyHttpServer();
@@ -676,7 +676,7 @@ final class AmphpServerTest extends TestCase
     $dispatcher->startup->register(
       static function (mixed ...$rest) use (&$capturedStartup): void {
         $capturedStartup = $rest;
-      }
+      },
     );
 
     $spy = new SpyHttpServer();

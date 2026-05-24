@@ -39,6 +39,8 @@ use PHPUnit\Framework\TestCase;
  *   returns `text` as-is (no escaping). Fixed in Phase 7 review cycle 2.
  * - `test_apply_single_entity` markdown `expandable_blockquote` row: fixed in
  *   Phase 7 self-review (Critical #2) to emit `">test||"` — was `">test\n**"`.
+ *
+ * @internal
  */
 final class TextDecorationTest extends TestCase
 {

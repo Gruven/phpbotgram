@@ -100,6 +100,8 @@ final class MarkdownDecorationExposer extends MarkdownDecoration
  * ---------------------------------
  * - `quote()` now escapes backslash (Critical #1): `quote('\\')` → `'\\\\'`.
  * - `expandableBlockquote()` now appends `||` (Critical #2): upstream syntax.
+ *
+ * @internal
  */
 final class MarkdownDecorationTest extends TestCase
 {

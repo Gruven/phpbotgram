@@ -32,7 +32,7 @@ abstract class BaseStorage
    *
    * Mirrors `BaseStorage.set_state` (`base.py:127-130`).
    */
-  abstract public function setState(StorageKey $key, null|State|string $state = null): void;
+  abstract public function setState(StorageKey $key, State|string|null $state = null): void;
 
   /**
    * Retrieve the FSM state for the given key.

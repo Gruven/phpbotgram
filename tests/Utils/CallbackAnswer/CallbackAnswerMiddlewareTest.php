@@ -45,6 +45,8 @@ use RuntimeException;
  *   upstream uses `AsyncMock` / `patch` for async coroutine patching; PHP
  *   uses synchronous closures — test infrastructure divergence (c); equivalent
  *   behavior is covered by the integration tests in this class.
+ *
+ * @internal
  */
 final class CallbackAnswerMiddlewareTest extends TestCase
 {

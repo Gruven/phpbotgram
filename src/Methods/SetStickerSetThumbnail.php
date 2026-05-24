@@ -25,7 +25,7 @@ final class SetStickerSetThumbnail extends TelegramMethod
     public readonly string $name,
     public readonly int $userId,
     public readonly string $format,
-    public readonly null|InputFile|string $thumbnail = null,
+    public readonly InputFile|string|null $thumbnail = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

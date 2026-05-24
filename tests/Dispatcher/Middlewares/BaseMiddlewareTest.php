@@ -11,6 +11,9 @@ use Gruven\PhpBotGram\Types\Chat;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
+/**
+ * @internal
+ */
 final class BaseMiddlewareTest extends TestCase
 {
   public function testBaseMiddlewareIsAbstractAndCannotBeInstantiated(): void

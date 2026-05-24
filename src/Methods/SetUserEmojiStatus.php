@@ -25,7 +25,7 @@ final class SetUserEmojiStatus extends TelegramMethod
   public function __construct(
     public readonly int $userId,
     public readonly ?string $emojiStatusCustomEmojiId = null,
-    public readonly null|DateInterval|DateTime|int $emojiStatusExpirationDate = null,
+    public readonly DateInterval|DateTime|int|null $emojiStatusExpirationDate = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

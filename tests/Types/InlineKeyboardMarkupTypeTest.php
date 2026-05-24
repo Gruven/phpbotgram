@@ -16,6 +16,8 @@ use PHPUnit\Framework\TestCase;
  *   - builder pattern tests (aiogram's InlineKeyboardBuilder) — API divergence (a):
  *     PHP exposes Utils\Keyboard\InlineKeyboardBuilder; that is tested in
  *     its own test file.
+ *
+ * @internal
  */
 final class InlineKeyboardMarkupTypeTest extends TestCase
 {

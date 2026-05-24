@@ -25,7 +25,7 @@ final class BanChatMember extends TelegramMethod
   public function __construct(
     public readonly int|string $chatId,
     public readonly int $userId,
-    public readonly null|DateInterval|DateTime|int $untilDate = null,
+    public readonly DateInterval|DateTime|int|null $untilDate = null,
     public readonly ?bool $revokeMessages = null,
     ?Bot $bot = null,
   ) {

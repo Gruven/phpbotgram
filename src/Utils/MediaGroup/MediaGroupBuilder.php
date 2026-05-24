@@ -68,9 +68,9 @@ final class MediaGroupBuilder
   public function addPhoto(
     InputFile|string $media,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
-    null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
+    bool|BotDefault|null $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     ?bool $hasSpoiler = null,
   ): static {
     return $this->append(new InputMediaPhoto(
@@ -92,9 +92,9 @@ final class MediaGroupBuilder
     InputFile|string $media,
     ?InputFile $thumbnail = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
-    null|bool|BotDefault $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
+    bool|BotDefault|null $showCaptionAboveMedia = new BotDefault('show_caption_above_media'),
     ?int $width = null,
     ?int $height = null,
     ?int $duration = null,
@@ -125,7 +125,7 @@ final class MediaGroupBuilder
     InputFile|string $media,
     ?InputFile $thumbnail = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
     ?int $duration = null,
     ?string $performer = null,
@@ -152,7 +152,7 @@ final class MediaGroupBuilder
     InputFile|string $media,
     ?InputFile $thumbnail = null,
     ?string $caption = null,
-    null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     ?array $captionEntities = null,
     ?bool $disableContentTypeDetection = null,
   ): static {
@@ -278,7 +278,7 @@ final class MediaGroupBuilder
     InputMediaAudio|InputMediaDocument|InputMediaPhoto|InputMediaVideo $item,
     ?string $caption,
     ?array $captionEntities,
-    null|BotDefault|string $parseMode,
+    BotDefault|string|null $parseMode,
   ): InputMediaAudio|InputMediaDocument|InputMediaPhoto|InputMediaVideo {
     return match (true) {
       $item instanceof InputMediaPhoto => new InputMediaPhoto(

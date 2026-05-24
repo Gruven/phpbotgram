@@ -45,6 +45,8 @@ use ReflectionClass;
  *     download through AmphpSession requires a live server; test uses a real
  *     temp-file path and a live HTTP response. Covered structurally in
  *     BotDownloadTest::testDownloadFileReturnsBufferedBody via MockedSession.
+ *
+ * @internal
  */
 final class BotTest extends TestCase
 {

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests;
 
-use const Gruven\PhpBotGram\F;
-
 use Gruven\PhpBotGram\Filters\Filter;
 use Gruven\PhpBotGram\Utils\MagicFilter\MagicFilter;
 use Gruven\PhpBotGram\Utils\MagicFilter\MagicFilterAsFilter;
 use PHPUnit\Framework\TestCase;
 use stdClass;
+
+use const Gruven\PhpBotGram\F;
 
 /**
  * Smoke coverage for the namespace-level `Gruven\PhpBotGram\F` constant.
@@ -24,6 +24,8 @@ use stdClass;
  * declarations (the same RFC that allowed `new` in attribute / property
  * default expressions). We verify both the constant exists, the chain
  * builder is immutable from it, and the bridge to `Filter` still works.
+ *
+ * @internal
  */
 final class FTest extends TestCase
 {

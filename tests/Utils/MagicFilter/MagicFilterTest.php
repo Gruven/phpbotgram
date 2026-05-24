@@ -25,6 +25,8 @@ use stdClass;
  *   1. Build a chain via `MagicFilter::root()->…`.
  *   2. Resolve it against an object / array / scalar subject.
  *   3. Assert the returned value matches Python upstream semantics.
+ *
+ * @internal
  */
 final class MagicFilterTest extends TestCase
 {

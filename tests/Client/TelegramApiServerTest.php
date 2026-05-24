@@ -19,6 +19,8 @@ use PHPUnit\Framework\TestCase;
  *   - test_file_url[Path("path")] — API divergence (a): PHP has no `pathlib.Path`;
  *     the string-path variant is covered by testProductionFileUrl.
  *   - test_from_base[Path("path")] — same as above.
+ *
+ * @internal
  */
 final class TelegramApiServerTest extends TestCase
 {

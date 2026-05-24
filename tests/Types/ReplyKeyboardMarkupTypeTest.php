@@ -15,6 +15,8 @@ use PHPUnit\Framework\TestCase;
  *   - Pydantic model_validate / model_dump — API divergence (a).
  *   - ReplyKeyboardBuilder test (Python-specific builder) — API divergence (a):
  *     PHP equivalent is Utils\Keyboard\ReplyKeyboardBuilder; tested separately.
+ *
+ * @internal
  */
 final class ReplyKeyboardMarkupTypeTest extends TestCase
 {

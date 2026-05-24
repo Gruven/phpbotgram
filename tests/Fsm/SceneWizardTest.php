@@ -34,6 +34,8 @@ use stdClass;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class SceneWizardTest extends TestCase
 {
@@ -87,7 +89,7 @@ final class SceneWizardTest extends TestCase
         return $this->historyManager;
       }
 
-      public function enter(null|State|string $scene, bool $checkActive = true, mixed ...$kwargs): void
+      public function enter(State|string|null $scene, bool $checkActive = true, mixed ...$kwargs): void
       {
         $this->enterCalls[] = ['scene' => $scene, 'checkActive' => $checkActive];
       }

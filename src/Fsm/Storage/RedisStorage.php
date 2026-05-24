@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Fsm\Storage;
 
 use Amp\Redis\Command\Option\SetOptions;
-
-use function Amp\Redis\createRedisClient;
-
 use Amp\Redis\RedisClient;
 use Gruven\PhpBotGram\Fsm\State;
 use JsonException;
+
+use function Amp\Redis\createRedisClient;
 
 /**
  * Redis-backed FSM storage using `amphp/redis ^2`.
@@ -98,7 +97,7 @@ final class RedisStorage extends BaseStorage
    * @param StorageKey $key Storage address.
    * @param null|State|string $state New state value.
    */
-  public function setState(StorageKey $key, null|State|string $state = null): void
+  public function setState(StorageKey $key, State|string|null $state = null): void
   {
     $redisKey = $this->keyBuilder->build($key, StoragePart::State);
 

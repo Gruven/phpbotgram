@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Utils;
 
+use InvalidArgumentException;
+
 use function hash;
 use function hash_equals;
 use function hash_hmac;
 use function implode;
-
-use InvalidArgumentException;
-
 use function ksort;
 
 /**

@@ -6,6 +6,9 @@ namespace Gruven\PhpBotGram\Tests\Support;
 
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class MockedSessionTest extends TestCase
 {
   public function testBotMeReturnsStub(): void

@@ -39,7 +39,7 @@ abstract class TelegramMethod extends BotContextController
       throw new LogicException(
         'This method is not mounted to any bot instance. '
           . 'Call it explicitly with bot instance `$bot($method)`, '
-          . 'or mount it via `$method->bindBot($bot)` and call `$method->emit()`.'
+          . 'or mount it via `$method->bindBot($bot)` and call `$method->emit()`.',
       );
     }
 

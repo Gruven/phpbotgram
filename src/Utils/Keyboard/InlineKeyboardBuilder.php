@@ -76,7 +76,7 @@ final class InlineKeyboardBuilder extends KeyboardBuilder
   public function button(
     string $text,
     ?string $url = null,
-    null|CallbackData|string $callbackData = null,
+    CallbackData|string|null $callbackData = null,
     ?WebAppInfo $webApp = null,
     ?LoginUrl $loginUrl = null,
     ?string $switchInlineQuery = null,

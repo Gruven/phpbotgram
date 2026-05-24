@@ -20,6 +20,8 @@ use PHPUnit\Framework\TestCase;
  *   - test_full_name (computed Python property) — API divergence (a):
  *     PHP exposes firstName/lastName as separate properties; callers compute
  *     concatenation themselves.
+ *
+ * @internal
  */
 final class UserTypeTest extends TestCase
 {

@@ -17,6 +17,8 @@ use PHPUnit\Framework\TestCase;
  *   - Certificate InputFile upload path — API divergence (a): InputFile upload
  *     is covered by InputFileTest.
  *   - Pydantic model_dump — API divergence (a).
+ *
+ * @internal
  */
 final class SetWebhookTest extends TestCase
 {

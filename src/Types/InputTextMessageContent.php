@@ -21,9 +21,9 @@ final class InputTextMessageContent extends InputMessageContent
    */
   public function __construct(
     public readonly string $messageText,
-    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    public readonly BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $entities = null,
-    public readonly null|BotDefault|LinkPreviewOptions $linkPreviewOptions = new BotDefault('link_preview'),
+    public readonly BotDefault|LinkPreviewOptions|null $linkPreviewOptions = new BotDefault('link_preview'),
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

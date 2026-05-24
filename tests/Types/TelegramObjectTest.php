@@ -8,6 +8,9 @@ use Gruven\PhpBotGram\Types\TelegramObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
+/**
+ * @internal
+ */
 final class TelegramObjectTest extends TestCase
 {
   public function testTelegramObjectIsNotReadonlyClass(): void

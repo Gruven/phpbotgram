@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Fsm\Storage;
 
-use function Amp\async;
-
 use Gruven\PhpBotGram\Fsm\State;
 use MongoDB\Client;
+
+use function Amp\async;
 
 /**
  * MongoDB-backed FSM storage.
@@ -155,7 +155,7 @@ final class MongoStorage extends BaseStorage
    * @param StorageKey $key Storage address.
    * @param null|State|string $state New state value.
    */
-  public function setState(StorageKey $key, null|State|string $state = null): void
+  public function setState(StorageKey $key, State|string|null $state = null): void
   {
     $documentId = $this->keyBuilder->build($key);
 

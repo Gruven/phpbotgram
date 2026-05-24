@@ -32,7 +32,7 @@ final readonly class After
    */
   public function __construct(
     public SceneAction $action,
-    public null|State|string $scene = null,
+    public State|string|null $scene = null,
   ) {}
 
   /**
@@ -64,7 +64,7 @@ final readonly class After
    *                                                     class name, a `State` instance, a bare state string, or `null` to
    *                                                     clear FSM state.
    */
-  public static function goto(null|State|string $scene): self
+  public static function goto(State|string|null $scene): self
   {
     return new self(action: SceneAction::Enter, scene: $scene);
   }

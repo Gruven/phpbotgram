@@ -43,6 +43,8 @@ use PHPUnit\Framework\TestCase;
  *   - test_stream_content_404 — same as above.
  *   - test_context_manager — API divergence (a): Python `async with session`
  *     is an async context manager; PHP has no equivalent pattern.
+ *
+ * @internal
  */
 final class AmphpSessionTest extends TestCase
 {

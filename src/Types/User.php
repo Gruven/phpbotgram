@@ -42,6 +42,7 @@ final class User extends TelegramObject
   ) {
     parent::__construct($bot);
   }
+
   public function getProfilePhotos(
     ?int $offset = null,
     ?int $limit = null,
@@ -53,6 +54,7 @@ final class User extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function getProfileAudios(
     ?int $offset = null,
     ?int $limit = null,

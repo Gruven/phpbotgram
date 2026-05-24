@@ -41,6 +41,8 @@ use stdClass;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class SceneRoutingTest extends TestCase
 {
@@ -517,7 +519,7 @@ final class SceneRoutingTest extends TestCase
       public function __construct(private readonly string $sceneClass) {}
 
       /** @return class-string<Scene> */
-      public function get(null|State|string $sceneType): string
+      public function get(State|string|null $sceneType): string
       {
         if ($sceneType === null) {
           throw new SceneException('null scene — clear state');
@@ -550,7 +552,7 @@ final class SceneRoutingTest extends TestCase
       public function __construct(private readonly Closure $push) {}
 
       /** @return class-string<Scene> */
-      public function get(null|State|string $sceneType): string
+      public function get(State|string|null $sceneType): string
       {
         if ($sceneType === null) {
           // Let ScenesManager take the "clear state" path.

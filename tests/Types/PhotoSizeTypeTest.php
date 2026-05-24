@@ -12,6 +12,8 @@ use PHPUnit\Framework\TestCase;
  *
  * Upstream skips:
  *   - Pydantic model_validate / model_dump — API divergence (a).
+ *
+ * @internal
  */
 final class PhotoSizeTypeTest extends TestCase
 {

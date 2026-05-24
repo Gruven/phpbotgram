@@ -13,6 +13,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Unit coverage for `SelectorOperation` and `ExtractOperation` — the
  * sub-filter operations.
+ *
+ * @internal
  */
 final class SelectorAndExtractOperationTest extends TestCase
 {

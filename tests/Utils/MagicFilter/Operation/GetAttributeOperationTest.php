@@ -13,6 +13,8 @@ use stdClass;
 /**
  * Unit coverage for `GetAttributeOperation` — the atomic "fetch attribute
  * by name" step that backs `F->foo` chain extensions.
+ *
+ * @internal
  */
 final class GetAttributeOperationTest extends TestCase
 {

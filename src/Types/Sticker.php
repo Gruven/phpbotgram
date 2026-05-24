@@ -37,6 +37,7 @@ final class Sticker extends TelegramObject
   ) {
     parent::__construct($bot);
   }
+
   public function setPositionInSet(
     int $position,
   ): SetStickerPositionInSet {
@@ -46,6 +47,7 @@ final class Sticker extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function deleteFromSet(
   ): DeleteStickerFromSet {
     return new DeleteStickerFromSet(

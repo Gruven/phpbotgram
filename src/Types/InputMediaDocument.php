@@ -24,7 +24,7 @@ final class InputMediaDocument extends InputMedia implements InputPollMediaInter
     public readonly string $type = 'document',
     public readonly ?InputFile $thumbnail = null,
     public readonly ?string $caption = null,
-    public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+    public readonly BotDefault|string|null $parseMode = new BotDefault('parse_mode'),
     public readonly ?array $captionEntities = null,
     public readonly ?bool $disableContentTypeDetection = null,
     ?Bot $bot = null,

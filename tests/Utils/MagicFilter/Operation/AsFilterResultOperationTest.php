@@ -12,6 +12,8 @@ use PHPUnit\Framework\TestCase;
  * Unit coverage for `AsFilterResultOperation` — the terminal step that
  * wraps the chain's final value as `[name => value]` (accept) or `null`
  * (reject).
+ *
+ * @internal
  */
 final class AsFilterResultOperationTest extends TestCase
 {

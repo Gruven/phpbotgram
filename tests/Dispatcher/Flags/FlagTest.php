@@ -10,6 +10,9 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionFunction;
 
+/**
+ * @internal
+ */
 final class FlagTest extends TestCase
 {
   public function testConstructDefaultsValueToTrue(): void

@@ -15,6 +15,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Unit coverage for `GetItemOperation` — subscript access including the
  * two wildcard sentinels that trigger fan-out resolution.
+ *
+ * @internal
  */
 final class GetItemOperationTest extends TestCase
 {

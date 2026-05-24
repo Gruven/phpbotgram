@@ -62,6 +62,7 @@ class Chat extends TelegramObject
   ) {
     parent::__construct($bot);
   }
+
   public function banSenderChat(
     int $senderChatId,
   ): BanChatSenderChat {
@@ -71,6 +72,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function unbanSenderChat(
     int $senderChatId,
   ): UnbanChatSenderChat {
@@ -80,6 +82,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function getAdministrators(
     ?bool $returnBots = null,
   ): GetChatAdministrators {
@@ -89,6 +92,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function deleteMessage(
     int $messageId,
   ): DeleteMessage {
@@ -98,6 +102,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function revokeInviteLink(
     string $inviteLink,
   ): RevokeChatInviteLink {
@@ -107,10 +112,11 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function editInviteLink(
     string $inviteLink,
     ?string $name = null,
-    null|DateInterval|DateTime|int $expireDate = null,
+    DateInterval|DateTime|int|null $expireDate = null,
     ?int $memberLimit = null,
     ?bool $createsJoinRequest = null,
   ): EditChatInviteLink {
@@ -124,9 +130,10 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function createInviteLink(
     ?string $name = null,
-    null|DateInterval|DateTime|int $expireDate = null,
+    DateInterval|DateTime|int|null $expireDate = null,
     ?int $memberLimit = null,
     ?bool $createsJoinRequest = null,
   ): CreateChatInviteLink {
@@ -139,6 +146,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function exportInviteLink(
   ): ExportChatInviteLink {
     return new ExportChatInviteLink(
@@ -146,6 +154,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function do(
     string $action,
     ?string $businessConnectionId = null,
@@ -159,6 +168,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function deleteStickerSet(
   ): DeleteChatStickerSet {
     return new DeleteChatStickerSet(
@@ -166,6 +176,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function setStickerSet(
     string $stickerSetName,
   ): SetChatStickerSet {
@@ -175,6 +186,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function getMember(
     int $userId,
   ): GetChatMember {
@@ -184,6 +196,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function getMemberCount(
   ): GetChatMemberCount {
     return new GetChatMemberCount(
@@ -191,6 +204,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function leave(
   ): LeaveChat {
     return new LeaveChat(
@@ -198,6 +212,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function unpinAllMessages(
   ): UnpinAllChatMessages {
     return new UnpinAllChatMessages(
@@ -205,6 +220,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function unpinMessage(
     ?string $businessConnectionId = null,
     ?int $messageId = null,
@@ -216,6 +232,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function pinMessage(
     int $messageId,
     ?string $businessConnectionId = null,
@@ -229,6 +246,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function setAdministratorCustomTitle(
     int $userId,
     string $customTitle,
@@ -240,6 +258,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function setMemberTag(
     int $userId,
     ?string $tag = null,
@@ -251,6 +270,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function setPermissions(
     ChatPermissions $permissions,
     ?bool $useIndependentChatPermissions = null,
@@ -262,6 +282,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function promote(
     int $userId,
     ?bool $isAnonymous = null,
@@ -305,11 +326,12 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function restrict(
     int $userId,
     ChatPermissions $permissions,
     ?bool $useIndependentChatPermissions = null,
-    null|DateInterval|DateTime|int $untilDate = null,
+    DateInterval|DateTime|int|null $untilDate = null,
   ): RestrictChatMember {
     return new RestrictChatMember(
       chatId: $this->id,
@@ -320,6 +342,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function unban(
     int $userId,
     ?bool $onlyIfBanned = null,
@@ -331,9 +354,10 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function ban(
     int $userId,
-    null|DateInterval|DateTime|int $untilDate = null,
+    DateInterval|DateTime|int|null $untilDate = null,
     ?bool $revokeMessages = null,
   ): BanChatMember {
     return new BanChatMember(
@@ -344,6 +368,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function setDescription(
     ?string $description = null,
   ): SetChatDescription {
@@ -353,6 +378,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function setTitle(
     string $title,
   ): SetChatTitle {
@@ -362,6 +388,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function deletePhoto(
   ): DeleteChatPhoto {
     return new DeleteChatPhoto(
@@ -369,6 +396,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function setPhoto(
     InputFile $photo,
   ): SetChatPhoto {
@@ -378,6 +406,7 @@ class Chat extends TelegramObject
       bot: $this->bot,
     );
   }
+
   public function unpinAllGeneralForumTopicMessages(
   ): UnpinAllGeneralForumTopicMessages {
     return new UnpinAllGeneralForumTopicMessages(

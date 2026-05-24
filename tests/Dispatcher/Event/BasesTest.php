@@ -11,6 +11,9 @@ use Gruven\PhpBotGram\Dispatcher\Event\SkipHandlerException;
 use Gruven\PhpBotGram\Dispatcher\Event\UnhandledSentinel;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class BasesTest extends TestCase
 {
   public function testUnhandledIsStableSingleton(): void

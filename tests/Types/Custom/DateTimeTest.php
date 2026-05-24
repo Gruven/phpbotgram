@@ -7,6 +7,9 @@ namespace Gruven\PhpBotGram\Tests\Types\Custom;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class DateTimeTest extends TestCase
 {
   public function testRoundTrip(): void

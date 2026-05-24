@@ -21,6 +21,8 @@ use PHPUnit\Framework\TestCase;
  *     (Python @property) — API divergence (a): PHP exposes equivalent logic
  *     via UpdateShortcuts; those are tested in tests/Types/Shortcuts/UpdateShortcutsTest.php.
  *   - de_json helper — API divergence (a).
+ *
+ * @internal
  */
 final class UpdateTypeTest extends TestCase
 {

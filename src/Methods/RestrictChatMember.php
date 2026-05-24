@@ -28,7 +28,7 @@ final class RestrictChatMember extends TelegramMethod
     public readonly int $userId,
     public readonly ChatPermissions $permissions,
     public readonly ?bool $useIndependentChatPermissions = null,
-    public readonly null|DateInterval|DateTime|int $untilDate = null,
+    public readonly DateInterval|DateTime|int|null $untilDate = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

@@ -10,6 +10,9 @@ use Gruven\PhpBotGram\Utils\BackoffConfig;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class PollingOptionsTest extends TestCase
 {
   public function testDefaultsMatchSpec(): void

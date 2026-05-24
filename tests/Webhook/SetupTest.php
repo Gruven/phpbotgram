@@ -369,7 +369,7 @@ final class SetupTest extends TestCase
     $dispatcher->startup->register(
       static function (mixed ...$rest) use (&$capturedStartup): void {
         $capturedStartup = $rest;
-      }
+      },
     );
 
     $server = new SpyHttpServer();
@@ -405,7 +405,7 @@ final class SetupTest extends TestCase
     $dispatcher->startup->register(
       static function (mixed ...$rest) use (&$capturedStartup): void {
         $capturedStartup = $rest;
-      }
+      },
     );
 
     $server = new SpyHttpServer();

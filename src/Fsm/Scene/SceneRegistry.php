@@ -95,7 +95,7 @@ final class SceneRegistry implements SceneRegistryInterface
    *
    * @throws SceneException When the identifier does not match any registered scene.
    */
-  public function get(null|State|string $sceneType): string
+  public function get(State|string|null $sceneType): string
   {
     // Normalise class-string<Scene> → state string.
     if (is_string($sceneType) && class_exists($sceneType) && is_subclass_of($sceneType, Scene::class)) {

@@ -36,6 +36,8 @@ use PHPUnit\Framework\TestCase;
  * - `test_build_with_caption` row where builder caption overrides per-item
  *   caption only on first item while subsequent items retain their own
  *   caption: covered by `testBuilderCaptionOnlyChangesFirstItem`.
+ *
+ * @internal
  */
 final class MediaGroupBuilderTest extends TestCase
 {

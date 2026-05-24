@@ -33,6 +33,8 @@ use WeakMap;
  * `WeakMap<Bot, string>`. GC eviction is a stdlib invariant; the test below
  * verifies via `gc_collect_cycles()` that the entry disappears after the
  * Bot variable goes out of scope.
+ *
+ * @internal
  */
 final class DeepLinkingTest extends TestCase
 {

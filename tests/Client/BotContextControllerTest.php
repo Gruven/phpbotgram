@@ -17,6 +17,8 @@ use PHPUnit\Framework\TestCase;
  *     `model_validate(context={"bot": bot})`; PHP has no equivalent Pydantic
  *     validation context injection pattern.
  *   - test_via_model_validate_none — same as above.
+ *
+ * @internal
  */
 final class BotContextControllerTest extends TestCase
 {

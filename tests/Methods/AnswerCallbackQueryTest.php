@@ -16,6 +16,8 @@ use PHPUnit\Framework\TestCase;
  *     test infrastructure divergence (c).
  *   - Pydantic model_dump round-trips — API divergence (a): replaced by
  *     constructor-shape verification and MockedBot dispatch.
+ *
+ * @internal
  */
 final class AnswerCallbackQueryTest extends TestCase
 {

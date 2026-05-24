@@ -143,6 +143,7 @@ final class DispatcherTest extends TestCase
     $counter = 0;
     $spy = new class ($counter) extends BaseMiddleware {
       public function __construct(public int &$counter) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         ++$this->counter;
@@ -723,6 +724,7 @@ final class DispatcherTest extends TestCase
     $dispatcher->message->outerMiddleware(new class ($log) extends BaseMiddleware {
       /** @param list<string> $log */
       public function __construct(public array &$log) {}
+
       public function __invoke(Closure $handler, object $event, array $data): mixed
       {
         $this->log[] = 'parent-outer-before';

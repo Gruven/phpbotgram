@@ -24,7 +24,7 @@ final class EditMessageReplyMarkup extends TelegramMethod
 
   public function __construct(
     public readonly ?string $businessConnectionId = null,
-    public readonly null|int|string $chatId = null,
+    public readonly int|string|null $chatId = null,
     public readonly ?int $messageId = null,
     public readonly ?string $inlineMessageId = null,
     public readonly ?InlineKeyboardMarkup $replyMarkup = null,

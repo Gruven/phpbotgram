@@ -43,6 +43,9 @@ final class ZeroWidthBuilder extends KeyboardBuilder
 // Tests
 // ---------------------------------------------------------------------------
 
+/**
+ * @internal
+ */
 final class KeyboardBuilderMaxWidthZeroTest extends TestCase
 {
   private static function btn(string $text): InlineKeyboardButton

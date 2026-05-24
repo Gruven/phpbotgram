@@ -29,32 +29,34 @@ use Gruven\PhpBotGram\Webhook\SimpleRequestHandler;
 $token = getenv('BOT_TOKEN') ?: ($_ENV['BOT_TOKEN'] ?? '');
 
 if ($token === '') {
-    fwrite(STDERR, "BOT_TOKEN env var is required.\n");
-    exit(1);
+  fwrite(STDERR, "BOT_TOKEN env var is required.\n");
+
+  exit(1);
 }
 
 $bot = new Bot($token);
 $dispatcher = new Dispatcher();
 
 $dispatcher->message->register(static function (Message $event): void {
-    $text = $event->text ?? '';
-    if ($text === '') {
-        return;
-    }
-    $event->answer($text)->emit();
+  $text = $event->text ?? '';
+
+  if ($text === '') {
+    return;
+  }
+  $event->answer($text)->emit();
 });
 
 $dispatcher->startup->register(static function (): void {
-    fwrite(STDOUT, "Webhook echo bot starting...\n");
+  fwrite(STDOUT, "Webhook echo bot starting...\n");
 });
 
 $dispatcher->shutdown->register(static function (): void {
-    fwrite(STDOUT, "Webhook echo bot stopped.\n");
+  fwrite(STDOUT, "Webhook echo bot stopped.\n");
 });
 
 $handler = new SimpleRequestHandler(
-    dispatcher: $dispatcher,
-    bot: $bot,
+  dispatcher: $dispatcher,
+  bot: $bot,
 );
 
 // `host: '127.0.0.1'` is the safe default: the bot listens only on the
@@ -75,9 +77,9 @@ $handler = new SimpleRequestHandler(
 // Capture the return value if you need either path; this minimal echo
 // example lets the OS handle termination.
 AmphpServer::run(
-    handler: $handler,
-    dispatcher: $dispatcher,
-    host: '127.0.0.1',
-    port: 8080,
-    path: '/webhook',
+  handler: $handler,
+  dispatcher: $dispatcher,
+  host: '127.0.0.1',
+  port: 8080,
+  path: '/webhook',
 );

@@ -41,18 +41,23 @@ const ALLOW_PATTERNS = [
 
 if ($argc !== 2) {
   fwrite(STDERR, "Usage: check-docs-build-log.php <path-to-build.out>\n");
+
   exit(2);
 }
 
 $path = $argv[1];
+
 if (!is_file($path)) {
   fwrite(STDERR, "check-docs-build-log: log file not found: {$path}\n");
+
   exit(2);
 }
 
 $body = file_get_contents($path);
+
 if ($body === false) {
   fwrite(STDERR, "check-docs-build-log: read failed: {$path}\n");
+
   exit(2);
 }
 
@@ -61,18 +66,23 @@ $failures = [];
 
 foreach ($lines as $i => $line) {
   $allowed = false;
+
   foreach (ALLOW_PATTERNS as $allow) {
     if (str_contains($line, $allow)) {
       $allowed = true;
+
       break;
     }
   }
+
   if ($allowed) {
     continue;
   }
+
   foreach (GATE_PATTERNS as $pattern) {
     if (str_contains($line, $pattern)) {
       $failures[] = ['line' => $i + 1, 'pattern' => $pattern, 'text' => $line];
+
       break;
     }
   }
@@ -80,11 +90,14 @@ foreach ($lines as $i => $line) {
 
 if ($failures === []) {
   echo "check-docs-build-log: clean\n";
+
   exit(0);
 }
 
-fwrite(STDERR, "check-docs-build-log: FAIL — " . count($failures) . " gate pattern matches in {$path}\n");
+fwrite(STDERR, 'check-docs-build-log: FAIL — ' . count($failures) . " gate pattern matches in {$path}\n");
+
 foreach ($failures as $f) {
   fwrite(STDERR, sprintf("  line %d (matched '%s'): %s\n", $f['line'], $f['pattern'], $f['text']));
 }
+
 exit(1);

@@ -7,6 +7,9 @@ namespace Gruven\PhpBotGram\Tests\Support;
 use PHPUnit\Framework\TestCase;
 use Revolt\EventLoop;
 
+/**
+ * @internal
+ */
 final class RunAsyncTraitTest extends TestCase
 {
   use RunAsyncTrait;

@@ -17,6 +17,8 @@ use stdClass;
  * Unit coverage for `FunctionOperation` and its `Important` flavour.
  * The function family is the heaviest by use — it backs `func`, `len`,
  * `lower`, `upper`, `regexp`, `startsWith`, `endsWith`, `contains`, etc.
+ *
+ * @internal
  */
 final class FunctionOperationTest extends TestCase
 {

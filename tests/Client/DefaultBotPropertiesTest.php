@@ -16,6 +16,8 @@ use PHPUnit\Framework\TestCase;
  * Upstream skips:
  *   - test_dataclass_creation_3_10_plus — API divergence (a): Python-specific
  *     `dataclass.__dataclass_params__` introspection, no PHP equivalent.
+ *
+ * @internal
  */
 final class DefaultBotPropertiesTest extends TestCase
 {

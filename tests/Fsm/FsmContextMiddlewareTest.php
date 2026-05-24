@@ -31,6 +31,8 @@ use stdClass;
  *
  * All other upstream cases are either ported below or covered behaviorally
  * by other test methods in this file.
+ *
+ * @internal
  */
 final class FsmContextMiddlewareTest extends TestCase
 {
@@ -360,7 +362,7 @@ final class FsmContextMiddlewareTest extends TestCase
     $spyStorage = new class ($spy) extends BaseStorage {
       public function __construct(private readonly stdClass $spy) {}
 
-      public function setState(StorageKey $key, null|object|string $state = null): void {}
+      public function setState(StorageKey $key, object|string|null $state = null): void {}
 
       public function getState(StorageKey $key): ?string
       {

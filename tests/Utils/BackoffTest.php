@@ -9,6 +9,9 @@ use Gruven\PhpBotGram\Utils\Backoff;
 use Gruven\PhpBotGram\Utils\BackoffConfig;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class BackoffTest extends TestCase
 {
   use RunAsyncTrait;

@@ -94,23 +94,29 @@ $cloverPath = $argv[1] ?? 'build/coverage/clover.xml';
 if (!is_readable($cloverPath)) {
   fwrite(STDERR, "coverage-gate: clover report not found at {$cloverPath}\n");
   fwrite(STDERR, "Run `XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-clover={$cloverPath}` first.\n");
+
   exit(2);
 }
 
 $xml = @simplexml_load_file($cloverPath);
+
 if ($xml === false) {
   fwrite(STDERR, "coverage-gate: failed to parse {$cloverPath} as XML\n");
+
   exit(2);
 }
 
 $repoRoot = realpath(__DIR__ . '/..');
+
 if ($repoRoot === false) {
   fwrite(STDERR, "coverage-gate: cannot resolve repo root\n");
+
   exit(2);
 }
 
 /** @var array<string, array{statements: int, covered: int, files: int}> $tally */
 $tally = [];
+
 foreach (array_keys(CORE_MODULES) as $module) {
   $tally[$module] = ['statements' => 0, 'covered' => 0, 'files' => 0];
 }
@@ -122,7 +128,7 @@ $matches = static function (string $relative, string $entry): bool {
 };
 
 foreach ($xml->xpath('//file') as $file) {
-  $rawName = (string) $file['name'];
+  $rawName = (string)$file['name'];
   $relative = ltrim(substr($rawName, strlen($repoRoot)), '/');
 
   foreach (CORE_MODULES as $module => $config) {
@@ -138,9 +144,10 @@ foreach ($xml->xpath('//file') as $file) {
       }
 
       $metrics = $file->metrics;
-      $tally[$module]['statements'] += (int) $metrics['statements'];
-      $tally[$module]['covered'] += (int) $metrics['coveredstatements'];
+      $tally[$module]['statements'] += (int)$metrics['statements'];
+      $tally[$module]['covered'] += (int)$metrics['coveredstatements'];
       $tally[$module]['files']++;
+
       continue 3;
     }
   }
@@ -159,12 +166,13 @@ if ($totalStatements > 0 && $totalCovered === 0) {
   fwrite(STDERR, "Was the suite run without a coverage driver? Re-run with:\n");
   fwrite(STDERR, "  XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-clover={$cloverPath}\n");
   fwrite(STDERR, "or `make coverage-gate` which sets the environment for you.\n");
+
   exit(2);
 }
 
 $failed = [];
 
-printf("Coverage gate — per-module thresholds\n");
+echo "Coverage gate — per-module thresholds\n";
 printf("%-12s %6s %12s %12s %8s\n", 'Module', 'Files', 'Statements', 'Coverage', 'Floor');
 printf("%s\n", str_repeat('-', 60));
 
@@ -174,6 +182,7 @@ foreach ($tally as $module => $row) {
   if ($row['statements'] === 0) {
     printf("%-12s %6d %12s %12s %8.1f%%\n", $module, $row['files'], '—', 'N/A', $threshold);
     $failed[] = sprintf('%s: no statements measured (matched %d files)', $module, $row['files']);
+
     continue;
   }
 
@@ -190,11 +199,14 @@ echo "\n";
 
 if ($failed !== []) {
   fwrite(STDERR, "coverage gate FAILED:\n");
+
   foreach ($failed as $message) {
     fwrite(STDERR, "  - {$message}\n");
   }
+
   exit(1);
 }
 
 echo "coverage gate PASSED — every core module meets the threshold.\n";
+
 exit(0);

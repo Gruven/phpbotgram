@@ -43,7 +43,7 @@ final class SerializerTestUnspecifiedFixture extends TelegramObject
     public readonly int $id,
     public readonly bool $isBot,
     public readonly string $firstName,
-    public readonly null|string|Unspecified $lastName = null,
+    public readonly string|Unspecified|null $lastName = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);
@@ -82,6 +82,9 @@ final class SerializerTestNullableNoDefaultFixture extends TelegramObject
   }
 }
 
+/**
+ * @internal
+ */
 final class SerializerTest extends TestCase
 {
   public function testDumpStripsUnspecified(): void

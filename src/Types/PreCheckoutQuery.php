@@ -33,6 +33,7 @@ final class PreCheckoutQuery extends TelegramObject
   ) {
     parent::__construct($bot);
   }
+
   public function answer(
     bool $ok,
     ?string $errorMessage = null,

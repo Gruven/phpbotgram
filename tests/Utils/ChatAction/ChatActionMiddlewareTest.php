@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Utils\ChatAction;
 
-use function Amp\delay;
-
 use Gruven\PhpBotGram\Dispatcher\Event\HandlerObject;
 use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Methods\SendChatAction;
@@ -16,6 +14,8 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Utils\ChatAction\ChatActionMiddleware;
 use PHPUnit\Framework\TestCase;
+
+use function Amp\delay;
 
 /**
  * Unit tests for {@see ChatActionMiddleware}.
@@ -40,6 +40,8 @@ use PHPUnit\Framework\TestCase;
  *   equivalent attribute-based flag decorator — test infrastructure divergence
  *   (c); equivalent behavior is covered by `testMiddlewareEnabledByDefaultForMessageEvents`
  *   and related tests using `HandlerObject` with flags.
+ *
+ * @internal
  */
 final class ChatActionMiddlewareTest extends TestCase
 {

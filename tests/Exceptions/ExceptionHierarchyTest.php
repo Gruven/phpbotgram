@@ -13,6 +13,9 @@ use Gruven\PhpBotGram\Methods\TelegramMethod;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+/**
+ * @internal
+ */
 final class ExceptionHierarchyTest extends TestCase
 {
   public function testApiInheritsFromBase(): void

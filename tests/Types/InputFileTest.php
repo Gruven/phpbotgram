@@ -11,6 +11,9 @@ use Gruven\PhpBotGram\Types\BufferedInputFile;
 use Gruven\PhpBotGram\Types\FsInputFile;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class InputFileTest extends TestCase
 {
   use RunAsyncTrait;

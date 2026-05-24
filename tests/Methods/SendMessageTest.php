@@ -25,6 +25,8 @@ use PHPUnit\Framework\TestCase;
  *   - parse_mode / link_preview_options BotDefault propagation tests — codegen-
  *     determined behavior (b): the BotDefault mechanism is exhaustively tested in
  *     tests/Client/Session/BaseSessionTest.php.
+ *
+ * @internal
  */
 final class SendMessageTest extends TestCase
 {

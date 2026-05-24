@@ -30,7 +30,7 @@ final class SendGame extends TelegramMethod
     public readonly ?string $businessConnectionId = null,
     public readonly ?int $messageThreadId = null,
     public readonly ?bool $disableNotification = null,
-    public readonly null|bool|BotDefault $protectContent = new BotDefault('protect_content'),
+    public readonly bool|BotDefault|null $protectContent = new BotDefault('protect_content'),
     public readonly ?bool $allowPaidBroadcast = null,
     public readonly ?string $messageEffectId = null,
     public readonly ?ReplyParameters $replyParameters = null,

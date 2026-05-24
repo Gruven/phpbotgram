@@ -42,9 +42,9 @@ trait InaccessibleMessageShortcuts
    * @param null|list<MessageEntity> $quoteEntities
    */
   public function asReplyParameters(
-    null|bool|BotDefault $allowSendingWithoutReply = new BotDefault('allow_sending_without_reply'),
+    bool|BotDefault|null $allowSendingWithoutReply = new BotDefault('allow_sending_without_reply'),
     ?string $quote = null,
-    null|BotDefault|string $quoteParseMode = new BotDefault('parse_mode'),
+    BotDefault|string|null $quoteParseMode = new BotDefault('parse_mode'),
     ?array $quoteEntities = null,
     ?int $quotePosition = null,
   ): ReplyParameters {

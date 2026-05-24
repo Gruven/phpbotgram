@@ -9,6 +9,9 @@ use Gruven\PhpBotGram\Utils\Token;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class TokenTest extends TestCase
 {
   public function testValidate(): void

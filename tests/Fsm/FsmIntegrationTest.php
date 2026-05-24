@@ -51,6 +51,9 @@ final class FsmIntegrationFormStates extends StatesGroup
 
 // ---------------------------------------------------------------------------
 
+/**
+ * @internal
+ */
 final class FsmIntegrationTest extends TestCase
 {
   private const int BOT_ID = 42;
