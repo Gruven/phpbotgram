@@ -6,8 +6,9 @@
    intended reading order (e.g. "Architecture decisions" floats to the top of
    Concepts; the How-to recipes sort by slug, not by intent group).
 
-   This override reorders the children of each guide section by an explicit
-   rank map (`guideOrder`, keyed by the rendered `entry.url` minus its #anchor).
+   This override strips phpDocumentor's first-heading #anchors from menu links
+   and reorders the children of each guide section by an explicit rank map
+   (`guideOrder`, keyed by the rendered `entry.url` minus its #anchor).
    Children with no rank fall back to 500 and keep their original, stable order
    (PHP 8 sort is stable) — so numbered tutorial pages stay 01..05 and any new
    page renders alphabetically until it is given a rank here.
@@ -16,7 +17,8 @@
    ranks leave gaps (10, 11, 20…) so pages can be slotted between siblings. #}
 {% if depth == 1 %}
 <h4 class="phpdocumentor-sidebar__root-namespace">
-    <a href="{{ entry.url }}" class="{{ destinationPath|trim('/', 'left') == entry.url ? '-active' }}">{{ entry.title | shortFQSEN }}</a>
+    {% set entryUrl = entry.url|split('#')|first %}
+    <a href="{{ entryUrl }}" class="{{ destinationPath|trim('/', 'left') == entryUrl ? '-active' }}">{{ entry.title | shortFQSEN }}</a>
 </h4>
 {% endif %}
 {% if entry.children.count > 0 %}
@@ -63,8 +65,9 @@
     ) %}
     <ul class="phpdocumentor-list">
         {% for child in orderedChildren %}
+            {% set childUrl = child.url|split('#')|first %}
             <li>
-                <a href="{{ child.url }}" class="{{ destinationPath|trim('/', 'left') == child.url ? '-active' }}">{{ child.title | shortFQSEN }}</a>
+                <a href="{{ childUrl }}" class="{{ destinationPath|trim('/', 'left') == childUrl ? '-active' }}">{{ child.title | shortFQSEN }}</a>
                 {{ toc(child, 'components/menu.html.twig', maxDepth, depth) }}
             </li>
         {% endfor %}
