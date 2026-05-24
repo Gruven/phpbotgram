@@ -7,22 +7,78 @@
    Styling notes:
    - margin-left:auto pushes the switcher to the right end of the navbar's
      flex container (alongside the search input).
-   - inline style block intentional — phpdoc's CSS pipeline doesn't pick up
-     ad-hoc files we drop into .phpdoc/template/, so colocating layout here
-     keeps the override one Twig file and one inline <style>. #}
-<div class="phpbotgram-switcher" style="display:flex; gap:0.5rem; padding:0.5rem; margin-left:auto; align-items:center;">
-  <select id="phpbotgram-lang-select" aria-label="Language" disabled style="font-size:0.85rem; padding:0.2rem 0.4rem;"></select>
-  <select id="phpbotgram-version-select" aria-label="Version" disabled style="font-size:0.85rem; padding:0.2rem 0.4rem;"></select>
+   - theme defaults are CSS-driven via prefers-color-scheme; the select below
+     only writes a manual override when the user chooses Light or Dark. #}
+<script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
 </div>
 <script>
 (function () {
+  const themeStorageKey = 'phpbotgram-theme';
   const base = new URL(document.baseURI);
   const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
   const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
   const repoRootUrl = base.origin + repoRoot;
 
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
   const versionSelect = document.getElementById('phpbotgram-version-select');
   const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
 
   function populate(el, items, currentId, formatter) {
     el.innerHTML = '';
