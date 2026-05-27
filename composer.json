@@ -1,35 +1,88 @@
 {
 	"name" : "gruven/phpbotgram",
+	"description" : "Modern PHP 8.5 port of the aiogram Telegram Bot framework. Fiber-based runtime, codegen-driven typed methods/types, FSM with scenes, webhook + long-polling.",
 	"type" : "library",
 	"license" : "MIT",
+	"keywords" : ["telegram", "bot", "telegram-bot", "aiogram", "amphp", "fsm", "scenes", "webhook"],
+	"homepage" : "https://github.com/Gruven/phpbotgram",
 	"authors" : [
 		{
 			"name" : "Gruven",
 			"email" : "igruven@gmail.com"
 		}
 	],
+	"support" : {
+		"issues" : "https://github.com/Gruven/phpbotgram/issues",
+		"source" : "https://github.com/Gruven/phpbotgram"
+	},
 	"require" : {
 		"php": "^8.5",
 		"php-64bit": "^8.5",
-		"php-http/discovery": "^1.20",
-		"psr/http-client-implementation": "*",
-		"psr/http-factory-implementation": "*"
+		"ext-mbstring": "*",
+		"ext-json": "*",
+		"ext-sodium": "*",
+		"amphp/amp": "^3",
+		"amphp/byte-stream": "^2",
+		"amphp/http-client": "^5",
+		"amphp/sync": "^2",
+		"revolt/event-loop": "^1"
 	},
 	"require-dev" : {
+		"amphp/file": "^3",
+		"amphp/http-server": "^3",
+		"amphp/redis": "^2",
 		"friendsofphp/php-cs-fixer": "^3.95",
-		"guzzlehttp/guzzle": "^7.10",
-		"phpunit/phpunit": "^13.1"
+		"mongodb/mongodb": "^2",
+		"phpdocumentor/shim": "~3.10.0",
+		"phpstan/phpstan": "^2.1",
+		"phpunit/phpunit": "^13.1",
+		"symfony/yaml": "^7.3",
+		"twig/twig": "^3.10"
+	},
+	"suggest" : {
+		"amphp/http-server": "^3 — required to host webhooks via the bundled AmphpServer adapter",
+		"amphp/redis": "^2 — required for the RedisStorage FSM backend and RedisEventIsolation",
+		"mongodb/mongodb": "^2 — required for the MongoStorage FSM backend",
+		"ext-mongodb": "^2.3 — required by mongodb/mongodb",
+		"ext-pcntl": "* — enables EventLoop::onSignal for graceful polling shutdown (unix only)"
 	},
 	"autoload" : {
 		"psr-4" : {
 			"Gruven\\PhpBotGram\\" : "src/"
+		},
+		"files" : [
+			"src/F.php"
+		]
+	},
+	"autoload-dev" : {
+		"psr-4" : {
+			"Gruven\\PhpBotGram\\Tests\\" : "tests/",
+			"Gruven\\PhpBotGram\\Generator\\" : "tools/generator/src/"
 		}
+	},
+	"scripts" : {
+		"test" : "phpunit",
+		"stan" : "phpstan analyze",
+		"lint" : "php-cs-fixer fix --dry-run --diff",
+		"fix" : "php-cs-fixer fix",
+		"docs-api" : "bash scripts/build-docs.sh",
+		"coverage" : "XDEBUG_MODE=coverage phpunit --coverage-clover=build/coverage/clover.xml",
+		"coverage-gate" : ["@coverage", "php scripts/coverage-gate.php build/coverage/clover.xml"]
+	},
+	"scripts-descriptions" : {
+		"test" : "Run the full PHPUnit suite.",
+		"stan" : "Run PHPStan at level 9 across src/ and tests/.",
+		"lint" : "Run php-cs-fixer in dry-run/diff mode.",
+		"fix" : "Apply php-cs-fixer fixes in place.",
+		"docs-api" : "Generate the API documentation site into build/docs/api/.",
+		"coverage" : "Run the test suite with Xdebug coverage and emit clover.xml.",
+		"coverage-gate" : "Run coverage and enforce the per-module floors in scripts/coverage-gate.php."
 	},
 	"config" : {
 		"sort-packages" : true,
 		"optimize-autoloader" : true,
 		"allow-plugins": {
-			"php-http/discovery": false
+			"phpdocumentor/shim": true
 		}
 	}
 }

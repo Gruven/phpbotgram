@@ -1,0 +1,102 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Gruven\PhpBotGram\Filters;
+
+use Gruven\PhpBotGram\Filters\Logic\AndFilter;
+use Gruven\PhpBotGram\Filters\Logic\InvertFilter;
+use Gruven\PhpBotGram\Filters\Logic\OrFilter;
+
+/**
+ * Abstract base for every dispatcher-side filter. Concrete subclasses
+ * (Command, StateFilter, ChatMemberUpdatedFilter, the Logic combinators
+ * below, the F-DSL builders, …) implement `__invoke` to vote on whether
+ * a handler should run for a given Telegram update.
+ *
+ * A filter return is interpreted by `HandlerObject::check` exactly as in
+ * upstream `aiogram.dispatcher.event.handler.HandlerObject.check` (lines
+ * 114-123 of `dispatcher/event/handler.py`):
+ *
+ * - `false` — reject this handler; the dispatcher moves on. Later
+ *   filters in the same handler are NOT consulted.
+ * - `true` — accept; the filter contributes no extra kwargs.
+ * - `array<string, mixed>` — accept and merge the entries into the
+ *   kwargs bag flowing into subsequent filters and the handler itself
+ *   (this is how `Command` injects `CommandObject`, `Regex` injects
+ *   capture groups, etc.).
+ *
+ * Mirrors upstream `aiogram.filters.base.Filter` (`aiogram/filters/base.py`).
+ * Unlike upstream's `BaseMiddleware`, `Filter` is NOT a `BotContextController`
+ * subclass — filters are dispatch-time predicates rather than Telegram
+ * entities, so they don't need serializer or `withBot()` wiring.
+ *
+ * Spec note: upstream leaves the `__call__` signature unconstrained because
+ * Python's `*args, **kwargs` plumbing lets every subclass declare its own
+ * parameter shape and the reflection adapter binds named kwargs to the
+ * declared names. The PHP port uses a variadic tail (`mixed ...$kwargs`) so
+ * that `CallableObject::prepareKwargs()` detects the variadic and passes
+ * through the ENTIRE dispatcher kwargs bag without filtering it down to just
+ * the named `kwargs` key. Without the variadic, `prepareKwargs()` would
+ * intersect the bag against the parameter names (`event`, `kwargs`) and drop
+ * everything else — `bot`, `state`, `event_context`, etc. would silently
+ * disappear. Concrete filters access the bag as `$kwargs['bot']`,
+ * `$kwargs['state']`, etc. — variadic capture delivers a regular PHP array
+ * with string keys (see `Logic\AndFilter`'s cascade for the canonical pattern).
+ *
+ * The `$event` parameter is typed as `object` rather than `TelegramObject`
+ * because dispatcher-synthetic events such as `ErrorEvent` deliberately do
+ * NOT extend `TelegramObject` (see `Types/ErrorEvent.php`). The dispatcher's
+ * `TelegramEventObserver::trigger()` accepts `object $event`, so the filter
+ * contract must too. Concrete filters that depend on a particular event shape
+ * narrow via `instanceof` at the top of `__invoke` (see `Command`, `CallbackQueryFilter`,
+ * `ExceptionTypeFilter`, …).
+ *
+ * @phpstan-type FilterResult bool|array<string, mixed>
+ */
+abstract class Filter
+{
+  /**
+   * Evaluate the filter against an update.
+   *
+   * `$kwargs` is captured variadically so that `CallableObject::prepareKwargs`
+   * detects the variadic tail and passes through the ENTIRE dispatcher kwargs
+   * bag (`bot`, `event_context`, `state`, …) rather than intersecting it down
+   * to only the parameter names literally declared here. The variadic capture
+   * produces a regular `array<string, mixed>` inside the method body, so
+   * existing accesses like `$kwargs['bot'] ?? null` continue to work unchanged.
+   *
+   * @return array<string, mixed>|bool See class docblock for the
+   *                                   interpretation contract.
+   */
+  abstract public function __invoke(object $event, mixed ...$kwargs): array|bool;
+
+  /**
+   * Compose an AND across filters: every child must accept, kwargs
+   * cascade. PHP equivalent of Python's `f1 & f2`.
+   */
+  public static function all(Filter ...$filters): AndFilter
+  {
+    return new AndFilter(...$filters);
+  }
+
+  /**
+   * Compose an OR across filters: the first accepting child wins, no
+   * cascade. PHP equivalent of Python's `f1 | f2`.
+   */
+  public static function any(Filter ...$filters): OrFilter
+  {
+    return new OrFilter(...$filters);
+  }
+
+  /**
+   * Invert a filter's accept/reject decision. Named `invertOf` rather
+   * than `not` because PHP forbids a static and an instance method
+   * sharing one name in a single class (the instance-side `$f->not()`
+   * convenience may land in a later task).
+   */
+  public static function invertOf(Filter $filter): InvertFilter
+  {
+    return new InvertFilter($filter);
+  }
+}

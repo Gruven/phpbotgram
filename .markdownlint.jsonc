@@ -1,0 +1,35 @@
+{
+  // phpbotgram narrative-docs markdownlint config.
+  // Pinned against markdownlint-cli2@0.22.1.
+  //
+  // Permissive rules to accommodate copies of CHANGELOG.md and CONTRIBUTING.md
+  // which `scripts/copy-root-docs.php` materialises into docs/guide/en/.
+  "default": true,
+
+  // Documentation prose is intentionally not hard-wrapped; long lines keep
+  // Markdown source easier to edit and avoid renderer artifacts around links.
+  "MD013": false,
+
+  // Allow inline HTML in fenced code blocks (the spec forbids it in narrative
+  // prose; lint-docs.php's positive regex enforces that separately).
+  "MD033": false,
+
+  // CHANGELOG.md uses `### Added` / `### Fixed` / `### Changed` under every
+  // version section, which legitimately repeats those headings. siblings_only
+  // permits duplicates as long as they don't share a parent heading — exactly
+  // the Keep-a-Changelog shape.
+  "MD024": { "siblings_only": true },
+
+  // Allow duplicate H1 across pages (one per file is fine).
+  "MD025": { "front_matter_title": "" },
+
+  // The autoload banner script writes <!-- AUTO-GENERATED -- > comments;
+  // those are fine.
+  "MD041": false,
+
+  // Lists in cookbook recipes often nest 4 spaces deep.
+  "MD007": { "indent": 2 },
+
+  // Allow empty links in stub pages during development.
+  "MD042": false
+}

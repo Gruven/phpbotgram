@@ -1,0 +1,13 @@
+name: StickerFormat
+description: |
+  Format of the sticker
+
+  Source: https://core.telegram.org/bots/api#createnewstickerset
+# Telegram's createNewStickerSet method dropped the `sticker_format` parameter
+# in API 7.2; the canonical wire values still ship under the addStickerToSet /
+# uploadStickerFile shape and remain stable. Hardcode them so the generated
+# enum keeps a usable surface without re-introducing a stale schema lookup.
+static:
+  STATIC: static
+  ANIMATED: animated
+  VIDEO: video

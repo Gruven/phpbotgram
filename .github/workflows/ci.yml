@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.5']
+    services:
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 10s
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+        options: --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping').ok\"" --health-interval 10s
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, json, mongodb, pcntl, sockets, openssl
+          coverage: xdebug
+      - uses: ramsey/composer-install@4.0.0
+      - run: vendor/bin/php-cs-fixer fix --dry-run --diff
+      - run: vendor/bin/phpstan analyze --no-progress --memory-limit=512M
+      - run: vendor/bin/phpunit --coverage-text
+        env:
+          PHPBOTGRAM_REDIS_DSN: redis://localhost:6379
+          PHPBOTGRAM_MONGO_DSN: mongodb://localhost:27017

@@ -1,0 +1,874 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Gruven\PhpBotGram\Tests\Dispatcher;
+
+use Closure;
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\Event\Bases;
+use Gruven\PhpBotGram\Dispatcher\Event\UnhandledSentinel;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\ErrorsMiddleware;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\EventContext;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\UserContextMiddleware;
+use Gruven\PhpBotGram\Dispatcher\Router;
+use Gruven\PhpBotGram\Exceptions\TelegramBadRequestException;
+use Gruven\PhpBotGram\Exceptions\UpdateTypeLookupException;
+use Gruven\PhpBotGram\Methods\GetMe;
+use Gruven\PhpBotGram\Methods\SendMessage;
+use Gruven\PhpBotGram\Tests\Support\MockedBot;
+use Gruven\PhpBotGram\Tests\Support\RunAsyncTrait;
+use Gruven\PhpBotGram\Types\CallbackQuery;
+use Gruven\PhpBotGram\Types\Chat;
+use Gruven\PhpBotGram\Types\Custom\DateTime;
+use Gruven\PhpBotGram\Types\ErrorEvent;
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Types\Update;
+use Gruven\PhpBotGram\Types\User;
+use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
+use RuntimeException;
+
+/**
+ * Ports `aiogram/dispatcher/dispatcher.py::Dispatcher`.
+ *
+ * The dispatcher is the polling/webhook entry point — it extends `Router`,
+ * wires the default outer-middleware stack (`UserContextMiddleware` first,
+ * `ErrorsMiddleware` second), and exposes `feedUpdate` / `feedRawUpdate` /
+ * `feedWebhookUpdate` as top-level ingress for incoming updates. The 55s
+ * webhook deadline and the slow-response warning live in Task 3.13 — Task
+ * 3.10 covers only the synchronous dispatch path.
+ *
+ * @internal
+ *
+ * @coversNothing
+ */
+final class DispatcherTest extends TestCase
+{
+  use RunAsyncTrait;
+
+  protected function tearDown(): void
+  {
+    // Defensively clear the FiberLocal `current bot` slot between tests so a
+    // failed feedUpdate (which sets and unsets it via try/finally) cannot
+    // leak the binding into a later test.
+    Bot::setCurrent(null);
+  }
+
+  public function testDispatcherExtendsRouter(): void
+  {
+    // Spec § "Dispatcher, Router, Filters": `Dispatcher extends Router` so
+    // it inherits the per-update-type observers and tree composition. The
+    // root entry-point semantics are added on top.
+    $dispatcher = new Dispatcher();
+
+    self::assertInstanceOf(Router::class, $dispatcher);
+  }
+
+  public function testWorkflowDataStartsEmpty(): void
+  {
+    // The workflow data bag is a mutable associative array merged into every
+    // handler invocation's kwargs. Default is empty so callers can add their
+    // own keys via direct property mutation.
+    $dispatcher = new Dispatcher();
+
+    self::assertSame([], $dispatcher->workflowData);
+  }
+
+  public function testDispatcherMiddlewareWiredOnceAtFeedUpdateLayer(): void
+  {
+    // Fix C1: the dispatcher-level middleware (UserContextMiddleware first,
+    // ErrorsMiddleware second) is wired ONCE at the feedUpdate entry layer
+    // — NOT on every observer. Upstream achieves the same shape with a
+    // single synthetic 'update' observer (`dispatcher.py:72-84`); the port
+    // stores the chain on a private `dispatcherMiddlewares` property and
+    // wraps it around `propagateEvent` once per `feedUpdate` call.
+    //
+    // The motivation is C1: wiring on every observer caused the chain to
+    // wrap each invocation again when `propagateEvent` recurses through
+    // sub-routers, doubling `UserContextMiddleware::resolveContext()` runs
+    // and duplicating exception handling in `ErrorsMiddleware`.
+    //
+    // disableFsm: true so the assertion reads the baseline without the
+    // Phase 5 FsmContextMiddleware (which is correctly placed on per-observer
+    // outer middleware chains — tested separately in FsmIntegrationTest).
+    $dispatcher = new Dispatcher(disableFsm: true);
+
+    foreach ($dispatcher->observers as $name => $observer) {
+      // After the fix, observers do NOT carry the dispatcher-level chain
+      // themselves — neither the 25 update observers nor the errors
+      // observer should have anything pre-installed at construction time
+      // when FSM is disabled.
+      self::assertCount(
+        0,
+        $observer->outerMiddleware,
+        "Observer '{$name}' must NOT carry per-observer dispatcher middleware (C1 fix).",
+      );
+      self::assertCount(0, $observer->innerMiddleware, "Observer '{$name}' must start with empty inner middleware.");
+    }
+
+    $reflection = new ReflectionProperty(Dispatcher::class, 'dispatcherMiddlewares');
+
+    /** @var list<BaseMiddleware> $chain */
+    $chain = $reflection->getValue($dispatcher);
+
+    self::assertCount(2, $chain, 'Dispatcher must wire two middlewares at the feedUpdate layer.');
+    self::assertInstanceOf(UserContextMiddleware::class, $chain[0]);
+    self::assertInstanceOf(ErrorsMiddleware::class, $chain[1]);
+  }
+
+  public function testMultiRouterDoesNotDoubleRunDispatcherMiddleware(): void
+  {
+    // Fix C1 regression: when the root dispatcher includes a child router
+    // and the matching handler is registered on the child, the
+    // dispatcher-level outer middleware (UserContextMiddleware +
+    // ErrorsMiddleware) MUST run exactly once. Before the fix the
+    // middleware was wired onto every observer, and `propagateEvent`
+    // recursing into the child observer wrapped each invocation with the
+    // same middleware AGAIN — `resolveContext()` fired twice and a thrown
+    // handler exception walked through `ErrorsMiddleware` twice.
+    //
+    // We instrument by counting `UserContextMiddleware`-style runs: a
+    // spy middleware on the dispatcher-level chain increments a counter on
+    // each entry. The dispatcher MUST trigger it exactly once per
+    // feedUpdate, regardless of the depth at which the handler claims
+    // the event.
+    $dispatcher = new Dispatcher();
+    $child = new Router('child');
+    $dispatcher->includeRouter($child);
+    $child->message->register(static fn(): string => 'claimed-by-child');
+
+    $counter = 0;
+    $spy = new class ($counter) extends BaseMiddleware {
+      public function __construct(public int &$counter) {}
+
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        ++$this->counter;
+
+        return $handler($event, $data);
+      }
+    };
+
+    // The fixed Dispatcher exposes `dispatcherMiddlewares` so we can
+    // sneak in a counting middleware that runs at the same wrapping
+    // layer as UserContextMiddleware / ErrorsMiddleware.
+    $reflection = new ReflectionProperty(Dispatcher::class, 'dispatcherMiddlewares');
+
+    /** @var list<BaseMiddleware> $current */
+    $current = $reflection->getValue($dispatcher);
+    $reflection->setValue($dispatcher, [...$current, $spy]);
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+
+    self::assertSame('claimed-by-child', $result);
+    self::assertSame(1, $counter, 'Dispatcher middleware must run exactly once across the router tree.');
+  }
+
+  public function testFeedUpdateDispatchesMessageToObserver(): void
+  {
+    // Happy path: an Update carrying a Message resolves to update_type
+    // 'message', and the message observer's registered handler claims the
+    // event. The dispatcher returns the handler's return value verbatim.
+    $dispatcher = new Dispatcher();
+    $dispatcher->message->register(static fn(): string => 'claimed');
+
+    $update = self::messageUpdate('hi');
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), $update);
+
+    self::assertSame('claimed', $result);
+  }
+
+  public function testFeedUpdateDispatchesCallbackQueryToObserver(): void
+  {
+    // Non-message dispatch: a callback_query carrying Update routes through
+    // the callback_query observer (not the message observer). Verifies the
+    // SCHEMA_FIELD_FOR_TYPE map correctly translates 'callback_query' to
+    // `Update::$callbackQuery`.
+    $dispatcher = new Dispatcher();
+    $messageSeen = false;
+    $callbackSeen = false;
+    $dispatcher->message->register(static function () use (&$messageSeen): string {
+      $messageSeen = true;
+
+      return 'message';
+    });
+    $dispatcher->callbackQuery->register(static function () use (&$callbackSeen): string {
+      $callbackSeen = true;
+
+      return 'callback';
+    });
+
+    $update = new Update(
+      updateId: 1,
+      callbackQuery: new CallbackQuery(id: 'cb', fromUser: self::makeUser(), chatInstance: 'ci', data: 'click'),
+    );
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), $update);
+
+    self::assertSame('callback', $result);
+    self::assertFalse($messageSeen, 'Message observer must not run when update is callback_query.');
+    self::assertTrue($callbackSeen);
+  }
+
+  public function testFeedUpdateThrowsForEmptyUpdate(): void
+  {
+    // An Update with every optional slot null has no event type → upstream
+    // raises UpdateTypeLookupError, the port mirrors with the typed
+    // UpdateTypeLookupException. The update_id surfaces in the message so
+    // logs can correlate.
+    $dispatcher = new Dispatcher();
+    $update = new Update(updateId: 7);
+
+    $this->expectException(UpdateTypeLookupException::class);
+    $this->expectExceptionMessageMatches('/7/');
+
+    $dispatcher->feedUpdate(new MockedBot(), $update);
+  }
+
+  public function testFeedUpdateInjectsBotEventUpdateIntoHandlerKwargs(): void
+  {
+    // Spec § "Injected dispatcher kwargs": every handler invocation sees
+    // `bot` and `event_update` injected. Verifies the merge into kwargs
+    // before propagateEvent runs.
+    //
+    // Note: pre-bind the Update to the dispatching bot so the Fix C3
+    // re-mount short-circuits (identity equality). Without the pre-bind
+    // the handler observes a withBot()-cloned tree, breaking the identity
+    // assertion below.
+    $dispatcher = new Dispatcher();
+    $observed = [];
+    $dispatcher->message->register(static function (
+      Bot $bot,
+      Update $event_update,
+    ) use (&$observed): string {
+      $observed = ['bot' => $bot, 'event_update' => $event_update];
+
+      return 'ok';
+    });
+    $bot = new MockedBot();
+    $update = self::messageUpdate('hi')->withBot($bot);
+
+    $dispatcher->feedUpdate($bot, $update);
+
+    self::assertSame($bot, $observed['bot']);
+    self::assertSame($update, $observed['event_update']);
+  }
+
+  public function testFeedUpdateInjectsWorkflowDataIntoHandlerKwargs(): void
+  {
+    // The dispatcher's workflowData bag is merged into every handler call.
+    // Keys live alongside the per-call $kwargs argument; per-call kwargs win
+    // on key collision (last-wins via PHP's spread merge order).
+    $dispatcher = new Dispatcher();
+    $dispatcher->workflowData = ['db' => 'mysql', 'shared' => 'workflow'];
+    $observed = null;
+    $dispatcher->message->register(static function (string $db, string $shared) use (&$observed): string {
+      $observed = ['db' => $db, 'shared' => $shared];
+
+      return 'ok';
+    });
+
+    $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+
+    self::assertSame(['db' => 'mysql', 'shared' => 'workflow'], $observed);
+  }
+
+  public function testFeedUpdatePerCallKwargsOverrideWorkflowData(): void
+  {
+    // When a caller-supplied $kwargs key matches a workflowData key, the
+    // per-call value wins. Matches the spec's merge order: workflowData
+    // first, then $kwargs.
+    $dispatcher = new Dispatcher();
+    $dispatcher->workflowData = ['db' => 'workflow_default'];
+    $observed = null;
+    $dispatcher->message->register(static function (string $db) use (&$observed): string {
+      $observed = $db;
+
+      return 'ok';
+    });
+
+    $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'), ['db' => 'per_call_override']);
+
+    self::assertSame('per_call_override', $observed);
+  }
+
+  public function testFeedUpdateBindsCurrentBotInsideHandler(): void
+  {
+    // Mirrors upstream `with bot.context():`. Inside a handler, `Bot::current()`
+    // returns the bot the dispatcher is dispatching for. Outside (post-call),
+    // it returns null — the try/finally unsets it.
+    $dispatcher = new Dispatcher();
+    $insideValue = null;
+    $dispatcher->message->register(static function () use (&$insideValue): string {
+      $insideValue = Bot::current();
+
+      return 'ok';
+    });
+    $bot = new MockedBot();
+
+    self::assertNull(Bot::current(), 'Pre-call sanity: no current bot.');
+    $dispatcher->feedUpdate($bot, self::messageUpdate('hi'));
+
+    self::assertSame($bot, $insideValue);
+    self::assertNull(Bot::current(), 'Post-call current bot must be reset to null.');
+  }
+
+  public function testFeedUpdateUnsetsCurrentBotEvenOnException(): void
+  {
+    // try/finally invariant: if a handler throws (or any later step raises),
+    // Bot::current() still returns null after feedUpdate returns. Otherwise
+    // a poisoned binding would leak into the next dispatch.
+    $dispatcher = new Dispatcher();
+    $dispatcher->message->register(static function (): never {
+      throw new RuntimeException('handler bomb');
+    });
+    $bot = new MockedBot();
+
+    try {
+      $dispatcher->feedUpdate($bot, self::messageUpdate('hi'));
+      self::fail('Expected RuntimeException to propagate.');
+    } catch (RuntimeException $e) {
+      self::assertSame('handler bomb', $e->getMessage());
+    }
+
+    self::assertNull(Bot::current(), 'current bot must be unset even after handler throws.');
+  }
+
+  public function testFeedRawUpdateLoadsViaSerializerAndDispatches(): void
+  {
+    // feedRawUpdate is the convenience wrapper that serializer-deserialises
+    // a raw payload to an Update then calls feedUpdate. Verifies the wire-
+    // shaped JSON (snake_case keys) is correctly converted.
+    $dispatcher = new Dispatcher();
+    $observed = null;
+    $dispatcher->message->register(static function (Update $event_update) use (&$observed): string {
+      $observed = $event_update;
+
+      return 'handled';
+    });
+
+    $rawUpdate = [
+      'update_id' => 99,
+      'message' => [
+        'message_id' => 1,
+        'date' => 0,
+        'chat' => ['id' => 5, 'type' => 'private'],
+        'text' => 'hi',
+      ],
+    ];
+
+    $result = $dispatcher->feedRawUpdate(new MockedBot(), $rawUpdate);
+
+    self::assertSame('handled', $result);
+    self::assertInstanceOf(Update::class, $observed);
+    self::assertSame(99, $observed->updateId);
+    self::assertNotNull($observed->message);
+    self::assertSame('hi', $observed->message->text);
+  }
+
+  // Note: feedWebhookUpdate contract coverage lives in WebhookContractTest.
+  // The Task 3.10 baseline that treated it as a thin alias for feedUpdate
+  // was retired in Task 3.13 — feedWebhookUpdate now collapses any
+  // non-TelegramMethod return to null and additionally requires a Fiber
+  // context (the 55s deadline race uses Amp futures).
+
+  public function testFeedUpdateRoutesEventContextThroughUserContextMiddleware(): void
+  {
+    // The dispatcher wires UserContextMiddleware as the first outer
+    // middleware, so handlers see `event_context`, `event_from_user`,
+    // `event_chat`, `event_thread_id` keys populated by the time they run.
+    $dispatcher = new Dispatcher();
+    $observed = null;
+    $dispatcher->message->register(static function (
+      EventContext $event_context,
+      ?User $event_from_user,
+      ?Chat $event_chat,
+    ) use (&$observed): string {
+      $observed = [
+        'ctx' => $event_context,
+        'user' => $event_from_user,
+        'chat' => $event_chat,
+      ];
+
+      return 'ok';
+    });
+
+    $bot = new MockedBot();
+    // Build every nested TelegramObject pre-bound to the dispatching bot
+    // via the ctor `bot:` parameter so the Fix C3 re-mount short-circuits
+    // (identity equality on `$update->bot === $bot`). Using `withBot()`
+    // would clone leaves, breaking the chat/user identity assertions
+    // below.
+    $chat = new Chat(id: 100, type: 'private', bot: $bot);
+    $user = new User(id: 200, isBot: false, firstName: 'Tester', bot: $bot);
+    $message = new Message(
+      messageId: 1,
+      date: new DateTime('@0'),
+      chat: $chat,
+      fromUser: $user,
+      bot: $bot,
+    );
+    $update = new Update(updateId: 1, message: $message, bot: $bot);
+
+    $dispatcher->feedUpdate($bot, $update);
+
+    self::assertNotNull($observed);
+    self::assertInstanceOf(EventContext::class, $observed['ctx']);
+    self::assertSame($chat, $observed['chat']);
+    self::assertSame($user, $observed['user']);
+  }
+
+  public function testHandlerExceptionRethrownWhenNoErrorObserverRegistered(): void
+  {
+    // ErrorsMiddleware catches the exception, asks the errors observer to
+    // handle it, gets UNHANDLED back (no handlers registered), and re-raises
+    // the original Throwable. Mirrors upstream behaviour.
+    $dispatcher = new Dispatcher();
+    $dispatcher->message->register(static function (): never {
+      throw new RuntimeException('handler bomb');
+    });
+
+    $this->expectException(RuntimeException::class);
+    $this->expectExceptionMessage('handler bomb');
+
+    $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+  }
+
+  public function testHandlerExceptionRoutedToRegisteredErrorObserver(): void
+  {
+    // When an error observer is registered, it receives an ErrorEvent with
+    // the offending Update and the original Throwable. If the observer
+    // returns a value (truthy non-sentinel), that becomes the dispatcher's
+    // return value instead of the exception propagating.
+    $dispatcher = new Dispatcher();
+    $dispatcher->message->register(static function (): never {
+      throw new RuntimeException('handler bomb');
+    });
+    $observed = null;
+    $dispatcher->errors->register(static function (ErrorEvent $event) use (&$observed): string {
+      $observed = $event;
+
+      return 'recovered';
+    });
+
+    // Pre-bind the Update to the dispatching bot so the Fix C3 re-mount
+    // short-circuits (identity equality). Without the pre-bind the
+    // ErrorEvent's `update` slot would reference the withBot()-cloned
+    // tree, not our local fixture.
+    $bot = new MockedBot();
+    $update = self::messageUpdate('hi')->withBot($bot);
+    $result = $dispatcher->feedUpdate($bot, $update);
+
+    self::assertSame('recovered', $result);
+    self::assertInstanceOf(ErrorEvent::class, $observed);
+    self::assertSame($update, $observed->update);
+    self::assertInstanceOf(RuntimeException::class, $observed->exception);
+    self::assertSame('handler bomb', $observed->exception->getMessage());
+  }
+
+  public function testSilentCallRequestDispatchesViaBot(): void
+  {
+    // The webhook fall-through stub simply calls $bot($method). Task 3.13
+    // adds the deadline-aware queue-and-skip semantics; for Task 3.10 the
+    // contract is just "dispatch to bot and return the result".
+    $bot = new MockedBot();
+    $method = new GetMe();
+    $user = new User(id: 42, isBot: true, firstName: 'Bot', username: 'tbot');
+    $bot->addResultFor(GetMe::class, ok: true, result: $user);
+
+    $dispatcher = new Dispatcher();
+    $result = $dispatcher->silentCallRequest($bot, $method);
+
+    self::assertSame($user, $result);
+  }
+
+  public function testSilentCallRequestSwallowsTelegramApiExceptionWithWarning(): void
+  {
+    // Cycle 5 review fix: `silentCallRequest` is the polling-loop /
+    // webhook-fall-through routing hook for a handler-returned
+    // `TelegramMethod`. If the resulting `$bot($method)` raises a
+    // `TelegramApiException` (e.g. the chat is gone, the message was
+    // already deleted, the bot is blocked) the loop MUST NOT die — the
+    // next update is unrelated and the transient failure of one reply
+    // should not stop polling. Upstream's `silent_call_request`
+    // (`aiogram/dispatcher/dispatcher.py:294-301`) catches
+    // `TelegramAPIError` and logs; the port emits an `E_USER_WARNING`
+    // and returns null so the loop continues.
+    $bot = new MockedBot();
+    $method = new SendMessage(chatId: 1, text: 'will fail');
+    // Queue a 400 Bad Request response — MockedSession routes ok=false
+    // through `checkResponse` which throws `TelegramBadRequestException`
+    // (a `TelegramApiException` subclass).
+    $bot->addResultFor(
+      SendMessage::class,
+      ok: false,
+      description: 'Bad Request: chat not found',
+      errorCode: 400,
+    );
+
+    $dispatcher = new Dispatcher();
+    $warning = null;
+    set_error_handler(static function (int $errno, string $errstr) use (&$warning): bool {
+      if ($errno === \E_USER_WARNING && $warning === null) {
+        $warning = $errstr;
+      }
+
+      return true;
+    });
+
+    try {
+      $result = $dispatcher->silentCallRequest($bot, $method);
+    } finally {
+      restore_error_handler();
+    }
+
+    self::assertNull(
+      $result,
+      'silentCallRequest must return null when the underlying call raises TelegramApiException.',
+    );
+    self::assertNotNull(
+      $warning,
+      'silentCallRequest must emit an E_USER_WARNING when swallowing TelegramApiException.',
+    );
+    self::assertStringContainsString('silentCallRequest', (string)$warning);
+    self::assertStringContainsString(SendMessage::class, (string)$warning);
+    self::assertStringContainsString('chat not found', (string)$warning);
+  }
+
+  public function testSilentCallRequestRethrowsNonTelegramApiException(): void
+  {
+    // Sanity counterpart: only `TelegramApiException` is swallowed. Any
+    // other Throwable (a programming error, an out-of-band runtime
+    // failure) must propagate so the upstream dispatch layer / fiber-
+    // level error handlers can react. Upstream's `silent_call_request`
+    // narrows on `TelegramAPIError` for the same reason — broad catches
+    // hide bugs.
+    $bot = new MockedBot();
+    $method = new GetMe();
+    // No canned response queued → MockedSession::makeRequest raises
+    // RuntimeException("No canned responses left"), which is NOT a
+    // TelegramApiException and must bubble up.
+    $dispatcher = new Dispatcher();
+
+    $this->expectException(RuntimeException::class);
+    $this->expectExceptionMessage('No canned responses left');
+
+    $dispatcher->silentCallRequest($bot, $method);
+  }
+
+  /**
+   * Sanity that the canned `TelegramBadRequestException` class reference is
+   * still wired through MockedSession — guards the test above from a silent
+   * exception-class rename. Catches the throw directly without going through
+   * silentCallRequest.
+   */
+  public function testMockedBotErrorResponseRaisesTelegramBadRequestException(): void
+  {
+    $bot = new MockedBot();
+    $bot->addResultFor(
+      SendMessage::class,
+      ok: false,
+      description: 'Bad Request: chat not found',
+      errorCode: 400,
+    );
+
+    $this->expectException(TelegramBadRequestException::class);
+    $bot(new SendMessage(chatId: 1, text: 'will fail'));
+  }
+
+  public function testInheritsObserverMapShapeFromRouter(): void
+  {
+    // Sanity: Dispatcher inherits the 25-update-type observer map plus the
+    // error observer. We do NOT use a synthetic 'update' observer (upstream
+    // does — `aiogram/dispatcher/dispatcher.py:72`); the port routes
+    // directly to per-type observers because the Router is already
+    // schema-derived.
+    $dispatcher = new Dispatcher();
+
+    self::assertSame(
+      [...Router::UPDATE_TYPES, 'error'],
+      array_keys($dispatcher->observers),
+    );
+  }
+
+  public function testFeedUpdateReturnsUnhandledWhenNoMatchingHandler(): void
+  {
+    // A registered observer with no handlers returns UNHANDLED — the
+    // dispatcher forwards that verbatim. Distinguishable from null /
+    // false return values by identity (`===`).
+    $dispatcher = new Dispatcher();
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+
+    self::assertSame(UnhandledSentinel::instance(), $result);
+  }
+
+  public function testFeedUpdateReMountsUpdateOntoSuppliedBot(): void
+  {
+    // Fix C3: spec § "Dispatcher" line 628 mandates that `feedUpdate`
+    // re-mounts the supplied bot onto the Update when `$update->bot !==
+    // $bot` — including every nested TelegramObject. Mirrors upstream's
+    // `Update.model_validate(update.model_dump(), context={"bot": bot})`
+    // round-trip at `dispatcher.py:153-161`.
+    //
+    // Test shape: build an Update whose nested message has `bot=null`,
+    // pass a real Bot to `feedUpdate`, and assert the handler observes
+    // both `$event_update->bot === $bot` AND `$event_update->message->bot
+    // === $bot`. Pre-fix, the message's `bot` slot stayed `null` because
+    // we never called `withBot()` on the update tree.
+    $dispatcher = new Dispatcher();
+    $observed = null;
+    $dispatcher->message->register(static function (Update $event_update) use (&$observed): string {
+      $observed = $event_update;
+
+      return 'ok';
+    });
+    $bot = new MockedBot();
+    $update = self::messageUpdate('hi'); // Built with bot=null.
+
+    self::assertNull($update->bot, 'Sanity: fixture must start with bot=null.');
+    self::assertNull($update->message?->bot, 'Sanity: nested message must start with bot=null.');
+
+    $dispatcher->feedUpdate($bot, $update);
+
+    self::assertInstanceOf(Update::class, $observed);
+    self::assertSame($bot, $observed->bot, 'feedUpdate must rebind Update->bot to the supplied bot.');
+    self::assertSame(
+      $bot,
+      $observed->message?->bot,
+      'feedUpdate must deep-rebind nested TelegramObject->bot to the supplied bot.',
+    );
+  }
+
+  public function testFeedUpdateLeavesUpdateUnchangedWhenBotsAlreadyMatch(): void
+  {
+    // Counterpart to the re-mount test: when `$update->bot === $bot` we
+    // must NOT clone the tree. The Update instance the handler sees is
+    // the SAME instance the caller passed in (identity check via `===`).
+    // Upstream short-circuits via `if update.bot != bot: update = ...`
+    // — the equality check skips the round-trip.
+    $dispatcher = new Dispatcher();
+    $bot = new MockedBot();
+    $update = self::messageUpdate('hi')->withBot($bot);
+    $observed = null;
+    $dispatcher->message->register(static function (Update $event_update) use (&$observed): string {
+      $observed = $event_update;
+
+      return 'ok';
+    });
+
+    $dispatcher->feedUpdate($bot, $update);
+
+    self::assertSame($update, $observed, 'feedUpdate must not clone the Update when bots already match.');
+  }
+
+  public function testRouterPropagateEventCollapsesRejectedSentinelToUnhandled(): void
+  {
+    // Fix I6: upstream's `Router.propagate_event` collapses any REJECTED
+    // observer result to UNHANDLED so callers don't need to know about
+    // the internal sentinel. A handler that `Bases::cancel()`s on the
+    // observer must surface to `feedUpdate` as `UnhandledSentinel`, NOT
+    // `RejectedSentinel`.
+    $dispatcher = new Dispatcher();
+    $dispatcher->message->register(static function (): never {
+      Bases::cancel('handled elsewhere');
+    });
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+
+    self::assertSame(
+      UnhandledSentinel::instance(),
+      $result,
+      'feedUpdate must surface RejectedSentinel from observer as UnhandledSentinel at Router boundary.',
+    );
+  }
+
+  public function testRouterPropagateEventCollapsesRejectedSentinelFromSubRouter(): void
+  {
+    // Same collapse must apply when a sub-router's observer returns
+    // REJECTED — the parent router's recursion sees the sentinel and
+    // collapses it before falling through.
+    $dispatcher = new Dispatcher();
+    $child = new Router('child');
+    $dispatcher->includeRouter($child);
+    $child->message->register(static function (): never {
+      Bases::cancel('child cancel');
+    });
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+
+    self::assertSame(UnhandledSentinel::instance(), $result);
+  }
+
+  public function testParentObserverOuterMiddlewareWrapsChildRouterHandler(): void
+  {
+    // Fix I2: per-observer outer middleware wraps the ENTIRE local dispatch
+    // (local observer + sub-router recursion), mirroring upstream's
+    // `propagate_event(...)` which composes
+    // `observer.wrap_outer_middleware(_wrapped, ...)` once around
+    // `_propagate_event` (which itself walks sub-routers). Concretely:
+    // an outer middleware on the parent dispatcher's `message` observer
+    // wraps a `message` handler registered on a child router too.
+    //
+    // The spy records `before`/`after` markers around the `$handler()`
+    // delegation; the handler markers must sit *inside* the spy's pair.
+    $dispatcher = new Dispatcher();
+    $child = new Router('child');
+    $dispatcher->includeRouter($child);
+
+    $log = [];
+    $dispatcher->message->outerMiddleware(new class ($log) extends BaseMiddleware {
+      /** @param list<string> $log */
+      public function __construct(public array &$log) {}
+
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        $this->log[] = 'parent-outer-before';
+        $result = $handler($event, $data);
+        $this->log[] = 'parent-outer-after';
+
+        return $result;
+      }
+    });
+    $child->message->register(static function () use (&$log): string {
+      $log[] = 'child-handler';
+
+      return 'child-claims';
+    });
+
+    $result = $dispatcher->feedUpdate(new MockedBot(), self::messageUpdate('hi'));
+
+    self::assertSame('child-claims', $result);
+    self::assertSame(
+      ['parent-outer-before', 'child-handler', 'parent-outer-after'],
+      $log,
+      'Parent observer outer middleware must wrap the child router handler invocation.',
+    );
+  }
+
+  public function testFeedWebhookUpdateAcceptsRawArrayUpdate(): void
+  {
+    // Fix I3: feedWebhookUpdate's first positional `update` parameter accepts
+    // either an `Update` instance or a wire-shaped associative array. The
+    // array form is the canonical webhook adapter input (the HTTP body decoded
+    // with json_decode($body, true)). When given an array, the dispatcher
+    // hydrates it via `Serializer::load(Update::class, ...)` before running
+    // the dispatch chain. Mirrors upstream's `feed_webhook_update` overload
+    // at `dispatcher.py:436-444`.
+    $dispatcher = new Dispatcher();
+    $observed = null;
+    $dispatcher->message->register(static function (Update $event_update) use (&$observed): SendMessage {
+      $observed = $event_update;
+
+      return new SendMessage(chatId: $event_update->message?->chat->id ?? 0, text: 'echo');
+    });
+    $rawUpdate = [
+      'update_id' => 77,
+      'message' => [
+        'message_id' => 1,
+        'date' => 0,
+        'chat' => ['id' => 11, 'type' => 'private'],
+        'text' => 'hi raw',
+      ],
+    ];
+
+    $result = $this->runAsync(static fn() => $dispatcher->feedWebhookUpdate(new MockedBot(), $rawUpdate));
+
+    self::assertInstanceOf(SendMessage::class, $result);
+    self::assertInstanceOf(Update::class, $observed);
+    self::assertSame(77, $observed->updateId);
+    self::assertSame('hi raw', $observed->message?->text);
+  }
+
+  /**
+   * Upstream `test_dispatcher.py::TestDispatcher::test_data_bind` verifies
+   * that the Dispatcher implements `__getitem__`/`__setitem__`/`__delitem__`
+   * (Python dict-like access) to proxy `workflow_data`. phpbotgram exposes
+   * `workflowData` as a plain public mutable array — no `ArrayAccess`
+   * interface — so the Python dict-subscript API has no equivalent.
+   *
+   * **Skip rationale (a) API divergence**: the public property
+   * `Dispatcher::$workflowData` is the canonical write path. Direct array
+   * mutation (`$dispatcher->workflowData['key'] = 42`) achieves the same
+   * result without operator-overloading. PHPStan level 9 catches typos at
+   * the caller side.
+   *
+   * This test documents the coverage gap and verifies the direct-mutation
+   * path that callers actually use.
+   */
+  public function testWorkflowDataDirectMutationIsEquivalentToDataBind(): void
+  {
+    // Upstream `dp["foo"] = 1; dp.workflow_data["foo"] == 1`.
+    // PHP equivalent: write and read through the public property directly.
+    $dispatcher = new Dispatcher();
+
+    self::assertSame([], $dispatcher->workflowData, 'workflowData starts empty.');
+
+    $dispatcher->workflowData['foo'] = 1;
+    self::assertSame(1, $dispatcher->workflowData['foo']);
+
+    unset($dispatcher->workflowData['foo']);
+    self::assertArrayNotHasKey('foo', $dispatcher->workflowData, 'Unset must remove the key.');
+  }
+
+  /**
+   * Upstream `test_dispatcher.py::TestDispatcher::test_init_args` /
+   * `test_init` verify that `Dispatcher` is a `Router` subclass and starts
+   * with default (not None) properties for storage and FSM. phpbotgram's
+   * `Dispatcher` also extends `Router`; FSM / storage properties are
+   * in scope for Phase 5 and tested in `FsmIntegrationTest`.
+   *
+   * Covered by: `DispatcherTest::testDispatcherExtendsRouter` (already
+   * present) and `FsmIntegrationTest::testDispatcherConstructorExposesStorageAccessor`.
+   *
+   * Upstream `test_dispatcher.py::test_parent_router` asserts `dispatcher.parent_router is None`.
+   * Covered by: `RouterTest::testInitialTreeStateHasNoParentAndNoSubRouters`.
+   *
+   * Upstream `test_dispatcher.py::TestDispatcher::test_storage_property` checks
+   * `dispatcher.storage is dispatcher.fsm.storage`.
+   * Covered by: `FsmIntegrationTest::testDispatcherConstructorExposesStorageAccessor`.
+   *
+   * This empty test is the coverage-note anchor only; no additional assertions
+   * are needed.
+   */
+  public function testDispatcherStartsWithNullParentRouter(): void
+  {
+    // Upstream test_parent_router: parent_router is None.
+    // Covered also in testDispatcherExtendsRouter (hierarchy check) and
+    // RouterTest::testInitialTreeStateHasNoParentAndNoSubRouters.
+    $dispatcher = new Dispatcher();
+
+    self::assertNull(
+      $dispatcher->parentRouter,
+      'A root Dispatcher has no parent router.',
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
+
+  /**
+   * Build a minimal `Update` carrying a text Message with the given body.
+   * Used as the canonical fixture across tests; keeping the constructor
+   * args inline in every test would noise out the actual scenario being
+   * verified.
+   */
+  private static function messageUpdate(string $text): Update
+  {
+    $chat = new Chat(id: 1, type: 'private');
+    $user = new User(id: 2, isBot: false, firstName: 'Tester');
+    $message = new Message(messageId: 1, date: new DateTime('@0'), chat: $chat, fromUser: $user, text: $text);
+
+    return new Update(updateId: 1, message: $message);
+  }
+
+  private static function makeUser(): User
+  {
+    return new User(id: 2, isBot: false, firstName: 'Tester');
+  }
+}

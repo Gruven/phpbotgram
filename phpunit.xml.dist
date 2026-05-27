@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         cacheDirectory=".phpunit.cache">
+    <testsuites>
+        <testsuite name="phpbotgram">
+            <directory>tests</directory>
+            <exclude>tests/data</exclude>
+            <!--
+              NOTE: do NOT exclude tests/Support — the Mocked*, RunAsyncTrait, etc.
+              that live there are imported by other test files, AND tests/Support/
+              hosts a couple of *Test.php files that exercise the harness itself
+              (MockedSessionTest, RunAsyncTraitTest). Excluding the directory would
+              silently drop those tests.
+            -->
+        </testsuite>
+    </testsuites>
+    <!--
+      No coverage block here: PHPUnit auto-emits a warning when no coverage driver
+      is loaded, which fails under failOnWarning. CI passes the coverage flag on
+      the CLI when it wants a coverage report; developers can do the same.
+    -->
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+    <php>
+        <env name="PHPBOTGRAM_TEST_REDIS_DSN" value=""/>
+        <env name="PHPBOTGRAM_TEST_MONGO_DSN" value=""/>
+    </php>
+</phpunit>

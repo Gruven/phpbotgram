@@ -1,0 +1,116 @@
+{#-
+  Bot facade template.
+
+  Variables provided by `BotRenderer::render()`:
+    - namespace : string  — `Gruven\PhpBotGram`
+    - imports   : list<string>  — alphabetical FQCNs
+    - wrappers  : list<{
+        name: string,
+        parameters: list<{phpName, phpType, phpdocType, default}>,
+        methodClass: string,
+        returnType: string,
+        phpdocReturn: ?string,
+        description: string,
+        timeoutParamName: string,
+      }>
+
+  The hand-coded constructor, `__invoke`, and `getDefaultProperties` are
+  emitted verbatim — the only thing the renderer composes is the
+  per-method wrapper list. cs-fixer polishes whitespace at orchestration
+  time.
+
+  Note: the trailing facade-side timeout parameter is named
+  `$timeout` by default but the renderer falls back to `$apiTimeout`
+  whenever the wrapped method already declares a wire `timeout`
+  parameter — only `getUpdates` does so in the vendored 10.0 schema.
+-#}
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+{% if imports is not empty %}
+
+{% for fqcn in imports -%}
+use {{ fqcn }};
+{% endfor -%}
+{% endif %}
+
+/**
+ * Bot facade.
+ *
+ * Provides one wrapper per Telegram API method, plus the hand-coded
+ * constructor / `__invoke` dispatch entry-point preserved from Phase 1.
+ *
+ * @generated do not edit; regenerate via `make regenerate`
+ */
+class Bot implements BotShortcutsContract
+{
+  use BotShortcuts;
+
+  public readonly BaseSession $session;
+  public readonly DefaultBotProperties $defaultProperties;
+
+  public function __construct(
+    public readonly string $token,
+    ?BaseSession $session = null,
+    ?DefaultBotProperties $defaultProperties = null,
+  ) {
+    Token::validate($token);
+    $this->session = $session ?? new AmphpSession();
+    $this->defaultProperties = $defaultProperties ?? new DefaultBotProperties();
+  }
+
+  public function getDefaultProperties(): DefaultBotProperties
+  {
+    return $this->defaultProperties;
+  }
+
+  /**
+   * Polymorphic entry point: $bot($method) dispatches the method through the
+   * session's middleware chain.
+   *
+   * @template TReturn
+   *
+   * @param TelegramMethod<TReturn> $method
+   *
+   * @return TReturn
+   */
+  public function __invoke(TelegramMethod $method, ?int $timeout = null): mixed
+  {
+    return ($this->session)($this, $method, $timeout);
+  }
+{% for w in wrappers %}
+{% set has_phpdoc_params = false %}{% for p in w.parameters %}{% if p.phpdocType is not null %}{% set has_phpdoc_params = true %}{% endif %}{% endfor -%}
+{% set has_timeout_note = w.timeoutDocLines is not empty -%}
+{% if has_phpdoc_params or w.phpdocReturn is not null or has_timeout_note -%}
+  /**
+{% if has_timeout_note -%}
+{% for line in w.timeoutDocLines -%}
+   * {{ line }}
+{% endfor -%}
+{% if has_phpdoc_params or w.phpdocReturn is not null -%}
+   *
+{% endif -%}
+{% endif -%}
+{% for p in w.parameters -%}
+{% if p.phpdocType is not null -%}
+   * @param {{ p.phpdocType }} ${{ p.phpName }}
+{% endif -%}
+{% endfor -%}
+{% if w.phpdocReturn is not null -%}
+   * @return {{ w.phpdocReturn }}
+{% endif -%}
+   */
+{% endif -%}
+  public function {{ w.name }}(
+{% for p in w.parameters %}    {{ p.phpType }} ${{ p.phpName }}{% if p.default is not null %} = {{ p.default }}{% endif %},
+{% endfor %}    ?int ${{ w.timeoutParamName }} = null,
+  ): {{ w.returnType }} {
+{% if w.phpdocReturn is not null %}    /** @var {{ w.phpdocReturn }} */
+{% endif %}    return $this(new {{ w.methodClass }}(
+{% for p in w.parameters %}      {{ p.phpName }}: ${{ p.phpName }},
+{% endfor %}    ), ${{ w.timeoutParamName }});
+  }
+{% endfor -%}
+}

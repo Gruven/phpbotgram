@@ -1,0 +1,63 @@
+# systemd unit for a long-polling phpbotgram bot.
+#
+# Install:
+#   sudo cp deploy/systemd/phpbotgram-polling.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now phpbotgram-polling.service
+#
+# Update the User, WorkingDirectory, EnvironmentFile, and ExecStart paths to
+# match your deployment. The example assumes:
+#   - source checkout at /srv/phpbotgram (`composer install --no-dev` already run)
+#   - non-root service account "phpbotgram"
+#   - /etc/phpbotgram/polling.env holding BOT_TOKEN= (and any other env vars)
+
+[Unit]
+Description=phpbotgram long-polling bot
+Documentation=https://github.com/Gruven/phpbotgram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=phpbotgram
+Group=phpbotgram
+WorkingDirectory=/srv/phpbotgram
+EnvironmentFile=/etc/phpbotgram/polling.env
+ExecStart=/usr/bin/php examples/echo_bot.php
+Restart=on-failure
+RestartSec=5s
+
+# Hardening — drop privileges and read-only filesystem outside of the
+# working directory. The polling echo bot has no on-disk state (it uses
+# MemoryStorage), so no ReadWritePaths is required. If your bot needs to
+# write — e.g. downloads via `Bot::downloadFile`, FSM via
+# `RedisStorage` cache files, or logs to a custom path — uncomment
+# ReadWritePaths and create the directory beforehand:
+#   sudo install -d -o phpbotgram -g phpbotgram -m 0750 /srv/phpbotgram/var
+# then uncomment the line below.
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+#ReadWritePaths=/srv/phpbotgram/var
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# NOTE: MemoryDenyWriteExecute=true is incompatible with PHP opcache JIT. If you
+# enable JIT, set opcache.jit_buffer_size=0 or comment the directive out, or the
+# runtime is killed at boot with SIGSYS. See deploy/README.md hardening notes.
+
+# Log to journald.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

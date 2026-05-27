@@ -1,0 +1,86 @@
+{#-
+  Union resolver class template.
+
+  Variables provided by `UnionRenderer::render()`:
+    - class_name                  : string  — `<Parent>Union`
+    - namespace                   : string  — `Gruven\PhpBotGram\Types`
+    - parent_name                 : string  — short class name of the union parent
+    - discriminator               : string  — wire field name (`type`, `source`, …)
+                                              already escaped for safe single-quoting
+    - members                     : list<{className, wireValue}> — discriminator → child
+                                              mapping in schema-declaration order;
+                                              wireValue is already escape-escaped for
+                                              single quotes
+    - has_ambiguous_discriminator : bool    — when true, omit resolve(); two or
+                                              more members share a wire value
+                                              and a match() would silently
+                                              route ambiguous payloads to
+                                              whichever member was registered
+                                              first.
+
+  Self-namespace imports (the parent class lives in the same namespace
+  and so does the rendered class itself) are intentionally omitted.
+-#}
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+{% if not has_ambiguous_discriminator %}
+
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\Serializer;
+use Gruven\PhpBotGram\Exceptions\ClientDecodeException;
+use RuntimeException;
+{% endif %}
+
+/**
+ * Discriminator resolver for the {@see {{ parent_name }}} union.
+ *
+ * Wire discriminator: `{{ discriminator }}`.
+{% if has_ambiguous_discriminator %}
+ *
+ * NOTE: this union's children share wire discriminator values — two or more
+ * subtypes declare the same `{{ discriminator }}` literal, so a
+ * `match($payload['{{ discriminator }}'])` resolver would silently dispatch
+ * every ambiguous payload to whichever subtype was registered first in
+ * declaration order. The `resolve()` helper is intentionally omitted;
+ * callers must dispatch via `instanceof` against the {@see members()}
+ * listing or by inspecting payload-content keys that uniquely distinguish
+ * the variants.
+{% endif %}
+ *
+ * @generated do not edit; regenerate via `make regenerate`
+ */
+final class {{ class_name }}
+{
+  /**
+   * @return list<class-string<{{ return_type }}>>
+   */
+  public static function members(): array
+  {
+    return [
+{% for m in all_members %}      {{ m.className }}::class,
+{% endfor %}    ];
+  }
+{% if not has_ambiguous_discriminator %}
+
+  /**
+   * @param array<string, mixed> $payload
+   */
+  public static function resolve(array $payload, ?Bot $bot = null): {{ return_type }}
+  {
+    $discriminator = $payload['{{ discriminator }}'] ?? null;
+    $resolved = match (is_string($discriminator) ? $discriminator : null) {
+{% for m in members %}      '{{ m.wireValue }}' => Serializer::load({{ m.className }}::class, $payload, $bot),
+{% endfor %}      default => throw new ClientDecodeException(
+        sprintf('Unknown {{ parent_name }} {{ discriminator }}: %s', var_export($discriminator, true)),
+        new RuntimeException('Discriminator value not recognised'),
+        $payload,
+      ),
+    };
+
+    return $resolved;
+  }
+{% endif %}
+}

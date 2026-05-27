@@ -1,0 +1,68 @@
+# Docker compose for the phpbotgram test bot.
+#
+# Brings up:
+#   - bot        long-polling echo bot built from deploy/docker/Dockerfile
+#   - redis      Redis sidecar for the integration test suite
+#                (compose profile `redis`)
+#   - mongo      MongoDB sidecar for the integration test suite
+#                (compose profile `mongo`)
+#
+# Quickstart (polling only):
+#   BOT_TOKEN=123:abc docker compose -f deploy/docker/compose.yaml up --build
+#
+# The shipped `examples/echo_bot.php` uses `MemoryStorage`; the redis /
+# mongo sidecars are NOT wired into the echo bot at runtime — they exist
+# so the integration test suite has a real backend to talk to. Run the
+# tests with:
+#
+#   PHPBOTGRAM_TEST_REDIS_DSN=redis://localhost:6379 \
+#   docker compose -f deploy/docker/compose.yaml --profile redis up -d redis
+#   vendor/bin/phpunit --filter Redis
+#
+# To actually run a bot with Redis-backed FSM, write your own example that
+# constructs `new RedisStorage(...)` from a connection your code creates
+# (see src/Fsm/Storage/RedisStorage.php).
+
+services:
+  bot:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    image: phpbotgram/echo:dev
+    environment:
+      BOT_TOKEN: "${BOT_TOKEN:?BOT_TOKEN must be set}"
+    restart: unless-stopped
+    # Long-polling needs outbound HTTPS to api.telegram.org; no inbound ports.
+    depends_on:
+      redis:
+        condition: service_healthy
+        required: false
+      mongo:
+        condition: service_healthy
+        required: false
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["redis"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis-data:/data
+
+  mongo:
+    image: mongo:7
+    profiles: ["mongo"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  redis-data:
+  mongo-data:

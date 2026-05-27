@@ -1,0 +1,66 @@
+parameters:
+    level: 9
+    paths:
+        - src
+        - tests
+        - tools/generator/src
+    # The "(?)" suffix is PHPStan's "optional path" marker; it tells the analyser
+    # the path may not yet exist on disk. tests/data is created on demand by
+    # individual test cases. Phase 2 codegen will land its output under
+    # src/Types/Generated/, src/Methods/Generated/, src/Enums/Generated/, which
+    # the wildcards below will then exclude — until then Phase 1's hand-authored
+    # stubs in src/Types/, src/Methods/, src/Enums/ stay analysed at level 9.
+    excludePaths:
+        - tests/data (?)
+        - src/Types/Generated/*.php (?)
+        - src/Methods/Generated/*.php (?)
+        - src/Enums/Generated/*.php (?)
+        - examples/*.php
+        - examples/**/*.php
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # MagicFilter is, by design, a dynamic-property + method DSL. Its
+        # __get / __call accept any name (the chain builders); listing
+        # every Telegram field as @property/@method would be brittle.
+        # AttrDict mirrors the same shape for the MagicData filter's
+        # data dict.
+        - identifier: property.notFound
+          paths:
+            - src/Utils/MagicFilter/MagicFilter.php
+            - src/Utils/MagicFilter/AttrDict.php
+            - tests/Utils/MagicFilter/*
+            - tests/FTest.php
+            # F-DSL field wrappers seed their MagicFilter chains via the
+            # dynamic-property dispatch (`MagicFilter::root()->firstName`,
+            # `->isBot`, …) — by design, see `BaseField`.
+            - tests/Filters/F/*
+            # MagicData test exercises the F-DSL natively (`F->event->text`,
+            # `F->state`, …) to mirror real call sites; the dispatch goes
+            # through MagicFilter::__get same as the F-DSL field wrappers.
+            - tests/Filters/MagicDataTest.php
+            # TelegramEventObserver's filter-acceptance test exercises the
+            # MagicFilterAsFilter path via `MagicFilter::root()->text`, by
+            # design relying on the same dynamic-property dispatch.
+            - tests/Dispatcher/Event/TelegramEventObserverTest.php
+        - identifier: method.notFound
+          paths:
+            - tests/Utils/MagicFilter/*
+            - tests/FTest.php
+        # The exception hierarchy assertion test deliberately calls
+        # is_subclass_of against literal class names; the analyser
+        # "narrows" these too aggressively at level 9.
+        - identifier: function.alreadyNarrowedType
+          paths:
+            - tests/Utils/MagicFilter/Exception/*
+        # Phase 10 docs-pipeline script tests exercise dynamic JSON shapes
+        # (`json_decode` returns `mixed`, then access `$data['versions'][0]['stable']`).
+        # The tests are pinned against fixture-emitted JSON they control,
+        # so the offset chain is safe at runtime; level-9 mixed-offset
+        # narrowing is too aggressive for this style.
+        - identifier: offsetAccess.nonOffsetAccessible
+          paths:
+            - tests/Scripts/*
+        - identifier: argument.type
+          paths:
+            - tests/Scripts/*

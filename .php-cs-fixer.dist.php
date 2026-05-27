@@ -6,15 +6,23 @@ use PhpCsFixer\Runner\Parallel\ParallelConfigFactory;
 
 $finder = new Finder()
   ->in([
+    __DIR__ . '/examples',
+    __DIR__ . '/scripts',
     __DIR__ . '/src',
+    __DIR__ . '/tests',
+    __DIR__ . '/tools/generator/src',
   ]);
 
 return new Config()
   ->setRules([
-    // PER Coding Style v2.0 (https://github.com/php-fig/per-coding-style/blob/2.0.0/spec.md)
-    '@PER-CS2.0' => true,
+    // PER Coding Style v3.0 (https://github.com/php-fig/per-coding-style/blob/3.0.1/spec.md)
+    '@PER-CS3x0' => true,
+    // Each line of multi-line DocComments must have an asterisk [PSR-5] and must be aligned with the first one.
+    'align_multiline_comment' => true,
     // Each element of an array must be indented exactly once.
     'array_indentation' => true,
+    // Converts simple usages of `array_push($x, $y);` to `$x[] = $y;`.
+    'array_push' => true,
     // PHP arrays should be declared using the configured syntax.
     'array_syntax' => true,
     // PHP attributes declared without arguments must (not) be followed by empty parentheses.
@@ -27,6 +35,7 @@ return new Config()
         'continue',
         'declare',
         'default',
+        'do',
         'exit',
         'for',
         'foreach',
@@ -44,6 +53,8 @@ return new Config()
     ],
     // A single space or none should be between cast and variable.
     'cast_spaces' => ['space' => 'none'],
+    // Class, trait and interface elements must be separated with one or none blank line.
+    'class_attributes_separation' => ['elements' => ['method' => 'one']],
     // When referencing an internal class it must be written using the correct casing.
     'class_reference_name_casing' => true,
     // Namespace must not contain spacing, comments or PHPDoc.
@@ -52,7 +63,7 @@ return new Config()
     'combine_consecutive_issets' => true,
     // Calling `unset` on multiple items should be done in one call.
     'combine_consecutive_unsets' => true,
-    // Replace multiple nested calls of `dirname` by only one call with second `$level` parameter. Requires PHP >= 7.0.
+    // Replace multiple nested calls of `dirname` by only one call with second `$level` parameter.
     'combine_nested_dirname' => true,
     // There must not be spaces around `declare` statement parentheses.
     'declare_parentheses' => true,
@@ -67,6 +78,8 @@ return new Config()
     'empty_loop_body' => ['style' => 'braces'],
     // Empty loop-condition must be in configured style.
     'empty_loop_condition' => true,
+    // Replace deprecated `ereg` regular expression functions with `preg`.
+    'ereg_to_preg' => true,
     // Converts implicit variables into explicit ones in double-quoted strings or heredoc syntax.
     'explicit_string_variable' => true,
     // Order the flags in `fopen` calls, `b` and `t` must be last.
@@ -88,6 +101,8 @@ return new Config()
     'get_class_to_class_keyword' => true,
     // Imports or fully qualifies global classes/functions/constants.
     'global_namespace_import' => true,
+    // Convert `heredoc` to `nowdoc` where possible.
+    'heredoc_to_nowdoc' => true,
     // Function `implode` must be called with 2 arguments in the documented order.
     'implode_call' => true,
     // Include/Require and file path should be divided with a single space. File path should not be placed within parentheses.
@@ -98,15 +113,17 @@ return new Config()
     'is_null' => true,
     // Lambda must not import variables it doesn't use.
     'lambda_not_used_import' => true,
-    // List (`array` destructuring) assignment should be declared using the configured syntax. Requires PHP >= 7.1.
+    // List (`array` destructuring) assignment should be declared using the configured syntax.
     'list_syntax' => true,
+    // Use `&&` and `||` logical operators instead of `and` and `or`.
+    'logical_operators' => true,
     // Magic constants should be referred to using the correct casing.
     'magic_constant_casing' => true,
     // Magic method definitions and calls must be using the correct casing.
     'magic_method_casing' => true,
     // Method chaining MUST be properly indented. Method chaining with different levels of indentation is not supported.
     'method_chaining_indentation' => true,
-    // Replace `strpos()` calls with `str_starts_with()` or `str_contains()` if possible.
+    // Replace `strpos()` and `stripos()` calls with `str_starts_with()` or `str_contains()` if possible.
     'modernize_strpos' => true,
     // Replaces `intval`, `floatval`, `doubleval`, `strval` and `boolval` function calls with according type casting operator.
     'modernize_types_casting' => true,
@@ -122,6 +139,8 @@ return new Config()
     'no_alias_functions' => ['sets' => ['@internal']],
     // Replace control structure alternative syntax to use braces.
     'no_alternative_syntax' => ['fix_non_monolithic_code' => false],
+    // There should not be a binary flag before strings.
+    'no_binary_string' => true,
     // There should not be blank lines between docblock and the documented element.
     'no_blank_lines_after_phpdoc' => true,
     // There should not be any empty comments.
@@ -156,6 +175,8 @@ return new Config()
     'no_multiline_whitespace_around_double_arrow' => true,
     // Convert PHP4-style constructors to `__construct`.
     'no_php4_constructor' => true,
+    // Removes redundant readonly from properties in readonly classes.
+    'no_redundant_readonly_property' => true,
     // Short cast `bool` using double exclamation mark should not be used.
     'no_short_bool_cast' => true,
     // Single-line whitespace before closing semicolon are prohibited.
@@ -166,6 +187,8 @@ return new Config()
     'no_superfluous_elseif' => true,
     // If a list of values separated by a comma is contained on a single line, then the last item MUST NOT have a trailing comma.
     'no_trailing_comma_in_singleline' => true,
+    // Removes unneeded braces that are superfluous and aren't part of a control structure's body.
+    'no_unneeded_braces' => ['namespaces' => true],
     // Removes unneeded parentheses around control statements.
     'no_unneeded_control_parentheses' => [
       'statements' => [
@@ -189,10 +212,18 @@ return new Config()
     'no_unset_cast' => true,
     // Unused `use` statements must be removed.
     'no_unused_imports' => true,
+    // There should not be useless `else` cases.
+    'no_useless_else' => true,
+    // There must be no `printf` calls with only the first argument.
+    'no_useless_printf' => true,
+    // There should not be an empty `return` statement at the end of a function.
+    'no_useless_return' => true,
     // There must be no `sprintf` calls with only the first argument.
     'no_useless_sprintf' => true,
     // In array declaration, there MUST NOT be a whitespace before each comma.
     'no_whitespace_before_comma_in_array' => ['after_heredoc' => true],
+    // Empty arrays should not contain only whitespace.
+    'no_whitespace_in_empty_array' => true,
     // Array index should always be written by using square braces.
     'normalize_index_brace' => true,
     // Nullable single type declaration should be standardised using configured syntax.
@@ -207,20 +238,37 @@ return new Config()
     'ordered_attributes' => true,
     // Ordering `use` statements.
     'ordered_imports' => [
+      'imports_order' => [
+        'class',
+        'function',
+        'const'
+      ],
       'sort_algorithm' => 'alpha',
     ],
+    // Orders the interfaces in an `implements` or `interface extends` clause.
+    'ordered_interfaces' => true,
     // Sort union types and intersection types using configured order.
-    'ordered_types' => true,
+    'ordered_types' => ['null_adjustment' => 'always_last', 'sort_algorithm' => 'alpha'],
+    // PHPUnit annotations should be a FQCNs including a root namespace.
+    'php_unit_fqcn_annotation' => true,
+    // All PHPUnit test classes should be marked as internal.
+    'php_unit_internal_class' => true,
+    // Enforce camel (or snake) case for PHPUnit test methods, following configuration.
+    'php_unit_method_casing' => true,
+    // PHPDoc should contain `@param` for all params.
+    'phpdoc_add_missing_param_annotation' => true,
     // All items of the given PHPDoc tags must be either left-aligned or (by default) aligned vertically.
     'phpdoc_align' => ['align' => 'left'],
     // Docblocks should have the same indentation as the documented subject.
     'phpdoc_indent' => true,
     // Fixes PHPDoc inline tags.
     'phpdoc_inline_tag_normalizer' => true,
-    // `@access` annotations should be omitted from PHPDoc.
+    // `@access` annotations must be removed from PHPDoc.
     'phpdoc_no_access' => true,
     // No alias PHPDoc tags should be used.
     'phpdoc_no_alias_tag' => true,
+    // Removes duplicate PHPDoc types.
+    'phpdoc_no_duplicate_types' => true,
     // Classy that does not inherit must not have `@inheritdoc` tags.
     'phpdoc_no_useless_inheritdoc' => true,
     // Annotations in PHPDoc should be ordered in defined sequence.
@@ -287,12 +335,23 @@ return new Config()
     'static_lambda' => true,
     // Handles implicit backslashes in strings and heredocs. Depending on the chosen strategy, it can escape implicit backslashes to ease the understanding of which are special chars interpreted by PHP and which not (`escape`), or it can remove these additional backslashes if you find them superfluous (`unescape`). You can also leave them as-is using `ignore` strategy.
     'string_implicit_backslashes' => ['single_quoted' => 'ignore'],
+    // A class that implements the `__toString()` method must explicitly implement the `Stringable` interface.
+    'stringable_for_to_string' => true,
     // Switch case must not be ended with `continue` but with `break`.
     'switch_continue_to_break' => true,
-    // Use `null` coalescing operator `??` where possible. Requires PHP >= 7.0.
+    // Use `null` coalescing operator `??` where possible.
     'ternary_to_null_coalescing' => true,
-    // Multi-line arrays, arguments list, parameters list and `match` expressions must have a trailing comma.
-    'trailing_comma_in_multiline' => ['after_heredoc' => true],
+    // Arguments lists, array destructuring lists, arrays that are multi-line, `match`-lines and parameters lists must have a trailing comma.
+    'trailing_comma_in_multiline' => [
+      'after_heredoc' => true,
+      'elements' => [
+        'arguments',
+        'array_destructuring',
+        'arrays',
+        'match',
+        'parameters',
+      ],
+    ],
     // Arrays should be formatted like function/method arguments, without leading or trailing single line space.
     'trim_array_spaces' => true,
     // Ensure single space between a variable and its type declaration in function arguments and properties.

@@ -1,0 +1,182 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Gruven\PhpBotGram\Client;
+
+use Amp\ByteStream\ReadableStream;
+use Closure;
+use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Methods\GetFile;
+use Gruven\PhpBotGram\Methods\GetMe;
+use Gruven\PhpBotGram\Types\Downloadable;
+use Gruven\PhpBotGram\Types\File;
+use Gruven\PhpBotGram\Types\User;
+use Gruven\PhpBotGram\Utils\Token;
+use InvalidArgumentException;
+use LogicException;
+use Revolt\EventLoop\FiberLocal;
+use RuntimeException;
+
+trait BotShortcuts
+{
+  /**
+   * Per-class FiberLocal slots, keyed by `static::class`. A trait-level
+   * `private static ?FiberLocal` would otherwise collapse across the
+   * using class hierarchy (Bot + MockedBot would share one slot).
+   *
+   * @var array<class-string, FiberLocal<?Bot>>
+   */
+  private static array $currentBotLocals = [];
+  private ?User $cachedMe = null;
+  private ?int $cachedId = null;
+
+  public function getId(): int
+  {
+    return $this->cachedId ??= Token::extractBotId($this->token);
+  }
+
+  /**
+   * `($bot->context())(function (Bot $bot) { … })` — the body closure receives
+   * `$this` as its single argument so callers can avoid `use ($bot)` clutter.
+   * Mirrors upstream's `async with bot.context() as bot:` binding.
+   */
+  public function context(bool $autoClose = true): Closure
+  {
+    return function (Closure $body) use ($autoClose): mixed {
+      try {
+        return $body($this);
+      } finally {
+        if ($autoClose) {
+          $this->session->close();
+        }
+      }
+    };
+  }
+
+  /**
+   * @param Closure():?Bot $init
+   *
+   * @return FiberLocal<?Bot>
+   */
+  private static function makeBotLocal(Closure $init): FiberLocal
+  {
+    return new FiberLocal($init);
+  }
+
+  /** @return FiberLocal<?Bot> */
+  private static function botLocal(): FiberLocal
+  {
+    $key = static::class;
+
+    return self::$currentBotLocals[$key] ??= self::makeBotLocal(static fn(): ?Bot => null);
+  }
+
+  public static function current(): ?Bot
+  {
+    return self::botLocal()->get();
+  }
+
+  public static function setCurrent(?Bot $bot): void
+  {
+    self::botLocal()->set($bot);
+  }
+
+  /**
+   * @internal Test/teardown helper — clears the FiberLocal storage for the
+   * calling class so the next test starts with a clean current bot. Production
+   * code should not call this; use setCurrent(null) instead, which keeps the
+   * FiberLocal slot but resets the stored Bot for the current fiber.
+   */
+  public static function resetCurrentBot(): void
+  {
+    unset(self::$currentBotLocals[static::class]);
+  }
+
+  public function me(): User
+  {
+    if ($this->cachedMe !== null) {
+      return $this->cachedMe;
+    }
+
+    /** @var User $me */
+    $me = $this(new GetMe());
+    $this->cachedMe = $me;
+
+    return $me;
+  }
+
+  public function downloadFile(File|string $fileOrPath, mixed $destination = null, int $timeout = 30, int $chunkSize = 65536): ?string
+  {
+    $path = $fileOrPath instanceof File
+        ? ($fileOrPath->filePath ?? throw new LogicException('File has no filePath'))
+        : $fileOrPath;
+    $url = $this->session->api->fileUrl($this->token, $path);
+    $stream = $this->session->streamContent($url, timeout: $timeout, chunkSize: $chunkSize);
+
+    return $this->consumeStream($stream, $destination);
+  }
+
+  /**
+   * Mirrors aiogram's `bot.download(file: str | Downloadable, ...)`. A bare
+   * `string` is treated as a `file_id` and resolved via `getFile` before
+   * downloading; a `Downloadable` (Document/Photo/Voice/etc) is unwrapped
+   * via its `fileId()` method.
+   */
+  public function download(Downloadable|string $object, mixed $destination = null, int $timeout = 30, int $chunkSize = 65536): ?string
+  {
+    $fileId = $object instanceof Downloadable ? $object->fileId() : $object;
+
+    /** @var File $file */
+    $file = $this(new GetFile(fileId: $fileId));
+
+    return $this->downloadFile($file, $destination, $timeout, $chunkSize);
+  }
+
+  private function consumeStream(ReadableStream $stream, mixed $destination): ?string
+  {
+    if ($destination === null) {
+      $buf = '';
+
+      while (($chunk = $stream->read()) !== null) {
+        $buf .= $chunk;
+      }
+
+      return $buf;
+    }
+
+    if (is_string($destination)) {
+      // @-suppress the E_WARNING — we surface the failure as a typed exception below.
+      $handle = @fopen($destination, 'wb');
+
+      if ($handle === false) {
+        $err = error_get_last()['message'] ?? 'unknown error';
+
+        throw new RuntimeException("Failed to open destination '{$destination}': {$err}");
+      }
+    } elseif (is_resource($destination)) {
+      $handle = $destination;
+    } else {
+      throw new InvalidArgumentException('Destination must be a string path or writable resource');
+    }
+
+    while (($chunk = $stream->read()) !== null) {
+      $expected = strlen($chunk);
+      $written = fwrite($handle, $chunk);
+
+      if ($written === false || $written !== $expected) {
+        if (is_string($destination)) {
+          fclose($handle);
+        }
+
+        throw new RuntimeException("Failed to write {$expected} bytes to destination (wrote: " . ($written === false ? 'false' : (string)$written) . ')');
+      }
+    }
+
+    if (is_string($destination)) {
+      fclose($handle);
+    }
+
+    return null;
+  }
+}

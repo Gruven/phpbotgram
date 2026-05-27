@@ -1,0 +1,256 @@
+{% set breakpoints = {
+    'sm': '400px',
+    'md': '550px',
+    'lg': '750px',
+    'xl': '1000px',
+    'xxl': '1200px',
+    'xxxl': '1900px',
+    'menu': '1000px'
+} %}
+
+{% include 'css/variables.css.twig' %}
+
+/* Base Styles
+-------------------------------------------------- */
+body {
+    background-color: #fff;
+    color: var(--text-color);
+    font-family: var(--font-primary);
+    font-size: var(--text-md);
+    letter-spacing: var(--letter-spacing--primary);
+    line-height: var(--line-height--primary);
+    width: 100%;
+}
+
+{% include 'objects/headings.css.twig' %}
+{% include 'components/headerlink.css.twig' %}
+{% include 'objects/paragraph.css.twig' %}
+{% include 'objects/images.css.twig' %}
+{% include 'objects/line.css.twig' %}
+{% include 'objects/section.css.twig' %}
+{% include 'objects/grid.css.twig' %}
+{% include 'objects/links.css.twig' %}
+{% include 'objects/buttons.css.twig' %}
+{% include 'objects/forms.css.twig' %}
+{% include 'objects/lists.css.twig' %}
+{% include 'objects/code.css.twig' %}
+{% include 'objects/blockquote.css.twig' %}
+{% include 'objects/tables.css.twig' %}
+{% include 'objects/labels.css.twig' %}
+
+{% include 'components/header.css.twig' %}
+{% include 'components/header-title.css.twig' %}
+{% include 'components/topnav.css.twig' %}
+{% include 'components/sidebar.css.twig' %}
+{% include 'components/admonition.css.twig' %}
+{% include 'components/breadcrumbs.css.twig' %}
+{% include 'components/back-to-top.css.twig' %}
+{% include 'components/search.css.twig' %}
+{% include 'components/search-results.css.twig' %}
+{% include 'components/source-modal.css.twig' %}
+{% include 'components/on-this-page.css.twig' %}
+
+{% include 'css/utilities.css.twig' %}
+
+/* phpbotgram docs theme override.
+   Auto mode is CSS-driven through prefers-color-scheme. JavaScript only sets
+   data-phpbotgram-theme when the user chooses a manual override. */
+
+:root {
+    --phpbotgram-page-bg: #fff;
+    --phpbotgram-surface-bg: #fff;
+    --phpbotgram-muted-bg: #f5f7f8;
+    --phpbotgram-border-color: #d9e4dc;
+    --phpbotgram-muted-text: #506057;
+    --phpbotgram-code-bg: #f3f8f4;
+    --phpbotgram-code-border: #cfe3d4;
+    --phpbotgram-select-bg: #fff;
+    --phpbotgram-select-text: #163016;
+}
+
+html[data-phpbotgram-theme="light"] {
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-phpbotgram-theme]) {
+        color-scheme: dark;
+        --primary-color: #5cc8a7;
+        --primary-color-darken: #43aa8b;
+        --primary-color-darker: #9be4c7;
+        --primary-color-darkest: #d7f8e9;
+        --primary-color-lighten: #2e4b40;
+        --primary-color-lighter: #17221e;
+        --dark-gray: #6b7785;
+        --light-gray: #26313a;
+        --text-color: #d7dde7;
+        --code-background-color: #151b22;
+        --code-border-color: #33404c;
+        --button-border-color: #4c5a67;
+        --button-text-color: #d7dde7;
+        --popover-background-color: rgba(9, 13, 18, 0.82);
+        --link-color-primary: #8fd8ff;
+        --link-hover-color-primary: #bde9ff;
+        --form-field-border-color: #4b5b66;
+        --form-field-color: #10161d;
+        --admonition-border-color: #40505d;
+        --table-separator-color: #33404c;
+        --title-text-color: #ecfdf5;
+        --sidebar-border-color: #2b3a44;
+        --phpbotgram-page-bg: #0d1117;
+        --phpbotgram-surface-bg: #111820;
+        --phpbotgram-muted-bg: #161f29;
+        --phpbotgram-border-color: #2b3a44;
+        --phpbotgram-muted-text: #a9b6c4;
+        --phpbotgram-code-bg: #151b22;
+        --phpbotgram-code-border: #33404c;
+        --phpbotgram-select-bg: #10161d;
+        --phpbotgram-select-text: #d7dde7;
+    }
+}
+
+html[data-phpbotgram-theme="dark"] {
+    color-scheme: dark;
+    --primary-color: #5cc8a7;
+    --primary-color-darken: #43aa8b;
+    --primary-color-darker: #9be4c7;
+    --primary-color-darkest: #d7f8e9;
+    --primary-color-lighten: #2e4b40;
+    --primary-color-lighter: #17221e;
+    --dark-gray: #6b7785;
+    --light-gray: #26313a;
+    --text-color: #d7dde7;
+    --code-background-color: #151b22;
+    --code-border-color: #33404c;
+    --button-border-color: #4c5a67;
+    --button-text-color: #d7dde7;
+    --popover-background-color: rgba(9, 13, 18, 0.82);
+    --link-color-primary: #8fd8ff;
+    --link-hover-color-primary: #bde9ff;
+    --form-field-border-color: #4b5b66;
+    --form-field-color: #10161d;
+    --admonition-border-color: #40505d;
+    --table-separator-color: #33404c;
+    --title-text-color: #ecfdf5;
+    --sidebar-border-color: #2b3a44;
+    --phpbotgram-page-bg: #0d1117;
+    --phpbotgram-surface-bg: #111820;
+    --phpbotgram-muted-bg: #161f29;
+    --phpbotgram-border-color: #2b3a44;
+    --phpbotgram-muted-text: #a9b6c4;
+    --phpbotgram-code-bg: #151b22;
+    --phpbotgram-code-border: #33404c;
+    --phpbotgram-select-bg: #10161d;
+    --phpbotgram-select-text: #d7dde7;
+}
+
+body {
+    background-color: var(--phpbotgram-page-bg);
+}
+
+.phpdocumentor-header {
+    background: var(--phpbotgram-surface-bg);
+    border-bottom: 1px solid var(--phpbotgram-border-color);
+}
+
+.phpdocumentor-title__link,
+.phpdocumentor-title__link:hover {
+    color: var(--title-text-color);
+}
+
+.phpbotgram-switcher {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-left: auto;
+    max-width: 100%;
+    padding: 0.5rem;
+}
+
+.phpbotgram-switcher select {
+    background: var(--phpbotgram-select-bg);
+    border: 1px solid var(--phpbotgram-border-color);
+    border-radius: var(--border-radius-base-size);
+    color: var(--phpbotgram-select-text);
+    font-size: 0.85rem;
+    height: 2rem;
+    padding: 0.2rem 0.4rem;
+}
+
+.phpbotgram-switcher select:disabled {
+    color: var(--phpbotgram-muted-text);
+    opacity: 0.7;
+}
+
+.phpdocumentor-field,
+.phpdocumentor-search__field,
+.phpdocumentor-search__field:focus {
+    background: var(--form-field-color);
+    color: var(--text-color);
+}
+
+.phpdocumentor-search input:disabled {
+    background-color: var(--phpbotgram-muted-bg);
+}
+
+.phpdocumentor-search-results__dialog {
+    background: var(--phpbotgram-surface-bg);
+    border-color: var(--phpbotgram-border-color);
+}
+
+.phpdocumentor-search-results__entry small,
+.phpdocumentor-summary,
+.phpdocumentor-element-found-in {
+    color: var(--phpbotgram-muted-text);
+}
+
+.phpdocumentor-sidebar {
+    background: var(--phpbotgram-page-bg);
+}
+
+.phpdocumentor .phpdocumentor-sidebar a.-active {
+    color: var(--link-hover-color-primary);
+}
+
+.phpdocumentor .phpdocumentor-sidebar__category > * {
+    border-left-color: var(--phpbotgram-border-color);
+}
+
+.phpdocumentor-sidebar__menu-icon {
+    background: var(--primary-color-darken);
+}
+
+.phpdocumentor .phpdocumentor-element .phpdocumentor-element,
+.phpdocumentor-admonition {
+    background: var(--phpbotgram-muted-bg);
+    border-color: var(--phpbotgram-border-color);
+}
+
+.phpdocumentor code:not([class*="language-"]):not(.prettyprint),
+.phpdocumentor code.prettyprint {
+    background: var(--phpbotgram-code-bg);
+    border: 1px solid var(--phpbotgram-code-border);
+    border-radius: var(--border-radius-base-size);
+    color: var(--text-color);
+    padding: 0.1rem 0.25rem;
+}
+
+.phpdocumentor pre code[class*="language-"] {
+    border: 1px solid var(--phpbotgram-code-border);
+    border-radius: var(--border-radius-base-size);
+    display: block;
+}
+
+.phpdocumentor table,
+.phpdocumentor dl.phpdocumentor-table-of-contents {
+    border-color: var(--phpbotgram-border-color);
+}
+
+.phpdocumentor th,
+.phpdocumentor td,
+.phpdocumentor-table-of-contents__entry,
+.phpdocumentor-search-results__entry {
+    border-bottom-color: var(--table-separator-color);
+}
