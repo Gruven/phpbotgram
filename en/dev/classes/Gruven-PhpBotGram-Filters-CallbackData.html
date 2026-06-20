@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png"/>
+    <link rel="icon" href="images/favicon.ico"/>
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button" />
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"/>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"/>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled />
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button" />
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show &quot;typing…&quot; while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                <section>
+                                        <ul class="phpdocumentor-breadcrumbs">
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven.html">Gruven</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram.html">PhpBotGram</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram-filters.html">Filters</a></li>
+    </ul>
+
+    <article class="phpdocumentor-element -class">
+        <h2 class="phpdocumentor-content__title">
+    CallbackData
+
+    
+            <div class="phpdocumentor-element__package">
+            in package
+            <ul class="phpdocumentor-breadcrumbs">
+                                    <li class="phpdocumentor-breadcrumb"><a href="packages/Application.html">Application</a></li>
+                            </ul>
+        </div>
+    
+    
+    </h2>
+
+<div class="phpdocumentor-label-line">
+
+
+    <div class="phpdocumentor-label phpdocumentor-label--success"><span>Abstract</span><span>Yes</span></div>
+
+</div>
+
+        <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">81</span>
+
+    </aside>
+
+            <p class="phpdocumentor-summary">Abstract base for typed callback-data payloads embedded inside
+`InlineKeyboardButton::$callbackData`. Mirrors
+`aiogram.filters.callback_data.CallbackData`
+(`aiogram/filters/callback_data.py:34-149`).</p>
+
+
+    <section class="phpdocumentor-description"><h1>Subclass shape</h1>
+<p>Subclasses declare a class-level <code class="prettyprint">#[CallbackPrefix('prefix', sep: ':')]</code>
+attribute plus constructor-promoted readonly public properties:</p>
+<p>#[CallbackPrefix('order')]
+final class OrderCallback extends CallbackData {
+public function __construct(
+public readonly int $id,
+public readonly string $action,
+public readonly bool $deleted,
+) }
+}</p>
+<p>The wire form is <code class="prettyprint">prefix:val1:val2:...</code>. Both <code class="prettyprint">pack()</code> and <code class="prettyprint">unpack()</code>
+iterate the <strong>constructor parameter list</strong> to determine which fields to
+serialise and in what order. This guarantees:</p>
+<ul>
+<li>Field order is always the constructor declaration order for both
+directions.</li>
+<li>Non-promoted <code class="prettyprint">public readonly</code> properties assigned in the constructor
+body (derived/computed fields) are excluded from the wire form, just as
+Pydantic's <code class="prettyprint">model_dump()</code> only includes model <em>fields</em> (declared in
+<code class="prettyprint">__init__</code>), not arbitrary attributes set inside the body.</li>
+</ul>
+<p>The standard subclass shape remains constructor-promoted properties only,
+which satisfies both constraints automatically.</p>
+<h1>Type-encoding table</h1>
+<p>Mirrors <code class="prettyprint">aiogram/filters/callback_data.py:67-82</code>:</p>
+<ul>
+<li><code class="prettyprint">null</code> → <code class="prettyprint">''</code> (empty wire segment; nullable typed properties
+decode the empty segment back to <code class="prettyprint">null</code>).</li>
+<li><code class="prettyprint">bool</code> → <code class="prettyprint">'1'</code> / <code class="prettyprint">'0'</code> (matches upstream <code class="prettyprint">str(int(value))</code>).</li>
+<li><code class="prettyprint">int</code>, <code class="prettyprint">float</code> → <code class="prettyprint">(string)$value</code>.</li>
+<li><code class="prettyprint">string</code> → as-is.</li>
+<li><code class="prettyprint">\Stringable</code> (Decimal/BigDecimal/Fraction equivalents) →
+<code class="prettyprint">(string)$value</code>.</li>
+<li><code class="prettyprint">\UnitEnum</code> (backed enum) → <code class="prettyprint">$value-&gt;value</code>.</li>
+<li>Anything else → <code class="prettyprint">\LogicException</code>. Programming error rather than
+user input, hence <code class="prettyprint">LogicException</code> not <code class="prettyprint">InvalidArgumentException</code>.</li>
+</ul>
+<p>UUID is mentioned in the upstream spec; we defer the dedicated branch
+until <code class="prettyprint">ramsey/uuid</code> is wired as a dependency. UUID objects that
+implement <code class="prettyprint">\Stringable</code> (the v4 default) flow through the Stringable
+branch already.</p>
+<h1>Size cap</h1>
+<p>Telegram limits <code class="prettyprint">CallbackQuery::$data</code> to 64 UTF-8 bytes
+(<code class="prettyprint">MAX_CALLBACK_LENGTH = 64</code>). <code class="prettyprint">pack()</code> measures byte length via
+<code class="prettyprint">strlen</code> — PHP strings are byte sequences, and the protocol expects
+UTF-8, so byte count == UTF-8 byte count as long as the input is
+properly UTF-8 (responsibility of the caller). Throws <code class="prettyprint">\LogicException</code>
+when the payload overflows: it's a programming error, not user input.</p>
+</section>
+
+
+
+    
+    
+<h3 id="toc">
+    Table of Contents
+    <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#toc" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h3>
+
+
+
+
+
+
+
+<h4 id="toc-constants">
+    Constants
+    <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#toc-constants" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -constant -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#constant_MAX_CALLBACK_LENGTH">MAX_CALLBACK_LENGTH</a>
+    <span>
+        &nbsp;: int&nbsp;= 64                            </span>
+</dt>
+<dd>Telegram-imposed maximum wire length in UTF-8 bytes.</dd>
+
+    </dl>
+
+
+
+<h4 id="toc-methods">
+    Methods
+    <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#toc-methods" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_filter">filter()</a>
+    <span>
+                                &nbsp;: <a href="classes/Gruven-PhpBotGram-Filters-CallbackQueryFilter.html"><abbr title="\Gruven\PhpBotGram\Filters\CallbackQueryFilter">CallbackQueryFilter</abbr></a>    </span>
+</dt>
+<dd>Build a `CallbackQueryFilter` bound to this subclass. Handler:</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_pack">pack()</a>
+    <span>
+                                &nbsp;: string    </span>
+</dt>
+<dd>Encode `$this` into the wire form `prefix:val1:val2:...`.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_unpack">unpack()</a>
+    <span>
+                                &nbsp;: static    </span>
+</dt>
+<dd>Decode a wire payload back into an instance of `static`. Iterates
+the constructor parameters and maps each segment by position; the
+declaration order MUST match the public property declaration order
+(true by default for promoted-property subclasses).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_decodeBool">decodeBool()</a>
+    <span>
+                                &nbsp;: bool    </span>
+</dt>
+<dd>Decode a boolean wire segment. Accepts `&#039;1&#039;`/`&#039;0&#039;` (our preferred
+pack form) plus `&#039;true&#039;`/`&#039;false&#039;` (case-insensitive) for forward
+compatibility with upstream&#039;s `_encode_value` accepting either.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_decodeComplex">decodeComplex()</a>
+    <span>
+                                &nbsp;: mixed    </span>
+</dt>
+<dd>Decode into a complex (non-scalar) target type. Currently supports
+backed enums via `::from($raw)`. Other complex types (Stringable
+value objects, UUIDs, etc.) require subclass-side overrides because
+we can&#039;t know how to reconstruct an arbitrary value object from a
+plain wire string.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_decodeValue">decodeValue()</a>
+    <span>
+                                &nbsp;: mixed    </span>
+</dt>
+<dd>Decode a wire segment back to a typed value. The parameter
+reflection gives us the target type; we dispatch per scalar/complex.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_encodeEnum">encodeEnum()</a>
+    <span>
+                                &nbsp;: string    </span>
+</dt>
+<dd>Encode a UnitEnum value. Backed enums (`enum X: string {}` /
+`enum X: int {}`) expose `-&gt;value`; pure UnitEnums fall back to the
+case name. Mirrors upstream&#039;s `str(value.value)` which works for
+Python&#039;s `Enum` (both backed and unbacked, where the backing value
+is the case name string by default).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_encodeValue">encodeValue()</a>
+    <span>
+                                &nbsp;: string    </span>
+</dt>
+<dd>Encode a single property value to its wire string form. See class
+docblock for the full type-encoding table.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_reflectMeta">reflectMeta()</a>
+    <span>
+                                &nbsp;: <a href="classes/Gruven-PhpBotGram-Filters-CallbackPrefix.html"><abbr title="\Gruven\PhpBotGram\Filters\CallbackPrefix">CallbackPrefix</abbr></a>    </span>
+</dt>
+<dd>Read the `#[CallbackPrefix]` metadata for `$class`. Validates that
+the attribute is present and that the separator is not contained
+inside the prefix (mirroring upstream&#039;s `__init_subclass__` check at
+`aiogram/filters/callback_data.py:59-64`).</dd>
+
+    </dl>
+
+
+
+        
+    <section class="phpdocumentor-constants">
+        <h3 class="phpdocumentor-elements__header" id="constants">
+            Constants
+            <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#constants" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article class="phpdocumentor-element -constant -public ">
+    <h4 class="phpdocumentor-element__name" id="constant_MAX_CALLBACK_LENGTH">
+        MAX_CALLBACK_LENGTH
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#constant_MAX_CALLBACK_LENGTH" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">84</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Telegram-imposed maximum wire length in UTF-8 bytes.</p>
+
+    
+    <code class="phpdocumentor-signature phpdocumentor-code ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+        <span class="phpdocumentor-signature__type">int</span>
+    <span class="phpdocumentor-signature__name">MAX_CALLBACK_LENGTH</span>
+    = <span class="phpdocumentor-signature__default-value">64</span>
+</code>
+
+
+    
+    
+    
+
+        
+    </article>
+            </section>
+
+        
+
+            <section class="phpdocumentor-methods">
+        <h3 class="phpdocumentor-elements__header" id="methods">
+            Methods
+            <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#methods" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_filter">
+        filter()
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_filter" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">228</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Build a `CallbackQueryFilter` bound to this subclass. Handler:</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">filter</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Filters-CallbackQueryFilter.html"><abbr title="\Gruven\PhpBotGram\Filters\CallbackQueryFilter">CallbackQueryFilter</abbr></a></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>$router-&gt;callbackQuery()-&gt;register($fn, MyCallbackData::filter());</p>
+<p>Mirrors upstream's <code class="prettyprint">cls.filter(rule=...)</code> classmethod
+(<code class="prettyprint">aiogram/filters/callback_data.py:141-149</code>). The <code class="prettyprint">rule</code> (MagicFilter)
+argument lands in Phase 4.5+; the current Task 4.8 surface keeps the
+factory parameter-less.</p>
+</section>
+
+    
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Filters-CallbackQueryFilter.html"><abbr title="\Gruven\PhpBotGram\Filters\CallbackQueryFilter">CallbackQueryFilter</abbr></a></span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_pack">
+        pack()
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_pack" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">106</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Encode `$this` into the wire form `prefix:val1:val2:...`.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">pack</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">string</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Iterates the constructor's parameter list (the same source <code class="prettyprint">unpack()</code>
+uses) rather than <code class="prettyprint">getProperties(IS_PUBLIC)</code>. This guarantees:</p>
+<ol>
+<li>Field order is always the constructor declaration order, matching
+<code class="prettyprint">unpack()</code>'s iteration order exactly.</li>
+<li>Non-promoted <code class="prettyprint">public readonly</code> properties that are computed inside
+the constructor body are excluded from the wire form — only
+constructor parameters are serialised, mirroring upstream's
+<code class="prettyprint">model_dump()</code> which iterates Pydantic model <em>fields</em> (declared in
+the model's <code class="prettyprint">__init__</code> signature), not arbitrary attributes set in
+the body.</li>
+</ol>
+</section>
+
+    
+    
+    <h5 class="phpdocumentor-tag-list__heading" id="method_pack_tags">
+        Tags
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_pack_tags" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h5>
+    <dl class="phpdocumentor-tag-list">
+                    <dt class="phpdocumentor-tag-list__entry">
+                <span class="phpdocumentor-tag__name">throws</span>
+            </dt>
+                            <dd class="phpdocumentor-tag-list__definition">
+                                                                <span class="phpdocumentor-tag-link"><abbr title="\LogicException">LogicException</abbr></span>
+                                                                                        <section class="phpdocumentor-description"><p>If the subclass is missing the
+<code class="prettyprint">#[CallbackPrefix]</code> attribute, has no constructor,
+contains an unencodable property value, or the
+result exceeds 64 bytes.</p>
+</section>
+
+                                    </dd>
+                        </dl>
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">string</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_unpack">
+        unpack()
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_unpack" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">167</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Decode a wire payload back into an instance of `static`. Iterates
+the constructor parameters and maps each segment by position; the
+declaration order MUST match the public property declaration order
+(true by default for promoted-property subclasses).</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">unpack</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$data</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">static</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$data</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+    <h5 class="phpdocumentor-tag-list__heading" id="method_unpack_tags">
+        Tags
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_unpack_tags" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h5>
+    <dl class="phpdocumentor-tag-list">
+                    <dt class="phpdocumentor-tag-list__entry">
+                <span class="phpdocumentor-tag__name">throws</span>
+            </dt>
+                            <dd class="phpdocumentor-tag-list__definition">
+                                                                <span class="phpdocumentor-tag-link"><abbr title="\InvalidArgumentException">InvalidArgumentException</abbr></span>
+                                                                                        <section class="phpdocumentor-description"><p>When the prefix doesn't match.</p>
+</section>
+
+                                    </dd>
+                            <dd class="phpdocumentor-tag-list__definition">
+                                                                <span class="phpdocumentor-tag-link"><abbr title="\LogicException">LogicException</abbr></span>
+                                                                                        <section class="phpdocumentor-description"><p>When the subclass is malformed (missing
+attribute, missing constructor, undecodable target type).</p>
+</section>
+
+                                    </dd>
+                        </dl>
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">static</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_decodeBool">
+        decodeBool()
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_decodeBool" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">389</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Decode a boolean wire segment. Accepts `&#039;1&#039;`/`&#039;0&#039;` (our preferred
+pack form) plus `&#039;true&#039;`/`&#039;false&#039;` (case-insensitive) for forward
+compatibility with upstream&#039;s `_encode_value` accepting either.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">decodeBool</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$raw</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">bool</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$raw</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">bool</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_decodeComplex">
+        decodeComplex()
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_decodeComplex" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">401</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Decode into a complex (non-scalar) target type. Currently supports
+backed enums via `::from($raw)`. Other complex types (Stringable
+value objects, UUIDs, etc.) require subclass-side overrides because
+we can&#039;t know how to reconstruct an arbitrary value object from a
+plain wire string.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">decodeComplex</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$raw</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type"><abbr title="\ReflectionNamedType">ReflectionNamedType</abbr>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$type</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">mixed</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$raw</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$type</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><abbr title="\ReflectionNamedType">ReflectionNamedType</abbr></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_decodeValue">
+        decodeValue()
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_decodeValue" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">340</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Decode a wire segment back to a typed value. The parameter
+reflection gives us the target type; we dispatch per scalar/complex.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">decodeValue</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$raw</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type"><abbr title="\ReflectionParameter">ReflectionParameter</abbr>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$param</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">mixed</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Nullable parameters with an empty wire segment decode according to
+upstream <code class="prettyprint">callback_data.py:131-137</code>:</p>
+<p>if v == &quot;&quot; and nullable and field.default != &quot;&quot;:
+return field.default if field.default is not PydanticUndefined else None</p>
+<p>Upstream contract decomposed:</p>
+<ol>
+<li>Empty wire + nullable + non-empty-string default → return default.</li>
+<li>Empty wire + nullable + no default → return <code class="prettyprint">null</code>.</li>
+<li>Empty wire + nullable + empty-string default (<code class="prettyprint">?string $foo = ''</code>) →
+fall through to <code class="prettyprint">$raw</code> (i.e. <code class="prettyprint">''</code>).  <code class="prettyprint">field.default != &quot;&quot;</code> fails, so
+upstream does NOT return default/null — the empty wire round-trips as
+the empty string.</li>
+<li>Empty wire + non-nullable → fall through to scalar coercion path
+(may raise <code class="prettyprint">TypeError</code> for int/bool/float).</li>
+</ol>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$raw</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$param</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><abbr title="\ReflectionParameter">ReflectionParameter</abbr></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_encodeEnum">
+        encodeEnum()
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_encodeEnum" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">305</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Encode a UnitEnum value. Backed enums (`enum X: string {}` /
+`enum X: int {}`) expose `-&gt;value`; pure UnitEnums fall back to the
+case name. Mirrors upstream&#039;s `str(value.value)` which works for
+Python&#039;s `Enum` (both backed and unbacked, where the backing value
+is the case name string by default).</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">encodeEnum</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><abbr title="\UnitEnum">UnitEnum</abbr>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$value</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">string</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$value</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><abbr title="\UnitEnum">UnitEnum</abbr></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">string</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_encodeValue">
+        encodeValue()
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_encodeValue" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">278</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Encode a single property value to its wire string form. See class
+docblock for the full type-encoding table.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">encodeValue</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">mixed&nbsp;</span><span class="phpdocumentor-signature__argument__name">$value</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">string</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$value</span>
+                : <span class="phpdocumentor-argument-list__argument__type">mixed</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">string</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_reflectMeta">
+        reflectMeta()
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_reflectMeta" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Filters/CallbackData.php"><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">245</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Read the `#[CallbackPrefix]` metadata for `$class`. Validates that
+the attribute is present and that the separator is not contained
+inside the prefix (mirroring upstream&#039;s `__init_subclass__` check at
+`aiogram/filters/callback_data.py:59-64`).</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">reflectMeta</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">class-string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$class</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Filters-CallbackPrefix.html"><abbr title="\Gruven\PhpBotGram\Filters\CallbackPrefix">CallbackPrefix</abbr></a></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$class</span>
+                : <span class="phpdocumentor-argument-list__argument__type">class-string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Filters-CallbackPrefix.html"><abbr title="\Gruven\PhpBotGram\Filters\CallbackPrefix">CallbackPrefix</abbr></a></span>
+            </section>
+
+</article>
+            </section>
+
+        
+    </article>
+                                </section>
+                <section class="phpdocumentor-on-this-page__sidebar">
+                                
+    <section class="phpdocumentor-on-this-page__content">
+        <strong class="phpdocumentor-on-this-page__title">On this page</strong>
+
+        <ul class="phpdocumentor-list -clean">
+            <li class="phpdocumentor-on-this-page-section__title">Table Of Contents</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                        <li><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#toc-constants">Constants</a></li>
+                                                                                <li><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#toc-methods">Methods</a></li>
+                                    </ul>
+            </li>
+                            <li class="phpdocumentor-on-this-page-section__title">Constants</li>
+                <li>
+                    <ul class="phpdocumentor-list -clean">
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#constant_MAX_CALLBACK_LENGTH">MAX_CALLBACK_LENGTH</a></li>
+                                            </ul>
+                </li>
+            
+            
+                        <li class="phpdocumentor-on-this-page-section__title">Methods</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_filter">filter()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_pack">pack()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_unpack">unpack()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_decodeBool">decodeBool()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_decodeComplex">decodeComplex()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_decodeValue">decodeValue()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_encodeEnum">encodeEnum()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_encodeValue">encodeValue()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#method_reflectMeta">reflectMeta()</a></li>
+                                    </ul>
+            </li>
+                    </ul>
+    </section>
+
+                </section>
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>

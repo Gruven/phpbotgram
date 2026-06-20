@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&amp;display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&amp;display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button">
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewbox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"></circle>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"></line>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled>
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button">
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                        
+<section class="section " id="filters">
+            <h1>Filters</h1>
+
+            
+    <p>A filter is a dispatch-time predicate that votes on whether a handler should run. Returns <code>false</code>
+ to reject, <code>true</code>
+ to accept, or an associative array to accept and merge kwargs into the handler call.</p>
+
+            <section class="section " id="how-it-works">
+            <h2>How it works</h2>
+
+            <section class="section " id="writing-a-custom-filter">
+            <h3>Writing a custom filter</h3>
+
+            
+    <p><a href="classes/Gruven-PhpBotGram-Filters-Filter.html"><code>Filter</code></a> is the abstract base. Every built-in filter (<a href="classes/Gruven-PhpBotGram-Filters-Command.html"><code>Command</code></a>, <a href="classes/Gruven-PhpBotGram-Filters-StateFilter.html"><code>StateFilter</code></a>, <a href="classes/Gruven-PhpBotGram-Filters-CallbackQueryFilter.html"><code>CallbackQueryFilter</code></a>, <a href="classes/Gruven-PhpBotGram-Filters-ChatMemberUpdatedFilter.html"><code>ChatMemberUpdatedFilter</code></a>, the F-DSL bridges, the logic combinators) inherits from it and implements <code>__invoke(object $event, mixed ...$kwargs)</code>
+.</p>
+
+            
+    <p>The variadic <code>$kwargs</code>
+ parameter is deliberate: it signals to <code>CallableObject::prepareKwargs</code>
+ that the filter wants the <em>entire</em>
+ dispatcher kwargs bag (<code>bot</code>
+, <code>state</code>
+, <code>event_context</code>
+, &hellip;), not just the keys it literally declares. Without the variadic the prepare step intersects the bag against the parameter names and drops everything else &mdash; which would silently break filters that need contextual data the dispatcher injected.</p>
+
+            
+    <p>The following filter accepts messages containing the word "hello" and injects a <code>greeting</code>
+ kwarg into the handler (adapted from <code>examples/own_filter.php</code>
+):</p>
+
+            <pre><code class="language-php">use Gruven\PhpBotGram\Filters\Filter;
+use Gruven\PhpBotGram\Types\Message;
+
+final class ContainsHelloFilter extends Filter
+{
+    public function __invoke(object $event, mixed ...$kwargs): array|bool
+    {
+        if (!$event instanceof Message) {
+            return false;
+        }
+        $text = strtolower($event-&gt;text ?? '');
+        if (!str_contains($text, 'hello')) {
+            return false;
+        }
+        return ['greeting' =&gt; 'Hello, friend!'];
+    }
+}
+</code></pre>
+
+    </section>
+
+            <section class="section " id="registering-a-handler-with-filters">
+            <h3>Registering a handler with filters</h3>
+
+            
+    <p>Pass filter instances to the <code>filters:</code>
+ named argument of <code>register</code>
+. The handler only runs when every filter in the list accepts:</p>
+
+            <pre><code class="language-php">use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Types\Message;
+
+$bot = new Bot('token');
+$dispatcher = new Dispatcher();
+
+$dispatcher-&gt;message-&gt;register(
+    static function (Message $event, string $greeting): void {
+        $event-&gt;answer($greeting)-&gt;emit();
+    },
+    filters: [new ContainsHelloFilter()],
+);
+
+$dispatcher-&gt;message-&gt;register(static function (Message $event): void {
+    $event-&gt;answer("Try saying hello!")-&gt;emit();
+});
+</code></pre>
+
+            
+    <p>The <code>$greeting</code>
+ parameter arrives because <code>ContainsHelloFilter</code>
+ returned <code>['greeting' =&gt; 'Hello, friend!']</code>
+. The dispatcher merges every filter's array return into the kwargs bag before calling the handler.</p>
+
+    </section>
+
+            <section class="section " id="combining-filters">
+            <h3>Combining filters</h3>
+
+            
+    <p>Filters compose with three static helpers.</p>
+
+            
+    <p><code>Filter::all($f1, $f2)</code>
+ builds an <a href="classes/Gruven-PhpBotGram-Filters-Logic-AndFilter.html"><code>AndFilter</code></a> that cascades kwargs forward &mdash; if the first filter returns <code>['command' =&gt; $cmd]</code>
+, the second filter sees it in <code>$kwargs</code>
+. <code>Filter::any($f1, $f2)</code>
+ builds an <a href="classes/Gruven-PhpBotGram-Filters-Logic-OrFilter.html"><code>OrFilter</code></a> where the first accepting child wins, no cascade. <code>Filter::invertOf($f)</code>
+ builds an <a href="classes/Gruven-PhpBotGram-Filters-Logic-InvertFilter.html"><code>InvertFilter</code></a> that flips the accept/reject decision.</p>
+
+            <pre><code class="language-php">use const Gruven\PhpBotGram\F;
+use Gruven\PhpBotGram\Filters\Filter;
+
+// ContainsHelloFilter is the custom filter from above; combine it with
+// any other Filter &mdash; here an inline F-DSL filter that matches "bye".
+$saysBye = F-&gt;text-&gt;contains('bye')-&gt;asFilter();
+
+$andFilter = Filter::all(new ContainsHelloFilter(), $saysBye);
+$orFilter  = Filter::any(new ContainsHelloFilter(), $saysBye);
+$notFilter = Filter::invertOf(new ContainsHelloFilter());
+</code></pre>
+
+            
+    <p>PHP cannot overload <code>&amp;</code>
+/<code>|</code>
+/<code>~</code>
+, so we ship method forms &mdash; the result composes identically to aiogram's <code>f1 &amp; f2 | ~f3</code>
+ syntax. The static-helper form is more verbose than operator overloading but reads identically once you're used to it.</p>
+
+    </section>
+
+            <section class="section " id="return-value-semantics">
+            <h3>Return-value semantics</h3>
+
+            
+    <p>The return-value semantics mirror aiogram's <code>HandlerObject.check</code>
+: <code>false</code>
+ rejects (later filters on the same handler are not consulted), <code>true</code>
+ accepts with no kwargs, and an associative array accepts with merged kwargs. The <code>Command</code>
+ filter returns <code>['command' =&gt; CommandObject(...)]</code>
+ so the handler can declare <code>function (Message $event, CommandObject $command)</code>
+ and receive the parsed pieces. Other filters that need to expose extracted state (Regex captures, F-DSL selections) follow the same shape. The <code>null</code>
+ return is treated as <code>false</code>
+ for backward-compat with filters that explicitly return nothing on rejection.</p>
+
+    </section>
+
+            <section class="section " id="global-vs-per-handler-filters">
+            <h3>Global vs per-handler filters</h3>
+
+            
+    <p>Filters run in two places. <strong>Global filters</strong>
+ registered on the observer apply <em>before</em>
+ any handler is considered &mdash; one rejection short-circuits the entire chain. <strong>Per-handler filters</strong>
+ passed to <code>register($cb, filters: [...])</code>
+ apply for that handler only. Scenes use global filters to scope every handler on a scene's observer to the current FSM state; user code typically uses per-handler filters for command matching, callback prefix routing, etc. Global filters are appended via <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_filter"><code>$observer-&gt;filter(...)</code></a> &mdash; e.g. <code>$dispatcher-&gt;message-&gt;filter(...)</code>
+.</p>
+
+    </section>
+
+            <section class="section " id="exception-typed-filters">
+            <h3>Exception-typed filters</h3>
+
+            
+    <p>The exception-typed filters (<a href="classes/Gruven-PhpBotGram-Filters-ExceptionTypeFilter.html"><code>ExceptionTypeFilter</code></a>, <a href="classes/Gruven-PhpBotGram-Filters-ExceptionMessageFilter.html"><code>ExceptionMessageFilter</code></a>) are designed for the <code>errors</code>
+ observer. They inspect the synthetic <code>ErrorEvent</code>
+'s <code>exception</code>
+ slot and accept or reject by type or by <code>getMessage()</code>
+ regex. This is how a global error handler can discriminate between "log everything" and "alert on <code>TelegramRetryAfter</code>
+ specifically".</p>
+
+    </section>
+
+    </section>
+
+            <section class="section " id="trade-offs">
+            <h2>Trade-offs</h2>
+
+            
+    <p>Filter results are not cached. A filter that hits Redis or runs a DB query runs on every event, every handler. For expensive checks, either attach the policy as a middleware (which runs once per observer) or move the heavy work behind an in-memory cache. The framework does not try to be clever &mdash; it would have to invalidate the cache on too many events. Caching the <em>output</em>
+ of a filter against the input event would require the filter to be a pure function of the event alone, which is not the contract (filters often read dispatcher kwargs too).</p>
+
+            
+    <p>Throws from a filter propagate. There is no automatic "a filter raised therefore reject" rescue. This is deliberate: a filter raising during a database lookup is a bug, not a vote, and swallowing it would mask the failure. If you want a graceful-fallback filter, catch inside the filter's <code>__invoke</code>
+ and return <code>false</code>
+:</p>
+
+            <pre><code class="language-php">use Gruven\PhpBotGram\Filters\Filter;
+
+final class SafeDbFilter extends Filter
+{
+    public function __invoke(object $event, mixed ...$kwargs): array|bool
+    {
+        try {
+            // ...expensive lookup...
+            return ['user' =&gt; null]; // resolved user object
+        } catch (\Throwable) {
+            return false; // reject gracefully rather than surface the error
+        }
+    }
+}
+</code></pre>
+
+            
+    <p>The <code>Command</code>
+ filter has one specific exception: failures inside <code>$bot-&gt;getMe()</code>
+ (the username lookup for mention-matching) are absorbed so unit tests that don't seed a <code>getMe</code>
+ response can still exercise the filter.</p>
+
+            
+    <p>Filters are stateless by design. Aiogram's <code>magic_filter</code>
+ is expression-tree, not callback-graph, and we keep that model &mdash; the F-DSL chain you build with <code>F-&gt;message-&gt;text-&gt;equals('hi')</code>
+ resolves fresh against each event. Sharing state across calls (e.g. caching the last seen value) is intentionally hard. If you need that, you want a middleware, not a filter &mdash; middlewares get one instance per registration and can hold state on <code>$this</code>
+.</p>
+
+            
+    <p>The variadic-kwargs convention is unusual but load-bearing. Removing it would mean every filter has to declare every kwarg it needs by name, and a new dispatcher-injected key would force every filter to update its signature. The variadic shape is invisible at the call site (handlers don't see it) and only matters when authoring new <code>Filter</code>
+ subclasses.</p>
+
+    </section>
+
+            <section class="section " id="see-also">
+            <h2>See also</h2>
+
+            
+
+<ul>
+    <li class="dash"><a href="guide/concepts/f-dsl.html#f-dsl">F-DSL</a></li>
+
+    <li class="dash"><a href="guide/concepts/callback-data.html">CallbackData</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Filters-Filter.html">API reference: Filter</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Filters-Command.html">API reference: Command</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Filters-StateFilter.html">API reference: StateFilter</a></li>
+
+</ul>
+
+    </section>
+
+    </section>
+
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>

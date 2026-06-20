@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png"/>
+    <link rel="icon" href="images/favicon.ico"/>
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button" />
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"/>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"/>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled />
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button" />
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show &quot;typing…&quot; while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                <section>
+                                        <ul class="phpdocumentor-breadcrumbs">
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven.html">Gruven</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram.html">PhpBotGram</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram-utils.html">Utils</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram-utils-keyboard.html">Keyboard</a></li>
+    </ul>
+
+    <article class="phpdocumentor-element -class">
+        <h2 class="phpdocumentor-content__title">
+    InlineKeyboardBuilder
+
+        <span class="phpdocumentor-element__extends">
+        extends <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html"><abbr title="\Gruven\PhpBotGram\Utils\Keyboard\KeyboardBuilder">KeyboardBuilder</abbr></a>
+    </span>
+    
+            <div class="phpdocumentor-element__package">
+            in package
+            <ul class="phpdocumentor-breadcrumbs">
+                                    <li class="phpdocumentor-breadcrumb"><a href="packages/Application.html">Application</a></li>
+                            </ul>
+        </div>
+    
+    
+    </h2>
+
+<div class="phpdocumentor-label-line">
+
+    <div class="phpdocumentor-label phpdocumentor-label--success"><span>Final</span><span>Yes</span></div>
+
+
+</div>
+
+        <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/InlineKeyboardBuilder.php"><a href="files/src-utils-keyboard-inlinekeyboardbuilder.html"><abbr title="src/Utils/Keyboard/InlineKeyboardBuilder.php">InlineKeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">23</span>
+
+    </aside>
+
+            <p class="phpdocumentor-summary">Fluent builder for `InlineKeyboardMarkup`.</p>
+
+
+    <section class="phpdocumentor-description"><p>Port of upstream <code class="prettyprint">aiogram/utils/keyboard.py</code> — <code class="prettyprint">InlineKeyboardBuilder</code> class.</p>
+</section>
+
+
+    <h5 class="phpdocumentor-tag-list__heading" id="tags">
+        Tags
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#tags" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h5>
+    <dl class="phpdocumentor-tag-list">
+                    <dt class="phpdocumentor-tag-list__entry">
+                <span class="phpdocumentor-tag__name">extends</span>
+            </dt>
+                            <dd class="phpdocumentor-tag-list__definition">
+                                                                                                        
+                                    </dd>
+                        </dl>
+
+    
+    
+<h3 id="toc">
+    Table of Contents
+    <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#toc" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h3>
+
+
+
+
+
+
+
+<h4 id="toc-constants">
+    Constants
+    <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#toc-constants" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -constant -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#constant_MAX_BUTTONS">MAX_BUTTONS</a>
+    <span>
+        &nbsp;: int&nbsp;= 100                            </span>
+</dt>
+<dd>Maximum total buttons for inline keyboards (Telegram limit: 100).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -constant -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#constant_MAX_WIDTH">MAX_WIDTH</a>
+    <span>
+        &nbsp;: int&nbsp;= 8                            </span>
+</dt>
+<dd>Maximum buttons per row for inline keyboards (Telegram limit: 8).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -constant -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#constant_MIN_WIDTH">MIN_WIDTH</a>
+    <span>
+        &nbsp;: int&nbsp;= 1                            </span>
+</dt>
+<dd>Minimum row width.</dd>
+
+    </dl>
+
+
+<h4 id="toc-properties">
+    Properties
+    <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#toc-properties" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -property -protected">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#property_buttonType">$buttonType</a>
+    <span>
+                        &nbsp;: string            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -protected">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#property_markup">$markup</a>
+    <span>
+                        &nbsp;: array&lt;int, array&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;&gt;            </span>
+</dt>
+<dd>Internal two-dimensional markup storage.</dd>
+
+    </dl>
+
+<h4 id="toc-methods">
+    Methods
+    <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#toc-methods" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method___construct">__construct()</a>
+    <span>
+                                &nbsp;: mixed    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_add">add()</a>
+    <span>
+                                &nbsp;: static    </span>
+</dt>
+<dd>Flow buttons into rows. When `MAX_WIDTH` is 0, each call appends a new
+row containing all the given buttons (no row-fill; matches upstream
+`keyboard.py` behaviour for `max_width == 0`). When `MAX_WIDTH` is
+positive, the last incomplete row is filled first, then remaining buttons
+are chunked into full rows of that width.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_adjust">adjust()</a>
+    <span>
+                                &nbsp;: static    </span>
+</dt>
+<dd>Reshape all buttons into rows of the given widths. The last size is
+repeated for any remaining buttons (upstream `repeat=False` default).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_adjustRepeating">adjustRepeating()</a>
+    <span>
+                                &nbsp;: static    </span>
+</dt>
+<dd>Reshape all buttons into rows of the given widths, cycling through the
+size list (upstream `repeat=True` variant).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_asMarkup">asMarkup()</a>
+    <span>
+                                &nbsp;: <a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardMarkup">InlineKeyboardMarkup</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-ReplyKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\ReplyKeyboardMarkup">ReplyKeyboardMarkup</abbr></a>    </span>
+</dt>
+<dd>Wrap the current markup in an `InlineKeyboardMarkup` DTO.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_attach">attach()</a>
+    <span>
+                                &nbsp;: static    </span>
+</dt>
+<dd>Concatenate another builder&#039;s markup onto this one.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_button">button()</a>
+    <span>
+                                &nbsp;: static    </span>
+</dt>
+<dd>Add a fully-specified `InlineKeyboardButton` to the markup by flowing
+it through `add()`.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_buttons">buttons()</a>
+    <span>
+                                &nbsp;: <abbr title="\Generator">Generator</abbr>&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;    </span>
+</dt>
+<dd>Flatten all buttons into a single iterator.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_copy">copy()</a>
+    <span>
+                                &nbsp;: self    </span>
+</dt>
+<dd>Create a deep-copied clone of this builder.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_export">export()</a>
+    <span>
+                                &nbsp;: array&lt;int, array&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;&gt;    </span>
+</dt>
+<dd>Return a deep copy of the internal markup.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_fromMarkup">fromMarkup()</a>
+    <span>
+                                &nbsp;: self    </span>
+</dt>
+<dd>Create an `InlineKeyboardBuilder` from an existing `InlineKeyboardMarkup`.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_row">row()</a>
+    <span>
+                                &nbsp;: static    </span>
+</dt>
+<dd>Append buttons as one or more new rows.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -protected">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_validateButton">validateButton()</a>
+    <span>
+                                &nbsp;: void    </span>
+</dt>
+<dd>Assert that a button is an instance of `$buttonType`.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -protected">
+    <a class="" href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_validateMarkup">validateMarkup()</a>
+    <span>
+                                &nbsp;: void    </span>
+</dt>
+<dd>Assert that every row in a markup array is a list of valid buttons, and
+that the total button count does not exceed `MAX_BUTTONS`.</dd>
+
+    </dl>
+
+
+
+        
+    <section class="phpdocumentor-constants">
+        <h3 class="phpdocumentor-elements__header" id="constants">
+            Constants
+            <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#constants" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article class="phpdocumentor-element -constant -public ">
+    <h4 class="phpdocumentor-element__name" id="constant_MAX_BUTTONS">
+        MAX_BUTTONS
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#constant_MAX_BUTTONS" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/InlineKeyboardBuilder.php"><a href="files/src-utils-keyboard-inlinekeyboardbuilder.html"><abbr title="src/Utils/Keyboard/InlineKeyboardBuilder.php">InlineKeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">38</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Maximum total buttons for inline keyboards (Telegram limit: 100).</p>
+
+    
+    <code class="phpdocumentor-signature phpdocumentor-code ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+        <span class="phpdocumentor-signature__type">int</span>
+    <span class="phpdocumentor-signature__name">MAX_BUTTONS</span>
+    = <span class="phpdocumentor-signature__default-value">100</span>
+</code>
+
+
+    
+    
+    
+
+        
+    </article>
+                    <article class="phpdocumentor-element -constant -public ">
+    <h4 class="phpdocumentor-element__name" id="constant_MAX_WIDTH">
+        MAX_WIDTH
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#constant_MAX_WIDTH" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/InlineKeyboardBuilder.php"><a href="files/src-utils-keyboard-inlinekeyboardbuilder.html"><abbr title="src/Utils/Keyboard/InlineKeyboardBuilder.php">InlineKeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">28</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Maximum buttons per row for inline keyboards (Telegram limit: 8).</p>
+
+    
+    <code class="phpdocumentor-signature phpdocumentor-code ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+        <span class="phpdocumentor-signature__type">int</span>
+    <span class="phpdocumentor-signature__name">MAX_WIDTH</span>
+    = <span class="phpdocumentor-signature__default-value">8</span>
+</code>
+
+
+    
+    
+    
+
+        
+    </article>
+                    <article class="phpdocumentor-element -constant -public ">
+    <h4 class="phpdocumentor-element__name" id="constant_MIN_WIDTH">
+        MIN_WIDTH
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#constant_MIN_WIDTH" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/InlineKeyboardBuilder.php"><a href="files/src-utils-keyboard-inlinekeyboardbuilder.html"><abbr title="src/Utils/Keyboard/InlineKeyboardBuilder.php">InlineKeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">33</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Minimum row width.</p>
+
+    
+    <code class="phpdocumentor-signature phpdocumentor-code ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+        <span class="phpdocumentor-signature__type">int</span>
+    <span class="phpdocumentor-signature__name">MIN_WIDTH</span>
+    = <span class="phpdocumentor-signature__default-value">1</span>
+</code>
+
+
+    
+    
+    
+
+        
+    </article>
+            </section>
+
+        
+    <section class="phpdocumentor-properties">
+        <h3 class="phpdocumentor-elements__header" id="properties">
+            Properties
+            <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#properties" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -protected
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_buttonType">
+        $buttonType
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#property_buttonType" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">51</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">protected</span>
+            <span class="phpdocumentor-signature__type">string</span>
+    <span class="phpdocumentor-signature__name">$buttonType</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -protected
+                                                                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_markup">
+        $markup
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#property_markup" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                                            </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">44</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Internal two-dimensional markup storage.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">protected</span>
+            <span class="phpdocumentor-signature__type">array&lt;int, array&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;&gt;</span>
+    <span class="phpdocumentor-signature__name">$markup</span>
+     = <span class="phpdocumentor-signature__default-value">[]</span></code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+            </section>
+
+            <section class="phpdocumentor-methods">
+        <h3 class="phpdocumentor-elements__header" id="methods">
+            Methods
+            <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#methods" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method___construct">
+        __construct()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method___construct" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/InlineKeyboardBuilder.php"><a href="files/src-utils-keyboard-inlinekeyboardbuilder.html"><abbr title="src/Utils/Keyboard/InlineKeyboardBuilder.php">InlineKeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">43</span>
+
+    </aside>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">__construct</span><span>(</span><span class="phpdocumentor-signature__argument"><span>[</span><span class="phpdocumentor-signature__argument__type">null|array&lt;int, array&lt;int, <a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardButton.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardButton">InlineKeyboardButton</abbr></a>&gt;&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$markup</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">mixed</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$markup</span>
+                : <span class="phpdocumentor-argument-list__argument__type">null|array&lt;int, array&lt;int, <a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardButton.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardButton">InlineKeyboardButton</abbr></a>&gt;&gt;</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_add">
+        add()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_add" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">123</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Flow buttons into rows. When `MAX_WIDTH` is 0, each call appends a new
+row containing all the given buttons (no row-fill; matches upstream
+`keyboard.py` behaviour for `max_width == 0`). When `MAX_WIDTH` is
+positive, the last incomplete row is filled first, then remaining buttons
+are chunked into full rows of that width.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">add</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&nbsp;</span><span class="phpdocumentor-signature__argument__variadic-operator">...</span><span class="phpdocumentor-signature__argument__name">$buttons</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">static</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$buttons</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">static</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_adjust">
+        adjust()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_adjust" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">230</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Reshape all buttons into rows of the given widths. The last size is
+repeated for any remaining buttons (upstream `repeat=False` default).</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">adjust</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">int&nbsp;</span><span class="phpdocumentor-signature__argument__variadic-operator">...</span><span class="phpdocumentor-signature__argument__name">$sizes</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">static</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Pass no arguments to default to <code class="prettyprint">[MAX_WIDTH]</code>.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$sizes</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">static</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_adjustRepeating">
+        adjustRepeating()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_adjustRepeating" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">241</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Reshape all buttons into rows of the given widths, cycling through the
+size list (upstream `repeat=True` variant).</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">adjustRepeating</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">int&nbsp;</span><span class="phpdocumentor-signature__argument__variadic-operator">...</span><span class="phpdocumentor-signature__argument__name">$sizes</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">static</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$sizes</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">static</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_asMarkup">
+        asMarkup()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_asMarkup" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/InlineKeyboardBuilder.php"><a href="files/src-utils-keyboard-inlinekeyboardbuilder.html"><abbr title="src/Utils/Keyboard/InlineKeyboardBuilder.php">InlineKeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">115</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Wrap the current markup in an `InlineKeyboardMarkup` DTO.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">asMarkup</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardMarkup">InlineKeyboardMarkup</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-ReplyKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\ReplyKeyboardMarkup">ReplyKeyboardMarkup</abbr></a></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+    
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardMarkup">InlineKeyboardMarkup</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-ReplyKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\ReplyKeyboardMarkup">ReplyKeyboardMarkup</abbr></a></span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_attach">
+        attach()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_attach" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">258</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Concatenate another builder&#039;s markup onto this one.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">attach</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html"><abbr title="\Gruven\PhpBotGram\Utils\Keyboard\KeyboardBuilder">KeyboardBuilder</abbr></a>&lt;string|int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$other</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">static</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Both builders must have the same <code class="prettyprint">$buttonType</code> — a mismatch throws
+<code class="prettyprint">InvalidArgumentException</code> to mirror upstream's type validation.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$other</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html"><abbr title="\Gruven\PhpBotGram\Utils\Keyboard\KeyboardBuilder">KeyboardBuilder</abbr></a>&lt;string|int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+    <h5 class="phpdocumentor-tag-list__heading" id="method_attach_tags">
+        Tags
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_attach_tags" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h5>
+    <dl class="phpdocumentor-tag-list">
+                    <dt class="phpdocumentor-tag-list__entry">
+                <span class="phpdocumentor-tag__name">throws</span>
+            </dt>
+                            <dd class="phpdocumentor-tag-list__definition">
+                                                                <span class="phpdocumentor-tag-link"><abbr title="\InvalidArgumentException">InvalidArgumentException</abbr></span>
+                                                                                        <section class="phpdocumentor-description"><p>When the button types do not match.</p>
+</section>
+
+                                    </dd>
+                        </dl>
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">static</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_button">
+        button()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_button" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/InlineKeyboardBuilder.php"><a href="files/src-utils-keyboard-inlinekeyboardbuilder.html"><abbr title="src/Utils/Keyboard/InlineKeyboardBuilder.php">InlineKeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">76</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Add a fully-specified `InlineKeyboardButton` to the markup by flowing
+it through `add()`.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">button</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$text</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$url</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">null|<a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html"><abbr title="\Gruven\PhpBotGram\Filters\CallbackData">CallbackData</abbr></a>|string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$callbackData</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-WebAppInfo.html"><abbr title="\Gruven\PhpBotGram\Types\WebAppInfo">WebAppInfo</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$webApp</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-LoginUrl.html"><abbr title="\Gruven\PhpBotGram\Types\LoginUrl">LoginUrl</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$loginUrl</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$switchInlineQuery</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$switchInlineQueryCurrentChat</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-SwitchInlineQueryChosenChat.html"><abbr title="\Gruven\PhpBotGram\Types\SwitchInlineQueryChosenChat">SwitchInlineQueryChosenChat</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$switchInlineQueryChosenChat</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-CopyTextButton.html"><abbr title="\Gruven\PhpBotGram\Types\CopyTextButton">CopyTextButton</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$copyText</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-CallbackGame.html"><abbr title="\Gruven\PhpBotGram\Types\CallbackGame">CallbackGame</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$callbackGame</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">bool|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$pay</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$iconCustomEmojiId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$style</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">static</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Convenience factory that mirrors upstream's <code class="prettyprint">InlineKeyboardBuilder.button()</code>.
+When <code class="prettyprint">$callbackData</code> is a <code class="prettyprint">CallbackData</code> instance it is packed to its wire
+string via <code class="prettyprint">CallbackData::pack()</code>.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$text</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$url</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$callbackData</span>
+                : <span class="phpdocumentor-argument-list__argument__type">null|<a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html"><abbr title="\Gruven\PhpBotGram\Filters\CallbackData">CallbackData</abbr></a>|string</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$webApp</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-WebAppInfo.html"><abbr title="\Gruven\PhpBotGram\Types\WebAppInfo">WebAppInfo</abbr></a>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$loginUrl</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-LoginUrl.html"><abbr title="\Gruven\PhpBotGram\Types\LoginUrl">LoginUrl</abbr></a>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$switchInlineQuery</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$switchInlineQueryCurrentChat</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$switchInlineQueryChosenChat</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-SwitchInlineQueryChosenChat.html"><abbr title="\Gruven\PhpBotGram\Types\SwitchInlineQueryChosenChat">SwitchInlineQueryChosenChat</abbr></a>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$copyText</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-CopyTextButton.html"><abbr title="\Gruven\PhpBotGram\Types\CopyTextButton">CopyTextButton</abbr></a>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$callbackGame</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-CallbackGame.html"><abbr title="\Gruven\PhpBotGram\Types\CallbackGame">CallbackGame</abbr></a>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$pay</span>
+                : <span class="phpdocumentor-argument-list__argument__type">bool|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$iconCustomEmojiId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$style</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">static</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_buttons">
+        buttons()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_buttons" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">83</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Flatten all buttons into a single iterator.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">buttons</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><abbr title="\Generator">Generator</abbr>&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+    
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><abbr title="\Generator">Generator</abbr>&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_copy">
+        copy()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_copy" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/InlineKeyboardBuilder.php"><a href="files/src-utils-keyboard-inlinekeyboardbuilder.html"><abbr title="src/Utils/Keyboard/InlineKeyboardBuilder.php">InlineKeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">59</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Create a deep-copied clone of this builder.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">copy</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">self</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+    
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">self</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_export">
+        export()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_export" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">95</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Return a deep copy of the internal markup.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">export</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">array&lt;int, array&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;&gt;</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+    
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">array&lt;int, array&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;&gt;</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_fromMarkup">
+        fromMarkup()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_fromMarkup" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/InlineKeyboardBuilder.php"><a href="files/src-utils-keyboard-inlinekeyboardbuilder.html"><abbr title="src/Utils/Keyboard/InlineKeyboardBuilder.php">InlineKeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">51</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Create an `InlineKeyboardBuilder` from an existing `InlineKeyboardMarkup`.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">fromMarkup</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardMarkup">InlineKeyboardMarkup</abbr></a>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$markup</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">self</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$markup</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardMarkup">InlineKeyboardMarkup</abbr></a></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">self</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_row">
+        row()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_row" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">185</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Append buttons as one or more new rows.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">row</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">array&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$buttons</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$width</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">static</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>When <code class="prettyprint">$width</code> is <code class="prettyprint">null</code>, the effective width defaults to <code class="prettyprint">MAX_WIDTH</code>
+(upstream <code class="prettyprint">keyboard.py</code> parity: <code class="prettyprint">width = self.max_width</code>). When
+<code class="prettyprint">MAX_WIDTH</code> is 0 and <code class="prettyprint">$width</code> is <code class="prettyprint">null</code>, all buttons go into a single
+row (no width limit). An explicit <code class="prettyprint">$width &gt; 0</code> overrides the default
+but is capped to <code class="prettyprint">MAX_WIDTH</code> when that constant is positive.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$buttons</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$width</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">static</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -protected
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_validateButton">
+        validateButton()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_validateButton" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">292</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Assert that a button is an instance of `$buttonType`.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">protected</span>
+                    <span class="phpdocumentor-signature__name">validateButton</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">object&nbsp;</span><span class="phpdocumentor-signature__argument__name">$button</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">void</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$button</span>
+                : <span class="phpdocumentor-argument-list__argument__type">object</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+    <h5 class="phpdocumentor-tag-list__heading" id="method_validateButton_tags">
+        Tags
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_validateButton_tags" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h5>
+    <dl class="phpdocumentor-tag-list">
+                    <dt class="phpdocumentor-tag-list__entry">
+                <span class="phpdocumentor-tag__name">throws</span>
+            </dt>
+                            <dd class="phpdocumentor-tag-list__definition">
+                                                                <span class="phpdocumentor-tag-link"><abbr title="\InvalidArgumentException">InvalidArgumentException</abbr></span>
+                                                                                    
+                                    </dd>
+                        </dl>
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -protected
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_validateMarkup">
+        validateMarkup()
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_validateMarkup" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Utils/Keyboard/KeyboardBuilder.php"><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">311</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Assert that every row in a markup array is a list of valid buttons, and
+that the total button count does not exceed `MAX_BUTTONS`.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">protected</span>
+                    <span class="phpdocumentor-signature__name">validateMarkup</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">array&lt;int, array&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$markup</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">void</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$markup</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;int, array&lt;int, <abbr title="\Gruven\PhpBotGram\Utils\Keyboard\T">T</abbr>&gt;&gt;</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+    <h5 class="phpdocumentor-tag-list__heading" id="method_validateMarkup_tags">
+        Tags
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_validateMarkup_tags" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h5>
+    <dl class="phpdocumentor-tag-list">
+                    <dt class="phpdocumentor-tag-list__entry">
+                <span class="phpdocumentor-tag__name">throws</span>
+            </dt>
+                            <dd class="phpdocumentor-tag-list__definition">
+                                                                <span class="phpdocumentor-tag-link"><abbr title="\InvalidArgumentException">InvalidArgumentException</abbr></span>
+                                                                                    
+                                    </dd>
+                        </dl>
+
+        
+    
+    
+</article>
+            </section>
+
+        
+    </article>
+                                </section>
+                <section class="phpdocumentor-on-this-page__sidebar">
+                                
+    <section class="phpdocumentor-on-this-page__content">
+        <strong class="phpdocumentor-on-this-page__title">On this page</strong>
+
+        <ul class="phpdocumentor-list -clean">
+            <li class="phpdocumentor-on-this-page-section__title">Table Of Contents</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                        <li><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#toc-constants">Constants</a></li>
+                                                            <li><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#toc-properties">Properties</a></li>
+                                                            <li><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#toc-methods">Methods</a></li>
+                                    </ul>
+            </li>
+                            <li class="phpdocumentor-on-this-page-section__title">Constants</li>
+                <li>
+                    <ul class="phpdocumentor-list -clean">
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#constant_MAX_BUTTONS">MAX_BUTTONS</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#constant_MAX_WIDTH">MAX_WIDTH</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#constant_MIN_WIDTH">MIN_WIDTH</a></li>
+                                            </ul>
+                </li>
+            
+                            <li class="phpdocumentor-on-this-page-section__title">Properties</li>
+                <li>
+                    <ul class="phpdocumentor-list -clean">
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#property_buttonType">$buttonType</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#property_markup">$markup</a></li>
+                                            </ul>
+                </li>
+            
+                        <li class="phpdocumentor-on-this-page-section__title">Methods</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method___construct">__construct()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_add">add()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_adjust">adjust()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_adjustRepeating">adjustRepeating()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_asMarkup">asMarkup()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_attach">attach()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_button">button()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_buttons">buttons()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_copy">copy()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_export">export()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#method_fromMarkup">fromMarkup()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_row">row()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_validateButton">validateButton()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Utils-Keyboard-KeyboardBuilder.html#method_validateMarkup">validateMarkup()</a></li>
+                                    </ul>
+            </li>
+                    </ul>
+    </section>
+
+                </section>
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="classes/Gruven-PhpBotGram-Utils-Keyboard-InlineKeyboardBuilder.html#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>

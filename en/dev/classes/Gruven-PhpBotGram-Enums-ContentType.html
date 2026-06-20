@@ -1,0 +1,3031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png"/>
+    <link rel="icon" href="images/favicon.ico"/>
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button" />
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"/>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"/>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled />
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button" />
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show &quot;typing…&quot; while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                <section>
+                                        <ul class="phpdocumentor-breadcrumbs">
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven.html">Gruven</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram.html">PhpBotGram</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram-enums.html">Enums</a></li>
+    </ul>
+
+    <article class="phpdocumentor-element -class">
+        <h2 class="phpdocumentor-content__title">
+    ContentType
+
+            <span class="phpdocumentor-element__extends">
+        : string
+    </span>
+    
+            <div class="phpdocumentor-element__package">
+            in package
+            <ul class="phpdocumentor-breadcrumbs">
+                                    <li class="phpdocumentor-breadcrumb"><a href="packages/Application.html">Application</a></li>
+                            </ul>
+        </div>
+    
+    
+    </h2>
+
+        <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">12</span>
+
+    </aside>
+
+            <p class="phpdocumentor-summary">This object represents a type of content in message</p>
+
+        
+        
+        
+
+
+        
+<h3 id="toc">
+    Table of Contents
+    <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#toc" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h3>
+
+
+
+
+
+
+
+
+<h4 id="toc-cases">
+    Cases
+    <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#toc-cases" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Animation">Animation</a>
+    <span>
+                &nbsp;= &#039;animation&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Any">Any</a>
+    <span>
+                &nbsp;= &#039;any&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Audio">Audio</a>
+    <span>
+                &nbsp;= &#039;audio&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_BoostAdded">BoostAdded</a>
+    <span>
+                &nbsp;= &#039;boost_added&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChannelChatCreated">ChannelChatCreated</a>
+    <span>
+                &nbsp;= &#039;channel_chat_created&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatBackgroundSet">ChatBackgroundSet</a>
+    <span>
+                &nbsp;= &#039;chat_background_set&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatOwnerChanged">ChatOwnerChanged</a>
+    <span>
+                &nbsp;= &#039;chat_owner_changed&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatOwnerLeft">ChatOwnerLeft</a>
+    <span>
+                &nbsp;= &#039;chat_owner_left&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatShared">ChatShared</a>
+    <span>
+                &nbsp;= &#039;chat_shared&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Checklist">Checklist</a>
+    <span>
+                &nbsp;= &#039;checklist&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChecklistTasksAdded">ChecklistTasksAdded</a>
+    <span>
+                &nbsp;= &#039;checklist_tasks_added&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChecklistTasksDone">ChecklistTasksDone</a>
+    <span>
+                &nbsp;= &#039;checklist_tasks_done&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ConnectedWebsite">ConnectedWebsite</a>
+    <span>
+                &nbsp;= &#039;connected_website&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Contact">Contact</a>
+    <span>
+                &nbsp;= &#039;contact&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_DeleteChatPhoto">DeleteChatPhoto</a>
+    <span>
+                &nbsp;= &#039;delete_chat_photo&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Dice">Dice</a>
+    <span>
+                &nbsp;= &#039;dice&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_DirectMessagePriceChanged">DirectMessagePriceChanged</a>
+    <span>
+                &nbsp;= &#039;direct_message_price_changed&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Document">Document</a>
+    <span>
+                &nbsp;= &#039;document&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicClosed">ForumTopicClosed</a>
+    <span>
+                &nbsp;= &#039;forum_topic_closed&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicCreated">ForumTopicCreated</a>
+    <span>
+                &nbsp;= &#039;forum_topic_created&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicEdited">ForumTopicEdited</a>
+    <span>
+                &nbsp;= &#039;forum_topic_edited&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicReopened">ForumTopicReopened</a>
+    <span>
+                &nbsp;= &#039;forum_topic_reopened&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Game">Game</a>
+    <span>
+                &nbsp;= &#039;game&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GeneralForumTopicHidden">GeneralForumTopicHidden</a>
+    <span>
+                &nbsp;= &#039;general_forum_topic_hidden&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GeneralForumTopicUnhidden">GeneralForumTopicUnhidden</a>
+    <span>
+                &nbsp;= &#039;general_forum_topic_unhidden&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Gift">Gift</a>
+    <span>
+                &nbsp;= &#039;gift&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiftUpgradeSent">GiftUpgradeSent</a>
+    <span>
+                &nbsp;= &#039;gift_upgrade_sent&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Giveaway">Giveaway</a>
+    <span>
+                &nbsp;= &#039;giveaway&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiveawayCompleted">GiveawayCompleted</a>
+    <span>
+                &nbsp;= &#039;giveaway_completed&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiveawayCreated">GiveawayCreated</a>
+    <span>
+                &nbsp;= &#039;giveaway_created&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiveawayWinners">GiveawayWinners</a>
+    <span>
+                &nbsp;= &#039;giveaway_winners&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GroupChatCreated">GroupChatCreated</a>
+    <span>
+                &nbsp;= &#039;group_chat_created&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Invoice">Invoice</a>
+    <span>
+                &nbsp;= &#039;invoice&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_LeftChatMember">LeftChatMember</a>
+    <span>
+                &nbsp;= &#039;left_chat_member&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_LivePhoto">LivePhoto</a>
+    <span>
+                &nbsp;= &#039;live_photo&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Location">Location</a>
+    <span>
+                &nbsp;= &#039;location&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ManagedBotCreated">ManagedBotCreated</a>
+    <span>
+                &nbsp;= &#039;managed_bot_created&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_MessageAutoDeleteTimerChanged">MessageAutoDeleteTimerChanged</a>
+    <span>
+                &nbsp;= &#039;message_auto_delete_timer_changed&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_MigrateFromChatId">MigrateFromChatId</a>
+    <span>
+                &nbsp;= &#039;migrate_from_chat_id&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_MigrateToChatId">MigrateToChatId</a>
+    <span>
+                &nbsp;= &#039;migrate_to_chat_id&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_NewChatMembers">NewChatMembers</a>
+    <span>
+                &nbsp;= &#039;new_chat_members&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_NewChatPhoto">NewChatPhoto</a>
+    <span>
+                &nbsp;= &#039;new_chat_photo&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_NewChatTitle">NewChatTitle</a>
+    <span>
+                &nbsp;= &#039;new_chat_title&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PaidMedia">PaidMedia</a>
+    <span>
+                &nbsp;= &#039;paid_media&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PaidMessagePriceChanged">PaidMessagePriceChanged</a>
+    <span>
+                &nbsp;= &#039;paid_message_price_changed&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PassportData">PassportData</a>
+    <span>
+                &nbsp;= &#039;passport_data&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Photo">Photo</a>
+    <span>
+                &nbsp;= &#039;photo&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PinnedMessage">PinnedMessage</a>
+    <span>
+                &nbsp;= &#039;pinned_message&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Poll">Poll</a>
+    <span>
+                &nbsp;= &#039;poll&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PollOptionAdded">PollOptionAdded</a>
+    <span>
+                &nbsp;= &#039;poll_option_added&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PollOptionDeleted">PollOptionDeleted</a>
+    <span>
+                &nbsp;= &#039;poll_option_deleted&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ProximityAlertTriggered">ProximityAlertTriggered</a>
+    <span>
+                &nbsp;= &#039;proximity_alert_triggered&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_RefundedPayment">RefundedPayment</a>
+    <span>
+                &nbsp;= &#039;refunded_payment&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Sticker">Sticker</a>
+    <span>
+                &nbsp;= &#039;sticker&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Story">Story</a>
+    <span>
+                &nbsp;= &#039;story&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuccessfulPayment">SuccessfulPayment</a>
+    <span>
+                &nbsp;= &#039;successful_payment&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostApprovalFailed">SuggestedPostApprovalFailed</a>
+    <span>
+                &nbsp;= &#039;suggested_post_approval_failed&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostApproved">SuggestedPostApproved</a>
+    <span>
+                &nbsp;= &#039;suggested_post_approved&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostDeclined">SuggestedPostDeclined</a>
+    <span>
+                &nbsp;= &#039;suggested_post_declined&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostPaid">SuggestedPostPaid</a>
+    <span>
+                &nbsp;= &#039;suggested_post_paid&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostRefunded">SuggestedPostRefunded</a>
+    <span>
+                &nbsp;= &#039;suggested_post_refunded&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SupergroupChatCreated">SupergroupChatCreated</a>
+    <span>
+                &nbsp;= &#039;supergroup_chat_created&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Text">Text</a>
+    <span>
+                &nbsp;= &#039;text&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_UniqueGift">UniqueGift</a>
+    <span>
+                &nbsp;= &#039;unique_gift&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Unknown">Unknown</a>
+    <span>
+                &nbsp;= &#039;unknown&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_UsersShared">UsersShared</a>
+    <span>
+                &nbsp;= &#039;users_shared&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Venue">Venue</a>
+    <span>
+                &nbsp;= &#039;venue&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Video">Video</a>
+    <span>
+                &nbsp;= &#039;video&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatEnded">VideoChatEnded</a>
+    <span>
+                &nbsp;= &#039;video_chat_ended&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatParticipantsInvited">VideoChatParticipantsInvited</a>
+    <span>
+                &nbsp;= &#039;video_chat_participants_invited&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatScheduled">VideoChatScheduled</a>
+    <span>
+                &nbsp;= &#039;video_chat_scheduled&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatStarted">VideoChatStarted</a>
+    <span>
+                &nbsp;= &#039;video_chat_started&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoNote">VideoNote</a>
+    <span>
+                &nbsp;= &#039;video_note&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Voice">Voice</a>
+    <span>
+                &nbsp;= &#039;voice&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_WebAppData">WebAppData</a>
+    <span>
+                &nbsp;= &#039;web_app_data&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_WriteAccessAllowed">WriteAccessAllowed</a>
+    <span>
+                &nbsp;= &#039;write_access_allowed&#039;                    </span>
+</dt>
+
+    </dl>
+
+
+
+
+
+            <section class="phpdocumentor-cases">
+        <h3 class="phpdocumentor-elements__header" id="cases">
+            Cases
+            <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#cases" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Unknown">
+        Unknown
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Unknown" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">14</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Any">
+        Any
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Any" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">15</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Text">
+        Text
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Text" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">16</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Animation">
+        Animation
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Animation" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">17</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Audio">
+        Audio
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Audio" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">18</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Document">
+        Document
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Document" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">19</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_LivePhoto">
+        LivePhoto
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_LivePhoto" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">20</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_PaidMedia">
+        PaidMedia
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PaidMedia" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">21</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Photo">
+        Photo
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Photo" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">22</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Sticker">
+        Sticker
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Sticker" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">23</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Story">
+        Story
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Story" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">24</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Video">
+        Video
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Video" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">25</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_VideoNote">
+        VideoNote
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoNote" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">26</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Voice">
+        Voice
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Voice" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">27</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Checklist">
+        Checklist
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Checklist" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">28</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Contact">
+        Contact
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Contact" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">29</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Dice">
+        Dice
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Dice" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">30</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Game">
+        Game
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Game" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">31</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Poll">
+        Poll
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Poll" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">32</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Venue">
+        Venue
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Venue" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">33</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Location">
+        Location
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Location" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">34</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_NewChatMembers">
+        NewChatMembers
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_NewChatMembers" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">35</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_LeftChatMember">
+        LeftChatMember
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_LeftChatMember" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">36</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ChatOwnerLeft">
+        ChatOwnerLeft
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatOwnerLeft" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">37</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ChatOwnerChanged">
+        ChatOwnerChanged
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatOwnerChanged" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">38</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_NewChatTitle">
+        NewChatTitle
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_NewChatTitle" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">39</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_NewChatPhoto">
+        NewChatPhoto
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_NewChatPhoto" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">40</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_DeleteChatPhoto">
+        DeleteChatPhoto
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_DeleteChatPhoto" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">41</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_GroupChatCreated">
+        GroupChatCreated
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GroupChatCreated" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">42</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_SupergroupChatCreated">
+        SupergroupChatCreated
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SupergroupChatCreated" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">43</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ChannelChatCreated">
+        ChannelChatCreated
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChannelChatCreated" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">44</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_MessageAutoDeleteTimerChanged">
+        MessageAutoDeleteTimerChanged
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_MessageAutoDeleteTimerChanged" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">45</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_MigrateToChatId">
+        MigrateToChatId
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_MigrateToChatId" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">46</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_MigrateFromChatId">
+        MigrateFromChatId
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_MigrateFromChatId" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">47</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_PinnedMessage">
+        PinnedMessage
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PinnedMessage" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">48</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Invoice">
+        Invoice
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Invoice" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">49</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_SuccessfulPayment">
+        SuccessfulPayment
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuccessfulPayment" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">50</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_RefundedPayment">
+        RefundedPayment
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_RefundedPayment" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">51</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_UsersShared">
+        UsersShared
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_UsersShared" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">52</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ChatShared">
+        ChatShared
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatShared" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">53</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Gift">
+        Gift
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Gift" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">54</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_UniqueGift">
+        UniqueGift
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_UniqueGift" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">55</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_GiftUpgradeSent">
+        GiftUpgradeSent
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiftUpgradeSent" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">56</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ConnectedWebsite">
+        ConnectedWebsite
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ConnectedWebsite" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">57</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_WriteAccessAllowed">
+        WriteAccessAllowed
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_WriteAccessAllowed" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">58</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_PassportData">
+        PassportData
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PassportData" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">59</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ProximityAlertTriggered">
+        ProximityAlertTriggered
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ProximityAlertTriggered" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">60</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_BoostAdded">
+        BoostAdded
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_BoostAdded" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">61</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ChatBackgroundSet">
+        ChatBackgroundSet
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatBackgroundSet" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">62</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ChecklistTasksDone">
+        ChecklistTasksDone
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChecklistTasksDone" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">63</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ChecklistTasksAdded">
+        ChecklistTasksAdded
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChecklistTasksAdded" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">64</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_DirectMessagePriceChanged">
+        DirectMessagePriceChanged
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_DirectMessagePriceChanged" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">65</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ForumTopicCreated">
+        ForumTopicCreated
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicCreated" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">66</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ForumTopicEdited">
+        ForumTopicEdited
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicEdited" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">67</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ForumTopicClosed">
+        ForumTopicClosed
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicClosed" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">68</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ForumTopicReopened">
+        ForumTopicReopened
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicReopened" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">69</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_GeneralForumTopicHidden">
+        GeneralForumTopicHidden
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GeneralForumTopicHidden" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">70</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_GeneralForumTopicUnhidden">
+        GeneralForumTopicUnhidden
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GeneralForumTopicUnhidden" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">71</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_GiveawayCreated">
+        GiveawayCreated
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiveawayCreated" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">72</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Giveaway">
+        Giveaway
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Giveaway" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">73</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_GiveawayWinners">
+        GiveawayWinners
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiveawayWinners" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">74</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_GiveawayCompleted">
+        GiveawayCompleted
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiveawayCompleted" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">75</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_ManagedBotCreated">
+        ManagedBotCreated
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ManagedBotCreated" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">76</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_PaidMessagePriceChanged">
+        PaidMessagePriceChanged
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PaidMessagePriceChanged" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">77</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_PollOptionAdded">
+        PollOptionAdded
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PollOptionAdded" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">78</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_PollOptionDeleted">
+        PollOptionDeleted
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PollOptionDeleted" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">79</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_SuggestedPostApproved">
+        SuggestedPostApproved
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostApproved" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">80</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_SuggestedPostApprovalFailed">
+        SuggestedPostApprovalFailed
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostApprovalFailed" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">81</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_SuggestedPostDeclined">
+        SuggestedPostDeclined
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostDeclined" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">82</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_SuggestedPostPaid">
+        SuggestedPostPaid
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostPaid" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">83</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_SuggestedPostRefunded">
+        SuggestedPostRefunded
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostRefunded" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">84</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_VideoChatScheduled">
+        VideoChatScheduled
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatScheduled" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">85</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_VideoChatStarted">
+        VideoChatStarted
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatStarted" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">86</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_VideoChatEnded">
+        VideoChatEnded
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatEnded" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">87</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_VideoChatParticipantsInvited">
+        VideoChatParticipantsInvited
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatParticipantsInvited" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">88</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_WebAppData">
+        WebAppData
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_WebAppData" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/ContentType.php"><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">89</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+            </section>
+
+        
+        
+    </article>
+                                </section>
+                <section class="phpdocumentor-on-this-page__sidebar">
+                            
+    <section class="phpdocumentor-on-this-page__content">
+        <strong class="phpdocumentor-on-this-page__title">On this page</strong>
+
+        <ul class="phpdocumentor-list -clean">
+            <li class="phpdocumentor-on-this-page-section__title">Table Of Contents</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                            <li><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#toc-cases">Cases</a></li>
+                                                        </ul>
+            </li>
+                            <li class="phpdocumentor-on-this-page-section__title">Cases</li>
+                <li>
+                    <ul class="phpdocumentor-list -clean">
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Unknown">Unknown</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Any">Any</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Text">Text</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Animation">Animation</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Audio">Audio</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Document">Document</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_LivePhoto">LivePhoto</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PaidMedia">PaidMedia</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Photo">Photo</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Sticker">Sticker</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Story">Story</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Video">Video</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoNote">VideoNote</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Voice">Voice</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Checklist">Checklist</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Contact">Contact</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Dice">Dice</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Game">Game</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Poll">Poll</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Venue">Venue</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Location">Location</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_NewChatMembers">NewChatMembers</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_LeftChatMember">LeftChatMember</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatOwnerLeft">ChatOwnerLeft</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatOwnerChanged">ChatOwnerChanged</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_NewChatTitle">NewChatTitle</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_NewChatPhoto">NewChatPhoto</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_DeleteChatPhoto">DeleteChatPhoto</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GroupChatCreated">GroupChatCreated</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SupergroupChatCreated">SupergroupChatCreated</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChannelChatCreated">ChannelChatCreated</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_MessageAutoDeleteTimerChanged">MessageAutoDeleteTimerChanged</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_MigrateToChatId">MigrateToChatId</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_MigrateFromChatId">MigrateFromChatId</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PinnedMessage">PinnedMessage</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Invoice">Invoice</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuccessfulPayment">SuccessfulPayment</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_RefundedPayment">RefundedPayment</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_UsersShared">UsersShared</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatShared">ChatShared</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Gift">Gift</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_UniqueGift">UniqueGift</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiftUpgradeSent">GiftUpgradeSent</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ConnectedWebsite">ConnectedWebsite</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_WriteAccessAllowed">WriteAccessAllowed</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PassportData">PassportData</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ProximityAlertTriggered">ProximityAlertTriggered</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_BoostAdded">BoostAdded</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChatBackgroundSet">ChatBackgroundSet</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChecklistTasksDone">ChecklistTasksDone</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ChecklistTasksAdded">ChecklistTasksAdded</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_DirectMessagePriceChanged">DirectMessagePriceChanged</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicCreated">ForumTopicCreated</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicEdited">ForumTopicEdited</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicClosed">ForumTopicClosed</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ForumTopicReopened">ForumTopicReopened</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GeneralForumTopicHidden">GeneralForumTopicHidden</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GeneralForumTopicUnhidden">GeneralForumTopicUnhidden</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiveawayCreated">GiveawayCreated</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_Giveaway">Giveaway</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiveawayWinners">GiveawayWinners</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_GiveawayCompleted">GiveawayCompleted</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_ManagedBotCreated">ManagedBotCreated</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PaidMessagePriceChanged">PaidMessagePriceChanged</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PollOptionAdded">PollOptionAdded</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_PollOptionDeleted">PollOptionDeleted</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostApproved">SuggestedPostApproved</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostApprovalFailed">SuggestedPostApprovalFailed</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostDeclined">SuggestedPostDeclined</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostPaid">SuggestedPostPaid</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_SuggestedPostRefunded">SuggestedPostRefunded</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatScheduled">VideoChatScheduled</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatStarted">VideoChatStarted</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatEnded">VideoChatEnded</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_VideoChatParticipantsInvited">VideoChatParticipantsInvited</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#enumcase_WebAppData">WebAppData</a></li>
+                                            </ul>
+                </li>
+            
+                    </ul>
+    </section>
+
+                </section>
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="classes/Gruven-PhpBotGram-Enums-ContentType.html#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>

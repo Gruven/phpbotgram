@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&amp;display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&amp;display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button">
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewbox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"></circle>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"></line>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled>
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button">
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                        
+<section class="section " id="serialization">
+            <h1>Serialization</h1>
+
+            
+    <p>The serializer turns Telegram type DTOs into snake_case-keyed wire payloads and back. It is the boundary between the strongly-typed PHP domain model and the dynamic-typed Bot API.</p>
+
+            <section class="section " id="how-it-works">
+            <h2>How it works</h2>
+
+            <section class="section " id="dump-and-load">
+            <h3>Dump and load</h3>
+
+            
+    <p><a href="classes/Gruven-PhpBotGram-Client-Serializer.html"><code>Serializer</code></a> is reflection-driven. <code>Serializer::dump($object)</code>
+ iterates the public properties of any <a href="classes/Gruven-PhpBotGram-Client-BotContextController.html"><code>BotContextController</code></a> subclass (every <code>TelegramObject</code>
+ and <code>TelegramMethod</code>
+), converts each camelCase property name to snake_case, and emits a flat <code>array&lt;string, mixed&gt;</code>
+ ready to JSON-encode or form-urlencode. Nested <code>BotContextController</code>
+ instances recurse; lists and maps walk element-by-element. An <code>Unspecified::instance()</code>
+ value signals "this field was never set" and is skipped &mdash; distinct from <code>null</code>
+, which is preserved so the wire can carry an explicit null.</p>
+
+            
+    <p><code>Serializer::load($class, $rawArray, $bot)</code>
+ is the inverse. It reflects the target class's constructor, walks the parameter list, converts each parameter's PHP name to snake_case to look up the wire key, and coerces the value via the parameter's declared type. Nested <code>TelegramObject</code>
+ parameters route through <code>Serializer::load</code>
+ recursively. The <code>$bot</code>
+ argument is threaded into every nested constructor's optional <code>?Bot $bot</code>
+ parameter so handler shortcuts (<code>$message-&gt;answer(...)</code>
+) work on hydrated trees. The recursion walks union types correctly via PHP's <code>ReflectionUnionType</code>
+ &mdash; a parameter typed <code>Message|null</code>
+ decodes the wire payload's expected shape and accepts the <code>null</code>
+ case if the wire delivers a <code>null</code>
+.</p>
+
+    </section>
+
+            <section class="section " id="method-dtos-and-the-apimethod-returnstype-constants">
+            <h3>Method DTOs and the ApiMethod / ReturnsType constants</h3>
+
+            
+    <p>Every generated method class carries two constants that drive the serialization pipeline. <code>ApiMethod</code>
+ is the wire-level Bot API method name; <code>ReturnsType</code>
+ is either a <code>class-string&lt;TelegramObject&gt;</code>
+, a scalar type name (<code>'bool'</code>
+, <code>'int'</code>
+, <code>'string'</code>
+), or a composite sentinel (<code>'list:&lt;inner&gt;'</code>
+, <code>'union:&lt;A&gt;|&lt;B&gt;'</code>
+). The session reads both constants at call time so there is no per-method dispatch table.</p>
+
+            <pre><code class="language-php">use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\BotDefault;
+use Gruven\PhpBotGram\Methods\TelegramMethod;
+use Gruven\PhpBotGram\Types\Message;
+
+// Illustrative shape of a generated method DTO.
+// Real class lives at src/Methods/SendMessage.php.
+final class SendMessage extends TelegramMethod
+{
+    public const string ApiMethod = 'sendMessage';
+    public const string ReturnsType = Message::class;
+
+    public function __construct(
+        public readonly int|string $chatId,
+        public readonly string $text,
+        public readonly null|BotDefault|string $parseMode = new BotDefault('parse_mode'),
+        ?Bot $bot = null,
+    ) {
+        parent::__construct($bot);
+    }
+}
+</code></pre>
+
+    </section>
+
+            <section class="section " id="wire-name-overrides">
+            <h3>Wire-name overrides</h3>
+
+            
+    <p>Per-class wire-name overrides live in a class-level <code>WireNames</code>
+ constant. Phase 2 codegen produces them when a Telegram field name doesn't camelCase cleanly to a valid PHP identifier &mdash; the upstream <code>from</code>
+ reserved-word collision becomes <code>$fromUser</code>
+ in PHP with <code>const WireNames = ['fromUser' =&gt; 'from']</code>
+ driving the serializer mapping.</p>
+
+            
+    <p>The override mechanism keeps the default <code>camelToSnake</code>
+ cheap and pushes special cases to the per-class metadata where they belong. The serializer reads the constant via reflection at class-load time; subsequent dumps/loads hit a cached copy. A concrete example from <code>src/Types/CallbackQuery.php</code>
+:</p>
+
+            <pre><code class="language-php">use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Types\TelegramObject;
+use Gruven\PhpBotGram\Types\User;
+
+final class CallbackQuery extends TelegramObject
+{
+    /** @var array&lt;string, string&gt; */
+    public const array WireNames = ['fromUser' =&gt; 'from'];
+
+    public function __construct(
+        public readonly string $id,
+        public readonly User $fromUser,
+        ?Bot $bot = null,
+    ) {
+        parent::__construct($bot);
+    }
+}
+</code></pre>
+
+    </section>
+
+            <section class="section " id="preparevalue-checkresponse-round-trip">
+            <h3>prepareValue / checkResponse round-trip</h3>
+
+            
+    <p><a href="classes/Gruven-PhpBotGram-Client-Session-BaseSession.html"><code>BaseSession</code></a> owns two adjacent hooks. <code>prepareValue</code>
+ runs after <code>Serializer::dump</code>
+ to detach <code>InputFile</code>
+ instances from the form body (uploads go in multipart fields, references stay in the JSON) and to strip null values from the form encoding (form bodies don't represent <code>null</code>
+ cleanly; the wire shape uses absence). <code>checkResponse</code>
+ runs on the decoded response: it validates the <code>ok: true</code>
+ field, throws the matching <code>TelegramApiException</code>
+ subclass on <code>ok: false</code>
+, and routes the success payload through <code>Serializer::load</code>
+ for the typed return. The two hooks bracket the network round-trip: dump &rarr; prepareValue &rarr; HTTP &rarr; checkResponse &rarr; load.</p>
+
+    </section>
+
+            <section class="section " id="custom-json-encoder-decoder-injection">
+            <h3>Custom JSON encoder/decoder injection</h3>
+
+            
+    <p><a href="classes/Gruven-PhpBotGram-Client-Session-AmphpSession.html"><code>AmphpSession</code></a> (and any <code>BaseSession</code>
+ subclass) accepts optional <code>$jsonLoads</code>
+ and <code>$jsonDumps</code>
+ closures so you can swap in a faster library or add tracing without subclassing the session:</p>
+
+            <pre><code class="language-php">use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Client\Session\AmphpSession;
+
+$session = new AmphpSession(
+    jsonLoads: fn(string $raw): mixed =&gt; json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR),
+    jsonDumps: fn(mixed $value): string =&gt; (string) json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+);
+$bot = new Bot(getenv('BOT_TOKEN'), session: $session);
+</code></pre>
+
+            
+    <p>The defaults shown above are what the session uses when no closures are supplied; drop in any callable with the same signatures.</p>
+
+    </section>
+
+            <section class="section " id="datetime-fields-and-botdefault">
+            <h3>DateTime fields and BotDefault</h3>
+
+            
+    <p>DateTime fields use a dedicated wrapper. The framework's <a href="classes/Gruven-PhpBotGram-Types-Custom-DateTime.html"><code>Types\Custom\DateTime</code></a> type carries a <code>DateTimeImmutable</code>
+ plus its original Unix-timestamp representation; the serializer routes <code>int &rarr; DateTime</code>
+ on load and <code>DateTime &rarr; int</code>
+ on dump. This preserves precision (<code>DateTimeImmutable</code>
+ keeps seconds + microseconds) while staying faithful to Telegram's wire format (Unix timestamp as integer). Handlers can use the <code>DateTimeImmutable</code>
+ API without re-parsing the timestamp on every read.</p>
+
+            
+    <p>The <code>BotDefault</code>
+ mechanism lets a <code>Bot</code>
+ carry default values that populate <code>Unspecified</code>
+ fields on outbound methods. The serializer checks for default presence after <code>Unspecified</code>
+ skip but before the wire emit &mdash; so a <code>SendMessage</code>
+ left with <code>parseMode: Unspecified::instance()</code>
+ picks up the bot's default parse mode if one was configured. The hook is in <a href="classes/Gruven-PhpBotGram-Client-BotDefault.html"><code>BotDefault</code></a>; defaults are scoped per bot so multi-tenant deployments can configure each bot independently.</p>
+
+    </section>
+
+    </section>
+
+            <section class="section " id="trade-offs">
+            <h2>Trade-offs</h2>
+
+            
+    <p>Reflection-based serialization costs one <code>ReflectionClass</code>
+ per shape per request &mdash; the serializer reflects on every <code>dump</code>
+/<code>load</code>
+ rather than caching type metadata. The only memoised path is the camelCase&rarr;snake_case property-name conversion (<code>Serializer::$camelToSnakeCache</code>
+), bounded by the number of distinct property names, not by request volume. We considered caching reflected shape metadata and decided the complexity wasn't worth it &mdash; the per-call reflection is cheap next to the network round-trip, and a stateless serializer is simpler to reason about.</p>
+
+            
+    <p>Codegen-output serializers would be faster. Aiogram uses Pydantic, which builds a fast-path validator at class definition time. The PHP port deliberately chose reflection: emitting per-class serializers during Phase 2 would have doubled the codegen surface and required a second template engine. The reflection cost is real but small, and hot paths can always cache the meta themselves. The 10x or so speedup codegen serializers could deliver is dwarfed by the network round-trip on every Bot API call, so the trade pays itself in code clarity.</p>
+
+            
+    <p><code>Unspecified::instance()</code>
+ is a sentinel, not <code>null</code>
+. The distinction matters because Telegram fields are tri-state: present-with-value, present-and-null (explicit nullability), absent. A naive <code>if ($value !== null)</code>
+ would conflate the last two; the <code>Unspecified</code>
+ sentinel preserves the difference. The cost is one extra concept to learn &mdash; handlers that build method DTOs almost always want to leave a field at <code>Unspecified::instance()</code>
+ to mean "don't send". The default value for every method parameter is <code>Unspecified::instance()</code>
+, so the surprise is contained to "what is this sentinel doing here".</p>
+
+            
+    <p>The <code>InputFile</code>
+ detachment in <code>prepareValue</code>
+ is form-only. JSON encoding (the default for Bot API methods that don't carry files) serialises <code>InputFile</code>
+ references inline; the detachment kicks in only when the session falls back to multipart form-data because of an attached file. The branching lives in the session, not the serializer &mdash; keeping the serializer ignorant of transport details.</p>
+
+            
+    <p>Wire-name overrides are a per-class constant rather than property attributes. We considered <code>#[WireName('from')]</code>
+ on each property and chose the constant for codegen simplicity: emitting one constant per class is cheaper than emitting one attribute per property. The cost is the override table is class-level, not property-level &mdash; a class with multiple wire-name overrides has them all in one constant, which is fine for the small number of overrides Bot API actually requires.</p>
+
+    </section>
+
+            <section class="section " id="see-also">
+            <h2>See also</h2>
+
+            
+
+<ul>
+    <li class="dash"><a href="guide/concepts/bot-and-session.html#bot-and-session">Bot and Session</a></li>
+
+    <li class="dash"><a href="guide/concepts/error-model.html#error-model">Error model</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Client-Serializer.html">API reference: Serializer</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Client-Session-BaseSession.html">API reference: BaseSession</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Client-BotContextController.html">API reference: BotContextController</a></li>
+
+</ul>
+
+    </section>
+
+    </section>
+
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>
