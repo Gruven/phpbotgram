@@ -1,1 +1,10 @@
-{"versions": []}
+{
+    "versions": [
+        {
+            "id": "dev",
+            "path": "en/dev/",
+            "label": "dev (master)",
+            "stable": false
+        }
+    ]
+}
