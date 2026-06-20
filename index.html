@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><title>phpbotgram</title></head>
+<body><script>
+fetch('versions.json', {cache: 'no-store'}).then(r => r.json()).then(data => {
+  const stable = (data.versions || []).find(v => v.stable);
+  const pick = stable || (data.versions || []).find(v => v.id === 'dev')
+                      || (data.versions || [])[0];
+  if (pick) location.replace(pick.path);
+  else document.body.textContent = 'No versions published yet.';
+}).catch(() => document.body.textContent = 'Failed to load versions.json.');
+</script><noscript>This site requires JavaScript to pick a docs version.</noscript></body></html>
