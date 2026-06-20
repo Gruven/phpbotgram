@@ -1,6 +1,6 @@
 # phpbotgram
 
-[![PHP version](https://img.shields.io/badge/php-%5E8.5-777bb4.svg?logo=php)](https://www.php.net/releases/8.5/) [![PHPStan level](https://img.shields.io/badge/PHPStan-level%209-2563eb.svg)](https://phpstan.org/) [![Tests](https://img.shields.io/badge/tests-2109%20passing-3fb950.svg)](#testing) [![Coverage gate](https://img.shields.io/badge/coverage--gate-passing-3fb950.svg)](#testing) [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE) [![Upstream](https://img.shields.io/badge/aiogram-3.28-blueviolet.svg?logo=python)](https://github.com/aiogram/aiogram)
+[![PHP version](https://img.shields.io/badge/php-%5E8.5-777bb4.svg?logo=php)](https://www.php.net/releases/8.5/) [![PHPStan level](https://img.shields.io/badge/PHPStan-level%209-2563eb.svg)](https://phpstan.org/) [![Tests](https://img.shields.io/badge/tests-2109%20passing-3fb950.svg)](#testing) [![Coverage gate](https://img.shields.io/badge/coverage--gate-passing-3fb950.svg)](#testing) [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE) [![Upstream](https://img.shields.io/badge/aiogram-3.28.2-blueviolet.svg?logo=python)](https://github.com/aiogram/aiogram)
 
 A modern PHP 8.5 port of the [aiogram](https://github.com/aiogram/aiogram) Telegram Bot framework.
 
@@ -239,4 +239,4 @@ MIT. See `LICENSE`.
 
 ## Upstream
 
-Tracks aiogram 3.28. Behaviour divergences from upstream are documented inline at the call site (search for `# Divergence:` in the source) and in `docs/superpowers/specs/`.
+Tracks aiogram 3.28.2. Behaviour divergences from upstream are documented inline at the call site (search for `# Divergence:` in the source) and in `docs/superpowers/specs/`.
