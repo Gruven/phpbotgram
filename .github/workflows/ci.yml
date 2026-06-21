@@ -29,6 +29,7 @@ jobs:
           extensions: mbstring, json, mongodb, pcntl, sockets, openssl
           coverage: xdebug
       - uses: ramsey/composer-install@4.0.0
+      - run: composer check-platform-reqs
       - run: vendor/bin/php-cs-fixer fix --dry-run --diff
       - run: vendor/bin/phpstan analyze --no-progress --memory-limit=512M
       - run: vendor/bin/phpunit --coverage-text

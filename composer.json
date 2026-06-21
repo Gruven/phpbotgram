@@ -81,6 +81,9 @@
 	"config" : {
 		"sort-packages" : true,
 		"optimize-autoloader" : true,
+		"platform" : {
+			"ext-mongodb" : "2.3.0"
+		},
 		"allow-plugins": {
 			"phpdocumentor/shim": true
 		}
