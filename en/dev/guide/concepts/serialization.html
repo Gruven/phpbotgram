@@ -277,6 +277,10 @@
                 <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
                 
             </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
             </ul>
 
                                     <h4 class="phpdocumentor-sidebar__root-namespace">
@@ -432,6 +436,19 @@
  decodes the wire payload's expected shape and accepts the <code>null</code>
  case if the wire delivers a <code>null</code>
 .</p>
+
+            
+    <p>Generated Bot API collections also use constructor PHPDoc to preserve list item types that PHP cannot express at runtime. For example, a <code>RichMessage</code>
+ constructor accepts <code>array $blocks</code>
+, while its PHPDoc narrows the value to <code>list&lt;RichBlock&gt;</code>
+. The loader reads that metadata so incoming rich messages hydrate each block as the matching generated <code>RichBlock*</code>
+ subtype instead of leaving the list as raw arrays.</p>
+
+            
+    <p>Rich text adds one more recursive shape. The Bot API lets rich-text fields be a plain string, a single <a href="classes/Gruven-PhpBotGram-Types-RichText.html"><code>RichText</code></a> object, or a list that mixes strings and nested rich-text objects. The serializer preserves that union in both directions, which is why <code>RichBlockParagraph::$text</code>
+, <code>RichTextBold::$text</code>
+, and similar generated fields are typed as <code>array|RichText|string</code>
+. See <a href="guide/how-to/rich-messages.html">Send rich messages</a> for the handler-facing API.</p>
 
     </section>
 

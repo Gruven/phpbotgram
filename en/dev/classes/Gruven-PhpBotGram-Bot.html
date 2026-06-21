@@ -276,6 +276,10 @@
                 <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
                 
             </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
             </ul>
 
                                     <h4 class="phpdocumentor-sidebar__root-namespace">
@@ -431,7 +435,7 @@
         <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">273</span>
+    <span class="phpdocumentor-element-found-in__line">278</span>
 
     </aside>
 
@@ -542,6 +546,12 @@ session&#039;s middleware chain.</dd>
 
             <dt class="phpdocumentor-table-of-contents__entry -method -public">
     <a class="" href="classes/Gruven-PhpBotGram-Bot.html#method_answerCallbackQuery">answerCallbackQuery()</a>
+    <span>
+                                &nbsp;: bool    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Bot.html#method_answerChatJoinRequestQuery">answerChatJoinRequestQuery()</a>
     <span>
                                 &nbsp;: bool    </span>
 </dt>
@@ -1238,6 +1248,12 @@ via its `fileId()` method.</dd>
 </dt>
 
             <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Bot.html#method_sendChatJoinRequestWebApp">sendChatJoinRequestWebApp()</a>
+    <span>
+                                &nbsp;: bool    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
     <a class="" href="classes/Gruven-PhpBotGram-Bot.html#method_sendChecklist">sendChecklist()</a>
     <span>
                                 &nbsp;: <a href="classes/Gruven-PhpBotGram-Types-Message.html"><abbr title="\Gruven\PhpBotGram\Types\Message">Message</abbr></a>    </span>
@@ -1325,6 +1341,18 @@ via its `fileId()` method.</dd>
     <a class="" href="classes/Gruven-PhpBotGram-Bot.html#method_sendPoll">sendPoll()</a>
     <span>
                                 &nbsp;: <a href="classes/Gruven-PhpBotGram-Types-Message.html"><abbr title="\Gruven\PhpBotGram\Types\Message">Message</abbr></a>    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Bot.html#method_sendRichMessage">sendRichMessage()</a>
+    <span>
+                                &nbsp;: <a href="classes/Gruven-PhpBotGram-Types-Message.html"><abbr title="\Gruven\PhpBotGram\Types\Message">Message</abbr></a>    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Bot.html#method_sendRichMessageDraft">sendRichMessageDraft()</a>
+    <span>
+                                &nbsp;: bool    </span>
 </dt>
 
             <dt class="phpdocumentor-table-of-contents__entry -method -public">
@@ -1693,7 +1721,7 @@ via its `fileId()` method.</dd>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">278</span>
+    <span class="phpdocumentor-element-found-in__line">283</span>
 
     </aside>
 
@@ -1730,7 +1758,7 @@ via its `fileId()` method.</dd>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">277</span>
+    <span class="phpdocumentor-element-found-in__line">282</span>
 
     </aside>
 
@@ -1767,7 +1795,7 @@ via its `fileId()` method.</dd>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">281</span>
+    <span class="phpdocumentor-element-found-in__line">286</span>
 
     </aside>
 
@@ -1923,7 +1951,7 @@ using class hierarchy (Bot + MockedBot would share one slot).</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">280</span>
+    <span class="phpdocumentor-element-found-in__line">285</span>
 
     </aside>
 
@@ -1981,7 +2009,7 @@ using class hierarchy (Bot + MockedBot would share one slot).</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">305</span>
+    <span class="phpdocumentor-element-found-in__line">310</span>
 
     </aside>
 
@@ -2051,7 +2079,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2989</span>
+    <span class="phpdocumentor-element-found-in__line">3018</span>
 
     </aside>
 
@@ -2120,7 +2148,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1938</span>
+    <span class="phpdocumentor-element-found-in__line">1965</span>
 
     </aside>
 
@@ -2195,6 +2223,68 @@ session&#039;s middleware chain.</p>
             -public
                                                         "
 >
+    <h4 class="phpdocumentor-element__name" id="method_answerChatJoinRequestQuery">
+        answerChatJoinRequestQuery()
+        <a href="classes/Gruven-PhpBotGram-Bot.html#method_answerChatJoinRequestQuery" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">1635</span>
+
+    </aside>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">answerChatJoinRequestQuery</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$chatJoinRequestQueryId</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$result</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$timeout</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">bool</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$chatJoinRequestQueryId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$result</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$timeout</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">bool</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
     <h4 class="phpdocumentor-element__name" id="method_answerGuestQuery">
         answerGuestQuery()
         <a href="classes/Gruven-PhpBotGram-Bot.html#method_answerGuestQuery" class="headerlink"><i class="fas fa-link"></i></a>
@@ -2203,7 +2293,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1955</span>
+    <span class="phpdocumentor-element-found-in__line">1982</span>
 
     </aside>
 
@@ -2265,7 +2355,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3125</span>
+    <span class="phpdocumentor-element-found-in__line">3200</span>
 
     </aside>
 
@@ -2355,7 +2445,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3290</span>
+    <span class="phpdocumentor-element-found-in__line">3365</span>
 
     </aside>
 
@@ -2424,7 +2514,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3275</span>
+    <span class="phpdocumentor-element-found-in__line">3350</span>
 
     </aside>
 
@@ -2500,7 +2590,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2607</span>
+    <span class="phpdocumentor-element-found-in__line">2634</span>
 
     </aside>
 
@@ -2562,7 +2652,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1608</span>
+    <span class="phpdocumentor-element-found-in__line">1613</span>
 
     </aside>
 
@@ -2624,7 +2714,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2818</span>
+    <span class="phpdocumentor-element-found-in__line">2847</span>
 
     </aside>
 
@@ -2693,7 +2783,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1373</span>
+    <span class="phpdocumentor-element-found-in__line">1378</span>
 
     </aside>
 
@@ -2769,7 +2859,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1489</span>
+    <span class="phpdocumentor-element-found-in__line">1494</span>
 
     </aside>
 
@@ -2831,7 +2921,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">387</span>
+    <span class="phpdocumentor-element-found-in__line">392</span>
 
     </aside>
 
@@ -2879,7 +2969,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1838</span>
+    <span class="phpdocumentor-element-found-in__line">1865</span>
 
     </aside>
 
@@ -2941,7 +3031,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1893</span>
+    <span class="phpdocumentor-element-found-in__line">1920</span>
 
     </aside>
 
@@ -3048,7 +3138,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2482</span>
+    <span class="phpdocumentor-element-found-in__line">2509</span>
 
     </aside>
 
@@ -3110,7 +3200,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">491</span>
+    <span class="phpdocumentor-element-found-in__line">496</span>
 
     </aside>
 
@@ -3277,7 +3367,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">537</span>
+    <span class="phpdocumentor-element-found-in__line">542</span>
 
     </aside>
 
@@ -3381,7 +3471,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1533</span>
+    <span class="phpdocumentor-element-found-in__line">1538</span>
 
     </aside>
 
@@ -3464,7 +3554,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1569</span>
+    <span class="phpdocumentor-element-found-in__line">1574</span>
 
     </aside>
 
@@ -3540,7 +3630,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1808</span>
+    <span class="phpdocumentor-element-found-in__line">1835</span>
 
     </aside>
 
@@ -3616,7 +3706,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3221</span>
+    <span class="phpdocumentor-element-found-in__line">3296</span>
 
     </aside>
 
@@ -3818,7 +3908,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2970</span>
+    <span class="phpdocumentor-element-found-in__line">2999</span>
 
     </aside>
 
@@ -3946,7 +4036,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1619</span>
+    <span class="phpdocumentor-element-found-in__line">1624</span>
 
     </aside>
 
@@ -4008,7 +4098,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2831</span>
+    <span class="phpdocumentor-element-found-in__line">2860</span>
 
     </aside>
 
@@ -4077,7 +4167,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2884</span>
+    <span class="phpdocumentor-element-found-in__line">2913</span>
 
     </aside>
 
@@ -4146,7 +4236,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2296</span>
+    <span class="phpdocumentor-element-found-in__line">2323</span>
 
     </aside>
 
@@ -4208,7 +4298,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1641</span>
+    <span class="phpdocumentor-element-found-in__line">1668</span>
 
     </aside>
 
@@ -4263,7 +4353,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1788</span>
+    <span class="phpdocumentor-element-found-in__line">1815</span>
 
     </aside>
 
@@ -4318,7 +4408,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1860</span>
+    <span class="phpdocumentor-element-found-in__line">1887</span>
 
     </aside>
 
@@ -4380,7 +4470,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2844</span>
+    <span class="phpdocumentor-element-found-in__line">2873</span>
 
     </aside>
 
@@ -4442,7 +4532,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2869</span>
+    <span class="phpdocumentor-element-found-in__line">2898</span>
 
     </aside>
 
@@ -4518,7 +4608,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2858</span>
+    <span class="phpdocumentor-element-found-in__line">2887</span>
 
     </aside>
 
@@ -4580,7 +4670,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2045</span>
+    <span class="phpdocumentor-element-found-in__line">2072</span>
 
     </aside>
 
@@ -4642,7 +4732,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3013</span>
+    <span class="phpdocumentor-element-found-in__line">3042</span>
 
     </aside>
 
@@ -4697,7 +4787,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3113</span>
+    <span class="phpdocumentor-element-found-in__line">3142</span>
 
     </aside>
 
@@ -4752,7 +4842,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2596</span>
+    <span class="phpdocumentor-element-found-in__line">2623</span>
 
     </aside>
 
@@ -4814,7 +4904,7 @@ session&#039;s middleware chain.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">357</span>
+    <span class="phpdocumentor-element-found-in__line">362</span>
 
     </aside>
 
@@ -5011,7 +5101,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1550</span>
+    <span class="phpdocumentor-element-found-in__line">1555</span>
 
     </aside>
 
@@ -5101,7 +5191,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1584</span>
+    <span class="phpdocumentor-element-found-in__line">1589</span>
 
     </aside>
 
@@ -5170,7 +5260,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1823</span>
+    <span class="phpdocumentor-element-found-in__line">1850</span>
 
     </aside>
 
@@ -5246,7 +5336,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1882</span>
+    <span class="phpdocumentor-element-found-in__line">1909</span>
 
     </aside>
 
@@ -5308,7 +5398,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2679</span>
+    <span class="phpdocumentor-element-found-in__line">2708</span>
 
     </aside>
 
@@ -5419,7 +5509,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2769</span>
+    <span class="phpdocumentor-element-found-in__line">2798</span>
 
     </aside>
 
@@ -5502,7 +5592,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2723</span>
+    <span class="phpdocumentor-element-found-in__line">2752</span>
 
     </aside>
 
@@ -5627,7 +5717,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2704</span>
+    <span class="phpdocumentor-element-found-in__line">2733</span>
 
     </aside>
 
@@ -5717,7 +5807,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2786</span>
+    <span class="phpdocumentor-element-found-in__line">2815</span>
 
     </aside>
 
@@ -5800,14 +5890,14 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2651</span>
+    <span class="phpdocumentor-element-found-in__line">2678</span>
 
     </aside>
 
     
     <code class="phpdocumentor-code phpdocumentor-signature ">
     <span class="phpdocumentor-signature__visibility">public</span>
-                    <span class="phpdocumentor-signature__name">editMessageText</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$text</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$businessConnectionId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$chatId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$messageId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$inlineMessageId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Client-BotDefault.html"><abbr title="\Gruven\PhpBotGram\Client\BotDefault">BotDefault</abbr></a>|string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$parseMode</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">new <a href="classes/Gruven-PhpBotGram-Client-BotDefault.html"><abbr title="\Gruven\PhpBotGram\Client\BotDefault">BotDefault</abbr></a>('parse_mode')</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">null|array&lt;int, <a href="classes/Gruven-PhpBotGram-Types-MessageEntity.html"><abbr title="\Gruven\PhpBotGram\Types\MessageEntity">MessageEntity</abbr></a>&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$entities</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Client-BotDefault.html"><abbr title="\Gruven\PhpBotGram\Client\BotDefault">BotDefault</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-LinkPreviewOptions.html"><abbr title="\Gruven\PhpBotGram\Types\LinkPreviewOptions">LinkPreviewOptions</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$linkPreviewOptions</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">new <a href="classes/Gruven-PhpBotGram-Client-BotDefault.html"><abbr title="\Gruven\PhpBotGram\Client\BotDefault">BotDefault</abbr></a>('link_preview')</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardMarkup">InlineKeyboardMarkup</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$replyMarkup</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$timeout</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">bool|<a href="classes/Gruven-PhpBotGram-Types-Message.html"><abbr title="\Gruven\PhpBotGram\Types\Message">Message</abbr></a></span></code>
+                    <span class="phpdocumentor-signature__name">editMessageText</span><span>(</span><span class="phpdocumentor-signature__argument"><span>[</span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$text</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$businessConnectionId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$chatId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$messageId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$inlineMessageId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Client-BotDefault.html"><abbr title="\Gruven\PhpBotGram\Client\BotDefault">BotDefault</abbr></a>|string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$parseMode</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">new <a href="classes/Gruven-PhpBotGram-Client-BotDefault.html"><abbr title="\Gruven\PhpBotGram\Client\BotDefault">BotDefault</abbr></a>('parse_mode')</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">null|array&lt;int, <a href="classes/Gruven-PhpBotGram-Types-MessageEntity.html"><abbr title="\Gruven\PhpBotGram\Types\MessageEntity">MessageEntity</abbr></a>&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$entities</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Client-BotDefault.html"><abbr title="\Gruven\PhpBotGram\Client\BotDefault">BotDefault</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-LinkPreviewOptions.html"><abbr title="\Gruven\PhpBotGram\Types\LinkPreviewOptions">LinkPreviewOptions</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$linkPreviewOptions</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">new <a href="classes/Gruven-PhpBotGram-Client-BotDefault.html"><abbr title="\Gruven\PhpBotGram\Client\BotDefault">BotDefault</abbr></a>('link_preview')</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardMarkup">InlineKeyboardMarkup</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$replyMarkup</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-InputRichMessage.html"><abbr title="\Gruven\PhpBotGram\Types\InputRichMessage">InputRichMessage</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$richMessage</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$timeout</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">bool|<a href="classes/Gruven-PhpBotGram-Types-Message.html"><abbr title="\Gruven\PhpBotGram\Types\Message">Message</abbr></a></span></code>
 
     <div class="phpdocumentor-label-line">
         </div>
@@ -5817,8 +5907,8 @@ via its `fileId()` method.</p>
     <dl class="phpdocumentor-argument-list">
                     <dt class="phpdocumentor-argument-list__entry">
                 <span class="phpdocumentor-argument-list__argument__name">$text</span>
-                : <span class="phpdocumentor-argument-list__argument__type">string</span>
-                            </dt>
+                : <span class="phpdocumentor-argument-list__argument__type">string|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
             <dd class="phpdocumentor-argument-list__definition">
                 
             </dd>
@@ -5879,6 +5969,13 @@ via its `fileId()` method.</p>
                 
             </dd>
                     <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$richMessage</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-InputRichMessage.html"><abbr title="\Gruven\PhpBotGram\Types\InputRichMessage">InputRichMessage</abbr></a>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
                 <span class="phpdocumentor-argument-list__argument__name">$timeout</span>
                 : <span class="phpdocumentor-argument-list__argument__type">int|null</span>
                  = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
@@ -5911,7 +6008,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2575</span>
+    <span class="phpdocumentor-element-found-in__line">2602</span>
 
     </aside>
 
@@ -6008,7 +6105,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3332</span>
+    <span class="phpdocumentor-element-found-in__line">3407</span>
 
     </aside>
 
@@ -6077,7 +6174,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1524</span>
+    <span class="phpdocumentor-element-found-in__line">1529</span>
 
     </aside>
 
@@ -6132,7 +6229,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">434</span>
+    <span class="phpdocumentor-element-found-in__line">439</span>
 
     </aside>
 
@@ -6250,7 +6347,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">466</span>
+    <span class="phpdocumentor-element-found-in__line">471</span>
 
     </aside>
 
@@ -6347,7 +6444,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2187</span>
+    <span class="phpdocumentor-element-found-in__line">2214</span>
 
     </aside>
 
@@ -6395,7 +6492,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2399</span>
+    <span class="phpdocumentor-element-found-in__line">2426</span>
 
     </aside>
 
@@ -6520,7 +6617,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2379</span>
+    <span class="phpdocumentor-element-found-in__line">2406</span>
 
     </aside>
 
@@ -6575,7 +6672,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1977</span>
+    <span class="phpdocumentor-element-found-in__line">2004</span>
 
     </aside>
 
@@ -6630,7 +6727,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1718</span>
+    <span class="phpdocumentor-element-found-in__line">1745</span>
 
     </aside>
 
@@ -6685,7 +6782,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1730</span>
+    <span class="phpdocumentor-element-found-in__line">1757</span>
 
     </aside>
 
@@ -6747,7 +6844,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2453</span>
+    <span class="phpdocumentor-element-found-in__line">2480</span>
 
     </aside>
 
@@ -6872,7 +6969,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1751</span>
+    <span class="phpdocumentor-element-found-in__line">1778</span>
 
     </aside>
 
@@ -6934,7 +7031,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1742</span>
+    <span class="phpdocumentor-element-found-in__line">1769</span>
 
     </aside>
 
@@ -6989,7 +7086,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2158</span>
+    <span class="phpdocumentor-element-found-in__line">2185</span>
 
     </aside>
 
@@ -7044,7 +7141,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2944</span>
+    <span class="phpdocumentor-element-found-in__line">2973</span>
 
     </aside>
 
@@ -7099,7 +7196,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">290</span>
+    <span class="phpdocumentor-element-found-in__line">295</span>
 
     </aside>
 
@@ -7137,7 +7234,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1364</span>
+    <span class="phpdocumentor-element-found-in__line">1369</span>
 
     </aside>
 
@@ -7192,7 +7289,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1800</span>
+    <span class="phpdocumentor-element-found-in__line">1827</span>
 
     </aside>
 
@@ -7240,7 +7337,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3410</span>
+    <span class="phpdocumentor-element-found-in__line">3485</span>
 
     </aside>
 
@@ -7354,7 +7451,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2004</span>
+    <span class="phpdocumentor-element-found-in__line">2031</span>
 
     </aside>
 
@@ -7409,7 +7506,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1986</span>
+    <span class="phpdocumentor-element-found-in__line">2013</span>
 
     </aside>
 
@@ -7464,7 +7561,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">373</span>
+    <span class="phpdocumentor-element-found-in__line">378</span>
 
     </aside>
 
@@ -7512,7 +7609,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2059</span>
+    <span class="phpdocumentor-element-found-in__line">2086</span>
 
     </aside>
 
@@ -7574,7 +7671,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2178</span>
+    <span class="phpdocumentor-element-found-in__line">2205</span>
 
     </aside>
 
@@ -7629,7 +7726,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2102</span>
+    <span class="phpdocumentor-element-found-in__line">2129</span>
 
     </aside>
 
@@ -7684,7 +7781,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2082</span>
+    <span class="phpdocumentor-element-found-in__line">2109</span>
 
     </aside>
 
@@ -7739,7 +7836,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2122</span>
+    <span class="phpdocumentor-element-found-in__line">2149</span>
 
     </aside>
 
@@ -7794,7 +7891,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3303</span>
+    <span class="phpdocumentor-element-found-in__line">3378</span>
 
     </aside>
 
@@ -7842,7 +7939,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3310</span>
+    <span class="phpdocumentor-element-found-in__line">3385</span>
 
     </aside>
 
@@ -7904,7 +8001,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2930</span>
+    <span class="phpdocumentor-element-found-in__line">2959</span>
 
     </aside>
 
@@ -7959,7 +8056,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">317</span>
+    <span class="phpdocumentor-element-found-in__line">322</span>
 
     </aside>
 
@@ -8036,7 +8133,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1966</span>
+    <span class="phpdocumentor-element-found-in__line">1993</span>
 
     </aside>
 
@@ -8098,7 +8195,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2428</span>
+    <span class="phpdocumentor-element-found-in__line">2455</span>
 
     </aside>
 
@@ -8209,7 +8306,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1765</span>
+    <span class="phpdocumentor-element-found-in__line">1792</span>
 
     </aside>
 
@@ -8271,7 +8368,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1338</span>
+    <span class="phpdocumentor-element-found-in__line">1343</span>
 
     </aside>
 
@@ -8340,7 +8437,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1325</span>
+    <span class="phpdocumentor-element-found-in__line">1330</span>
 
     </aside>
 
@@ -8409,7 +8506,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">366</span>
+    <span class="phpdocumentor-element-found-in__line">371</span>
 
     </aside>
 
@@ -8457,7 +8554,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2221</span>
+    <span class="phpdocumentor-element-found-in__line">2248</span>
 
     </aside>
 
@@ -8547,7 +8644,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1911</span>
+    <span class="phpdocumentor-element-found-in__line">1938</span>
 
     </aside>
 
@@ -8602,7 +8699,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1709</span>
+    <span class="phpdocumentor-element-found-in__line">1736</span>
 
     </aside>
 
@@ -8657,7 +8754,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">380</span>
+    <span class="phpdocumentor-element-found-in__line">385</span>
 
     </aside>
 
@@ -8743,7 +8840,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1672</span>
+    <span class="phpdocumentor-element-found-in__line">1699</span>
 
     </aside>
 
@@ -8819,7 +8916,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2527</span>
+    <span class="phpdocumentor-element-found-in__line">2554</span>
 
     </aside>
 
@@ -8930,7 +9027,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1418</span>
+    <span class="phpdocumentor-element-found-in__line">1423</span>
 
     </aside>
 
@@ -9111,7 +9208,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2280</span>
+    <span class="phpdocumentor-element-found-in__line">2307</span>
 
     </aside>
 
@@ -9180,7 +9277,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3321</span>
+    <span class="phpdocumentor-element-found-in__line">3396</span>
 
     </aside>
 
@@ -9242,7 +9339,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2355</span>
+    <span class="phpdocumentor-element-found-in__line">2382</span>
 
     </aside>
 
@@ -9304,7 +9401,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2271</span>
+    <span class="phpdocumentor-element-found-in__line">2298</span>
 
     </aside>
 
@@ -9359,7 +9456,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2140</span>
+    <span class="phpdocumentor-element-found-in__line">2167</span>
 
     </aside>
 
@@ -9407,7 +9504,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2262</span>
+    <span class="phpdocumentor-element-found-in__line">2289</span>
 
     </aside>
 
@@ -9462,7 +9559,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1849</span>
+    <span class="phpdocumentor-element-found-in__line">1876</span>
 
     </aside>
 
@@ -9524,7 +9621,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1902</span>
+    <span class="phpdocumentor-element-found-in__line">1929</span>
 
     </aside>
 
@@ -9579,7 +9676,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1995</span>
+    <span class="phpdocumentor-element-found-in__line">2022</span>
 
     </aside>
 
@@ -9634,7 +9731,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3022</span>
+    <span class="phpdocumentor-element-found-in__line">3051</span>
 
     </aside>
 
@@ -9710,7 +9807,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2552</span>
+    <span class="phpdocumentor-element-found-in__line">2579</span>
 
     </aside>
 
@@ -9800,7 +9897,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1401</span>
+    <span class="phpdocumentor-element-found-in__line">1406</span>
 
     </aside>
 
@@ -9883,7 +9980,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1597</span>
+    <span class="phpdocumentor-element-found-in__line">1602</span>
 
     </aside>
 
@@ -9945,7 +10042,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2618</span>
+    <span class="phpdocumentor-element-found-in__line">2645</span>
 
     </aside>
 
@@ -10035,7 +10132,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2637</span>
+    <span class="phpdocumentor-element-found-in__line">2664</span>
 
     </aside>
 
@@ -10097,7 +10194,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">804</span>
+    <span class="phpdocumentor-element-found-in__line">809</span>
 
     </aside>
 
@@ -10292,7 +10389,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">654</span>
+    <span class="phpdocumentor-element-found-in__line">659</span>
 
     </aside>
 
@@ -10473,7 +10570,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1292</span>
+    <span class="phpdocumentor-element-found-in__line">1297</span>
 
     </aside>
 
@@ -10541,6 +10638,68 @@ via its `fileId()` method.</p>
             -public
                                                         "
 >
+    <h4 class="phpdocumentor-element__name" id="method_sendChatJoinRequestWebApp">
+        sendChatJoinRequestWebApp()
+        <a href="classes/Gruven-PhpBotGram-Bot.html#method_sendChatJoinRequestWebApp" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">1646</span>
+
+    </aside>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">sendChatJoinRequestWebApp</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$chatJoinRequestQueryId</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$webAppUrl</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$timeout</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">bool</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$chatJoinRequestQueryId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$webAppUrl</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$timeout</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">bool</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
     <h4 class="phpdocumentor-element__name" id="method_sendChecklist">
         sendChecklist()
         <a href="classes/Gruven-PhpBotGram-Bot.html#method_sendChecklist" class="headerlink"><i class="fas fa-link"></i></a>
@@ -10549,7 +10708,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1216</span>
+    <span class="phpdocumentor-element-found-in__line">1221</span>
 
     </aside>
 
@@ -10653,7 +10812,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1096</span>
+    <span class="phpdocumentor-element-found-in__line">1101</span>
 
     </aside>
 
@@ -10806,7 +10965,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1239</span>
+    <span class="phpdocumentor-element-found-in__line">1244</span>
 
     </aside>
 
@@ -10938,7 +11097,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">702</span>
+    <span class="phpdocumentor-element-found-in__line">707</span>
 
     </aside>
 
@@ -11105,7 +11264,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3359</span>
+    <span class="phpdocumentor-element-found-in__line">3434</span>
 
     </aside>
 
@@ -11223,7 +11382,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2197</span>
+    <span class="phpdocumentor-element-found-in__line">2224</span>
 
     </aside>
 
@@ -11320,7 +11479,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3148</span>
+    <span class="phpdocumentor-element-found-in__line">3223</span>
 
     </aside>
 
@@ -11585,7 +11744,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">608</span>
+    <span class="phpdocumentor-element-found-in__line">613</span>
 
     </aside>
 
@@ -11759,7 +11918,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1010</span>
+    <span class="phpdocumentor-element-found-in__line">1015</span>
 
     </aside>
 
@@ -11926,7 +12085,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">982</span>
+    <span class="phpdocumentor-element-found-in__line">987</span>
 
     </aside>
 
@@ -12044,7 +12203,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">397</span>
+    <span class="phpdocumentor-element-found-in__line">402</span>
 
     </aside>
 
@@ -12197,7 +12356,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1273</span>
+    <span class="phpdocumentor-element-found-in__line">1278</span>
 
     </aside>
 
@@ -12287,7 +12446,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">936</span>
+    <span class="phpdocumentor-element-found-in__line">941</span>
 
     </aside>
 
@@ -12454,7 +12613,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">564</span>
+    <span class="phpdocumentor-element-found-in__line">569</span>
 
     </aside>
 
@@ -12621,7 +12780,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1141</span>
+    <span class="phpdocumentor-element-found-in__line">1146</span>
 
     </aside>
 
@@ -12899,6 +13058,214 @@ via its `fileId()` method.</p>
             -public
                                                         "
 >
+    <h4 class="phpdocumentor-element__name" id="method_sendRichMessage">
+        sendRichMessage()
+        <a href="classes/Gruven-PhpBotGram-Bot.html#method_sendRichMessage" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">3151</span>
+
+    </aside>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">sendRichMessage</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">int|string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$chatId</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-InputRichMessage.html"><abbr title="\Gruven\PhpBotGram\Types\InputRichMessage">InputRichMessage</abbr></a>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$richMessage</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$businessConnectionId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$messageThreadId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$directMessagesTopicId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">bool|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$disableNotification</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">bool|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$protectContent</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">bool|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$allowPaidBroadcast</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$messageEffectId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-SuggestedPostParameters.html"><abbr title="\Gruven\PhpBotGram\Types\SuggestedPostParameters">SuggestedPostParameters</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$suggestedPostParameters</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-ReplyParameters.html"><abbr title="\Gruven\PhpBotGram\Types\ReplyParameters">ReplyParameters</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$replyParameters</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-ForceReply.html"><abbr title="\Gruven\PhpBotGram\Types\ForceReply">ForceReply</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardMarkup">InlineKeyboardMarkup</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-ReplyKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\ReplyKeyboardMarkup">ReplyKeyboardMarkup</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-ReplyKeyboardRemove.html"><abbr title="\Gruven\PhpBotGram\Types\ReplyKeyboardRemove">ReplyKeyboardRemove</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$replyMarkup</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$timeout</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Types-Message.html"><abbr title="\Gruven\PhpBotGram\Types\Message">Message</abbr></a></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$chatId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int|string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$richMessage</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-InputRichMessage.html"><abbr title="\Gruven\PhpBotGram\Types\InputRichMessage">InputRichMessage</abbr></a></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$businessConnectionId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$messageThreadId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$directMessagesTopicId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$disableNotification</span>
+                : <span class="phpdocumentor-argument-list__argument__type">bool|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$protectContent</span>
+                : <span class="phpdocumentor-argument-list__argument__type">bool|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$allowPaidBroadcast</span>
+                : <span class="phpdocumentor-argument-list__argument__type">bool|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$messageEffectId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$suggestedPostParameters</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-SuggestedPostParameters.html"><abbr title="\Gruven\PhpBotGram\Types\SuggestedPostParameters">SuggestedPostParameters</abbr></a>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$replyParameters</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-ReplyParameters.html"><abbr title="\Gruven\PhpBotGram\Types\ReplyParameters">ReplyParameters</abbr></a>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$replyMarkup</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-ForceReply.html"><abbr title="\Gruven\PhpBotGram\Types\ForceReply">ForceReply</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardMarkup">InlineKeyboardMarkup</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-ReplyKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\ReplyKeyboardMarkup">ReplyKeyboardMarkup</abbr></a>|<a href="classes/Gruven-PhpBotGram-Types-ReplyKeyboardRemove.html"><abbr title="\Gruven\PhpBotGram\Types\ReplyKeyboardRemove">ReplyKeyboardRemove</abbr></a>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$timeout</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Types-Message.html"><abbr title="\Gruven\PhpBotGram\Types\Message">Message</abbr></a></span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_sendRichMessageDraft">
+        sendRichMessageDraft()
+        <a href="classes/Gruven-PhpBotGram-Bot.html#method_sendRichMessageDraft" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">3182</span>
+
+    </aside>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">sendRichMessageDraft</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">int&nbsp;</span><span class="phpdocumentor-signature__argument__name">$chatId</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">int&nbsp;</span><span class="phpdocumentor-signature__argument__name">$draftId</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Types-InputRichMessage.html"><abbr title="\Gruven\PhpBotGram\Types\InputRichMessage">InputRichMessage</abbr></a>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$richMessage</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$messageThreadId</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">int|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$timeout</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">bool</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$chatId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$draftId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$richMessage</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Types-InputRichMessage.html"><abbr title="\Gruven\PhpBotGram\Types\InputRichMessage">InputRichMessage</abbr></a></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$messageThreadId</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$timeout</span>
+                : <span class="phpdocumentor-argument-list__argument__type">int|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">bool</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
     <h4 class="phpdocumentor-element__name" id="method_sendSticker">
         sendSticker()
         <a href="classes/Gruven-PhpBotGram-Bot.html#method_sendSticker" class="headerlink"><i class="fas fa-link"></i></a>
@@ -12907,7 +13274,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2897</span>
+    <span class="phpdocumentor-element-found-in__line">2926</span>
 
     </aside>
 
@@ -13046,7 +13413,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1051</span>
+    <span class="phpdocumentor-element-found-in__line">1056</span>
 
     </aside>
 
@@ -13227,7 +13594,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">746</span>
+    <span class="phpdocumentor-element-found-in__line">751</span>
 
     </aside>
 
@@ -13443,7 +13810,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">895</span>
+    <span class="phpdocumentor-element-found-in__line">900</span>
 
     </aside>
 
@@ -13596,7 +13963,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">856</span>
+    <span class="phpdocumentor-element-found-in__line">861</span>
 
     </aside>
 
@@ -13756,7 +14123,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2331</span>
+    <span class="phpdocumentor-element-found-in__line">2358</span>
 
     </aside>
 
@@ -13818,7 +14185,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2366</span>
+    <span class="phpdocumentor-element-found-in__line">2393</span>
 
     </aside>
 
@@ -13887,7 +14254,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2307</span>
+    <span class="phpdocumentor-element-found-in__line">2334</span>
 
     </aside>
 
@@ -13956,7 +14323,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2342</span>
+    <span class="phpdocumentor-element-found-in__line">2369</span>
 
     </aside>
 
@@ -14025,7 +14392,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2320</span>
+    <span class="phpdocumentor-element-found-in__line">2347</span>
 
     </aside>
 
@@ -14087,7 +14454,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1463</span>
+    <span class="phpdocumentor-element-found-in__line">1468</span>
 
     </aside>
 
@@ -14156,7 +14523,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1661</span>
+    <span class="phpdocumentor-element-found-in__line">1688</span>
 
     </aside>
 
@@ -14218,7 +14585,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1476</span>
+    <span class="phpdocumentor-element-found-in__line">1481</span>
 
     </aside>
 
@@ -14287,7 +14654,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2147</span>
+    <span class="phpdocumentor-element-found-in__line">2174</span>
 
     </aside>
 
@@ -14349,7 +14716,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1511</span>
+    <span class="phpdocumentor-element-found-in__line">1516</span>
 
     </aside>
 
@@ -14418,7 +14785,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1630</span>
+    <span class="phpdocumentor-element-found-in__line">1657</span>
 
     </aside>
 
@@ -14480,7 +14847,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1777</span>
+    <span class="phpdocumentor-element-found-in__line">1804</span>
 
     </aside>
 
@@ -14542,7 +14909,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1650</span>
+    <span class="phpdocumentor-element-found-in__line">1677</span>
 
     </aside>
 
@@ -14648,7 +15015,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3102</span>
+    <span class="phpdocumentor-element-found-in__line">3131</span>
 
     </aside>
 
@@ -14710,7 +15077,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3386</span>
+    <span class="phpdocumentor-element-found-in__line">3461</span>
 
     </aside>
 
@@ -14807,7 +15174,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2016</span>
+    <span class="phpdocumentor-element-found-in__line">2043</span>
 
     </aside>
 
@@ -14876,7 +15243,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1310</span>
+    <span class="phpdocumentor-element-found-in__line">1315</span>
 
     </aside>
 
@@ -14952,7 +15319,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2032</span>
+    <span class="phpdocumentor-element-found-in__line">2059</span>
 
     </aside>
 
@@ -15021,7 +15388,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2167</span>
+    <span class="phpdocumentor-element-found-in__line">2194</span>
 
     </aside>
 
@@ -15083,7 +15450,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2091</span>
+    <span class="phpdocumentor-element-found-in__line">2118</span>
 
     </aside>
 
@@ -15145,7 +15512,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2071</span>
+    <span class="phpdocumentor-element-found-in__line">2098</span>
 
     </aside>
 
@@ -15207,7 +15574,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2131</span>
+    <span class="phpdocumentor-element-found-in__line">2158</span>
 
     </aside>
 
@@ -15262,7 +15629,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2111</span>
+    <span class="phpdocumentor-element-found-in__line">2138</span>
 
     </aside>
 
@@ -15324,7 +15691,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3348</span>
+    <span class="phpdocumentor-element-found-in__line">3423</span>
 
     </aside>
 
@@ -15386,7 +15753,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3040</span>
+    <span class="phpdocumentor-element-found-in__line">3069</span>
 
     </aside>
 
@@ -15448,7 +15815,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3054</span>
+    <span class="phpdocumentor-element-found-in__line">3083</span>
 
     </aside>
 
@@ -15510,7 +15877,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3065</span>
+    <span class="phpdocumentor-element-found-in__line">3094</span>
 
     </aside>
 
@@ -15572,7 +15939,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3002</span>
+    <span class="phpdocumentor-element-found-in__line">3031</span>
 
     </aside>
 
@@ -15634,7 +16001,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3087</span>
+    <span class="phpdocumentor-element-found-in__line">3116</span>
 
     </aside>
 
@@ -15710,7 +16077,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">3076</span>
+    <span class="phpdocumentor-element-found-in__line">3105</span>
 
     </aside>
 
@@ -15772,7 +16139,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1351</span>
+    <span class="phpdocumentor-element-found-in__line">1356</span>
 
     </aside>
 
@@ -15841,7 +16208,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">336</span>
+    <span class="phpdocumentor-element-found-in__line">341</span>
 
     </aside>
 
@@ -15938,7 +16305,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2752</span>
+    <span class="phpdocumentor-element-found-in__line">2781</span>
 
     </aside>
 
@@ -16021,7 +16388,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2803</span>
+    <span class="phpdocumentor-element-found-in__line">2832</span>
 
     </aside>
 
@@ -16097,7 +16464,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2388</span>
+    <span class="phpdocumentor-element-found-in__line">2415</span>
 
     </aside>
 
@@ -16159,7 +16526,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2508</span>
+    <span class="phpdocumentor-element-found-in__line">2535</span>
 
     </aside>
 
@@ -16235,7 +16602,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1388</span>
+    <span class="phpdocumentor-element-found-in__line">1393</span>
 
     </aside>
 
@@ -16304,7 +16671,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1500</span>
+    <span class="phpdocumentor-element-found-in__line">1505</span>
 
     </aside>
 
@@ -16366,7 +16733,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1920</span>
+    <span class="phpdocumentor-element-found-in__line">1947</span>
 
     </aside>
 
@@ -16421,7 +16788,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1700</span>
+    <span class="phpdocumentor-element-found-in__line">1727</span>
 
     </aside>
 
@@ -16476,7 +16843,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1871</span>
+    <span class="phpdocumentor-element-found-in__line">1898</span>
 
     </aside>
 
@@ -16538,7 +16905,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1929</span>
+    <span class="phpdocumentor-element-found-in__line">1956</span>
 
     </aside>
 
@@ -16593,7 +16960,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">1687</span>
+    <span class="phpdocumentor-element-found-in__line">1714</span>
 
     </aside>
 
@@ -16662,7 +17029,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2493</span>
+    <span class="phpdocumentor-element-found-in__line">2520</span>
 
     </aside>
 
@@ -16738,7 +17105,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2954</span>
+    <span class="phpdocumentor-element-found-in__line">2983</span>
 
     </aside>
 
@@ -16807,7 +17174,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2251</span>
+    <span class="phpdocumentor-element-found-in__line">2278</span>
 
     </aside>
 
@@ -16869,7 +17236,7 @@ via its `fileId()` method.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Bot.php"><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">2240</span>
+    <span class="phpdocumentor-element-found-in__line">2267</span>
 
     </aside>
 
@@ -17096,6 +17463,7 @@ via its `fileId()` method.</p>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method___invoke">__invoke()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_addStickerToSet">addStickerToSet()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_answerCallbackQuery">answerCallbackQuery()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_answerChatJoinRequestQuery">answerChatJoinRequestQuery()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_answerGuestQuery">answerGuestQuery()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_answerInlineQuery">answerInlineQuery()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_answerPreCheckoutQuery">answerPreCheckoutQuery()</a></li>
@@ -17210,6 +17578,7 @@ via its `fileId()` method.</p>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendAnimation">sendAnimation()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendAudio">sendAudio()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendChatAction">sendChatAction()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendChatJoinRequestWebApp">sendChatJoinRequestWebApp()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendChecklist">sendChecklist()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendContact">sendContact()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendDice">sendDice()</a></li>
@@ -17225,6 +17594,8 @@ via its `fileId()` method.</p>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendPaidMedia">sendPaidMedia()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendPhoto">sendPhoto()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendPoll">sendPoll()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendRichMessage">sendRichMessage()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendRichMessageDraft">sendRichMessageDraft()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendSticker">sendSticker()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendVenue">sendVenue()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Bot.html#method_sendVideo">sendVideo()</a></li>

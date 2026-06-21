@@ -277,6 +277,10 @@
                 <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
                 
             </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
             </ul>
 
                                     <h4 class="phpdocumentor-sidebar__root-namespace">
@@ -409,12 +413,65 @@
             <h2><a href="https://github.com/Gruven/phpbotgram/releases/tag/v0.1.0">0.1.0</a> &mdash; Initial release</h2>
 
             
-    <p>First public release. Ports aiogram 3.28 to PHP 8.5 with full feature parity for the core framework. Behaviour divergences from upstream are documented inline at the call site (<code># Divergence:</code>
+    <p>First public release. Ports aiogram 3.29.0 / Telegram Bot API 10.1 to PHP 8.5 with full feature parity for the core framework. Behaviour divergences from upstream are documented inline at the call site (<code># Divergence:</code>
  comments) and in <code>docs/superpowers/specs/</code>
 .</p>
 
             <section class="section " id="added">
             <h3>Added</h3>
+
+            <section class="section " id="bot-api-10-1-schema-sync">
+            <h4>Bot API 10.1 schema sync</h4>
+
+            
+
+<ul>
+    <li class="dash">Generated Telegram Bot API surface synced from aiogram 3.29.0 / Bot API 10.1.</li>
+
+    <li class="dash">
+    <p>Rich-message support:</p>
+
+
+<ul>
+    <li class="dash"><code>InputRichMessage</code>
+, <code>RichMessage</code>
+, <code>RichBlock*</code>
+, <code>RichText*</code>
+, <code>Link</code>
+, <code>InputMediaLink</code>
+, and the generated <code>RichBlockUnion</code>
+ / <code>RichTextUnion</code>
+ helpers.</li>
+
+    <li class="dash"><code>Bot::sendRichMessage</code>
+, <code>Bot::sendRichMessageDraft</code>
+, <code>Message::answerRich</code>
+, and <code>Message::replyRich</code>
+.</li>
+
+    <li class="dash"><code>EditMessageText::$richMessage</code>
+ for editing rich messages without breaking the existing positional <code>$text</code>
+ shortcut.</li>
+
+</ul>
+</li>
+
+    <li class="dash">Chat-join request query methods: <code>Bot::answerChatJoinRequestQuery</code>
+ and <code>Bot::sendChatJoinRequestWebApp</code>
+.</li>
+
+    <li class="dash">Serializer support for PHPDoc-backed generated list parameters such as <code>list&lt;RichBlock&gt;</code>
+ and nested rich-block table structures.</li>
+
+    <li class="dash">Serializer support for the recursive rich text wire union: a plain string, a rich-text object, or a list mixing strings and rich-text segments.</li>
+
+    <li class="dash">README badges now track aiogram 3.29.0, Bot API 10.1, and the current passing test count.</li>
+
+    <li class="dash">Narrative docs for sending, replying with, streaming, and reading rich messages.</li>
+
+</ul>
+
+    </section>
 
             <section class="section " id="bot-client-and-http-transport">
             <h4>Bot client and HTTP transport</h4>
@@ -831,7 +888,7 @@
 
 <ul>
     <li class="dash">Diataxis-structured narrative site under <code>docs/guide/en/</code>
- (46 committed pages: 1 top-level landing + 6 tutorial + 21 how-to + 17 concept + 1 reference stub) plus 2 build-time copies of CHANGELOG.md and CONTRIBUTING.md &rarr; 48 rendered pages.</li>
+ (47 committed pages: 1 top-level landing + 6 tutorial + 22 how-to + 17 concept + 1 reference stub) plus 2 build-time copies of CHANGELOG.md and CONTRIBUTING.md &rarr; 49 rendered pages.</li>
 
     <li class="dash"><code>phpdoc.dist.xml.tpl</code>
  template (envsubst &rarr; <code>phpdoc.dist.xml</code>
@@ -931,7 +988,7 @@
             
 
 <ul>
-    <li class="dash">2109 PHPUnit tests with 6599 assertions (9 env-gated skips). Real Redis / MongoDB integration tests gated on <code>PHPBOTGRAM_TEST_REDIS_DSN</code>
+    <li class="dash">2168 PHPUnit tests with 6929 assertions (9 env-gated skips). Real Redis / MongoDB integration tests gated on <code>PHPBOTGRAM_TEST_REDIS_DSN</code>
  / <code>PHPBOTGRAM_TEST_MONGO_DSN</code>
  env vars.</li>
 
@@ -946,8 +1003,8 @@
 
     </section>
 
-            <section class="section " id="known-divergences-from-aiogram-3-28">
-            <h3>Known divergences from aiogram 3.28</h3>
+            <section class="section " id="known-divergences-from-aiogram-3-29-0">
+            <h3>Known divergences from aiogram 3.29.0</h3>
 
             
 
