@@ -155,6 +155,19 @@ class Router
    */
   public private(set) array $subRouters = [];
 
+  /**
+   * Scene routers should get the first chance to handle updates while an FSM
+   * state is active, so broad parent catch-all handlers do not starve active
+   * scenes. Normal routers keep the local-observer-first traversal.
+   */
+  public private(set) bool $scenePriority = false;
+
+  /**
+   * FSM state this scene-priority router owns. Null means the router is marked
+   * as priority but cannot be state-matched during the active-scene prepass.
+   */
+  public private(set) ?string $scenePriorityState = null;
+
   // Per-update-type aliases (camelCase). Each is a direct reference to
   // the same instance in `$observers['<snake_case>']` — initialized in
   // the constructor and frozen as `readonly` so the dual-API invariant
@@ -318,6 +331,20 @@ class Router
   }
 
   /**
+   * Mark this router as a scene router for active-state priority dispatch.
+   *
+   * Intended for `Scene::asRouter()`; exposed as a tiny fluent method so tests
+   * and custom scene wiring can opt into the same traversal rule.
+   */
+  public function preferWhenStateActive(?string $state = null): static
+  {
+    $this->scenePriority = true;
+    $this->scenePriorityState = $state;
+
+    return $this;
+  }
+
+  /**
    * Collect the snake_case names of every update type with at least
    * one registered handler anywhere in the tree rooted at `$this`.
    *
@@ -413,6 +440,18 @@ class Router
     object $event,
     array $kwargs = [],
   ): mixed {
+    return $this->propagateEventInternal($updateType, $event, $kwargs);
+  }
+
+  /**
+   * @param array<string, mixed> $kwargs
+   */
+  private function propagateEventInternal(
+    string $updateType,
+    object $event,
+    array $kwargs = [],
+    bool $skipScenePriority = false,
+  ): mixed {
     if (!isset($this->observers[$updateType])) {
       throw new LogicException("Unknown update type: {$updateType}");
     }
@@ -430,7 +469,45 @@ class Router
     // body (`router.py:168-197`) — the raw `trigger()` runs without
     // outer-middleware wrap, and the sub-router walk happens inside the
     // same closure so the OUTER wrap covers it.
-    $inner = static function (object $e, array $data) use ($observer, $subRouters, $updateType): mixed {
+    $inner = static function (object $e, array $data) use ($observer, $subRouters, $updateType, $skipScenePriority): mixed {
+      $walkSubRouters = static function (
+        array $routers,
+        object $event,
+        array $kwargs,
+        bool $skipChildScenePriority,
+      ) use ($updateType): mixed {
+        foreach ($routers as $child) {
+          $r = $child->propagateEventInternal($updateType, $event, $kwargs, $skipChildScenePriority);
+
+          // Same collapse for the sub-router recursion: a child's REJECTED
+          // surfaces here as UNHANDLED so we keep walking siblings instead
+          // of short-circuiting on an internal sentinel the outer caller
+          // doesn't recognise. (Note: `propagateEvent` already collapses
+          // its own observer's REJECTED before returning, so a child can
+          // only return UNHANDLED or a concrete value here — but keep the
+          // guard for defence-in-depth against future refactors.)
+          if ($r === RejectedSentinel::instance()) {
+            continue;
+          }
+
+          if ($r !== UnhandledSentinel::instance()) {
+            return $r;
+          }
+        }
+
+        return UnhandledSentinel::instance();
+      };
+
+      $rawState = $data['raw_state'] ?? null;
+
+      if (!$skipScenePriority && is_string($rawState)) {
+        $response = self::propagateScenePrioritySubtree($subRouters, $rawState, $updateType, $e, $data);
+
+        if ($response !== UnhandledSentinel::instance()) {
+          return $response;
+        }
+      }
+
       $response = $observer->trigger($e, $data);
 
       // Fix I6: collapse `RejectedSentinel` to `UnhandledSentinel` at the
@@ -447,26 +524,15 @@ class Router
         return $response;
       }
 
-      foreach ($subRouters as $child) {
-        $r = $child->propagateEvent($updateType, $e, $data);
+      $regularSubRouters = (!$skipScenePriority && is_string($rawState))
+        ? array_values(array_filter(
+          $subRouters,
+          static fn(Router $router): bool => !$router->matchesScenePriorityState($rawState)
+            && !$router->hasScenePriorityForStateInSubtree($rawState),
+        ))
+        : $subRouters;
 
-        // Same collapse for the sub-router recursion: a child's REJECTED
-        // surfaces here as UNHANDLED so we keep walking siblings instead
-        // of short-circuiting on an internal sentinel the outer caller
-        // doesn't recognise. (Note: `propagateEvent` already collapses
-        // its own observer's REJECTED before returning, so a child can
-        // only return UNHANDLED or a concrete value here — but keep the
-        // guard for defence-in-depth against future refactors.)
-        if ($r === RejectedSentinel::instance()) {
-          continue;
-        }
-
-        if ($r !== UnhandledSentinel::instance()) {
-          return $r;
-        }
-      }
-
-      return UnhandledSentinel::instance();
+      return $walkSubRouters($regularSubRouters, $e, $data, is_string($rawState));
     };
 
     // Compose the local observer's outer middleware around the inner
@@ -476,6 +542,59 @@ class Router
     $wrapped = $observer->outerMiddleware->wrap($inner);
 
     return $wrapped($event, $kwargs);
+  }
+
+  /**
+   * Walk only scene-priority descendants matching the active FSM state.
+   *
+   * Matching child subtrees are entered through their normal propagation path
+   * exactly once. Inside that subtree, the same rule gives the matching scene
+   * router the first chance, then falls back to that subtree's local handlers
+   * without re-running outer middleware.
+   *
+   * @param list<Router> $routers
+   * @param array<string, mixed> $kwargs
+   */
+  private static function propagateScenePrioritySubtree(
+    array $routers,
+    string $rawState,
+    string $updateType,
+    object $event,
+    array $kwargs,
+  ): mixed {
+    foreach ($routers as $router) {
+      if (!$router->matchesScenePriorityState($rawState) && !$router->hasScenePriorityForStateInSubtree($rawState)) {
+        continue;
+      }
+
+      $response = $router->propagateEventInternal($updateType, $event, $kwargs);
+
+      if ($response === RejectedSentinel::instance()) {
+        continue;
+      }
+
+      if ($response !== UnhandledSentinel::instance()) {
+        return $response;
+      }
+    }
+
+    return UnhandledSentinel::instance();
+  }
+
+  private function matchesScenePriorityState(string $rawState): bool
+  {
+    return $this->scenePriority && $this->scenePriorityState === $rawState;
+  }
+
+  private function hasScenePriorityForStateInSubtree(string $rawState): bool
+  {
+    foreach ($this->subRouters as $router) {
+      if ($router->matchesScenePriorityState($rawState) || $router->hasScenePriorityForStateInSubtree($rawState)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**

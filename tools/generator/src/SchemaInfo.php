@@ -17,8 +17,8 @@ namespace Gruven\PhpBotGram\Generator;
  * speed-bump that catches accidental scope expansion in butcher's output.
  *
  * `EMITTED_TYPE_FILES` exceeds `TYPE_ENTITIES` because the codegen emits
- * one `<Parent>Union.php` resolver per union parent in addition to the
- * per-type class file (see `UnionDetector::plans()` and `Pipeline::run()`).
+ * union resolver/helper files in addition to the per-type class files
+ * (see `UnionDetector::plans()` and `Pipeline::run()`).
  * The number is empirically pinned: a manual `ls $tmpOut/Types | wc -l`
  * after `bin/generate.php` finishes is the source of truth.
  */
@@ -50,7 +50,8 @@ final class SchemaInfo
   /**
    * Files emitted by `Pipeline::run()` under `$outDir/Types/`.
    *
-   * Composition: 359 schema types + 23 `<Parent>Union.php` resolvers +
+   * Composition: 359 schema types + 23 discriminator `<Parent>Union.php`
+   * resolvers + 1 structural `MaybeInaccessibleMessageUnion.php` resolver +
    * 2 `<Parent>Interface.php` marker interfaces (only the two unions with
    * shadow members — `InputPollMedia` and `InputPollOptionMedia` — get an
    * interface; single-parent unions are satisfied by the abstract class
@@ -60,7 +61,7 @@ final class SchemaInfo
    * the test we count emissions into a clean `$outDir`, where the
    * protected path is skipped and so does NOT contribute to this number.
    */
-  public const int EMITTED_TYPE_FILES = 383;
+  public const int EMITTED_TYPE_FILES = 384;
 
   /** Files emitted under `$outDir/Methods/` — one PHP class per `MethodEntity`. */
   public const int EMITTED_METHOD_FILES = 180;

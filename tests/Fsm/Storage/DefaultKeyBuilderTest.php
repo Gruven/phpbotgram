@@ -7,7 +7,6 @@ namespace Gruven\PhpBotGram\Tests\Fsm\Storage;
 use Gruven\PhpBotGram\Fsm\Storage\DefaultKeyBuilder;
 use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use Gruven\PhpBotGram\Fsm\Storage\StoragePart;
-use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -213,25 +212,25 @@ final class DefaultKeyBuilderTest extends TestCase
   }
 
   /**
-   * Destiny check: key with non-default destiny + `withDestiny=false` throws.
+   * Non-default destiny is emitted even when `withDestiny=false`.
    *
-   * Mirrors `test_destiny_check` second assertion (expects `ValueError`; PHP maps to
-   * `InvalidArgumentException` as the contract-violation equivalent).
+   * The default builder keeps ordinary `default` keys compact, but scene
+   * history and custom destiny slots must not crash Redis/Mongo storage.
    */
-  public function testNonDefaultDestinyWithWithDestinyFalseThrows(): void
+  public function testNonDefaultDestinyWithWithDestinyFalseAppendsDestiny(): void
   {
-    $builder = new DefaultKeyBuilder(withDestiny: false);
+    $builder = new DefaultKeyBuilder(prefix: self::PREFIX, withDestiny: false);
     $key = new StorageKey(
       botId: self::BOT_ID,
       chatId: self::CHAT_ID,
       userId: self::USER_ID,
-      destiny: 'CUSTOM_TEST_DESTINY',
+      destiny: 'scenes_history',
     );
 
-    $this->expectException(InvalidArgumentException::class);
-    $this->expectExceptionMessageMatches('/withDestiny/');
-
-    $builder->build($key, StoragePart::Data);
+    self::assertSame(
+      self::PREFIX . ':' . self::CHAT_ID . ':' . self::USER_ID . ':scenes_history:data',
+      $builder->build($key, StoragePart::Data),
+    );
   }
 
   /**

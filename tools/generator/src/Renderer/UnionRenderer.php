@@ -152,6 +152,20 @@ final class UnionRenderer
   }
 
   /**
+   * Emit the hand-shaped structural resolver for MaybeInaccessibleMessage.
+   *
+   * The union is tagged by `date === 0`, but `date` is also a legitimate
+   * Message field, so it must not go through the discriminator-plan pipeline
+   * that pins child constructor defaults.
+   */
+  public function renderMaybeInaccessibleMessage(): string
+  {
+    return $this->twig->render('union_maybe_inaccessible_message.php.twig', [
+      'namespace' => 'Gruven\\PhpBotGram\\Types',
+    ]);
+  }
+
+  /**
    * Escape a wire-side literal for safe inclusion inside a PHP
    * single-quoted string.
    *

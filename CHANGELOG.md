@@ -2,6 +2,19 @@
 
 All notable changes to phpbotgram are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-06-21
+
+### Fixed
+
+- `Serializer::load()` now hydrates `CallbackQuery::$message` through the generated `MaybeInaccessibleMessageUnion` resolver instead of trying to instantiate the abstract `MaybeInaccessibleMessage` base class. Payloads with `date = 0` resolve to `InaccessibleMessage`; normal payloads resolve to `Message`.
+- Scene handlers and lifecycle action methods now filter dispatcher workflow kwargs by method signature. Strict scene methods such as `onEnter(Message $event)` no longer need a `mixed ...$kwargs` tail just because middleware or workflow data injected unrelated keys.
+- Active scene routers now get priority over parent catch-all handlers while `raw_state` is set, so broad root `message` handlers do not consume messages intended for the active scene.
+- `DefaultKeyBuilder` now appends non-default destiny values even when `withDestiny` is `false`, keeping ordinary default FSM keys compact while allowing scene history (`scenes_history`) to work with Redis and Mongo storage defaults.
+
+### Changed
+
+- Router dispatch keeps the existing parent-local-first order for normal routers and inactive FSM state, but scene routers created by `Scene::asRouter()` are tried before parent-local handlers when an FSM state is active. Root handlers that must run during scenes should use explicit filters or middleware rather than relying on catch-all order.
+
 ## [0.1.0] — Initial release
 
 First public release. Ports aiogram 3.29.0 / Telegram Bot API 10.1 to PHP 8.5 with full feature parity for the core framework. Behaviour divergences from upstream are documented inline at the call site (`# Divergence:` comments) and in `docs/superpowers/specs/`.

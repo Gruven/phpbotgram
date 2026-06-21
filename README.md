@@ -1,6 +1,6 @@
 # phpbotgram
 
-[![PHP version](https://img.shields.io/badge/php-%5E8.5-777bb4.svg?logo=php)](https://www.php.net/releases/8.5/) [![PHPStan level](https://img.shields.io/badge/PHPStan-level%209-2563eb.svg)](https://phpstan.org/) [![Tests](https://img.shields.io/badge/tests-2168%20passing-3fb950.svg)](#testing) [![Coverage gate](https://img.shields.io/badge/coverage--gate-passing-3fb950.svg)](#testing) [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE) [![Upstream](https://img.shields.io/badge/aiogram-3.29.0-blueviolet.svg?logo=python)](https://github.com/aiogram/aiogram) [![Bot API](https://img.shields.io/badge/Bot%20API-10.1-26a5e4.svg?logo=telegram)](https://core.telegram.org/bots/api)
+[![PHP version](https://img.shields.io/badge/php-%5E8.5-777bb4.svg?logo=php)](https://www.php.net/releases/8.5/) [![PHPStan level](https://img.shields.io/badge/PHPStan-level%209-2563eb.svg)](https://phpstan.org/) [![Tests](https://img.shields.io/badge/tests-2190%20passing-3fb950.svg)](#testing) [![Coverage gate](https://img.shields.io/badge/coverage--gate-passing-3fb950.svg)](#testing) [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE) [![Upstream](https://img.shields.io/badge/aiogram-3.29.0-blueviolet.svg?logo=python)](https://github.com/aiogram/aiogram) [![Bot API](https://img.shields.io/badge/Bot%20API-10.1-26a5e4.svg?logo=telegram)](https://core.telegram.org/bots/api)
 
 A modern PHP 8.5 port of the [aiogram](https://github.com/aiogram/aiogram) Telegram Bot framework.
 
@@ -160,7 +160,7 @@ $dispatcher->message->register(
 );
 ```
 
-The framework injects `ScenesManager $scenes` as a handler kwarg when `SceneRegistry` has been attached to the dispatcher.
+The framework injects `ScenesManager $scenes` as a handler kwarg when `SceneRegistry` has been attached to the dispatcher. While a scene state is active, router subtrees that contain that scene state are tried before broad parent catch-all handlers so free-text scene replies are not consumed by root fallbacks.
 
 ### Webhook
 

@@ -221,6 +221,20 @@ final class MongoStorageTest extends TestCase
     self::assertTrue((bool)($updateCalls[0]['options']['upsert'] ?? false));
   }
 
+  public function testDefaultKeyBuilderStoresSceneHistoryDestiny(): void
+  {
+    $collection = $this->makeCollection();
+    $storage = $this->makeStorage($collection);
+    $historyKey = $this->key->withDestiny('scenes_history');
+
+    $storage->setData($historyKey, ['history' => []]);
+
+    /** @var list<array{method: string, filter: array<string, mixed>, update: array<string, mixed>, options: array<string, mixed>}> $updateCalls */
+    $updateCalls = array_values(array_filter($collection->calls, static fn(array $c): bool => $c['method'] === 'updateOne'));
+    self::assertCount(1, $updateCalls);
+    self::assertSame(['_id' => 'fsm:100:42:scenes_history'], $updateCalls[0]['filter']);
+  }
+
   public function testSetDataDoesNotDeleteWhenDocStillHasState(): void
   {
     $documentId = (new DefaultKeyBuilder())->build($this->key);

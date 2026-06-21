@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Gruven\PhpBotGram\Tests\Fsm;
 
 use Closure;
+use Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware;
 use Gruven\PhpBotGram\Dispatcher\Router;
 use Gruven\PhpBotGram\Exceptions\SceneException;
+use Gruven\PhpBotGram\Filters\Filter;
 use Gruven\PhpBotGram\Filters\StateFilter;
 use Gruven\PhpBotGram\Fsm\After;
 use Gruven\PhpBotGram\Fsm\FsmContext;
@@ -185,6 +187,195 @@ final class SceneRoutingTest extends TestCase
     self::assertCount(1, $router->observers['message']->filters, 'StateFilter on message');
   }
 
+  public function testActiveSceneRouterRunsBeforeParentCatchAllHandler(): void
+  {
+    StrictMessageScene::$handlerCalled = false;
+    $rootHandlerCalled = false;
+
+    $root = new Router('root');
+    $root->includeRouter(StrictMessageScene::asRouter());
+    $root->message->register(static function () use (&$rootHandlerCalled): string {
+      $rootHandlerCalled = true;
+
+      return 'root';
+    });
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(StrictMessageScene::class);
+    $ctx->setState(StrictMessageScene::sceneConfig()->state);
+
+    $result = $root->propagateEvent('message', new stdClass(), [
+      'state' => $ctx,
+      'scenes' => $scenes,
+      'raw_state' => StrictMessageScene::sceneConfig()->state,
+    ]);
+
+    self::assertNull($result);
+    self::assertTrue(StrictMessageScene::$handlerCalled);
+    self::assertFalse($rootHandlerCalled);
+  }
+
+  public function testNestedActiveSceneRouterRunsBeforeParentCatchAllHandler(): void
+  {
+    StrictMessageScene::$handlerCalled = false;
+    $rootHandlerCalled = false;
+    $featureHandlerCalled = false;
+
+    $root = new Router('root');
+    $feature = new Router('feature');
+    $feature->includeRouter(StrictMessageScene::asRouter());
+    $feature->message->register(static function () use (&$featureHandlerCalled): string {
+      $featureHandlerCalled = true;
+
+      return 'feature';
+    });
+    $root->includeRouter($feature);
+    $root->message->register(static function () use (&$rootHandlerCalled): string {
+      $rootHandlerCalled = true;
+
+      return 'root';
+    });
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(StrictMessageScene::class);
+    $ctx->setState(StrictMessageScene::sceneConfig()->state);
+
+    $result = $root->propagateEvent('message', new stdClass(), [
+      'state' => $ctx,
+      'scenes' => $scenes,
+      'raw_state' => StrictMessageScene::sceneConfig()->state,
+    ]);
+
+    self::assertNull($result);
+    self::assertTrue(StrictMessageScene::$handlerCalled);
+    self::assertFalse($rootHandlerCalled);
+    self::assertFalse($featureHandlerCalled);
+  }
+
+  public function testNestedScenePrioritySkipsNonMatchingSceneSubtreeCatchAll(): void
+  {
+    StrictMessageScene::$handlerCalled = false;
+    SecondStrictMessageScene::$handlerCalled = false;
+    $featureAHandlerCalled = false;
+    $featureBHandlerCalled = false;
+
+    $root = new Router('root');
+
+    $featureA = new Router('feature-a');
+    $featureA->includeRouter(StrictMessageScene::asRouter());
+    $featureA->message->register(static function () use (&$featureAHandlerCalled): string {
+      $featureAHandlerCalled = true;
+
+      return 'feature-a';
+    });
+
+    $featureB = new Router('feature-b');
+    $featureB->includeRouter(SecondStrictMessageScene::asRouter());
+    $featureB->message->register(static function () use (&$featureBHandlerCalled): string {
+      $featureBHandlerCalled = true;
+
+      return 'feature-b';
+    });
+
+    $root->includeRouter($featureA);
+    $root->includeRouter($featureB);
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(SecondStrictMessageScene::class);
+    $ctx->setState(SecondStrictMessageScene::sceneConfig()->state);
+
+    $result = $root->propagateEvent('message', new stdClass(), [
+      'state' => $ctx,
+      'scenes' => $scenes,
+      'raw_state' => SecondStrictMessageScene::sceneConfig()->state,
+    ]);
+
+    self::assertNull($result);
+    self::assertFalse(StrictMessageScene::$handlerCalled);
+    self::assertTrue(SecondStrictMessageScene::$handlerCalled);
+    self::assertFalse($featureAHandlerCalled);
+    self::assertFalse($featureBHandlerCalled);
+  }
+
+  public function testNestedScenePrioritySubtreeRunsOuterMiddlewareOnceWhenSceneUnhandled(): void
+  {
+    StrictMessageScene::$handlerCalled = false;
+    $featureHandlerCalled = false;
+    $featureOuterCalls = 0;
+
+    $root = new Router('root');
+    $feature = new Router('feature');
+    $feature->includeRouter(StrictMessageScene::asRouter());
+    $feature->message->outerMiddleware(new class ($featureOuterCalls) extends BaseMiddleware {
+      public function __construct(private int &$calls) {}
+
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        ++$this->calls;
+
+        return $handler($event, $data);
+      }
+    });
+    $feature->message->register(static function () use (&$featureHandlerCalled): string {
+      $featureHandlerCalled = true;
+
+      return 'feature';
+    });
+    $root->includeRouter($feature);
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(StrictMessageScene::class);
+    $ctx->setState('other_active_state');
+
+    $result = $root->propagateEvent('message', new stdClass(), [
+      'state' => $ctx,
+      'scenes' => $scenes,
+      'raw_state' => 'other_active_state',
+    ]);
+
+    self::assertSame('feature', $result);
+    self::assertFalse(StrictMessageScene::$handlerCalled);
+    self::assertTrue($featureHandlerCalled);
+    self::assertSame(1, $featureOuterCalls);
+  }
+
+  public function testNestedScenePriorityMatchingSubtreeRunsOuterMiddlewareOnceWhenSceneHandlerFilterRejects(): void
+  {
+    FilterRejectingMessageScene::$handlerCalled = false;
+    $featureHandlerCalled = false;
+    $featureOuterCalls = 0;
+
+    $root = new Router('root');
+    $feature = new Router('feature');
+    $feature->includeRouter(FilterRejectingMessageScene::asRouter());
+    $feature->message->outerMiddleware(new class ($featureOuterCalls) extends BaseMiddleware {
+      public function __construct(private int &$calls) {}
+
+      public function __invoke(Closure $handler, object $event, array $data): mixed
+      {
+        ++$this->calls;
+
+        return $handler($event, $data);
+      }
+    });
+    $feature->message->register(static function () use (&$featureHandlerCalled): string {
+      $featureHandlerCalled = true;
+
+      return 'feature';
+    });
+    $root->includeRouter($feature);
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(FilterRejectingMessageScene::class);
+    $ctx->setState(FilterRejectingMessageScene::sceneConfig()->state);
+
+    $result = $root->propagateEvent('message', new stdClass(), [
+      'state' => $ctx,
+      'scenes' => $scenes,
+      'raw_state' => FilterRejectingMessageScene::sceneConfig()->state,
+    ]);
+
+    self::assertSame('feature', $result);
+    self::assertFalse(FilterRejectingMessageScene::$handlerCalled);
+    self::assertTrue($featureHandlerCalled);
+    self::assertSame(1, $featureOuterCalls);
+  }
+
   // ------------------------------------------------------------------ //
   // 3. asHandler() — entry-point callable
   // ------------------------------------------------------------------ //
@@ -350,6 +541,219 @@ final class SceneRoutingTest extends TestCase
     self::assertTrue($called);
   }
 
+  public function testSceneHandlerWrapperFiltersWorkflowKwargsForStrictSceneMethods(): void
+  {
+    StrictMessageScene::$handlerCalled = false;
+
+    $handler = StrictMessageScene::sceneConfig()->handlers[0]->handler;
+    $wrapper = new SceneHandlerWrapper(
+      sceneClass: StrictMessageScene::class,
+      handler: $handler,
+    );
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(StrictMessageScene::class);
+
+    $wrapper(new stdClass(), ...[
+      'state' => $ctx,
+      'scenes' => $scenes,
+      'demo_storage' => new stdClass(),
+    ]);
+
+    self::assertTrue(StrictMessageScene::$handlerCalled);
+  }
+
+  public function testSceneHandlerWrapperTreatsObjectMessageAsEvent(): void
+  {
+    ObjectMessageScene::$handlerCalled = false;
+    ObjectMessageScene::$message = null;
+
+    $handler = ObjectMessageScene::sceneConfig()->handlers[0]->handler;
+    $wrapper = new SceneHandlerWrapper(
+      sceneClass: ObjectMessageScene::class,
+      handler: $handler,
+    );
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(ObjectMessageScene::class);
+    $event = new stdClass();
+
+    $wrapper($event, ...[
+      'state' => $ctx,
+      'scenes' => $scenes,
+      'demo_storage' => new stdClass(),
+    ]);
+
+    self::assertTrue(ObjectMessageScene::$handlerCalled);
+    self::assertSame($event, ObjectMessageScene::$message);
+  }
+
+  public function testSceneHandlerWrapperPreservesDeclaredWorkflowKwargs(): void
+  {
+    WorkflowKwargsScene::$handlerCalled = false;
+    WorkflowKwargsScene::$state = null;
+    WorkflowKwargsScene::$demoStorage = null;
+
+    $handler = WorkflowKwargsScene::sceneConfig()->handlers[0]->handler;
+    $wrapper = new SceneHandlerWrapper(
+      sceneClass: WorkflowKwargsScene::class,
+      handler: $handler,
+    );
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(WorkflowKwargsScene::class);
+    $demoStorage = new stdClass();
+
+    $wrapper(new stdClass(), ...[
+      'state' => $ctx,
+      'scenes' => $scenes,
+      'demo_storage' => $demoStorage,
+      'ignored' => new stdClass(),
+    ]);
+
+    self::assertTrue(WorkflowKwargsScene::$handlerCalled);
+    self::assertSame($ctx, WorkflowKwargsScene::$state);
+    self::assertSame($demoStorage, WorkflowKwargsScene::$demoStorage);
+  }
+
+  public function testSceneHandlerWrapperSupportsWorkflowFirstSceneMethods(): void
+  {
+    WorkflowFirstScene::$handlerCalled = false;
+    WorkflowFirstScene::$rawState = null;
+    WorkflowFirstScene::$state = null;
+
+    $handler = WorkflowFirstScene::sceneConfig()->handlers[0]->handler;
+    $wrapper = new SceneHandlerWrapper(
+      sceneClass: WorkflowFirstScene::class,
+      handler: $handler,
+    );
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(WorkflowFirstScene::class);
+
+    $wrapper(new stdClass(), ...[
+      'state' => $ctx,
+      'scenes' => $scenes,
+      'raw_state' => 'workflow_first',
+      'ignored' => new stdClass(),
+    ]);
+
+    self::assertTrue(WorkflowFirstScene::$handlerCalled);
+    self::assertSame('workflow_first', WorkflowFirstScene::$rawState);
+    self::assertSame($ctx, WorkflowFirstScene::$state);
+  }
+
+  public function testSceneHandlerWrapperSupportsVariadicOnlySceneMethods(): void
+  {
+    VariadicOnlyScene::$handlerCalled = false;
+    VariadicOnlyScene::$eventWasForwarded = false;
+    VariadicOnlyScene::$state = null;
+    VariadicOnlyScene::$demoStorage = null;
+
+    $handler = VariadicOnlyScene::sceneConfig()->handlers[0]->handler;
+    $wrapper = new SceneHandlerWrapper(
+      sceneClass: VariadicOnlyScene::class,
+      handler: $handler,
+    );
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(VariadicOnlyScene::class);
+    $demoStorage = new stdClass();
+
+    $wrapper(new stdClass(), ...[
+      'state' => $ctx,
+      'scenes' => $scenes,
+      'demo_storage' => $demoStorage,
+    ]);
+
+    self::assertTrue(VariadicOnlyScene::$handlerCalled);
+    self::assertTrue(VariadicOnlyScene::$eventWasForwarded);
+    self::assertSame($ctx, VariadicOnlyScene::$state);
+    self::assertSame($demoStorage, VariadicOnlyScene::$demoStorage);
+  }
+
+  public function testSceneLifecycleActionFiltersWorkflowKwargsForStrictSceneMethods(): void
+  {
+    StrictEnterActionScene::$enterCalled = false;
+
+    [$scenes] = $this->makeScenesAndCtx(StrictEnterActionScene::class);
+
+    $scenes->enter(StrictEnterActionScene::class, demo_storage: new stdClass());
+
+    self::assertTrue(StrictEnterActionScene::$enterCalled);
+  }
+
+  public function testSceneLifecycleActionTreatsObjectMessageAsEvent(): void
+  {
+    ObjectMessageEnterActionScene::$enterCalled = false;
+    ObjectMessageEnterActionScene::$message = null;
+
+    [$scenes] = $this->makeScenesAndCtx(ObjectMessageEnterActionScene::class);
+
+    $scenes->enter(ObjectMessageEnterActionScene::class, demo_storage: new stdClass());
+
+    self::assertTrue(ObjectMessageEnterActionScene::$enterCalled);
+    self::assertInstanceOf(stdClass::class, ObjectMessageEnterActionScene::$message);
+  }
+
+  public function testSceneLifecycleActionPreservesDeclaredWorkflowKwargs(): void
+  {
+    WorkflowEnterActionScene::$enterCalled = false;
+    WorkflowEnterActionScene::$state = null;
+    WorkflowEnterActionScene::$demoStorage = null;
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(WorkflowEnterActionScene::class);
+    $demoStorage = new stdClass();
+
+    $scenes->enter(
+      WorkflowEnterActionScene::class,
+      state: $ctx,
+      demo_storage: $demoStorage,
+      ignored: new stdClass(),
+    );
+
+    self::assertTrue(WorkflowEnterActionScene::$enterCalled);
+    self::assertSame($ctx, WorkflowEnterActionScene::$state);
+    self::assertSame($demoStorage, WorkflowEnterActionScene::$demoStorage);
+  }
+
+  public function testSceneLifecycleActionSupportsWorkflowFirstSceneMethods(): void
+  {
+    WorkflowFirstEnterActionScene::$enterCalled = false;
+    WorkflowFirstEnterActionScene::$rawState = null;
+    WorkflowFirstEnterActionScene::$state = null;
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(WorkflowFirstEnterActionScene::class);
+
+    $scenes->enter(
+      WorkflowFirstEnterActionScene::class,
+      state: $ctx,
+      raw_state: 'workflow_first_enter',
+      ignored: new stdClass(),
+    );
+
+    self::assertTrue(WorkflowFirstEnterActionScene::$enterCalled);
+    self::assertSame('workflow_first_enter', WorkflowFirstEnterActionScene::$rawState);
+    self::assertSame($ctx, WorkflowFirstEnterActionScene::$state);
+  }
+
+  public function testSceneLifecycleActionSupportsVariadicOnlySceneMethods(): void
+  {
+    VariadicOnlyEnterActionScene::$enterCalled = false;
+    VariadicOnlyEnterActionScene::$eventWasForwarded = false;
+    VariadicOnlyEnterActionScene::$state = null;
+    VariadicOnlyEnterActionScene::$demoStorage = null;
+
+    [$scenes, $ctx] = $this->makeScenesAndCtx(VariadicOnlyEnterActionScene::class);
+    $demoStorage = new stdClass();
+
+    $scenes->enter(
+      VariadicOnlyEnterActionScene::class,
+      state: $ctx,
+      demo_storage: $demoStorage,
+    );
+
+    self::assertTrue(VariadicOnlyEnterActionScene::$enterCalled);
+    self::assertTrue(VariadicOnlyEnterActionScene::$eventWasForwarded);
+    self::assertSame($ctx, VariadicOnlyEnterActionScene::$state);
+    self::assertSame($demoStorage, VariadicOnlyEnterActionScene::$demoStorage);
+  }
+
   /**
    * The scene instance passed to the handler is of the correct class.
    */
@@ -485,12 +889,14 @@ final class SceneRoutingTest extends TestCase
   }
 
   /**
+   * @param class-string<Scene> $sceneClass
+   *
    * @return array{ScenesManager, FsmContext}
    */
-  private function makeScenesAndCtx(): array
+  private function makeScenesAndCtx(string $sceneClass = SimpleMessageScene::class): array
   {
     $ctx = $this->makeFsmContext();
-    $registry = $this->makeMinimalRegistry(SimpleMessageScene::class);
+    $registry = $this->makeMinimalRegistry($sceneClass);
 
     $scenes = new ScenesManager(
       registry: $registry,
@@ -597,6 +1003,201 @@ final class SimpleMessageScene extends Scene
 }
 
 /**
+ * A scene with a strict handler signature. Workflow-data kwargs must not be
+ * forwarded as named arguments to this method.
+ */
+#[SceneState('strict_message')]
+final class StrictMessageScene extends Scene
+{
+  public static bool $handlerCalled = false;
+
+  #[OnMessage]
+  public function onMessage(object $event): void
+  {
+    self::$handlerCalled = true;
+  }
+}
+
+#[SceneState('second_strict_message')]
+final class SecondStrictMessageScene extends Scene
+{
+  public static bool $handlerCalled = false;
+
+  #[OnMessage]
+  public function onMessage(object $event): void
+  {
+    self::$handlerCalled = true;
+  }
+}
+
+#[SceneState('object_message')]
+final class ObjectMessageScene extends Scene
+{
+  public static bool $handlerCalled = false;
+  public static ?object $message = null;
+
+  #[OnMessage]
+  public function onMessage(object $message): void
+  {
+    self::$handlerCalled = true;
+    self::$message = $message;
+  }
+}
+
+#[SceneState('filter_rejecting_message')]
+final class FilterRejectingMessageScene extends Scene
+{
+  public static bool $handlerCalled = false;
+
+  #[OnMessage(filters: new SceneRoutingRejectingFilter())]
+  public function onMessage(object $event): void
+  {
+    self::$handlerCalled = true;
+  }
+}
+
+/**
+ * A scene that declares workflow-data parameters. The binding layer must keep
+ * matching kwargs while dropping unrelated workflow keys.
+ */
+#[SceneState('workflow_kwargs')]
+final class WorkflowKwargsScene extends Scene
+{
+  public static bool $handlerCalled = false;
+  public static ?FsmContext $state = null;
+  public static ?object $demoStorage = null;
+
+  #[OnMessage]
+  public function onMessage(object $event, FsmContext $state, object $demo_storage): void
+  {
+    self::$handlerCalled = true;
+    self::$state = $state;
+    self::$demoStorage = $demo_storage;
+  }
+}
+
+#[SceneState('workflow_first')]
+final class WorkflowFirstScene extends Scene
+{
+  public static bool $handlerCalled = false;
+  public static ?string $rawState = null;
+  public static ?FsmContext $state = null;
+
+  #[OnMessage]
+  public function onMessage(?string $raw_state, FsmContext $state): void
+  {
+    self::$handlerCalled = true;
+    self::$rawState = $raw_state;
+    self::$state = $state;
+  }
+}
+
+#[SceneState('variadic_only')]
+final class VariadicOnlyScene extends Scene
+{
+  public static bool $handlerCalled = false;
+  public static bool $eventWasForwarded = false;
+  public static ?FsmContext $state = null;
+  public static ?object $demoStorage = null;
+
+  #[OnMessage]
+  public function onMessage(mixed ...$kwargs): void
+  {
+    self::$handlerCalled = true;
+    self::$eventWasForwarded = array_key_exists('event', $kwargs);
+    $state = $kwargs['state'] ?? null;
+    $demoStorage = $kwargs['demo_storage'] ?? null;
+    self::$state = $state instanceof FsmContext ? $state : null;
+    self::$demoStorage = is_object($demoStorage) ? $demoStorage : null;
+  }
+}
+
+/**
+ * A scene with a strict lifecycle action signature. Enter handlers should work
+ * even when dispatcher workflow data contains unrelated keys.
+ */
+#[SceneState('strict_enter_action')]
+final class StrictEnterActionScene extends Scene
+{
+  public static bool $enterCalled = false;
+
+  #[OnMessage(action: SceneAction::Enter)]
+  public function onEnter(object $event): void
+  {
+    self::$enterCalled = true;
+  }
+}
+
+#[SceneState('object_message_enter_action')]
+final class ObjectMessageEnterActionScene extends Scene
+{
+  public static bool $enterCalled = false;
+  public static ?object $message = null;
+
+  #[OnMessage(action: SceneAction::Enter)]
+  public function onEnter(object $message): void
+  {
+    self::$enterCalled = true;
+    self::$message = $message;
+  }
+}
+
+/**
+ * A lifecycle action that declares workflow-data parameters.
+ */
+#[SceneState('workflow_enter_action')]
+final class WorkflowEnterActionScene extends Scene
+{
+  public static bool $enterCalled = false;
+  public static ?FsmContext $state = null;
+  public static ?object $demoStorage = null;
+
+  #[OnMessage(action: SceneAction::Enter)]
+  public function onEnter(object $event, FsmContext $state, object $demo_storage): void
+  {
+    self::$enterCalled = true;
+    self::$state = $state;
+    self::$demoStorage = $demo_storage;
+  }
+}
+
+#[SceneState('workflow_first_enter_action')]
+final class WorkflowFirstEnterActionScene extends Scene
+{
+  public static bool $enterCalled = false;
+  public static ?string $rawState = null;
+  public static ?FsmContext $state = null;
+
+  #[OnMessage(action: SceneAction::Enter)]
+  public function onEnter(?string $raw_state, FsmContext $state): void
+  {
+    self::$enterCalled = true;
+    self::$rawState = $raw_state;
+    self::$state = $state;
+  }
+}
+
+#[SceneState('variadic_only_enter_action')]
+final class VariadicOnlyEnterActionScene extends Scene
+{
+  public static bool $enterCalled = false;
+  public static bool $eventWasForwarded = false;
+  public static ?FsmContext $state = null;
+  public static ?object $demoStorage = null;
+
+  #[OnMessage(action: SceneAction::Enter)]
+  public function onEnter(mixed ...$kwargs): void
+  {
+    self::$enterCalled = true;
+    self::$eventWasForwarded = array_key_exists('event', $kwargs);
+    $state = $kwargs['state'] ?? null;
+    $demoStorage = $kwargs['demo_storage'] ?? null;
+    self::$state = $state instanceof FsmContext ? $state : null;
+    self::$demoStorage = is_object($demoStorage) ? $demoStorage : null;
+  }
+}
+
+/**
  * A scene whose `#[OnMessage(action: SceneAction::Enter)]` method registers
  * as a lifecycle action, not an ordinary handler.
  */
@@ -635,5 +1236,13 @@ final class CallbackQueryWithoutStateScene extends Scene
       resetHistoryOnEnter: $base->resetHistoryOnEnter,
       callbackQueryWithoutState: true,
     );
+  }
+}
+
+final class SceneRoutingRejectingFilter extends Filter
+{
+  public function __invoke(object $event, mixed ...$kwargs): bool
+  {
+    return false;
   }
 }

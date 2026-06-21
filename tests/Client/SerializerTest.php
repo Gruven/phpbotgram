@@ -10,9 +10,13 @@ use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
 use Gruven\PhpBotGram\Exceptions\ClientDecodeException;
 use Gruven\PhpBotGram\Tests\Support\MockedSession;
+use Gruven\PhpBotGram\Types\CallbackQuery;
 use Gruven\PhpBotGram\Types\Chat;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
+use Gruven\PhpBotGram\Types\InaccessibleMessage;
 use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Types\PollOptionAdded;
+use Gruven\PhpBotGram\Types\PollOptionDeleted;
 use Gruven\PhpBotGram\Types\RichBlockList;
 use Gruven\PhpBotGram\Types\RichBlockListItem;
 use Gruven\PhpBotGram\Types\RichBlockParagraph;
@@ -313,6 +317,75 @@ final class SerializerTest extends TestCase
     self::assertInstanceOf(RichBlockTable::class, $blocks[2]);
     self::assertInstanceOf(RichBlockTableCell::class, $blocks[2]->cells[0][0]);
     self::assertSame('Cell', $blocks[2]->cells[0][0]->text);
+  }
+
+  public function testLoadCallbackQueryHydratesMaybeInaccessibleMessageUnion(): void
+  {
+    $loaded = Serializer::load(CallbackQuery::class, [
+      'id' => 'callback-id',
+      'from' => ['id' => 5, 'is_bot' => false, 'first_name' => 'Ada'],
+      'chat_instance' => 'chat-instance',
+      'message' => [
+        'message_id' => 42,
+        'date' => 1_700_000_000,
+        'chat' => ['id' => 1, 'type' => 'private'],
+      ],
+      'data' => 'pressed',
+    ]);
+
+    self::assertInstanceOf(CallbackQuery::class, $loaded);
+    self::assertInstanceOf(Message::class, $loaded->message);
+    self::assertSame(42, $loaded->message->messageId);
+  }
+
+  public function testLoadCallbackQueryHydratesInaccessibleMessageFromDateZero(): void
+  {
+    $loaded = Serializer::load(CallbackQuery::class, [
+      'id' => 'callback-id',
+      'from' => ['id' => 5, 'is_bot' => false, 'first_name' => 'Ada'],
+      'chat_instance' => 'chat-instance',
+      'message' => [
+        'message_id' => 42,
+        'date' => 0,
+        'chat' => ['id' => 1, 'type' => 'private'],
+      ],
+      'data' => 'pressed',
+    ]);
+
+    self::assertInstanceOf(InaccessibleMessage::class, $loaded->message);
+    self::assertSame(42, $loaded->message->messageId);
+  }
+
+  public function testLoadPollOptionAddedHydratesPollMessageUnion(): void
+  {
+    $loaded = Serializer::load(PollOptionAdded::class, [
+      'option_persistent_id' => 'option-id',
+      'option_text' => 'Choice',
+      'poll_message' => [
+        'message_id' => 10,
+        'date' => 1_700_000_000,
+        'chat' => ['id' => 1, 'type' => 'private'],
+      ],
+    ]);
+
+    self::assertInstanceOf(Message::class, $loaded->pollMessage);
+    self::assertSame(10, $loaded->pollMessage->messageId);
+  }
+
+  public function testLoadPollOptionDeletedHydratesInaccessiblePollMessageUnion(): void
+  {
+    $loaded = Serializer::load(PollOptionDeleted::class, [
+      'option_persistent_id' => 'option-id',
+      'option_text' => 'Choice',
+      'poll_message' => [
+        'message_id' => 10,
+        'date' => 0,
+        'chat' => ['id' => 1, 'type' => 'private'],
+      ],
+    ]);
+
+    self::assertInstanceOf(InaccessibleMessage::class, $loaded->pollMessage);
+    self::assertSame(10, $loaded->pollMessage->messageId);
   }
 
   public function testLoadWrapsTypeErrorInClientDecodeException(): void

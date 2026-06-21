@@ -174,6 +174,18 @@ final class UnionRendererTest extends TestCase
     self::assertStringContainsString('Gruven\\PhpBotGram\\Client\\Serializer', $out);
   }
 
+  public function testRendersMaybeInaccessibleMessageStructuralUnion(): void
+  {
+    $out = $this->renderer()->renderMaybeInaccessibleMessage();
+
+    self::assertMatchesRegularExpression('/final\s+class\s+MaybeInaccessibleMessageUnion/', $out);
+    self::assertStringContainsString('Message::class,', $out);
+    self::assertStringContainsString('InaccessibleMessage::class,', $out);
+    self::assertStringContainsString("if ((\$payload['date'] ?? null) === 0)", $out);
+    self::assertStringContainsString('Serializer::load(InaccessibleMessage::class, $payload, $bot)', $out);
+    self::assertStringContainsString('Serializer::load(Message::class, $payload, $bot)', $out);
+  }
+
   public function testReturnTypeAndStaticMethodsHavePhpDoc(): void
   {
     $out = $this->render('BackgroundFill');

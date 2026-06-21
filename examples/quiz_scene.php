@@ -36,6 +36,7 @@ use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Dispatcher\Dispatcher;
 use Gruven\PhpBotGram\Dispatcher\PollingOptions;
 use Gruven\PhpBotGram\Filters\Command;
+use Gruven\PhpBotGram\Filters\Logic\InvertFilter;
 use Gruven\PhpBotGram\Fsm\After;
 use Gruven\PhpBotGram\Fsm\Scene;
 use Gruven\PhpBotGram\Fsm\Scene\Attribute\OnMessage;
@@ -67,11 +68,18 @@ final class QuestionOneScene extends Scene
     $event->answer('Question 1: What is 2 + 2?')->emit();
   }
 
+  #[OnMessage(filters: new Command('cancel'))]
+  public function onCancel(Message $event): void
+  {
+    $this->wizard->exit();
+    $event->answer('Quiz cancelled.')->emit();
+  }
+
   /**
    * Store the answer then move to question 2.
    * `new After(SceneAction::Enter, 'quiz:q2')` ≡ `After::goto('quiz:q2')`.
    */
-  #[OnMessage(after: new After(SceneAction::Enter, 'quiz:q2'))]
+  #[OnMessage(after: new After(SceneAction::Enter, 'quiz:q2'), filters: new InvertFilter(new Command('cancel')))]
   public function onAnswer(Message $event): void
   {
     $this->wizard->updateData(['q1' => $event->text ?? '']);
@@ -97,11 +105,18 @@ final class QuestionTwoScene extends Scene
     $event->answer('Question 2: What is the capital of France?')->emit();
   }
 
+  #[OnMessage(filters: new Command('cancel'))]
+  public function onCancel(Message $event): void
+  {
+    $this->wizard->exit();
+    $event->answer('Quiz cancelled.')->emit();
+  }
+
   /**
    * Store the answer, show results, then exit the FSM.
    * `new After(SceneAction::Exit)` ≡ `After::exit()`.
    */
-  #[OnMessage(after: new After(SceneAction::Exit))]
+  #[OnMessage(after: new After(SceneAction::Exit), filters: new InvertFilter(new Command('cancel')))]
   public function onAnswer(Message $event): void
   {
     $this->wizard->updateData(['q2' => $event->text ?? '']);
@@ -138,7 +153,7 @@ $dispatcher->message->register(
   filters: [new Command('start')],
 );
 
-// /cancel — exit FSM from anywhere.
+// /cancel outside scenes. Scene-level cancel handlers above handle active scenes.
 $dispatcher->message->register(
   static function (Message $event, ScenesManager $scenes): void {
     $scenes->close();

@@ -43,6 +43,8 @@ Registration goes through [`SceneRegistry`](https://api.phpbotgram.local/Gruven-
 
 The [`ScenesManager`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html) is the per-request handle injected into handlers as the `scenes` kwarg. Handlers call `$scenes->enter(MyScene::class)` to transition from a non-scene handler into a scene, or `$scenes->close()` to abandon any in-flight scene. The manager threads through the dispatcher's middleware chain alongside `FsmContext`, so a handler can declare both `function (Message $event, FsmContext $state, ScenesManager $scenes)` and receive both.
 
+When a user is already in a scene, router subtrees that contain scenes for the active state are tried before broad parent catch-all handlers. This lets active scene methods receive free-text replies even if the root dispatcher also has a fallback `message` handler, and it still works when scenes live under feature routers. Root handlers that should run only outside scenes can still add `new StateFilter(null)`. Commands that must work inside broad scenes should be registered as scene handlers or handled in middleware, so a scene catch-all cannot consume them first.
+
 The full wiring for the greeting scene above (from `examples/scene.php`):
 
 ```php
@@ -74,7 +76,9 @@ $dispatcher->runPolling(new PollingOptions(), $bot);
 
 ### Lifecycle hooks and multi-step wizards
 
-Lifecycle hooks let scenes react to transitions. Override `enter()`, `leave()`, `exit()`, `back()`, or `retake()` on the subclass; the framework calls them at the right transition point. The [`SceneAction`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-SceneAction.html) enum tags `#[On*]` attributes with `Enter` / `Leave` markers so a single method can serve as "the handler that fires *when the user enters this scene*", e.g. `#[OnMessage(action: SceneAction::Enter)]` on a `welcome` method. The default `enter()` / `leave()` / `exit()` / `back()` / `retake()` implementations return `null`; subclasses override only the hooks they need.
+Lifecycle hooks let scenes react to transitions through `#[On*]` attributes. The [`SceneAction`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-SceneAction.html) enum tags a method as "the handler that fires *when the user enters this scene*", e.g. `#[OnMessage(action: SceneAction::Enter)]` on a `welcome` method. Transition methods on [`SceneWizard`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-SceneWizard.html) dispatch those attribute actions; overriding `Scene::enter()` / `leave()` / `exit()` / `back()` is not the supported hook path.
+
+Scene methods receive the event plus only the workflow kwargs they declare by name. A strict method like `onEnter(Message $event)` is valid even when the dispatcher has workflow data such as `demo_storage`; add a `mixed ...$kwargs` tail only when the method intentionally wants the full bag.
 
 The `after:` parameter on `#[OnMessage]` specifies what the framework should do automatically after the handler returns. The [`After`](https://api.phpbotgram.local/Gruven-PhpBotGram-Fsm-After.html) value wraps a `SceneAction` constant and an optional target state. The following two-question quiz wires this up end-to-end (from `examples/quiz_scene.php`):
 
@@ -157,7 +161,7 @@ The history manager stores a deep-copy of FSM data per push, in memory inside th
 
 Scene method reflection runs once per subclass at registration time. The cost is small but real if you have many scenes. The `SceneConfig` cache is per-class, keyed by `static::class`, so repeated registrations of the same class (rare in production, common in tests) share the reflection result. Tests that spin up the scene registry many times benefit from this caching.
 
-`SceneAction` has `Enter`, `Leave`, `Exit`, and `Back` cases — there is no `Retake`. `Enter` and `Leave` are the lifecycle points you bind to with the `#[On*](action:)` marker; `Exit` and `Back` are driven imperatively via the wizard (`$wizard->exit()`, `$wizard->back()`). If you need logic on `back()`, override the scene's `back()` method directly.
+`SceneAction` has `Enter`, `Leave`, `Exit`, and `Back` cases — there is no `Retake`. `Enter` and `Leave` are the lifecycle points you bind to with the `#[On*](action:)` marker; `Exit` and `Back` are driven imperatively via the wizard (`$wizard->exit()`, `$wizard->back()`) and can also dispatch matching attribute actions.
 
 ## See also
 

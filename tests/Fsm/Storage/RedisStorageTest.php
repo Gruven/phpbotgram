@@ -234,6 +234,18 @@ final class RedisStorageTest extends TestCase
     );
   }
 
+  public function testDefaultKeyBuilderStoresSceneHistoryDestiny(): void
+  {
+    $storage = new RedisStorage($this->makeRedis());
+    $historyKey = $this->key->withDestiny('scenes_history');
+
+    $storage->setData($historyKey, ['history' => []]);
+
+    $setCalls = array_values(array_filter($this->calls, static fn($e) => $e['cmd'] === 'set'));
+    self::assertCount(1, $setCalls);
+    self::assertSame('fsm:100:42:scenes_history:data', (string)$setCalls[0]['args'][0]);
+  }
+
   public function testSetDataForwardsDataTtl(): void
   {
     $storage = new RedisStorage($this->makeRedis(), dataTtl: 600);

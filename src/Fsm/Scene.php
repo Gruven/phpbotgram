@@ -17,6 +17,8 @@ use Gruven\PhpBotGram\Fsm\Scene\ScenesManager;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
+use ReflectionNamedType;
+use ReflectionParameter;
 
 /**
  * Abstract base for all scene classes in the Scene subsystem.
@@ -47,17 +49,15 @@ use ReflectionMethod;
  *       }
  *   }
  *
- * ## Lifecycle stubs
+ * ## Lifecycle actions
  *
- * - `enter()` — invoked by the framework when the scene is entered.
- * - `leave()` — invoked when the scene is left via `SceneWizard::leave()`.
- * - `exit()`  — invoked when FSM is cleared via `SceneWizard::exit()`.
- * - `back()`  — invoked when rolling back via `SceneWizard::back()`.
- * - `retake()` — invoked when the scene is re-entered (e.g. loop iteration).
+ * Transition hooks are registered with `#[On*]` attributes and
+ * `SceneAction` values, for example
+ * `#[OnMessage(action: SceneAction::Enter)]`.
  *
- * Default implementations return `null`. Subclasses override as needed.
- * Returning `null` from a lifecycle hook is safe — the framework checks the
- * return type dynamically.
+ * The `enter()` / `leave()` / `exit()` / `back()` / `retake()` methods below
+ * are parity stubs for user code that wants to call them explicitly; framework
+ * transitions dispatch attribute actions through `SceneWizard`.
  *
  * ## SceneWizard
  *
@@ -93,13 +93,17 @@ abstract class Scene
   }
 
   // ------------------------------------------------------------------ //
-  // Lifecycle stubs — subclasses override as needed
+  // Lifecycle stubs — call explicitly from user code if needed
   // ------------------------------------------------------------------ //
 
   /**
-   * Invoked by the framework when this scene is entered.
+   * Parity stub for custom scene code.
    *
-   * Mirrors `Scene.enter()` (`aiogram/fsm/scene.py:400-404`).
+   * Framework transitions dispatch `SceneAction::Enter` attribute handlers via
+   * `SceneWizard`; they do not call this method directly.
+   *
+   * Mirrors `Scene.enter()` (`aiogram/fsm/scene.py:400-404`) as an overridable
+   * method user code may call explicitly.
    * Default: returns `null`. Subclasses may return `mixed`.
    */
   public function enter(mixed ...$kwargs): mixed
@@ -108,7 +112,10 @@ abstract class Scene
   }
 
   /**
-   * Invoked when the scene is left via `SceneWizard::leave()`.
+   * Parity stub for custom scene code.
+   *
+   * Framework transitions dispatch `SceneAction::Leave` attribute handlers via
+   * `SceneWizard`; they do not call this method directly.
    *
    * Mirrors `Scene.leave()` (`aiogram/fsm/scene.py:406-408`).
    * Default: returns `null`.
@@ -119,7 +126,10 @@ abstract class Scene
   }
 
   /**
-   * Invoked when FSM is cleared via `SceneWizard::exit()`.
+   * Parity stub for custom scene code.
+   *
+   * Framework transitions dispatch `SceneAction::Exit` attribute handlers via
+   * `SceneWizard`; they do not call this method directly.
    *
    * Mirrors `Scene.exit()` (`aiogram/fsm/scene.py:410-412`).
    * Default: returns `null`.
@@ -130,7 +140,10 @@ abstract class Scene
   }
 
   /**
-   * Invoked when rolling back via `SceneWizard::back()`.
+   * Parity stub for custom scene code.
+   *
+   * Framework transitions dispatch `SceneAction::Back` attribute handlers via
+   * `SceneWizard`; they do not call this method directly.
    *
    * Mirrors `Scene.back()` (`aiogram/fsm/scene.py:414-416`).
    * Default: returns `null`.
@@ -141,7 +154,7 @@ abstract class Scene
   }
 
   /**
-   * Invoked when the scene is re-entered (e.g., after a looping step).
+   * Parity stub for custom scene code.
    *
    * No direct upstream equivalent — added for the PHP port's "retake"
    * concept used in wizard-style multi-step scenes.
@@ -175,7 +188,7 @@ abstract class Scene
       $name = "Scene '" . static::class . "' for state {$state}";
     }
 
-    $router = new Router($name);
+    $router = (new Router($name))->preferWhenStateActive($config->state);
     static::addToRouter($router);
 
     return $router;
@@ -441,8 +454,10 @@ abstract class Scene
         // Build the unbound callable: a closure that, when invoked with
         // ($scene, $event, ...$kwargs), calls $method on $scene.
         $methodName = $method->getName();
-        $handler = static function (Scene $scene, object $event, mixed ...$kwargs) use ($methodName): mixed {
-          return $scene->{$methodName}($event, ...$kwargs);
+        $handler = static function (Scene $scene, object $event, mixed ...$kwargs) use ($method): mixed {
+          $methodName = $method->getName();
+
+          return $scene->{$methodName}(...self::prepareSceneMethodArguments($method, $event, $kwargs));
         };
 
         if ($attr->action === null) {
@@ -472,5 +487,86 @@ abstract class Scene
       handlers: $handlers,
       actions: $actions,
     );
+  }
+
+  /**
+   * Bind the event and dispatcher kwargs to a reflected scene method.
+   *
+   * Scene methods are user handlers, so they should receive the same kwarg
+   * filtering ergonomics as normal dispatcher handlers: strict signatures get
+   * only declared parameter names, while a variadic tail opts in to the full
+   * workflow-data bag.
+   *
+   * @param array<int|string, mixed> $kwargs
+   *
+   * @return array<int|string, mixed>
+   */
+  private static function prepareSceneMethodArguments(ReflectionMethod $method, object $event, array $kwargs): array
+  {
+    $namedKwargs = array_filter($kwargs, 'is_string', ARRAY_FILTER_USE_KEY);
+    $namedKwargs = ['event' => $event, ...$namedKwargs];
+    $params = $method->getParameters();
+
+    if ($params === []) {
+      return [];
+    }
+
+    $first = $params[0];
+    $args = [];
+
+    if (self::sceneParameterIsPositionalEvent($first, $event)) {
+      $args[] = $event;
+      unset($namedKwargs[$first->getName()]);
+      $params = \array_slice($params, 1);
+    }
+
+    $acceptsVariadic = false;
+    $acceptedNames = [];
+
+    foreach ($params as $param) {
+      if ($param->isVariadic()) {
+        $acceptsVariadic = true;
+
+        continue;
+      }
+
+      $acceptedNames[$param->getName()] = true;
+    }
+
+    if ($acceptsVariadic) {
+      return [...$args, ...$namedKwargs];
+    }
+
+    return [...$args, ...array_intersect_key($namedKwargs, $acceptedNames)];
+  }
+
+  private static function sceneParameterIsPositionalEvent(ReflectionParameter $parameter, object $event): bool
+  {
+    if ($parameter->isVariadic()) {
+      return false;
+    }
+
+    $type = $parameter->getType();
+
+    if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
+      return is_a($event, $type->getName());
+    }
+
+    if ($type instanceof ReflectionNamedType && $type->getName() === 'object') {
+      return self::sceneParameterNameLooksLikeEvent($parameter);
+    }
+
+    if ($type === null) {
+      return self::sceneParameterNameLooksLikeEvent($parameter);
+    }
+
+    return false;
+  }
+
+  private static function sceneParameterNameLooksLikeEvent(ReflectionParameter $parameter): bool
+  {
+    $name = $parameter->getName();
+
+    return $name === 'event' || $name === 'message' || str_ends_with($name, 'Event');
   }
 }

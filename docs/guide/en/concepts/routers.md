@@ -40,7 +40,9 @@ Routers compose via `includeRouter()`. The parent stores the child in `$subRoute
 
 ### Depth-first dispatch
 
-Dispatch is a depth-first walk. `Router::propagateEvent` first tries its own observer's handlers. If every handler returns the `UnhandledSentinel` (or no handler is registered), it recurses into each child router in registration order. The first router whose tree claims the event short-circuits the walk.
+Dispatch is a depth-first walk. `Router::propagateEvent` normally tries its own observer's handlers first. If every handler returns the `UnhandledSentinel` (or no handler is registered), it recurses into each child router in registration order. The first router whose tree claims the event short-circuits the walk.
+
+Scene routers are the exception. Routers created by `Scene::asRouter()` are marked as active-state priority routers for their declared scene state; when the dispatch kwargs contain a non-null `raw_state`, child subtrees that contain a scene router for that state are tried before the parent observer. This prevents broad parent catch-all handlers from consuming messages that belong to the active scene, including nested layouts such as `root -> feature -> scene`. The subtree is still entered through normal `propagateEvent()` calls, so its outer middleware wraps once around that pass. When there is no active FSM state, or for child subtrees without a scene matching the active state, the parent-local-first order remains unchanged.
 
 The walk gives parents a chance to filter, transform, or short-circuit before children see the event — useful for cross-cutting concerns like auth gates or per-tenant scoping. The `Router::propagateEvent` method also owns the wrap-once invariant: the observer's outer middleware chain composes around the recursive walk exactly once, not once per child, so a deep router tree doesn't re-apply the same middleware at every level.
 
@@ -54,7 +56,7 @@ Lifecycle hooks live on the router via `startup` and `shutdown` — typed as [`E
 
 Routers are not lazy. Every router constructs all 26 observers (25 update types + `errors`) at instantiation, even if you only register a `message` handler. The cost is a few dozen object allocations per router, paid once at boot — negligible against the dispatch hot path but worth knowing if you build many short-lived routers (e.g. one router per request in some unusual testing pattern). For production shapes, where you boot a handful of routers once at startup, the overhead is invisible.
 
-The depth-first walk runs in registration order. Re-ordering child routers changes which one claims an event when multiple could. There is no priority field; the first matching handler in the first matching router wins. If you find yourself wanting priority, you probably want to merge those routers into one with explicit filters. Aiogram has the same limitation and the same workaround — the upstream community discussed adding priority and decided against it because it makes the dispatch behaviour harder to reason about.
+The depth-first walk runs in registration order after the scene-priority subtree pass. Re-ordering child routers changes which one claims an event when multiple could. For non-scene priority, prefer explicit filters or merge the handlers into one router so the ordering is visible at the observer.
 
 `Router` is not `final`. `Dispatcher` extends it to add polling entry points, and tests subclass it to add instrumentation. User code generally should not — composition via `includeRouter` is the expected extension point. We do not enforce final-ness because the test base subclass is the canonical seam; users who reach for inheritance instead of composition are choosing the harder path deliberately.
 

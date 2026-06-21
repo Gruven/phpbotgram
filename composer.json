@@ -61,7 +61,10 @@
 		}
 	},
 	"scripts" : {
-		"test" : "phpunit",
+		"test" : [
+			"Composer\\Config::disableProcessTimeout",
+			"phpunit"
+		],
 		"stan" : "phpstan analyze --memory-limit=1G",
 		"lint" : "php-cs-fixer fix --dry-run --diff",
 		"fix" : "php-cs-fixer fix",

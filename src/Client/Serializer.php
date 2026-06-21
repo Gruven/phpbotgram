@@ -188,7 +188,7 @@ final class Serializer
 
       if (is_subclass_of($typeName, TelegramObject::class) && is_array($value)) {
         /** @var class-string<TelegramObject> $typeName */
-        return self::load($typeName, self::toStringKeyedArray($value), $bot);
+        return self::loadTelegramObjectValue($typeName, $value, $bot);
       }
     }
 

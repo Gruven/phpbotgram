@@ -195,15 +195,23 @@ final class Pipeline
     //
     // Discriminator-tagged unions get a `<X>Union::resolve()` class; every
     // union parent (discriminated or structural) gets a `<X>Interface`
-    // marker. `UnionDetector` skips structural unions (`InputMessageContent`,
-    // `MaybeInaccessibleMessage`) because resolve() can't dispatch them, but
-    // their interface is still load-bearing for the property-typing layer.
+    // marker when shadow memberships require it. `UnionDetector` skips
+    // structural unions (`InputMessageContent`, `MaybeInaccessibleMessage`)
+    // because most cannot dispatch through one shared discriminator. The
+    // `MaybeInaccessibleMessage` date-zero shape is the one structural union
+    // we can resolve safely, so it is emitted by a dedicated renderer path.
     $unionPlans = array_values($unionsByParent);
     usort($unionPlans, static fn(UnionPlan $a, UnionPlan $b): int => strcmp($a->parentName, $b->parentName));
 
     foreach ($unionPlans as $plan) {
       $src = $unionRenderer->render($plan);
       $rel = 'Types/' . $plan->parentName . 'Union.php';
+      $this->record($emitter->emit($rel, $src), $rel, $written, $skipped);
+    }
+
+    if (isset($typesByName['MaybeInaccessibleMessage'])) {
+      $src = $unionRenderer->renderMaybeInaccessibleMessage();
+      $rel = 'Types/MaybeInaccessibleMessageUnion.php';
       $this->record($emitter->emit($rel, $src), $rel, $written, $skipped);
     }
 
