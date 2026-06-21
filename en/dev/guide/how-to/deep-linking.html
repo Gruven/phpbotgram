@@ -445,8 +445,12 @@ $dispatcher-&gt;message-&gt;register(
  (or a custom encoder) to base64 arbitrary payloads &mdash; raw payloads are limited to <code>[A-Za-z0-9_-]</code>
  and 64 characters. On receipt, the <code>CommandObject</code>
  injected by <code>CommandStart</code>
- carries the unencoded payload in <code>$command-&gt;args</code>
-.</p>
+ carries the raw payload in <code>$command-&gt;args</code>
+. If you used <code>encode: true</code>
+, decode it explicitly with <a href="classes/Gruven-PhpBotGram-Utils-Payload.html"><code>Payload::decode</code></a>.</p>
+
+            
+    <p>The full runnable version is <a href="https://github.com/Gruven/phpbotgram/blob/master/examples/deep_linking.php"><code>examples/deep_linking.php</code></a>.</p>
 
     </section>
 

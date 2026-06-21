@@ -418,23 +418,42 @@
             <section class="section " id="solution">
             <h2>Solution</h2>
 
+            <section class="section " id="default-post-mode-answer">
+            <h3>Default post-mode answer</h3>
+
             <pre><code class="language-php">use Gruven\PhpBotGram\Types\CallbackQuery;
-use Gruven\PhpBotGram\Utils\CallbackAnswer\CallbackAnswer;
+use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Utils\CallbackAnswer\CallbackAnswerMiddleware;
 
 // Install once on the dispatcher (or any router).
-$dispatcher-&gt;callbackQuery-&gt;middleware(new CallbackAnswerMiddleware());
+$dispatcher-&gt;callbackQuery-&gt;innerMiddleware(new CallbackAnswerMiddleware());
 
 // Normal handler &mdash; no manual answer call needed.
 $dispatcher-&gt;callbackQuery-&gt;register(static function (CallbackQuery $event): void {
-    $event-&gt;message?-&gt;editText('Order confirmed')-&gt;emit();
-});
+    if (!$event-&gt;message instanceof Message) {
+        return;
+    }
 
-// Per-handler override: show a popup BEFORE the handler runs.
+    $event-&gt;message-&gt;editText('Order confirmed')-&gt;emit();
+});
+</code></pre>
+
+    </section>
+
+            <section class="section " id="per-handler-pre-mode-answer">
+            <h3>Per-handler pre-mode answer</h3>
+
+            
+    <p>Use this handler instead of the catch-all post-mode handler above, or add disjoint filters when both handlers live on the same observer.</p>
+
+            <pre><code class="language-php">use Gruven\PhpBotGram\Types\CallbackQuery;
+use Gruven\PhpBotGram\Utils\CallbackAnswer\CallbackAnswerMiddleware;
+
+$dispatcher-&gt;callbackQuery-&gt;innerMiddleware(new CallbackAnswerMiddleware());
+
 $dispatcher-&gt;callbackQuery-&gt;register(
-    static function (CallbackQuery $event, CallbackAnswer $callback_answer): void {
+    static function (CallbackQuery $event): void {
         // Run slow work; the user already saw "Processing&hellip;".
-        $callback_answer-&gt;disabled = true;  // skip the auto-answer
     },
     flags: ['callback_answer' =&gt; ['pre' =&gt; true, 'text' =&gt; 'Processing&hellip;']],
 );
@@ -443,6 +462,11 @@ $dispatcher-&gt;callbackQuery-&gt;register(
             
     <p><a href="classes/Gruven-PhpBotGram-Utils-CallbackAnswer-CallbackAnswerMiddleware.html"><code>CallbackAnswerMiddleware</code></a> injects a <a href="classes/Gruven-PhpBotGram-Utils-CallbackAnswer-CallbackAnswer.html"><code>CallbackAnswer</code></a> DTO into every handler. Post-mode (default) answers after the handler returns or throws; pre-mode answers first and treats the handler as "in flight". Per-handler <code>flags: ['callback_answer' =&gt; [&hellip;]]</code>
  override the defaults.</p>
+
+            
+    <p>The full runnable version is <a href="https://github.com/Gruven/phpbotgram/blob/master/examples/inline_keyboard.php"><code>examples/inline_keyboard.php</code></a>.</p>
+
+    </section>
 
     </section>
 
@@ -455,6 +479,8 @@ $dispatcher-&gt;callbackQuery-&gt;register(
     <li class="dash">Setting <code>disabled = true</code>
  makes you responsible for calling <code>answerCallbackQuery</code>
  yourself. Forgetting both leaves the button spinning.</li>
+
+    <li class="dash">Pre-mode answers before the handler runs, so answer fields are frozen by the time handler code sees the injected DTO. Configure pre-mode text/alert/cache via flags.</li>
 
     <li class="dash">Pre-mode and post-mode are mutually exclusive per handler &mdash; the middleware never double-answers.</li>
 
