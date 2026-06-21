@@ -371,23 +371,25 @@ final class RedisEventIsolationTest extends TestCase
       $this->markTestSkipped('PHPBOTGRAM_TEST_REDIS_DSN not set; skipping live redis tests');
     }
 
-    $storage = RedisStorage::fromUrl((string)$dsn);
-    $isolation = new RedisEventIsolation(\Amp\Redis\createRedisClient((string)$dsn));
+    $this->runAsync(function () use ($dsn): void {
+      $storage = RedisStorage::fromUrl((string)$dsn);
+      $isolation = new RedisEventIsolation(\Amp\Redis\createRedisClient((string)$dsn));
 
-    try {
-      // Acquire the lock.
-      $lock = $isolation->lock($this->key);
-      self::assertInstanceOf(Lock::class, $lock);
+      try {
+        // Acquire the lock.
+        $lock = $isolation->lock($this->key);
+        self::assertInstanceOf(Lock::class, $lock);
 
-      // Must be able to release cleanly.
-      $lock->release();
+        // Must be able to release cleanly.
+        $lock->release();
 
-      // After release, re-acquire must succeed.
-      $lock2 = $isolation->lock($this->key);
-      $lock2->release();
-    } finally {
-      $storage->close();
-      $isolation->close();
-    }
+        // After release, re-acquire must succeed.
+        $lock2 = $isolation->lock($this->key);
+        $lock2->release();
+      } finally {
+        $storage->close();
+        $isolation->close();
+      }
+    });
   }
 }

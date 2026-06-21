@@ -14,6 +14,7 @@ use Gruven\PhpBotGram\Fsm\Storage\DefaultKeyBuilder;
 use Gruven\PhpBotGram\Fsm\Storage\RedisStorage;
 use Gruven\PhpBotGram\Fsm\Storage\StorageKey;
 use Gruven\PhpBotGram\Fsm\Storage\StoragePart;
+use Gruven\PhpBotGram\Tests\Support\RunAsyncTrait;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -35,6 +36,8 @@ use PHPUnit\Framework\TestCase;
  */
 final class RedisStorageTest extends TestCase
 {
+  use RunAsyncTrait;
+
   private StorageKey $key;
 
   /** @var list<array{cmd: string, args: array<float|int|string>}> */
@@ -352,20 +355,22 @@ final class RedisStorageTest extends TestCase
       $this->markTestSkipped('PHPBOTGRAM_TEST_REDIS_DSN not set; skipping live redis tests');
     }
 
-    $storage = RedisStorage::fromUrl((string)$dsn);
-    $key = new StorageKey(botId: 999, chatId: 888, userId: 777);
+    $this->runAsync(static function () use ($dsn): void {
+      $storage = RedisStorage::fromUrl((string)$dsn);
+      $key = new StorageKey(botId: 999, chatId: 888, userId: 777);
 
-    try {
-      $storage->setState($key, 'integration:state');
-      self::assertSame('integration:state', $storage->getState($key));
+      try {
+        $storage->setState($key, 'integration:state');
+        self::assertSame('integration:state', $storage->getState($key));
 
-      $storage->setState($key, null);
-      self::assertNull($storage->getState($key));
-    } finally {
-      $storage->setState($key, null);
-      $storage->setData($key, []);
-      $storage->close();
-    }
+        $storage->setState($key, null);
+        self::assertNull($storage->getState($key));
+      } finally {
+        $storage->setState($key, null);
+        $storage->setData($key, []);
+        $storage->close();
+      }
+    });
   }
 
   public function testIntegrationDataRoundTrip(): void
@@ -376,19 +381,21 @@ final class RedisStorageTest extends TestCase
       $this->markTestSkipped('PHPBOTGRAM_TEST_REDIS_DSN not set; skipping live redis tests');
     }
 
-    $storage = RedisStorage::fromUrl((string)$dsn);
-    $key = new StorageKey(botId: 999, chatId: 888, userId: 777);
+    $this->runAsync(static function () use ($dsn): void {
+      $storage = RedisStorage::fromUrl((string)$dsn);
+      $key = new StorageKey(botId: 999, chatId: 888, userId: 777);
 
-    try {
-      $storage->setData($key, ['foo' => 'bar', 'num' => 42]);
-      self::assertSame(['foo' => 'bar', 'num' => 42], $storage->getData($key));
+      try {
+        $storage->setData($key, ['foo' => 'bar', 'num' => 42]);
+        self::assertSame(['foo' => 'bar', 'num' => 42], $storage->getData($key));
 
-      $storage->setData($key, []);
-      self::assertSame([], $storage->getData($key));
-    } finally {
-      $storage->setState($key, null);
-      $storage->setData($key, []);
-      $storage->close();
-    }
+        $storage->setData($key, []);
+        self::assertSame([], $storage->getData($key));
+      } finally {
+        $storage->setState($key, null);
+        $storage->setData($key, []);
+        $storage->close();
+      }
+    });
   }
 }
