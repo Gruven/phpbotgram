@@ -26,7 +26,9 @@ $dispatcher->message->register(
 );
 ```
 
-[`DeepLinking::createStartLink`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-DeepLinking.html) caches the bot's username via a `WeakMap` so subsequent calls don't re-hit `getMe`. Pass `encode: true` (or a custom encoder) to base64 arbitrary payloads — raw payloads are limited to `[A-Za-z0-9_-]` and 64 characters. On receipt, the `CommandObject` injected by `CommandStart` carries the unencoded payload in `$command->args`.
+[`DeepLinking::createStartLink`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-DeepLinking.html) caches the bot's username via a `WeakMap` so subsequent calls don't re-hit `getMe`. Pass `encode: true` (or a custom encoder) to base64 arbitrary payloads — raw payloads are limited to `[A-Za-z0-9_-]` and 64 characters. On receipt, the `CommandObject` injected by `CommandStart` carries the raw payload in `$command->args`. If you used `encode: true`, decode it explicitly with [`Payload::decode`](https://api.phpbotgram.local/Gruven-PhpBotGram-Utils-Payload.html).
+
+The full runnable version is [`examples/deep_linking.php`](https://github.com/Gruven/phpbotgram/blob/master/examples/deep_linking.php).
 
 ## Pitfalls
 

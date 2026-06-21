@@ -36,12 +36,14 @@ use Gruven\PhpBotGram\Types\Message;
 // Download what the user sent.
 $dispatcher->message->register(static function (Message $event, Bot $bot): void {
     if ($event->document !== null) {
-        $bot->download($event->document, destination: '/tmp/in.bin');
+        $bot->download($event->document->fileId, destination: '/tmp/in.bin');
     }
 });
 ```
 
-[`Bot::downloadFile`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-BotShortcuts.html) streams the response body — pass a path string to write to disk, a writable resource to fork the stream, or `null` to receive the full content as a string. `Bot::download` accepts any `Downloadable` (`Document`, `Photo`, `Voice`…) or a raw `file_id` and resolves it via `getFile` first.
+[`Bot::downloadFile`](https://api.phpbotgram.local/Gruven-PhpBotGram-Client-BotShortcuts.html) streams the response body — pass a path string to write to disk, a writable resource to fork the stream, or `null` to receive the full content as a string. `Bot::download` accepts a raw `file_id` and resolves it via `getFile` first.
+
+The full runnable download version is [`examples/file_download.php`](https://github.com/Gruven/phpbotgram/blob/master/examples/file_download.php).
 
 ## Pitfalls
 

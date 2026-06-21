@@ -77,6 +77,9 @@ All examples are runnable and self-contained. Set `BOT_TOKEN` before launching (
 | `examples/multibot.php` | One `Dispatcher` driving several `Bot` instances |
 | `examples/without_dispatcher.php` | Raw `getUpdates` loop bypassing the dispatcher |
 | `examples/stars_invoice.php` | Telegram Stars `sendInvoice` + `PreCheckoutQuery` flow |
+| `examples/inline_keyboard.php` | Inline keyboard builder + typed `CallbackData` + callback auto-answer |
+| `examples/deep_linking.php` | Deep-link `/start` payload generation and handling |
+| `examples/file_download.php` | Downloading user-sent documents/photos via `Bot::download()` |
 
 ## Core concepts
 
