@@ -33,5 +33,5 @@ jobs:
       - run: vendor/bin/phpstan analyze --no-progress --memory-limit=512M
       - run: vendor/bin/phpunit --coverage-text
         env:
-          PHPBOTGRAM_TEST_REDIS_DSN: redis://localhost:6379
-          PHPBOTGRAM_TEST_MONGO_DSN: mongodb://localhost:27017
+          PHPBOTGRAM_TEST_REDIS_DSN: redis://127.0.0.1:6379
+          PHPBOTGRAM_TEST_MONGO_DSN: mongodb://127.0.0.1:27017
