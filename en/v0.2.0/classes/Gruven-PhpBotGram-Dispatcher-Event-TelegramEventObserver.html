@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png"/>
+    <link rel="icon" href="images/favicon.ico"/>
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button" />
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"/>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"/>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled />
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button" />
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show &quot;typing…&quot; while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                <section>
+                                        <ul class="phpdocumentor-breadcrumbs">
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven.html">Gruven</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram.html">PhpBotGram</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram-dispatcher.html">Dispatcher</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram-dispatcher-event.html">Event</a></li>
+    </ul>
+
+    <article class="phpdocumentor-element -class">
+        <h2 class="phpdocumentor-content__title">
+    TelegramEventObserver
+
+    
+            <div class="phpdocumentor-element__package">
+            in package
+            <ul class="phpdocumentor-breadcrumbs">
+                                    <li class="phpdocumentor-breadcrumb"><a href="packages/Application.html">Application</a></li>
+                            </ul>
+        </div>
+    
+    
+    </h2>
+
+<div class="phpdocumentor-label-line">
+
+    <div class="phpdocumentor-label phpdocumentor-label--success"><span>Final</span><span>Yes</span></div>
+
+
+</div>
+
+        <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">65</span>
+
+    </aside>
+
+            <p class="phpdocumentor-summary">Routing observer for a single Telegram update type — port of
+`aiogram.dispatcher.event.telegram.TelegramEventObserver`.</p>
+
+
+    <section class="phpdocumentor-description"><p>Each <code class="prettyprint">Router</code> owns one of these per Bot API event key (<code class="prettyprint">message</code>,
+<code class="prettyprint">callback_query</code>, <code class="prettyprint">inline_query</code>, …). It tracks two collections:</p>
+<ul>
+<li><strong>Handlers</strong> — registered callbacks, each wrapped in a <code class="prettyprint">HandlerObject</code>
+that carries its filter pipeline and flags. Dispatched in registration
+order; the <strong>first</strong> handler whose filters all accept claims the event
+and its return value is the trigger's result.</li>
+<li><strong>Global filters</strong> — predicates applied <strong>before</strong> any handler dispatch.
+A single rejection (<code class="prettyprint">false</code> / <code class="prettyprint">null</code> / <code class="prettyprint">[]</code>) short-circuits the entire
+chain to <code class="prettyprint">RejectedSentinel</code> — no handlers are tried. Used by scenes to
+scope every handler on the observer to the current scene state.</li>
+</ul>
+<p>The <code class="prettyprint">register()</code> signature is a deliberate deviation from upstream's
+Python form <code class="prettyprint">register(callback, *filters, flags=None)</code>. PHP cannot place
+a named optional parameter after a variadic, and we want the friendly
+call-site <code class="prettyprint">register($cb, [$f1, $f2], ['admin_only' =&gt; true])</code> to work
+without quirky <code class="prettyprint">null</code>-padding. Filters become a <code class="prettyprint">list&lt;Closure&gt;</code> and
+flags become an <code class="prettyprint">array&lt;string, mixed&gt;</code>; both are optional and positional.</p>
+<p><code class="prettyprint">__invoke()</code> keeps the decorator-factory ergonomics: passed a callback
+it registers eagerly, otherwise it returns a registration closure. PHP
+lacks Python decorator syntax, but this two-shape <code class="prettyprint">__invoke</code> lets us
+support both <code class="prettyprint">$obs($cb, flags: [...])</code> and the factory form
+<code class="prettyprint">$register = $obs(filters: [...]); $register($cb);</code>.</p>
+<p>The flags-merge semantics match upstream <code class="prettyprint">flags = {**extract_flags_from_object(cb), **flags}</code>:
+attribute / WeakMap-attached flags are merged in first, then the manual
+<code class="prettyprint">$flags</code> argument overlays them last (manual wins on key collision).</p>
+<p><strong>Middleware integration</strong> — the observer owns two <code class="prettyprint">MiddlewareManager</code>
+collections that compose around the dispatch primitive:</p>
+<ul>
+<li><code class="prettyprint">$outerMiddleware</code> wraps the <strong>entire observer</strong> (global filter chain
+plus the handler iteration) AND, when the observer is owned by a
+<code class="prettyprint">Router</code>, the sub-router walk too — wrapping lives in
+<code class="prettyprint">Router::propagateEvent</code> (Fix I2). A bare <code class="prettyprint">$observer-&gt;trigger()</code> call
+skips the outer wrap (matches upstream <code class="prettyprint">TelegramEventObserver.trigger</code>).</li>
+<li><code class="prettyprint">$innerMiddleware</code> wraps <strong>each individual handler invocation</strong>
+(<code class="prettyprint">HandlerObject::call</code>). This is where per-handler concerns like
+throttling, auth gates, and cache hits attach.</li>
+</ul>
+<p>The split mirrors upstream's <code class="prettyprint">outer_middlewares</code> / <code class="prettyprint">middlewares</code> lists on
+<code class="prettyprint">TelegramEventObserver</code> at <code class="prettyprint">aiogram/dispatcher/event/telegram.py:23-31</code>.
+The two managers are independent — registering on one does NOT register
+on the other — and the outer chain has access to the kwargs the global
+filters would see, while the inner chain runs only after the per-handler
+filter check accepts.</p>
+</section>
+
+
+
+    
+    
+<h3 id="toc">
+    Table of Contents
+    <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#toc" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h3>
+
+
+
+
+
+
+
+
+
+<h4 id="toc-properties">
+    Properties
+    <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#toc-properties" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_eventName">$eventName</a>
+    <span>
+                        &nbsp;: string            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_filters">$filters</a>
+    <span>
+                        &nbsp;: array&lt;int, <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-FilterObject.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\FilterObject">FilterObject</abbr></a>&gt;            </span>
+</dt>
+<dd>Global filters applied before any handler dispatch — every filter must
+accept (truthy result, i.e. `!$result === false`) for the handler chain
+to be considered. Append via `filter()`.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_handlers">$handlers</a>
+    <span>
+                        &nbsp;: array&lt;int, <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-HandlerObject.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\HandlerObject">HandlerObject</abbr></a>&gt;            </span>
+</dt>
+<dd>Registered handlers in declaration order. Exposed read-only so the
+dispatcher / introspection code can iterate; mutation goes through
+`register()` / `clear()`.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_innerMiddleware">$innerMiddleware</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-MiddlewareManager.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager">MiddlewareManager</abbr></a>            </span>
+</dt>
+<dd>Inner middleware chain — wraps each individual handler invocation.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_outerMiddleware">$outerMiddleware</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-MiddlewareManager.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager">MiddlewareManager</abbr></a>            </span>
+</dt>
+<dd>Outer middleware chain — wraps the entire observer (global filters +
+handler iteration) AND, when this observer is owned by a `Router`, the
+`Router::propagateEvent` sub-router walk (Fix I2). Registered via
+`outerMiddleware()`. Note: the chain is applied by
+`Router::propagateEvent`, NOT by `trigger()` — `trigger()` is the raw
+dispatch primitive (upstream parity).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_router">$router</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>|null            </span>
+</dt>
+<dd>Back-reference to the owning `Router`. `null` when the observer is
+constructed standalone (legitimate for unit tests that don&#039;t need
+chain-head inheritance). Populated by `Router::__construct` for every
+observer in the schema-derived map so `resolveMiddlewares()` can
+walk the ancestor chain via `Router::$parentRouter`.</dd>
+
+    </dl>
+
+<h4 id="toc-methods">
+    Methods
+    <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#toc-methods" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method___construct">__construct()</a>
+    <span>
+                                &nbsp;: mixed    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method___invoke">__invoke()</a>
+    <span>
+                                &nbsp;: callable(<abbr title="\Closure">Closure</abbr>): <abbr title="\Closure">Closure</abbr>    </span>
+</dt>
+<dd>Dual-shape decorator entrypoint mirroring upstream&#039;s `__call__`.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_clear">clear()</a>
+    <span>
+                                &nbsp;: void    </span>
+</dt>
+<dd>Drop every registered handler and global filter. Intended for test
+isolation and router rebuilds — production routing never calls this.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_filter">filter()</a>
+    <span>
+                                &nbsp;: void    </span>
+</dt>
+<dd>Append global filters that gate every handler on this observer.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_innerMiddleware">innerMiddleware()</a>
+    <span>
+                                &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a>    </span>
+</dt>
+<dd>Append a middleware to the **inner** chain (wraps each handler call).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_outerMiddleware">outerMiddleware()</a>
+    <span>
+                                &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a>    </span>
+</dt>
+<dd>Append a middleware to the **outer** chain (wraps the whole observer).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_register">register()</a>
+    <span>
+                                &nbsp;: <abbr title="\Closure">Closure</abbr>    </span>
+</dt>
+<dd>Register a handler with optional per-handler filters and flag metadata.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_resolveMiddlewares">resolveMiddlewares()</a>
+    <span>
+                                &nbsp;: array&lt;int, <a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a>&gt;    </span>
+</dt>
+<dd>Resolve every inner-middleware instance that should wrap each
+handler invocation on this observer — self&#039;s own plus every ancestor
+router&#039;s matching observer&#039;s inner middleware. Mirrors upstream&#039;s
+`_resolve_middlewares` (`telegram.py:49-56`):</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_trigger">trigger()</a>
+    <span>
+                                &nbsp;: mixed    </span>
+</dt>
+<dd>Raw dispatch entry: runs global filters then iterates handlers (with
+per-handler filter check and inner-middleware wrapping). Does NOT
+apply outer middleware — that responsibility lives in
+`Router::propagateEvent`, which wraps the full local-observer + sub-
+router dispatch with `outerMiddleware-&gt;wrap()` once per propagation.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_triggerCore">triggerCore()</a>
+    <span>
+                                &nbsp;: mixed    </span>
+</dt>
+<dd>The actual dispatch primitive (post-outer-middleware): runs global
+filters then iterates handlers with per-handler filter check and
+inner-middleware wrapping.</dd>
+
+    </dl>
+
+
+
+        
+
+        
+    <section class="phpdocumentor-properties">
+        <h3 class="phpdocumentor-elements__header" id="properties">
+            Properties
+            <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#properties" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_eventName">
+        $eventName
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_eventName" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">127</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type">string</span>
+    <span class="phpdocumentor-signature__name">$eventName</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_filters">
+        $filters
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_filters" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                                            </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">83</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Global filters applied before any handler dispatch — every filter must
+accept (truthy result, i.e. `!$result === false`) for the handler chain
+to be considered. Append via `filter()`.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+            <span class="phpdocumentor-signature__visibility">public private(set)</span>
+            <span class="phpdocumentor-signature__type">array&lt;int, <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-FilterObject.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\FilterObject">FilterObject</abbr></a>&gt;</span>
+    <span class="phpdocumentor-signature__name">$filters</span>
+     = <span class="phpdocumentor-signature__default-value">[]</span></code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_handlers">
+        $handlers
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_handlers" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                                            </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">74</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Registered handlers in declaration order. Exposed read-only so the
+dispatcher / introspection code can iterate; mutation goes through
+`register()` / `clear()`.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+            <span class="phpdocumentor-signature__visibility">public private(set)</span>
+            <span class="phpdocumentor-signature__type">array&lt;int, <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-HandlerObject.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\HandlerObject">HandlerObject</abbr></a>&gt;</span>
+    <span class="phpdocumentor-signature__name">$handlers</span>
+     = <span class="phpdocumentor-signature__default-value">[]</span></code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_innerMiddleware">
+        $innerMiddleware
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_innerMiddleware" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">101</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Inner middleware chain — wraps each individual handler invocation.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-MiddlewareManager.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager">MiddlewareManager</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$innerMiddleware</span>
+    </code>
+
+        <section class="phpdocumentor-description"><p>Registered via <code class="prettyprint">innerMiddleware()</code>. Per-handler concerns (throttling,
+cache lookup, auth gates) attach here so the rest of the observer
+(global filter chain, per-handler filter pipeline) runs first.</p>
+</section>
+
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_outerMiddleware">
+        $outerMiddleware
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_outerMiddleware" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">93</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Outer middleware chain — wraps the entire observer (global filters +
+handler iteration) AND, when this observer is owned by a `Router`, the
+`Router::propagateEvent` sub-router walk (Fix I2). Registered via
+`outerMiddleware()`. Note: the chain is applied by
+`Router::propagateEvent`, NOT by `trigger()` — `trigger()` is the raw
+dispatch primitive (upstream parity).</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-MiddlewareManager.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\MiddlewareManager">MiddlewareManager</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$outerMiddleware</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_router">
+        $router
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_router" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">117</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Back-reference to the owning `Router`. `null` when the observer is
+constructed standalone (legitimate for unit tests that don&#039;t need
+chain-head inheritance). Populated by `Router::__construct` for every
+observer in the schema-derived map so `resolveMiddlewares()` can
+walk the ancestor chain via `Router::$parentRouter`.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>|null</span>
+    <span class="phpdocumentor-signature__name">$router</span>
+    </code>
+
+        <section class="phpdocumentor-description"><p>Mirrors upstream's <code class="prettyprint">TelegramEventObserver(router=self, event_name=...)</code>
+constructor (<code class="prettyprint">telegram.py:26-28</code>). The reference is <code class="prettyprint">?Router</code> not
+<code class="prettyprint">Router</code> because the observer is sometimes built before its router
+(PHP property initializers run before the <code class="prettyprint">__construct</code> body, but
+the observer's own ctor needs the router reference up-front), and
+<code class="prettyprint">null</code> is the contract-safe default for unit-test instantiation.</p>
+</section>
+
+    
+    
+
+        
+        
+
+</article>
+            </section>
+
+            <section class="phpdocumentor-methods">
+        <h3 class="phpdocumentor-elements__header" id="methods">
+            Methods
+            <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#methods" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method___construct">
+        __construct()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method___construct" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">127</span>
+
+    </aside>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">__construct</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$eventName</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$router</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">mixed</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$eventName</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Wire-level Bot API key this observer routes
+for (<code class="prettyprint">message</code>, <code class="prettyprint">callback_query</code>, …). The dispatcher uses this
+when injecting the <code class="prettyprint">event_name</code> kwarg into middleware data.</p>
+</section>
+
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$router</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Back-reference to the owning router. Populated
+by <code class="prettyprint">Router::__construct</code>; left <code class="prettyprint">null</code> for tests
+that drive the observer in isolation.</p>
+</section>
+
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method___invoke">
+        __invoke()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method___invoke" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">315</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Dual-shape decorator entrypoint mirroring upstream&#039;s `__call__`.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">__invoke</span><span>(</span><span class="phpdocumentor-signature__argument"><span>[</span><span class="phpdocumentor-signature__argument__type"><abbr title="\Closure">Closure</abbr>|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$callback</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">array&lt;int, <abbr title="\Closure">Closure</abbr>&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$filters</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">[]</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">array&lt;string, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$flags</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">[]</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">callable(<abbr title="\Closure">Closure</abbr>): <abbr title="\Closure">Closure</abbr></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><ul>
+<li>Eager form: <code class="prettyprint">$observer($cb, filters: [...], flags: [...])</code> registers
+immediately and returns the original callback.</li>
+<li>Factory form: <code class="prettyprint">$register = $observer(filters: [...], flags: [...]);</code>
+returns a registration closure to be invoked later with the callback.</li>
+</ul>
+<p>The factory form is the PHP idiom for the Python decorator
+<code class="prettyprint">@router.message(F::text-&gt;equals('hi'), flags=[...])</code> — we can't apply
+a decorator with the <code class="prettyprint">@</code> syntax, but we can produce the same closure
+factory.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$callback</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><abbr title="\Closure">Closure</abbr>|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$filters</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;int, <abbr title="\Closure">Closure</abbr>&gt;</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">[]</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$flags</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;string, mixed&gt;</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">[]</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">callable(<abbr title="\Closure">Closure</abbr>): <abbr title="\Closure">Closure</abbr></span>
+                    &mdash;
+                <section class="phpdocumentor-description"><p>In factory mode, a closure that
+accepts the callback and registers it. In eager mode, the
+original callback (already registered).</p>
+</section>
+
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_clear">
+        clear()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_clear" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">513</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Drop every registered handler and global filter. Intended for test
+isolation and router rebuilds — production routing never calls this.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">clear</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">void</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+    
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_filter">
+        filter()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_filter" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">227</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Append global filters that gate every handler on this observer.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">filter</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><abbr title="\Closure">Closure</abbr>&nbsp;</span><span class="phpdocumentor-signature__argument__variadic-operator">...</span><span class="phpdocumentor-signature__argument__name">$filters</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">void</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Each closure is wrapped in a <code class="prettyprint">FilterObject</code> (reflection-cached kwarg
+binding). Multiple <code class="prettyprint">filter()</code> calls accumulate — the filters run in
+insertion order during <code class="prettyprint">trigger()</code>, and the first one to reject (any
+falsy return) short-circuits the dispatch to <code class="prettyprint">RejectedSentinel</code>.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$filters</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><abbr title="\Closure">Closure</abbr></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_innerMiddleware">
+        innerMiddleware()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_innerMiddleware" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">214</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Append a middleware to the **inner** chain (wraps each handler call).</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">innerMiddleware</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$middleware</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Mirror of <code class="prettyprint">outerMiddleware()</code> for the per-handler chain.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$middleware</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a></span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_outerMiddleware">
+        outerMiddleware()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_outerMiddleware" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">205</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Append a middleware to the **outer** chain (wraps the whole observer).</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">outerMiddleware</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$middleware</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Thin wrapper around <code class="prettyprint">$outerMiddleware-&gt;register()</code> that exists so
+Dispatcher's setup code reads <code class="prettyprint">$observer-&gt;outerMiddleware(new …)</code> —
+matching upstream's <code class="prettyprint">observer.outer_middleware(...)</code> call site.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$middleware</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a></span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_register">
+        register()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_register" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">265</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Register a handler with optional per-handler filters and flag metadata.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">register</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><abbr title="\Closure">Closure</abbr>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$callback</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">array&lt;int, callable&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$filters</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">[]</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">array&lt;string, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$flags</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">[]</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><abbr title="\Closure">Closure</abbr></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>The Python upstream uses <code class="prettyprint">register(callback, *filters, flags=None)</code>;
+PHP cannot place named-optional parameters after a variadic, so we
+flatten filters into a <code class="prettyprint">list&lt;Closure&gt;</code> and flags into a positional
+associative array. Both default to empty.</p>
+<p>Flag-merge order matches upstream:</p>
+<ol>
+<li>Read <code class="prettyprint">#[Flag]</code> attributes and imperative <code class="prettyprint">FlagDecorator::attach()</code>
+attachments from the callback (<code class="prettyprint">Flags::extractFlags</code>).</li>
+<li>Overlay the manual <code class="prettyprint">$flags</code> argument on top — <strong>manual wins</strong> on
+key collision (<code class="prettyprint">{**attribute, **manual}</code> semantics).</li>
+</ol>
+<p>Returns the original callback unchanged so registration sites can keep
+a reference for re-use (matches <code class="prettyprint">EventObserver::register()</code> ergonomics).</p>
+<p>Filter entries may be any <code class="prettyprint">callable</code> — bare <code class="prettyprint">Closure</code>s, first-class
+callable expressions (<code class="prettyprint">fn() =&gt; true</code>), or invokable objects such as
+<code class="prettyprint">Filter</code> subclasses (<code class="prettyprint">new Command('start')</code>, <code class="prettyprint">new StateFilter(...)</code>,
+a user <code class="prettyprint">Filter</code> instance). Invokable objects are wrapped with a
+<code class="prettyprint">Closure::fromCallable</code> adapter so the <code class="prettyprint">FilterObject</code> invariant
+(<code class="prettyprint">Closure $callback</code>) stays intact. Mirrors aiogram's
+<code class="prettyprint">aiogram.dispatcher.event.handler.FilterObject</code> which accepts any
+<code class="prettyprint">Callable[..., Any]</code>.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$callback</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><abbr title="\Closure">Closure</abbr></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$filters</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;int, callable&gt;</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">[]</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Per-handler filter pipeline. An empty
+list means &quot;always accept&quot; — fall-through to the handler itself.</p>
+</section>
+
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$flags</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;string, mixed&gt;</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">[]</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Manual flag overrides. Merged with
+attribute / WeakMap-attached flags via <code class="prettyprint">Flags::extractFlags</code>.</p>
+</section>
+
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><abbr title="\Closure">Closure</abbr></span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_resolveMiddlewares">
+        resolveMiddlewares()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_resolveMiddlewares" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">161</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Resolve every inner-middleware instance that should wrap each
+handler invocation on this observer — self&#039;s own plus every ancestor
+router&#039;s matching observer&#039;s inner middleware. Mirrors upstream&#039;s
+`_resolve_middlewares` (`telegram.py:49-56`):</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">resolveMiddlewares</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">array&lt;int, <a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a>&gt;</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>for router in reversed(tuple(self.router.chain_head)):
+observer = router.observers.get(self.event_name)
+if observer:
+middlewares.extend(observer.middleware)
+return middlewares</p>
+<p><code class="prettyprint">chain_head</code> walks self → parent → root; <code class="prettyprint">reversed</code> then yields
+root → … → self, so the outermost link of the composed chain is the
+root router's middleware. The PHP port iterates the same order: we
+walk from <code class="prettyprint">$this-&gt;router</code> upward, push each ancestor's matching
+observer's middleware onto an in-progress list, then return that
+list reversed.</p>
+<p>Returns an empty list when <code class="prettyprint">$this-&gt;router</code> is null (standalone
+observers used in unit tests carry their own inner middleware via
+<code class="prettyprint">$this-&gt;innerMiddleware</code> only).</p>
+</section>
+
+    
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">array&lt;int, <a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Middlewares\BaseMiddleware">BaseMiddleware</abbr></a>&gt;</span>
+                    &mdash;
+                <section class="phpdocumentor-description"><p>Composed innermost-to-outermost; callers
+pass to <code class="prettyprint">MiddlewareManager::wrap</code> semantics
+(first element wraps outermost).</p>
+</section>
+
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_trigger">
+        trigger()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_trigger" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">362</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Raw dispatch entry: runs global filters then iterates handlers (with
+per-handler filter check and inner-middleware wrapping). Does NOT
+apply outer middleware — that responsibility lives in
+`Router::propagateEvent`, which wraps the full local-observer + sub-
+router dispatch with `outerMiddleware-&gt;wrap()` once per propagation.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">trigger</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">object&nbsp;</span><span class="phpdocumentor-signature__argument__name">$event</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">array&lt;string, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$kwargs</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">[]</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">mixed</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Mirrors upstream's <code class="prettyprint">TelegramEventObserver.trigger</code> (<code class="prettyprint">telegram.py:111-130</code>),
+which is also outer-middleware-free; upstream's <code class="prettyprint">Router.propagate_event</code>
+(<code class="prettyprint">router.py:152-166</code>) composes
+<code class="prettyprint">observer.wrap_outer_middleware(_wrapped, ...)</code> once around
+<code class="prettyprint">_propagate_event</code>'s full body — so the parent observer's outer
+middleware covers child router handlers too (Fix I2).</p>
+<p>The split exists because outer middleware must NOT wrap individual
+observer triggers in a multi-router tree (that would skip sub-router
+handlers from the outer-middleware scope and re-wrap each ancestor
+trigger when sub-router recursion bubbles back up). Anything wanting
+to drive this observer through the outer chain should call
+<code class="prettyprint">Router::propagateEvent</code> instead.</p>
+<p><code class="prettyprint">$event</code> is typed <code class="prettyprint">object</code> because dispatcher-synthetic events (notably
+<code class="prettyprint">ErrorEvent</code>, which deliberately does not extend <code class="prettyprint">TelegramObject</code>) flow
+through the same dispatch primitive. Handler-declared parameter types
+are checked by <code class="prettyprint">CallableObject</code>'s reflection adapter when binding the
+<code class="prettyprint">event</code> kwarg.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$event</span>
+                : <span class="phpdocumentor-argument-list__argument__type">object</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$kwargs</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;string, mixed&gt;</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">[]</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Dispatcher context (bot,
+event_context, state, …) merged with filter-result injections
+before reaching each handler.</p>
+</section>
+
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">mixed</span>
+                    &mdash;
+                <section class="phpdocumentor-description"><p>The first claiming handler's return value, or
+<code class="prettyprint">UnhandledSentinel::instance()</code> if every handler passed, or
+<code class="prettyprint">RejectedSentinel::instance()</code> if a global filter rejected.</p>
+</section>
+
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_triggerCore">
+        triggerCore()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_triggerCore" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Event/TelegramEventObserver.php"><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">402</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">The actual dispatch primitive (post-outer-middleware): runs global
+filters then iterates handlers with per-handler filter check and
+inner-middleware wrapping.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+                    <span class="phpdocumentor-signature__name">triggerCore</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">object&nbsp;</span><span class="phpdocumentor-signature__argument__name">$event</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">array&lt;string, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$kwargs</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">mixed</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Sequence — matches upstream <code class="prettyprint">TelegramEventObserver.trigger</code>:</p>
+<ol>
+<li>Iterate global <code class="prettyprint">$filters</code>. Each runs against <code class="prettyprint">$event</code> + <code class="prettyprint">$kwargs</code>.
+A falsy result aborts dispatch with <code class="prettyprint">RejectedSentinel</code>; an array
+result is merged into <code class="prettyprint">$kwargs</code> for downstream filter and handler
+consumption.</li>
+<li>Iterate <code class="prettyprint">$handlers</code> in registration order. For each:
+a. Inject <code class="prettyprint">'handler' =&gt; $handler</code> into kwargs (the dispatcher
+contract — handlers can declare <code class="prettyprint">HandlerObject $handler</code>).
+b. Run the handler's filter pipeline via <code class="prettyprint">HandlerObject::check</code>.
+Failure: <code class="prettyprint">continue</code> to the next handler.
+c. Success: invoke the handler via the inner-middleware chain.
+If the result is <code class="prettyprint">UnhandledSentinel</code> the handler explicitly opts
+out and we <code class="prettyprint">continue</code>; otherwise its return value is the trigger
+result.</li>
+<li>If no handler claimed the event, return <code class="prettyprint">UnhandledSentinel</code>.</li>
+</ol>
+<p>The <code class="prettyprint">event</code> kwarg is injected before filters run so filter and handler
+signatures can declare the event as a named parameter. Deviation from
+upstream's <code class="prettyprint">handler.call(event, **kwargs)</code>: we pass <code class="prettyprint">event</code> <strong>only</strong> as
+a kwarg, never positional. The PHP kwarg-binding model uses parameter
+names, and forwarding <code class="prettyprint">event</code> positionally AND as a kwarg collides
+with PHP 8.1+ &quot;Named parameter overwrites previous argument&quot; guard.</p>
+<p>Sentinel return values are intentionally distinct objects (compared by
+identity via <code class="prettyprint">===</code>) so a handler that legitimately returns <code class="prettyprint">null</code> is
+not confused with &quot;no handler ran&quot;.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$event</span>
+                : <span class="phpdocumentor-argument-list__argument__type">object</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$kwargs</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;string, mixed&gt;</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+            </section>
+
+        
+    </article>
+                                </section>
+                <section class="phpdocumentor-on-this-page__sidebar">
+                                
+    <section class="phpdocumentor-on-this-page__content">
+        <strong class="phpdocumentor-on-this-page__title">On this page</strong>
+
+        <ul class="phpdocumentor-list -clean">
+            <li class="phpdocumentor-on-this-page-section__title">Table Of Contents</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                                            <li><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#toc-properties">Properties</a></li>
+                                                            <li><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#toc-methods">Methods</a></li>
+                                    </ul>
+            </li>
+            
+                            <li class="phpdocumentor-on-this-page-section__title">Properties</li>
+                <li>
+                    <ul class="phpdocumentor-list -clean">
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_eventName">$eventName</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_filters">$filters</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_handlers">$handlers</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_innerMiddleware">$innerMiddleware</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_outerMiddleware">$outerMiddleware</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#property_router">$router</a></li>
+                                            </ul>
+                </li>
+            
+                        <li class="phpdocumentor-on-this-page-section__title">Methods</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method___construct">__construct()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method___invoke">__invoke()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_clear">clear()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_filter">filter()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_innerMiddleware">innerMiddleware()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_outerMiddleware">outerMiddleware()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_register">register()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_resolveMiddlewares">resolveMiddlewares()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_trigger">trigger()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_triggerCore">triggerCore()</a></li>
+                                    </ul>
+            </li>
+                    </ul>
+    </section>
+
+                </section>
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>

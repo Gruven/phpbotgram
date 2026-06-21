@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&amp;display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&amp;display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button">
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewbox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"></circle>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"></line>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled>
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button">
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                        
+
+<section class="section " id="changelog">
+            <h1>Changelog</h1>
+
+            
+    <p>All notable changes to phpbotgram are documented in this file. The format follows <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a> and the project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+
+            <section class="section " id="0-2-0-2026-06-21">
+            <h2>[0.2.0] &mdash; 2026-06-21</h2>
+
+            <section class="section " id="fixed">
+            <h3>Fixed</h3>
+
+            
+
+<ul>
+    <li class="dash"><code>Serializer::load()</code>
+ now hydrates <code>CallbackQuery::$message</code>
+ through the generated <code>MaybeInaccessibleMessageUnion</code>
+ resolver instead of trying to instantiate the abstract <code>MaybeInaccessibleMessage</code>
+ base class. Payloads with <code>date = 0</code>
+ resolve to <code>InaccessibleMessage</code>
+; normal payloads resolve to <code>Message</code>
+.</li>
+
+    <li class="dash">Scene handlers and lifecycle action methods now filter dispatcher workflow kwargs by method signature. Strict scene methods such as <code>onEnter(Message $event)</code>
+ no longer need a <code>mixed ...$kwargs</code>
+ tail just because middleware or workflow data injected unrelated keys.</li>
+
+    <li class="dash">Active scene routers now get priority over parent catch-all handlers while <code>raw_state</code>
+ is set, so broad root <code>message</code>
+ handlers do not consume messages intended for the active scene.</li>
+
+    <li class="dash"><code>DefaultKeyBuilder</code>
+ now appends non-default destiny values even when <code>withDestiny</code>
+ is <code>false</code>
+, keeping ordinary default FSM keys compact while allowing scene history (<code>scenes_history</code>
+) to work with Redis and Mongo storage defaults.</li>
+
+</ul>
+
+    </section>
+
+            <section class="section " id="changed">
+            <h3>Changed</h3>
+
+            
+
+<ul>
+    <li class="dash">Router dispatch keeps the existing parent-local-first order for normal routers and inactive FSM state, but scene routers created by <code>Scene::asRouter()</code>
+ are tried before parent-local handlers when an FSM state is active. Root handlers that must run during scenes should use explicit filters or middleware rather than relying on catch-all order.</li>
+
+</ul>
+
+    </section>
+
+    </section>
+
+            <section class="section " id="0-1-0">
+            <h2><a href="https://github.com/Gruven/phpbotgram/releases/tag/v0.1.0">0.1.0</a> &mdash; Initial release</h2>
+
+            
+    <p>First public release. Ports aiogram 3.29.0 / Telegram Bot API 10.1 to PHP 8.5 with full feature parity for the core framework. Behaviour divergences from upstream are documented inline at the call site (<code># Divergence:</code>
+ comments) and in <code>docs/superpowers/specs/</code>
+.</p>
+
+            <section class="section " id="added">
+            <h3>Added</h3>
+
+            <section class="section " id="bot-api-10-1-schema-sync">
+            <h4>Bot API 10.1 schema sync</h4>
+
+            
+
+<ul>
+    <li class="dash">Generated Telegram Bot API surface synced from aiogram 3.29.0 / Bot API 10.1.</li>
+
+    <li class="dash">
+    <p>Rich-message support:</p>
+
+
+<ul>
+    <li class="dash"><code>InputRichMessage</code>
+, <code>RichMessage</code>
+, <code>RichBlock*</code>
+, <code>RichText*</code>
+, <code>Link</code>
+, <code>InputMediaLink</code>
+, and the generated <code>RichBlockUnion</code>
+ / <code>RichTextUnion</code>
+ helpers.</li>
+
+    <li class="dash"><code>Bot::sendRichMessage</code>
+, <code>Bot::sendRichMessageDraft</code>
+, <code>Message::answerRich</code>
+, and <code>Message::replyRich</code>
+.</li>
+
+    <li class="dash"><code>EditMessageText::$richMessage</code>
+ for editing rich messages without breaking the existing positional <code>$text</code>
+ shortcut.</li>
+
+</ul>
+</li>
+
+    <li class="dash">Chat-join request query methods: <code>Bot::answerChatJoinRequestQuery</code>
+ and <code>Bot::sendChatJoinRequestWebApp</code>
+.</li>
+
+    <li class="dash">Serializer support for PHPDoc-backed generated list parameters such as <code>list&lt;RichBlock&gt;</code>
+ and nested rich-block table structures.</li>
+
+    <li class="dash">Serializer support for the recursive rich text wire union: a plain string, a rich-text object, or a list mixing strings and rich-text segments.</li>
+
+    <li class="dash">README badges now track aiogram 3.29.0, Bot API 10.1, and the current passing test count.</li>
+
+    <li class="dash">Narrative docs for sending, replying with, streaming, and reading rich messages.</li>
+
+</ul>
+
+    </section>
+
+            <section class="section " id="bot-client-and-http-transport">
+            <h4>Bot client and HTTP transport</h4>
+
+            
+
+<ul>
+    <li class="dash"><code>Bot</code>
+ facade that builds typed API method DTOs for every Telegram Bot API method (codegen output, regenerate via <code>make regenerate</code>
+).</li>
+
+    <li class="dash"><code>BaseSession</code>
+ abstract with <code>prepareValue</code>
+, <code>checkResponse</code>
+, <code>buildResponse</code>
+, <code>deserializeResult</code>
+, and the polymorphic <code>union:</code>
+ ReturnsType discriminator.</li>
+
+    <li class="dash"><code>AmphpSession</code>
+ production HTTP adapter built on <code>amphp/http-client ^5</code>
+ (form-urlencoded bodies; multipart deferred).</li>
+
+    <li class="dash">Typed exception hierarchy: <code>TelegramApiException</code>
+, <code>TelegramBadRequestException</code>
+, <code>TelegramConflictException</code>
+, <code>TelegramForbiddenException</code>
+, <code>TelegramNetworkException</code>
+, <code>TelegramNotFoundException</code>
+, <code>TelegramRetryAfter</code>
+, <code>TelegramServerException</code>
+, <code>TelegramUnauthorizedException</code>
+, <code>TelegramEntityTooLarge</code>
+, <code>TelegramMigrateToChat</code>
+, <code>RestartingTelegram</code>
+.</li>
+
+    <li class="dash"><code>DefaultBotProperties</code>
+ (parseMode, link-preview aggregation, <code>ArrayAccess</code>
+ read-only surface).</li>
+
+    <li class="dash"><code>TelegramApiServer</code>
+ production / test / fromBase factories for the local-server mode.</li>
+
+    <li class="dash"><code>Serializer::dump()</code>
+ / <code>Serializer::load()</code>
+ for snake_case wire conversion with <code>WireNames</code>
+ per-class overrides and recursive TelegramObject / union resolution.</li>
+
+    <li class="dash"><code>BotShortcuts</code>
+ trait providing <code>getId</code>
+, <code>me</code>
+, <code>context</code>
+, <code>downloadFile</code>
+, <code>download</code>
+, plus the FiberLocal current-bot binding.</li>
+
+</ul>
+
+    </section>
+
+            <section class="section " id="dispatcher-routers-middleware">
+            <h4>Dispatcher, routers, middleware</h4>
+
+            
+
+<ul>
+    <li class="dash"><code>Dispatcher</code>
+ extends <code>Router</code>
+ and owns the polling loop (<code>startPolling</code>
+/<code>runPolling</code>
+), graceful shutdown via signals, and the 25-update-type observer map.</li>
+
+    <li class="dash"><code>Router</code>
+ cascade with parent-locked <code>includeRouter</code>
+ / <code>includeRouters</code>
+ and post-include immutability.</li>
+
+    <li class="dash">
+    <p><code>TelegramEventObserver</code>
+ for every update type, with:</p>
+
+
+<ul>
+    <li class="dash">registration via Closure or any callable (Filter subclass, MagicFilterAsFilter, anonymous invokables &mdash; all wrapped via <code>Closure::fromCallable</code>
+).</li>
+
+    <li class="dash">dual decorator surface (<code>$observer($cb, filters:)</code>
+ eager vs. <code>$observer(filters:)</code>
+ factory).</li>
+
+    <li class="dash">global filter chain plus per-handler filter pipeline.</li>
+
+    <li class="dash">outer / inner middleware stacks with proper composition order.</li>
+
+</ul>
+</li>
+
+    <li class="dash"><code>BaseMiddleware</code>
+ abstract for both outer and inner roles.</li>
+
+    <li class="dash"><code>Flags</code>
+ system with <code>#[Flag]</code>
+ attribute and imperative <code>FlagDecorator::attach</code>
+ for closures, with merge semantics ("manual wins").</li>
+
+</ul>
+
+    </section>
+
+            <section class="section " id="filters-and-the-f-dsl">
+            <h4>Filters and the F-DSL</h4>
+
+            
+
+<ul>
+    <li class="dash"><code>Command</code>
+ filter with prefix/case-sensitivity/bot-username gating and <code>CommandObject</code>
+ parsed result.</li>
+
+    <li class="dash"><code>CommandStart</code>
+ for <code>/start</code>
+ deep links.</li>
+
+    <li class="dash"><code>CallbackData</code>
+ abstract with <code>pack</code>
+ / <code>unpack</code>
+ / <code>filter()</code>
+ static builder, <code>#[CallbackPrefix]</code>
+ attribute, and <code>decodeComplex()</code>
+ for nested scalars / enums (int- and string-backed).</li>
+
+    <li class="dash"><code>StateFilter</code>
+ and <code>State::__invoke</code>
+ for FSM state predicates.</li>
+
+    <li class="dash"><code>ChatMemberUpdatedFilter</code>
+ for <code>chat_member</code>
+ / <code>my_chat_member</code>
+ member transition filtering.</li>
+
+    <li class="dash"><code>ExceptionTypeFilter</code>
+, <code>ExceptionMessageFilter</code>
+ for error handlers.</li>
+
+    <li class="dash"><code>MagicData</code>
+ filter bridging the F-DSL against the dispatch data dict.</li>
+
+    <li class="dash"><code>Filter::all()</code>
+, <code>Filter::any()</code>
+, <code>Filter::invertOf()</code>
+ combinators returning <code>AndFilter</code>
+ / <code>OrFilter</code>
+ / <code>InvertFilter</code>
+.</li>
+
+    <li class="dash"><code>F</code>
+ constant + <code>MagicFilter</code>
+ chain DSL with comparator ops (<code>equals</code>
+, <code>notEquals</code>
+, <code>in_</code>
+, <code>contains</code>
+, <code>startsWith</code>
+, <code>endsWith</code>
+, <code>regexp</code>
+, <code>gt</code>
+/<code>gte</code>
+/<code>lt</code>
+/<code>lte</code>
+, <code>between</code>
+, <code>as_</code>
+).</li>
+
+    <li class="dash">Typed <code>F-DSL</code>
+ field wrappers: <code>IntField</code>
+, <code>StringField</code>
+, <code>BoolField</code>
+, <code>DateTimeField</code>
+, <code>NullableIntField</code>
+, <code>NullableStringField</code>
+, <code>NullableObjectField</code>
+, <code>RegexField</code>
+, <code>BaseField</code>
+.</li>
+
+</ul>
+
+    </section>
+
+            <section class="section " id="fsm">
+            <h4>FSM</h4>
+
+            
+
+<ul>
+    <li class="dash"><code>FsmContext</code>
+ with state/value accessors (<code>getState</code>
+, <code>setState</code>
+, <code>getValue</code>
+, <code>setData</code>
+, <code>updateData</code>
+, <code>getData</code>
+, <code>clear</code>
+).</li>
+
+    <li class="dash"><code>FsmStrategy</code>
+ (<code>UserInChat</code>
+, <code>Chat</code>
+, <code>GlobalUser</code>
+, <code>UserInTopic</code>
+, <code>ChatTopic</code>
+) plus <code>StorageKey</code>
+ resolver covering chat / user / message thread isolation.</li>
+
+    <li class="dash">
+    <p>Storage backends:</p>
+
+
+<ul>
+    <li class="dash"><code>MemoryStorage</code>
+ (in-process default).</li>
+
+    <li class="dash"><code>RedisStorage</code>
+ (integration tests gated by <code>PHPBOTGRAM_TEST_REDIS_DSN</code>
+).</li>
+
+    <li class="dash"><code>MongoStorage</code>
+ (integration tests gated by <code>PHPBOTGRAM_TEST_MONGO_DSN</code>
+).</li>
+
+</ul>
+</li>
+
+    <li class="dash"><code>StatesGroup</code>
+ and <code>State</code>
+ (explicit; no metaclass auto-discovery).</li>
+
+    <li class="dash">
+    <p>Scenes:</p>
+
+
+<ul>
+    <li class="dash"><code>Scene</code>
+ base with reflection-driven <code>sceneConfig()</code>
+ extraction.</li>
+
+    <li class="dash"><code>SceneWizard</code>
+ (enter / exit / leave / retake / goto / back).</li>
+
+    <li class="dash"><code>SceneRegistry</code>
+ with eager <code>add([Scene::class])</code>
+ wiring.</li>
+
+    <li class="dash"><code>ScenesManager</code>
+ injected as a handler kwarg.</li>
+
+    <li class="dash"><code>#[SceneState]</code>
+, <code>#[OnMessage]</code>
+, <code>#[OnCallbackQuery]</code>
+, <code>#[OnChatJoinRequest]</code>
+, &hellip; attribute markers.</li>
+
+    <li class="dash"><code>After</code>
+ lifecycle directives (Enter, Exit, Back, etc.).</li>
+
+</ul>
+</li>
+
+</ul>
+
+    </section>
+
+            <section class="section " id="webhook">
+            <h4>Webhook</h4>
+
+            
+
+<ul>
+    <li class="dash"><code>AmphpServer::run()</code>
+ wrapping <code>amphp/http-server ^3</code>
+ with shutdown hooks tied to the dispatcher lifecycle.</li>
+
+    <li class="dash"><code>SimpleRequestHandler</code>
+ (single bot) and <code>TokenBasedRequestHandler</code>
+ (multi-tenant routing on the URL path token).</li>
+
+    <li class="dash"><code>IpFilter</code>
+ middleware enforcing Telegram's CIDR ranges.</li>
+
+    <li class="dash"><code>Setup::register()</code>
+ to splice the bot lifecycle into an existing amphp/http-server instance.</li>
+
+    <li class="dash">Constant-time secret-token validation via <code>hash_equals</code>
+.</li>
+
+</ul>
+
+    </section>
+
+            <section class="section " id="utils">
+            <h4>Utils</h4>
+
+            
+
+<ul>
+    <li class="dash"><code>TextDecoration</code>
+ with <code>HtmlDecoration</code>
+ and <code>MarkdownDecoration</code>
+ (Markdown V2) strategies &mdash; entity-aware escaping, full V2 special-char coverage, expandable-blockquote support.</li>
+
+    <li class="dash"><code>DeepLinking</code>
+ for <code>/start</code>
+ payload encode/decode with WeakMap-cached bot binding.</li>
+
+    <li class="dash">Keyboard builders: <code>InlineKeyboardBuilder</code>
+, <code>ReplyKeyboardBuilder</code>
+, shared <code>KeyboardBuilder</code>
+ base.</li>
+
+    <li class="dash"><code>MediaGroupBuilder</code>
+ for grouped media uploads.</li>
+
+    <li class="dash"><code>ChatActionSender</code>
+ + <code>ChatActionMiddleware</code>
+ with <code>DeferredCancellation</code>
+-managed <code>raceDelay</code>
+ ticking.</li>
+
+    <li class="dash"><code>CallbackAnswer</code>
+ DTO + <code>CallbackAnswerMiddleware</code>
+ (pre/post modes).</li>
+
+    <li class="dash"><code>WebApp</code>
+ signature verification (<code>WebAppSignature</code>
+, <code>WebAppInitData</code>
+, <code>WebAppUser</code>
+, <code>WebAppChat</code>
+) using <code>sodium_crypto_sign_verify_detached</code>
+ for Ed25519 and <code>hash_equals</code>
+ for HMAC compare.</li>
+
+    <li class="dash"><code>AuthWidget</code>
+ for the Telegram Login Widget data validation.</li>
+
+    <li class="dash"><code>Payload</code>
+, <code>Link</code>
+, <code>Token</code>
+ parsing utilities.</li>
+
+    <li class="dash"><code>Backoff</code>
+ + <code>BackoffConfig</code>
+ for exponential-with-jitter retry pacing used by the polling loop.</li>
+
+    <li class="dash"><code>DeepLinkType</code>
+ enum classifying <code>/start</code>
+ payload kinds.</li>
+
+</ul>
+
+    </section>
+
+            <section class="section " id="tooling">
+            <h4>Tooling</h4>
+
+            
+
+<ul>
+    <li class="dash"><code>tools/generator/</code>
+ produces <code>src/Types/Generated/</code>
+, <code>src/Methods/Generated/</code>
+, <code>src/Enums/Generated/</code>
+, plus the <code>Bot.php</code>
+ facade from the upstream Telegram API spec.</li>
+
+    <li class="dash"><code>scripts/coverage-gate.php</code>
+ enforces per-module coverage floors (Bot &ge;80%, Session &ge;75%, Dispatcher/Router/Filters/FSM &ge;90%).</li>
+
+    <li class="dash">Make targets and composer scripts: <code>test</code>
+, <code>stan</code>
+, <code>lint</code>
+, <code>fix</code>
+, <code>regenerate</code>
+, <code>coverage</code>
+, <code>coverage-gate</code>
+, <code>docs-api</code>
+ (script and target names match).</li>
+
+    <li class="dash">12 runnable examples under <code>examples/</code>
+ mirroring upstream aiogram's example surface.</li>
+
+    <li class="dash">Deployment templates under <code>deploy/</code>
+ (nginx reverse proxy, systemd unit, Docker compose).</li>
+
+    <li class="dash">API documentation pipeline: <code>phpdocumentor/shim</code>
+ composer dev-dep drops the official phpDocumentor v3 phar into <code>vendor/bin/phpdoc</code>
+ on <code>composer install</code>
+; <code>composer docs-api</code>
+ (or <code>make docs-api</code>
+) renders the site into <code>build/docs/api/</code>
+. GitHub Actions (<code>.github/workflows/docs.yml</code>
+) publishes the site to GitHub Pages on every push to <code>master</code>
+.</li>
+
+</ul>
+
+    </section>
+
+    </section>
+
+            <section class="section " id="added-narrative-documentation">
+            <h3>Added &mdash; narrative documentation</h3>
+
+            
+
+<ul>
+    <li class="dash">Diataxis-structured narrative site under <code>docs/guide/en/</code>
+ (47 committed pages: 1 top-level landing + 6 tutorial + 22 how-to + 17 concept + 1 reference stub) plus 2 build-time copies of CHANGELOG.md and CONTRIBUTING.md &rarr; 49 rendered pages.</li>
+
+    <li class="dash"><code>phpdoc.dist.xml.tpl</code>
+ template (envsubst &rarr; <code>phpdoc.dist.xml</code>
+) rendering narrative + API into a single phpDocumentor v3 site under <code>build/docs/api/</code>
+.</li>
+
+    <li class="dash"><code>.phpdoc/template/components/header.html.twig</code>
+ override injecting a navbar language+version switcher driven by <code>versions.json</code>
+ and <code>languages.json</code>
+ served from the gh-pages branch root.</li>
+
+    <li class="dash">
+    <p>Seven post-build CI gates in <code>scripts/build-docs.sh</code>
+:</p>
+
+
+<ul>
+    <li class="dash"><code>check-docs-build-log.php</code>
+ greps phpdoc stderr for unresolved refs / orphan docs / missing-title / missing-alt-text warnings.</li>
+
+    <li class="dash"><code>check-docs-links.php</code>
+ verifies every sentinel-URL (<code>https://api.phpbotgram.local/...</code>
+) points at a real API page.</li>
+
+    <li class="dash"><code>rewrite-api-links.php</code>
+ HTML-aware DOM rewrite of sentinel URLs to <code>classes/...</code>
+, with HTML5-doctype preservation and a 50% size-shrink sanity guard.</li>
+
+    <li class="dash"><code>check-internal-links.php</code>
+ walks rendered HTML for non-sentinel internal links and validates them against <code>&lt;base href&gt;</code>
+, with macOS <code>/var</code>
+-vs-<code>/private/var</code>
+ realpath canonicalisation.</li>
+
+    <li class="dash"><code>lint-docs.php</code>
+ runs <code>php -l</code>
+ on every fenced <code>```php</code>
+ block and bans inline raw HTML in narrative prose.</li>
+
+    <li class="dash"><code>check-docs-examples.php</code>
+ verifies every <code>examples/X.php</code>
+ link resolves to an existing file.</li>
+
+    <li class="dash"><code>markdownlint-cli2@0.22.1</code>
+ for prose style.</li>
+
+</ul>
+</li>
+
+    <li class="dash"><code>.github/workflows/docs.yml</code>
+ migrated from Pages "workflow mode" to "branch mode" via <code>peaceiris/actions-gh-pages@v4</code>
+; publishes master pushes to <code>/en/dev/</code>
+.</li>
+
+    <li class="dash">New <code>.github/workflows/docs-release.yml</code>
+ publishes tag pushes to <code>/en/&lt;tag&gt;/</code>
+ + <code>/en/latest/</code>
+ + updates <code>versions.json</code>
+ with a semver-shape validation gate at job entry.</li>
+
+    <li class="dash"><code>update-versions-json.php</code>
+ atomic CLI with <code>stable=auto</code>
+ semver-aware backport handling.</li>
+
+    <li class="dash"><code>copy-root-docs.php</code>
+ mirrors project-root <code>CHANGELOG.md</code>
+ and <code>CONTRIBUTING.md</code>
+ into <code>docs/guide/en/</code>
+ pre-build (gitignored copies with AUTO-GENERATED banner; mtime preserved).</li>
+
+    <li class="dash"><code>CONTRIBUTING.md</code>
+ at project root with "Fenced-block conventions" documenting the <code>```php</code>
+ (lint-gated) vs <code>```php-fragment</code>
+ (lint-skipped) distinction.</li>
+
+    <li class="dash"><code>.markdownlint.jsonc</code>
+ config compatible with the copied CHANGELOG/CONTRIBUTING (MD024 siblings_only for Keep-a-Changelog shape).</li>
+
+    <li class="dash"><code>composer.json</code>
+ constraint for <code>phpdocumentor/shim</code>
+ tightened from <code>^3</code>
+ to <code>~3.10.0</code>
+.</li>
+
+    <li class="dash"><code>composer docs-api</code>
+ and <code>make docs-api</code>
+ both delegate to <code>bash scripts/build-docs.sh</code>
+.</li>
+
+</ul>
+
+    </section>
+
+            <section class="section " id="quality-bars">
+            <h3>Quality bars</h3>
+
+            
+
+<ul>
+    <li class="dash">2168 PHPUnit tests with 6929 assertions (9 env-gated skips). Real Redis / MongoDB integration tests gated on <code>PHPBOTGRAM_TEST_REDIS_DSN</code>
+ / <code>PHPBOTGRAM_TEST_MONGO_DSN</code>
+ env vars.</li>
+
+    <li class="dash">PHPStan level 9, clean.</li>
+
+    <li class="dash"><code>php-cs-fixer</code>
+ enforced.</li>
+
+    <li class="dash">Coverage gate passes at the documented per-module floors.</li>
+
+</ul>
+
+    </section>
+
+            <section class="section " id="known-divergences-from-aiogram-3-29-0">
+            <h3>Known divergences from aiogram 3.29.0</h3>
+
+            
+
+<ul>
+    <li class="dash">No async/await keywords &mdash; fiber-based runtime via amphp v3 / Revolt makes the dispatch path synchronous from the caller's perspective.</li>
+
+    <li class="dash">Scenes are explicit (no metaclass auto-discovery) &mdash; register via <code>SceneRegistry::add([Scene::class])</code>
+ because PHP has no metaclasses.</li>
+
+    <li class="dash">No <code>model_dump</code>
+ / <code>model_validate</code>
+ &mdash; <code>Serializer::dump</code>
+ / <code>Serializer::load</code>
+ cover the same surface with PHP reflection.</li>
+
+    <li class="dash"><code>Filter::__invoke</code>
+ signature is <code>(object $event, mixed ...$kwargs)</code>
+ (variadic) to round-trip dispatcher kwargs without case translation.</li>
+
+    <li class="dash">Handler kwargs use literal name matching (no snake_case &harr; camelCase conversion); filter return keys, <code>workflowData</code>
+ keys, and handler parameter names must agree.</li>
+
+</ul>
+
+    </section>
+
+    </section>
+
+    </section>
+
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>
