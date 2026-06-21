@@ -461,17 +461,13 @@ public function onMessage(object $message): void
   }
 </code></pre>
 <p>}</p>
-<h2>Lifecycle stubs</h2>
-<ul>
-<li><code class="prettyprint">enter()</code> — invoked by the framework when the scene is entered.</li>
-<li><code class="prettyprint">leave()</code> — invoked when the scene is left via <code class="prettyprint">SceneWizard::leave()</code>.</li>
-<li><code class="prettyprint">exit()</code>  — invoked when FSM is cleared via <code class="prettyprint">SceneWizard::exit()</code>.</li>
-<li><code class="prettyprint">back()</code>  — invoked when rolling back via <code class="prettyprint">SceneWizard::back()</code>.</li>
-<li><code class="prettyprint">retake()</code> — invoked when the scene is re-entered (e.g. loop iteration).</li>
-</ul>
-<p>Default implementations return <code class="prettyprint">null</code>. Subclasses override as needed.
-Returning <code class="prettyprint">null</code> from a lifecycle hook is safe — the framework checks the
-return type dynamically.</p>
+<h2>Lifecycle actions</h2>
+<p>Transition hooks are registered with <code class="prettyprint">#[On*]</code> attributes and
+<code class="prettyprint">SceneAction</code> values, for example
+<code class="prettyprint">#[OnMessage(action: SceneAction::Enter)]</code>.</p>
+<p>The <code class="prettyprint">enter()</code> / <code class="prettyprint">leave()</code> / <code class="prettyprint">exit()</code> / <code class="prettyprint">back()</code> / <code class="prettyprint">retake()</code> methods below
+are parity stubs for user code that wants to call them explicitly; framework
+transitions dispatch attribute actions through <code class="prettyprint">SceneWizard</code>.</p>
 <h2>SceneWizard</h2>
 <p>The <code class="prettyprint">$wizard</code> property is typed as <code class="prettyprint">SceneWizard</code> (Task 5.9). Subclasses
 receive a fully initialised wizard instance from the framework.</p>
@@ -556,35 +552,35 @@ receive a fully initialised wizard instance from the framework.</p>
     <span>
                                 &nbsp;: mixed    </span>
 </dt>
-<dd>Invoked when rolling back via `SceneWizard::back()`.</dd>
+<dd>Parity stub for custom scene code.</dd>
 
             <dt class="phpdocumentor-table-of-contents__entry -method -public">
     <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_enter">enter()</a>
     <span>
                                 &nbsp;: mixed    </span>
 </dt>
-<dd>Invoked by the framework when this scene is entered.</dd>
+<dd>Parity stub for custom scene code.</dd>
 
             <dt class="phpdocumentor-table-of-contents__entry -method -public">
     <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_exit">exit()</a>
     <span>
                                 &nbsp;: mixed    </span>
 </dt>
-<dd>Invoked when FSM is cleared via `SceneWizard::exit()`.</dd>
+<dd>Parity stub for custom scene code.</dd>
 
             <dt class="phpdocumentor-table-of-contents__entry -method -public">
     <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_leave">leave()</a>
     <span>
                                 &nbsp;: mixed    </span>
 </dt>
-<dd>Invoked when the scene is left via `SceneWizard::leave()`.</dd>
+<dd>Parity stub for custom scene code.</dd>
 
             <dt class="phpdocumentor-table-of-contents__entry -method -public">
     <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_retake">retake()</a>
     <span>
                                 &nbsp;: mixed    </span>
 </dt>
-<dd>Invoked when the scene is re-entered (e.g., after a looping step).</dd>
+<dd>Parity stub for custom scene code.</dd>
 
             <dt class="phpdocumentor-table-of-contents__entry -method -public">
     <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneConfig">sceneConfig()</a>
@@ -608,6 +604,25 @@ this class (or a subclass), or `null` when no attribute is present.</dd>
 </dt>
 <dd>Build a `SceneConfig` for this class by reflecting on `#[SceneState]`
 (class) and `#[On*]` (method) attributes.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_prepareSceneMethodArguments">prepareSceneMethodArguments()</a>
+    <span>
+                                &nbsp;: array&lt;int|string, mixed&gt;    </span>
+</dt>
+<dd>Bind the event and dispatcher kwargs to a reflected scene method.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneParameterIsPositionalEvent">sceneParameterIsPositionalEvent()</a>
+    <span>
+                                &nbsp;: bool    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneParameterNameLooksLikeEvent">sceneParameterNameLooksLikeEvent()</a>
+    <span>
+                                &nbsp;: bool    </span>
+</dt>
 
     </dl>
 
@@ -770,7 +785,7 @@ Populated lazily by <code class="prettyprint">buildSceneConfig()</code> on first
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">199</span>
+    <span class="phpdocumentor-element-found-in__line">212</span>
 
     </aside>
 
@@ -827,7 +842,7 @@ observer filter on every used observer (except <code class="prettyprint">callbac
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">292</span>
+    <span class="phpdocumentor-element-found-in__line">305</span>
 
     </aside>
 
@@ -909,7 +924,7 @@ to skip that step (e.g. for chained transitions).</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">169</span>
+    <span class="phpdocumentor-element-found-in__line">182</span>
 
     </aside>
 
@@ -964,11 +979,11 @@ to skip that step (e.g. for chained transitions).</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">138</span>
+    <span class="phpdocumentor-element-found-in__line">151</span>
 
     </aside>
 
-        <p class="phpdocumentor-summary">Invoked when rolling back via `SceneWizard::back()`.</p>
+        <p class="phpdocumentor-summary">Parity stub for custom scene code.</p>
 
     <code class="phpdocumentor-code phpdocumentor-signature ">
     <span class="phpdocumentor-signature__visibility">public</span>
@@ -977,7 +992,9 @@ to skip that step (e.g. for chained transitions).</p>
     <div class="phpdocumentor-label-line">
         </div>
     
-        <section class="phpdocumentor-description"><p>Mirrors <code class="prettyprint">Scene.back()</code> (<code class="prettyprint">aiogram/fsm/scene.py:414-416</code>).
+        <section class="phpdocumentor-description"><p>Framework transitions dispatch <code class="prettyprint">SceneAction::Back</code> attribute handlers via
+<code class="prettyprint">SceneWizard</code>; they do not call this method directly.</p>
+<p>Mirrors <code class="prettyprint">Scene.back()</code> (<code class="prettyprint">aiogram/fsm/scene.py:414-416</code>).
 Default: returns <code class="prettyprint">null</code>.</p>
 </section>
 
@@ -1012,11 +1029,11 @@ Default: returns <code class="prettyprint">null</code>.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">105</span>
+    <span class="phpdocumentor-element-found-in__line">109</span>
 
     </aside>
 
-        <p class="phpdocumentor-summary">Invoked by the framework when this scene is entered.</p>
+        <p class="phpdocumentor-summary">Parity stub for custom scene code.</p>
 
     <code class="phpdocumentor-code phpdocumentor-signature ">
     <span class="phpdocumentor-signature__visibility">public</span>
@@ -1025,7 +1042,10 @@ Default: returns <code class="prettyprint">null</code>.</p>
     <div class="phpdocumentor-label-line">
         </div>
     
-        <section class="phpdocumentor-description"><p>Mirrors <code class="prettyprint">Scene.enter()</code> (<code class="prettyprint">aiogram/fsm/scene.py:400-404</code>).
+        <section class="phpdocumentor-description"><p>Framework transitions dispatch <code class="prettyprint">SceneAction::Enter</code> attribute handlers via
+<code class="prettyprint">SceneWizard</code>; they do not call this method directly.</p>
+<p>Mirrors <code class="prettyprint">Scene.enter()</code> (<code class="prettyprint">aiogram/fsm/scene.py:400-404</code>) as an overridable
+method user code may call explicitly.
 Default: returns <code class="prettyprint">null</code>. Subclasses may return <code class="prettyprint">mixed</code>.</p>
 </section>
 
@@ -1060,11 +1080,11 @@ Default: returns <code class="prettyprint">null</code>. Subclasses may return <c
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">127</span>
+    <span class="phpdocumentor-element-found-in__line">137</span>
 
     </aside>
 
-        <p class="phpdocumentor-summary">Invoked when FSM is cleared via `SceneWizard::exit()`.</p>
+        <p class="phpdocumentor-summary">Parity stub for custom scene code.</p>
 
     <code class="phpdocumentor-code phpdocumentor-signature ">
     <span class="phpdocumentor-signature__visibility">public</span>
@@ -1073,7 +1093,9 @@ Default: returns <code class="prettyprint">null</code>. Subclasses may return <c
     <div class="phpdocumentor-label-line">
         </div>
     
-        <section class="phpdocumentor-description"><p>Mirrors <code class="prettyprint">Scene.exit()</code> (<code class="prettyprint">aiogram/fsm/scene.py:410-412</code>).
+        <section class="phpdocumentor-description"><p>Framework transitions dispatch <code class="prettyprint">SceneAction::Exit</code> attribute handlers via
+<code class="prettyprint">SceneWizard</code>; they do not call this method directly.</p>
+<p>Mirrors <code class="prettyprint">Scene.exit()</code> (<code class="prettyprint">aiogram/fsm/scene.py:410-412</code>).
 Default: returns <code class="prettyprint">null</code>.</p>
 </section>
 
@@ -1108,11 +1130,11 @@ Default: returns <code class="prettyprint">null</code>.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">116</span>
+    <span class="phpdocumentor-element-found-in__line">123</span>
 
     </aside>
 
-        <p class="phpdocumentor-summary">Invoked when the scene is left via `SceneWizard::leave()`.</p>
+        <p class="phpdocumentor-summary">Parity stub for custom scene code.</p>
 
     <code class="phpdocumentor-code phpdocumentor-signature ">
     <span class="phpdocumentor-signature__visibility">public</span>
@@ -1121,7 +1143,9 @@ Default: returns <code class="prettyprint">null</code>.</p>
     <div class="phpdocumentor-label-line">
         </div>
     
-        <section class="phpdocumentor-description"><p>Mirrors <code class="prettyprint">Scene.leave()</code> (<code class="prettyprint">aiogram/fsm/scene.py:406-408</code>).
+        <section class="phpdocumentor-description"><p>Framework transitions dispatch <code class="prettyprint">SceneAction::Leave</code> attribute handlers via
+<code class="prettyprint">SceneWizard</code>; they do not call this method directly.</p>
+<p>Mirrors <code class="prettyprint">Scene.leave()</code> (<code class="prettyprint">aiogram/fsm/scene.py:406-408</code>).
 Default: returns <code class="prettyprint">null</code>.</p>
 </section>
 
@@ -1156,11 +1180,11 @@ Default: returns <code class="prettyprint">null</code>.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">150</span>
+    <span class="phpdocumentor-element-found-in__line">163</span>
 
     </aside>
 
-        <p class="phpdocumentor-summary">Invoked when the scene is re-entered (e.g., after a looping step).</p>
+        <p class="phpdocumentor-summary">Parity stub for custom scene code.</p>
 
     <code class="phpdocumentor-code phpdocumentor-signature ">
     <span class="phpdocumentor-signature__visibility">public</span>
@@ -1205,7 +1229,7 @@ Default: returns <code class="prettyprint">null</code>.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">351</span>
+    <span class="phpdocumentor-element-found-in__line">364</span>
 
     </aside>
 
@@ -1254,7 +1278,7 @@ override is called instead.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">379</span>
+    <span class="phpdocumentor-element-found-in__line">392</span>
 
     </aside>
 
@@ -1310,7 +1334,7 @@ explicit state has been declared.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">414</span>
+    <span class="phpdocumentor-element-found-in__line">427</span>
 
     </aside>
 
@@ -1348,6 +1372,177 @@ explicit state has been declared.</p>
             <section>
         <h5 class="phpdocumentor-return-value__heading">Return values</h5>
         <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene-SceneConfig.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\SceneConfig">SceneConfig</abbr></a></span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_prepareSceneMethodArguments">
+        prepareSceneMethodArguments()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_prepareSceneMethodArguments" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">504</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Bind the event and dispatcher kwargs to a reflected scene method.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">prepareSceneMethodArguments</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><abbr title="\ReflectionMethod">ReflectionMethod</abbr>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$method</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">object&nbsp;</span><span class="phpdocumentor-signature__argument__name">$event</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">array&lt;int|string, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$kwargs</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">array&lt;int|string, mixed&gt;</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Scene methods are user handlers, so they should receive the same kwarg
+filtering ergonomics as normal dispatcher handlers: strict signatures get
+only declared parameter names, while a variadic tail opts in to the full
+workflow-data bag.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$method</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><abbr title="\ReflectionMethod">ReflectionMethod</abbr></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$event</span>
+                : <span class="phpdocumentor-argument-list__argument__type">object</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$kwargs</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;int|string, mixed&gt;</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">array&lt;int|string, mixed&gt;</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_sceneParameterIsPositionalEvent">
+        sceneParameterIsPositionalEvent()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneParameterIsPositionalEvent" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">543</span>
+
+    </aside>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">sceneParameterIsPositionalEvent</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><abbr title="\ReflectionParameter">ReflectionParameter</abbr>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$parameter</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">object&nbsp;</span><span class="phpdocumentor-signature__argument__name">$event</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">bool</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$parameter</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><abbr title="\ReflectionParameter">ReflectionParameter</abbr></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$event</span>
+                : <span class="phpdocumentor-argument-list__argument__type">object</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">bool</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                    -static                    "
+>
+    <h4 class="phpdocumentor-element__name" id="method_sceneParameterNameLooksLikeEvent">
+        sceneParameterNameLooksLikeEvent()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneParameterNameLooksLikeEvent" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene.php"><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">566</span>
+
+    </aside>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__static">static</span>        <span class="phpdocumentor-signature__name">sceneParameterNameLooksLikeEvent</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><abbr title="\ReflectionParameter">ReflectionParameter</abbr>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$parameter</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">bool</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$parameter</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><abbr title="\ReflectionParameter">ReflectionParameter</abbr></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">bool</span>
             </section>
 
 </article>
@@ -1393,6 +1588,9 @@ explicit state has been declared.</p>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneConfig">sceneConfig()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneState">sceneState()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_buildSceneConfig">buildSceneConfig()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_prepareSceneMethodArguments">prepareSceneMethodArguments()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneParameterIsPositionalEvent">sceneParameterIsPositionalEvent()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneParameterNameLooksLikeEvent">sceneParameterNameLooksLikeEvent()</a></li>
                                     </ul>
             </li>
                     </ul>

@@ -436,7 +436,7 @@
         <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Storage/DefaultKeyBuilder.php"><a href="files/src-fsm-storage-defaultkeybuilder.html"><abbr title="src/Fsm/Storage/DefaultKeyBuilder.php">DefaultKeyBuilder.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">29</span>
+    <span class="phpdocumentor-element-found-in__line">26</span>
 
     </aside>
 
@@ -451,13 +451,12 @@ exactly:</p>
 <ul>
 <li><code class="prettyprint">$withBotId</code>                 — include <code class="prettyprint">botId</code></li>
 <li><code class="prettyprint">$withBusinessConnectionId</code>  — include <code class="prettyprint">businessConnectionId</code> (only when non-null on the key)</li>
-<li><code class="prettyprint">$withDestiny</code>               — include <code class="prettyprint">destiny</code></li>
+<li><code class="prettyprint">$withDestiny</code>               — always include the <code class="prettyprint">destiny</code> segment.</li>
 </ul>
-<p>When <code class="prettyprint">$withDestiny</code> is <code class="prettyprint">false</code> (the default) and the key carries a destiny
-string that differs from <a href="classes/Gruven-PhpBotGram-Fsm-Storage-StorageKey.html#constant_DEFAULT_DESTINY"><abbr title="\Gruven\PhpBotGram\Fsm\Storage\StorageKey::DEFAULT_DESTINY">StorageKey::DEFAULT_DESTINY</abbr></a>, <code class="prettyprint">build()</code> throws
-<abbr title="\InvalidArgumentException">InvalidArgumentException</abbr> (upstream raises <code class="prettyprint">ValueError</code> for the same
-condition; PHP's closest semantic equivalent for a programming-contract
-violation is <code class="prettyprint">InvalidArgumentException</code>).</p>
+<p>When <code class="prettyprint">$withDestiny</code> is <code class="prettyprint">false</code> (the default), the default destiny segment is
+omitted for compact keys, but non-default destiny values are still included.
+This keeps ordinary FSM keys stable while allowing scene-history and custom
+destiny slots to live in isolated backend keys.</p>
 </section>
 
 
@@ -573,7 +572,7 @@ optional sub-record discriminator.</dd>    </dl>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Storage/DefaultKeyBuilder.php"><a href="files/src-fsm-storage-defaultkeybuilder.html"><abbr title="src/Fsm/Storage/DefaultKeyBuilder.php">DefaultKeyBuilder.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">42</span>
+    <span class="phpdocumentor-element-found-in__line">38</span>
 
     </aside>
 
@@ -610,7 +609,7 @@ optional sub-record discriminator.</dd>    </dl>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Storage/DefaultKeyBuilder.php"><a href="files/src-fsm-storage-defaultkeybuilder.html"><abbr title="src/Fsm/Storage/DefaultKeyBuilder.php">DefaultKeyBuilder.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">43</span>
+    <span class="phpdocumentor-element-found-in__line">39</span>
 
     </aside>
 
@@ -647,7 +646,7 @@ optional sub-record discriminator.</dd>    </dl>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Storage/DefaultKeyBuilder.php"><a href="files/src-fsm-storage-defaultkeybuilder.html"><abbr title="src/Fsm/Storage/DefaultKeyBuilder.php">DefaultKeyBuilder.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">44</span>
+    <span class="phpdocumentor-element-found-in__line">40</span>
 
     </aside>
 
@@ -684,7 +683,7 @@ optional sub-record discriminator.</dd>    </dl>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Storage/DefaultKeyBuilder.php"><a href="files/src-fsm-storage-defaultkeybuilder.html"><abbr title="src/Fsm/Storage/DefaultKeyBuilder.php">DefaultKeyBuilder.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">45</span>
+    <span class="phpdocumentor-element-found-in__line">41</span>
 
     </aside>
 
@@ -721,7 +720,7 @@ optional sub-record discriminator.</dd>    </dl>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Storage/DefaultKeyBuilder.php"><a href="files/src-fsm-storage-defaultkeybuilder.html"><abbr title="src/Fsm/Storage/DefaultKeyBuilder.php">DefaultKeyBuilder.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">46</span>
+    <span class="phpdocumentor-element-found-in__line">42</span>
 
     </aside>
 
@@ -763,7 +762,7 @@ optional sub-record discriminator.</dd>    </dl>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Storage/DefaultKeyBuilder.php"><a href="files/src-fsm-storage-defaultkeybuilder.html"><abbr title="src/Fsm/Storage/DefaultKeyBuilder.php">DefaultKeyBuilder.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">41</span>
+    <span class="phpdocumentor-element-found-in__line">37</span>
 
     </aside>
 
@@ -821,8 +820,7 @@ included (only if the key's <code class="prettyprint">businessConnectionId</code
                  = <span class="phpdocumentor-argument-list__argument__default-value">false</span>            </dt>
             <dd class="phpdocumentor-argument-list__definition">
                     <section class="phpdocumentor-description"><p>When <code class="prettyprint">true</code>, the destiny segment is always included.
-When <code class="prettyprint">false</code> (default) and the key has a non-default destiny, an
-<abbr title="\InvalidArgumentException">InvalidArgumentException</abbr> is thrown.</p>
+When <code class="prettyprint">false</code>, only non-default destiny values are included.</p>
 </section>
 
             </dd>
@@ -848,7 +846,7 @@ When <code class="prettyprint">false</code> (default) and the key has a non-defa
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Storage/DefaultKeyBuilder.php"><a href="files/src-fsm-storage-defaultkeybuilder.html"><abbr title="src/Fsm/Storage/DefaultKeyBuilder.php">DefaultKeyBuilder.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">59</span>
+    <span class="phpdocumentor-element-found-in__line">53</span>
 
     </aside>
 
@@ -885,22 +883,6 @@ When <code class="prettyprint">false</code> (default) and the key has a non-defa
             </dl>
 
     
-    <h5 class="phpdocumentor-tag-list__heading" id="method_build_tags">
-        Tags
-        <a href="classes/Gruven-PhpBotGram-Fsm-Storage-DefaultKeyBuilder.html#method_build_tags" class="headerlink"><i class="fas fa-link"></i></a>
-
-    </h5>
-    <dl class="phpdocumentor-tag-list">
-                    <dt class="phpdocumentor-tag-list__entry">
-                <span class="phpdocumentor-tag__name">throws</span>
-            </dt>
-                            <dd class="phpdocumentor-tag-list__definition">
-                                                                <span class="phpdocumentor-tag-link"><abbr title="\InvalidArgumentException">InvalidArgumentException</abbr></span>
-                                                                                        <section class="phpdocumentor-description"><p>When the key carries a non-default destiny but <code class="prettyprint">$withDestiny</code> is <code class="prettyprint">false</code>.</p>
-</section>
-
-                                    </dd>
-                        </dl>
 
         
     

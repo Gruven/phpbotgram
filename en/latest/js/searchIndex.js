@@ -2236,6 +2236,11 @@ Search.appendIndex(
             "summary": "Variadic\u0020convenience\u0020for\u0020attaching\u0020several\u0020children\u0020at\u0020once.",
             "url": "classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_includeRouters"
         },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Dispatcher\\Router\u003A\u003ApreferWhenStateActive\u0028\u0029",
+            "name": "preferWhenStateActive",
+            "summary": "Mark\u0020this\u0020router\u0020as\u0020a\u0020scene\u0020router\u0020for\u0020active\u002Dstate\u0020priority\u0020dispatch.",
+            "url": "classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_preferWhenStateActive"
+        },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Dispatcher\\Router\u003A\u003AresolveUsedUpdateTypes\u0028\u0029",
             "name": "resolveUsedUpdateTypes",
             "summary": "Collect\u0020the\u0020snake_case\u0020names\u0020of\u0020every\u0020update\u0020type\u0020with\u0020at\u0020least\none\u0020registered\u0020handler\u0020anywhere\u0020in\u0020the\u0020tree\u0020rooted\u0020at\u0020\u0060\u0024this\u0060.",
@@ -2245,6 +2250,26 @@ Search.appendIndex(
             "name": "propagateEvent",
             "summary": "Route\u0020an\u0020event\u0020through\u0020the\u0020local\u0020observer\u003B\u0020on\u0020UNHANDLED\u0020fall\nthrough\u0020to\u0020sub\u002Drouters\u0020in\u0020registration\u0020order.",
             "url": "classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_propagateEvent"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Dispatcher\\Router\u003A\u003ApropagateEventInternal\u0028\u0029",
+            "name": "propagateEventInternal",
+            "summary": "",
+            "url": "classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_propagateEventInternal"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Dispatcher\\Router\u003A\u003ApropagateScenePrioritySubtree\u0028\u0029",
+            "name": "propagateScenePrioritySubtree",
+            "summary": "Walk\u0020only\u0020scene\u002Dpriority\u0020descendants\u0020matching\u0020the\u0020active\u0020FSM\u0020state.",
+            "url": "classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_propagateScenePrioritySubtree"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Dispatcher\\Router\u003A\u003AmatchesScenePriorityState\u0028\u0029",
+            "name": "matchesScenePriorityState",
+            "summary": "",
+            "url": "classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_matchesScenePriorityState"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Dispatcher\\Router\u003A\u003AhasScenePriorityForStateInSubtree\u0028\u0029",
+            "name": "hasScenePriorityForStateInSubtree",
+            "summary": "",
+            "url": "classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_hasScenePriorityForStateInSubtree"
         },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Dispatcher\\Router\u003A\u003AemitStartup\u0028\u0029",
             "name": "emitStartup",
@@ -2295,6 +2320,16 @@ Search.appendIndex(
             "name": "subRouters",
             "summary": "Children\u0020attached\u0020via\u0020\u0060includeRouter\u0028\u0029\u0060,\u0020in\u0020registration\u0020order.",
             "url": "classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_subRouters"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Dispatcher\\Router\u003A\u003A\u0024scenePriority",
+            "name": "scenePriority",
+            "summary": "Scene\u0020routers\u0020should\u0020get\u0020the\u0020first\u0020chance\u0020to\u0020handle\u0020updates\u0020while\u0020an\u0020FSM\nstate\u0020is\u0020active,\u0020so\u0020broad\u0020parent\u0020catch\u002Dall\u0020handlers\u0020do\u0020not\u0020starve\u0020active\nscenes.\u0020Normal\u0020routers\u0020keep\u0020the\u0020local\u002Dobserver\u002Dfirst\u0020traversal.",
+            "url": "classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_scenePriority"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Dispatcher\\Router\u003A\u003A\u0024scenePriorityState",
+            "name": "scenePriorityState",
+            "summary": "FSM\u0020state\u0020this\u0020scene\u002Dpriority\u0020router\u0020owns.\u0020Null\u0020means\u0020the\u0020router\u0020is\u0020marked\nas\u0020priority\u0020but\u0020cannot\u0020be\u0020state\u002Dmatched\u0020during\u0020the\u0020active\u002Dscene\u0020prepass.",
+            "url": "classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_scenePriorityState"
         },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Dispatcher\\Router\u003A\u003A\u0024message",
             "name": "message",
@@ -6343,27 +6378,27 @@ Search.appendIndex(
         },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Fsm\\Scene\u003A\u003Aenter\u0028\u0029",
             "name": "enter",
-            "summary": "Invoked\u0020by\u0020the\u0020framework\u0020when\u0020this\u0020scene\u0020is\u0020entered.",
+            "summary": "Parity\u0020stub\u0020for\u0020custom\u0020scene\u0020code.",
             "url": "classes/Gruven-PhpBotGram-Fsm-Scene.html#method_enter"
         },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Fsm\\Scene\u003A\u003Aleave\u0028\u0029",
             "name": "leave",
-            "summary": "Invoked\u0020when\u0020the\u0020scene\u0020is\u0020left\u0020via\u0020\u0060SceneWizard\u003A\u003Aleave\u0028\u0029\u0060.",
+            "summary": "Parity\u0020stub\u0020for\u0020custom\u0020scene\u0020code.",
             "url": "classes/Gruven-PhpBotGram-Fsm-Scene.html#method_leave"
         },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Fsm\\Scene\u003A\u003Aexit\u0028\u0029",
             "name": "exit",
-            "summary": "Invoked\u0020when\u0020FSM\u0020is\u0020cleared\u0020via\u0020\u0060SceneWizard\u003A\u003Aexit\u0028\u0029\u0060.",
+            "summary": "Parity\u0020stub\u0020for\u0020custom\u0020scene\u0020code.",
             "url": "classes/Gruven-PhpBotGram-Fsm-Scene.html#method_exit"
         },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Fsm\\Scene\u003A\u003Aback\u0028\u0029",
             "name": "back",
-            "summary": "Invoked\u0020when\u0020rolling\u0020back\u0020via\u0020\u0060SceneWizard\u003A\u003Aback\u0028\u0029\u0060.",
+            "summary": "Parity\u0020stub\u0020for\u0020custom\u0020scene\u0020code.",
             "url": "classes/Gruven-PhpBotGram-Fsm-Scene.html#method_back"
         },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Fsm\\Scene\u003A\u003Aretake\u0028\u0029",
             "name": "retake",
-            "summary": "Invoked\u0020when\u0020the\u0020scene\u0020is\u0020re\u002Dentered\u0020\u0028e.g.,\u0020after\u0020a\u0020looping\u0020step\u0029.",
+            "summary": "Parity\u0020stub\u0020for\u0020custom\u0020scene\u0020code.",
             "url": "classes/Gruven-PhpBotGram-Fsm-Scene.html#method_retake"
         },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Fsm\\Scene\u003A\u003AasRouter\u0028\u0029",
@@ -6395,6 +6430,21 @@ Search.appendIndex(
             "name": "buildSceneConfig",
             "summary": "Build\u0020a\u0020\u0060SceneConfig\u0060\u0020for\u0020this\u0020class\u0020by\u0020reflecting\u0020on\u0020\u0060\u0023\u005BSceneState\u005D\u0060\n\u0028class\u0029\u0020and\u0020\u0060\u0023\u005BOn\u002A\u005D\u0060\u0020\u0028method\u0029\u0020attributes.",
             "url": "classes/Gruven-PhpBotGram-Fsm-Scene.html#method_buildSceneConfig"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Fsm\\Scene\u003A\u003AprepareSceneMethodArguments\u0028\u0029",
+            "name": "prepareSceneMethodArguments",
+            "summary": "Bind\u0020the\u0020event\u0020and\u0020dispatcher\u0020kwargs\u0020to\u0020a\u0020reflected\u0020scene\u0020method.",
+            "url": "classes/Gruven-PhpBotGram-Fsm-Scene.html#method_prepareSceneMethodArguments"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Fsm\\Scene\u003A\u003AsceneParameterIsPositionalEvent\u0028\u0029",
+            "name": "sceneParameterIsPositionalEvent",
+            "summary": "",
+            "url": "classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneParameterIsPositionalEvent"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Fsm\\Scene\u003A\u003AsceneParameterNameLooksLikeEvent\u0028\u0029",
+            "name": "sceneParameterNameLooksLikeEvent",
+            "summary": "",
+            "url": "classes/Gruven-PhpBotGram-Fsm-Scene.html#method_sceneParameterNameLooksLikeEvent"
         },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Fsm\\Scene\u003A\u003A\u0024wizard",
             "name": "wizard",
@@ -22870,6 +22920,21 @@ Search.appendIndex(
             "name": "__construct",
             "summary": "",
             "url": "classes/Gruven-PhpBotGram-Types-MaybeInaccessibleMessage.html#method___construct"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Types\\MaybeInaccessibleMessageUnion",
+            "name": "MaybeInaccessibleMessageUnion",
+            "summary": "Structural\u0020resolver\u0020for\u0020the\u0020\u007B\u0040see\u0020MaybeInaccessibleMessage\u007D\u0020union.",
+            "url": "classes/Gruven-PhpBotGram-Types-MaybeInaccessibleMessageUnion.html"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Types\\MaybeInaccessibleMessageUnion\u003A\u003Amembers\u0028\u0029",
+            "name": "members",
+            "summary": "",
+            "url": "classes/Gruven-PhpBotGram-Types-MaybeInaccessibleMessageUnion.html#method_members"
+        },                {
+            "fqsen": "\\Gruven\\PhpBotGram\\Types\\MaybeInaccessibleMessageUnion\u003A\u003Aresolve\u0028\u0029",
+            "name": "resolve",
+            "summary": "",
+            "url": "classes/Gruven-PhpBotGram-Types-MaybeInaccessibleMessageUnion.html#method_resolve"
         },                {
             "fqsen": "\\Gruven\\PhpBotGram\\Types\\MenuButton",
             "name": "MenuButton",

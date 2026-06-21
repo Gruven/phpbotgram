@@ -484,8 +484,15 @@ $dispatcher-&gt;runPolling(new PollingOptions(), new Bot(getenv('BOT_TOKEN') ?: 
 
             
     <p>Dispatch is a depth-first walk. <code>Router::propagateEvent</code>
- first tries its own observer's handlers. If every handler returns the <code>UnhandledSentinel</code>
+ normally tries its own observer's handlers first. If every handler returns the <code>UnhandledSentinel</code>
  (or no handler is registered), it recurses into each child router in registration order. The first router whose tree claims the event short-circuits the walk.</p>
+
+            
+    <p>Scene routers are the exception. Routers created by <code>Scene::asRouter()</code>
+ are marked as active-state priority routers for their declared scene state; when the dispatch kwargs contain a non-null <code>raw_state</code>
+, child subtrees that contain a scene router for that state are tried before the parent observer. This prevents broad parent catch-all handlers from consuming messages that belong to the active scene, including nested layouts such as <code>root -&gt; feature -&gt; scene</code>
+. The subtree is still entered through normal <code>propagateEvent()</code>
+ calls, so its outer middleware wraps once around that pass. When there is no active FSM state, or for child subtrees without a scene matching the active state, the parent-local-first order remains unchanged.</p>
 
             
     <p>The walk gives parents a chance to filter, transform, or short-circuit before children see the event &mdash; useful for cross-cutting concerns like auth gates or per-tenant scoping. The <code>Router::propagateEvent</code>
@@ -520,7 +527,7 @@ $dispatcher-&gt;runPolling(new PollingOptions(), new Bot(getenv('BOT_TOKEN') ?: 
  handler. The cost is a few dozen object allocations per router, paid once at boot &mdash; negligible against the dispatch hot path but worth knowing if you build many short-lived routers (e.g. one router per request in some unusual testing pattern). For production shapes, where you boot a handful of routers once at startup, the overhead is invisible.</p>
 
             
-    <p>The depth-first walk runs in registration order. Re-ordering child routers changes which one claims an event when multiple could. There is no priority field; the first matching handler in the first matching router wins. If you find yourself wanting priority, you probably want to merge those routers into one with explicit filters. Aiogram has the same limitation and the same workaround &mdash; the upstream community discussed adding priority and decided against it because it makes the dispatch behaviour harder to reason about.</p>
+    <p>The depth-first walk runs in registration order after the scene-priority subtree pass. Re-ordering child routers changes which one claims an event when multiple could. For non-scene priority, prefer explicit filters or merge the handlers into one router so the ordering is visible at the observer.</p>
 
             
     <p><code>Router</code>
