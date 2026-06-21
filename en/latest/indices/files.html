@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png"/>
+    <link rel="icon" href="images/favicon.ico"/>
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button" />
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"/>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"/>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled />
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button" />
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show &quot;typing…&quot; while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                        <section>
+        
+        <h2 class="phpdocumentor-content__title">Files</h2>
+                                            <h3>A</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-types-acceptedgifttypes.html"><abbr title="src/Types/AcceptedGiftTypes.php">AcceptedGiftTypes.php</abbr></a></li>
+                            <li><a href="files/src-methods-addstickertoset.html"><abbr title="src/Methods/AddStickerToSet.php">AddStickerToSet.php</abbr></a></li>
+                            <li><a href="files/src-types-affiliateinfo.html"><abbr title="src/Types/AffiliateInfo.php">AffiliateInfo.php</abbr></a></li>
+                            <li><a href="files/src-fsm-after.html"><abbr title="src/Fsm/After.php">After.php</abbr></a></li>
+                            <li><a href="files/src-webhook-server-amphpserver.html"><abbr title="src/Webhook/Server/AmphpServer.php">AmphpServer.php</abbr></a></li>
+                            <li><a href="files/src-client-session-amphpsession.html"><abbr title="src/Client/Session/AmphpSession.php">AmphpSession.php</abbr></a></li>
+                            <li><a href="files/src-filters-logic-andfilter.html"><abbr title="src/Filters/Logic/AndFilter.php">AndFilter.php</abbr></a></li>
+                            <li><a href="files/src-types-animation.html"><abbr title="src/Types/Animation.php">Animation.php</abbr></a></li>
+                            <li><a href="files/src-methods-answercallbackquery.html"><abbr title="src/Methods/AnswerCallbackQuery.php">AnswerCallbackQuery.php</abbr></a></li>
+                            <li><a href="files/src-methods-answerchatjoinrequestquery.html"><abbr title="src/Methods/AnswerChatJoinRequestQuery.php">AnswerChatJoinRequestQuery.php</abbr></a></li>
+                            <li><a href="files/src-methods-answerguestquery.html"><abbr title="src/Methods/AnswerGuestQuery.php">AnswerGuestQuery.php</abbr></a></li>
+                            <li><a href="files/src-methods-answerinlinequery.html"><abbr title="src/Methods/AnswerInlineQuery.php">AnswerInlineQuery.php</abbr></a></li>
+                            <li><a href="files/src-methods-answerprecheckoutquery.html"><abbr title="src/Methods/AnswerPreCheckoutQuery.php">AnswerPreCheckoutQuery.php</abbr></a></li>
+                            <li><a href="files/src-methods-answershippingquery.html"><abbr title="src/Methods/AnswerShippingQuery.php">AnswerShippingQuery.php</abbr></a></li>
+                            <li><a href="files/src-methods-answerwebappquery.html"><abbr title="src/Methods/AnswerWebAppQuery.php">AnswerWebAppQuery.php</abbr></a></li>
+                            <li><a href="files/src-methods-approvechatjoinrequest.html"><abbr title="src/Methods/ApproveChatJoinRequest.php">ApproveChatJoinRequest.php</abbr></a></li>
+                            <li><a href="files/src-methods-approvesuggestedpost.html"><abbr title="src/Methods/ApproveSuggestedPost.php">ApproveSuggestedPost.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-asfilterresultoperation.html"><abbr title="src/Utils/MagicFilter/Operation/AsFilterResultOperation.php">AsFilterResultOperation.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-attrdict.html"><abbr title="src/Utils/MagicFilter/AttrDict.php">AttrDict.php</abbr></a></li>
+                            <li><a href="files/src-types-audio.html"><abbr title="src/Types/Audio.php">Audio.php</abbr></a></li>
+                            <li><a href="files/src-utils-authwidget.html"><abbr title="src/Utils/AuthWidget.php">AuthWidget.php</abbr></a></li>
+                        </ul>
+                                                        <h3>B</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-types-backgroundfill.html"><abbr title="src/Types/BackgroundFill.php">BackgroundFill.php</abbr></a></li>
+                            <li><a href="files/src-types-backgroundfillfreeformgradient.html"><abbr title="src/Types/BackgroundFillFreeformGradient.php">BackgroundFillFreeformGradient.php</abbr></a></li>
+                            <li><a href="files/src-types-backgroundfillgradient.html"><abbr title="src/Types/BackgroundFillGradient.php">BackgroundFillGradient.php</abbr></a></li>
+                            <li><a href="files/src-types-backgroundfillsolid.html"><abbr title="src/Types/BackgroundFillSolid.php">BackgroundFillSolid.php</abbr></a></li>
+                            <li><a href="files/src-types-backgroundfillunion.html"><abbr title="src/Types/BackgroundFillUnion.php">BackgroundFillUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-backgroundtype.html"><abbr title="src/Types/BackgroundType.php">BackgroundType.php</abbr></a></li>
+                            <li><a href="files/src-types-backgroundtypechattheme.html"><abbr title="src/Types/BackgroundTypeChatTheme.php">BackgroundTypeChatTheme.php</abbr></a></li>
+                            <li><a href="files/src-types-backgroundtypefill.html"><abbr title="src/Types/BackgroundTypeFill.php">BackgroundTypeFill.php</abbr></a></li>
+                            <li><a href="files/src-types-backgroundtypepattern.html"><abbr title="src/Types/BackgroundTypePattern.php">BackgroundTypePattern.php</abbr></a></li>
+                            <li><a href="files/src-types-backgroundtypeunion.html"><abbr title="src/Types/BackgroundTypeUnion.php">BackgroundTypeUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-backgroundtypewallpaper.html"><abbr title="src/Types/BackgroundTypeWallpaper.php">BackgroundTypeWallpaper.php</abbr></a></li>
+                            <li><a href="files/src-utils-backoff.html"><abbr title="src/Utils/Backoff.php">Backoff.php</abbr></a></li>
+                            <li><a href="files/src-utils-backoffconfig.html"><abbr title="src/Utils/BackoffConfig.php">BackoffConfig.php</abbr></a></li>
+                            <li><a href="files/src-methods-banchatmember.html"><abbr title="src/Methods/BanChatMember.php">BanChatMember.php</abbr></a></li>
+                            <li><a href="files/src-methods-banchatsenderchat.html"><abbr title="src/Methods/BanChatSenderChat.php">BanChatSenderChat.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-baseeventisolation.html"><abbr title="src/Fsm/Storage/BaseEventIsolation.php">BaseEventIsolation.php</abbr></a></li>
+                            <li><a href="files/src-filters-f-basefield.html"><abbr title="src/Filters/F/BaseField.php">BaseField.php</abbr></a></li>
+                            <li><a href="files/src-filters-basefilter.html"><abbr title="src/Filters/BaseFilter.php">BaseFilter.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-middlewares-basemiddleware.html"><abbr title="src/Dispatcher/Middlewares/BaseMiddleware.php">BaseMiddleware.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-baseoperation.html"><abbr title="src/Utils/MagicFilter/Operation/BaseOperation.php">BaseOperation.php</abbr></a></li>
+                            <li><a href="files/src-webhook-baserequesthandler.html"><abbr title="src/Webhook/BaseRequestHandler.php">BaseRequestHandler.php</abbr></a></li>
+                            <li><a href="files/src-client-session-middleware-baserequestmiddleware.html"><abbr title="src/Client/Session/Middleware/BaseRequestMiddleware.php">BaseRequestMiddleware.php</abbr></a></li>
+                            <li><a href="files/src-client-session-basesession.html"><abbr title="src/Client/Session/BaseSession.php">BaseSession.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-basestorage.html"><abbr title="src/Fsm/Storage/BaseStorage.php">BaseStorage.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-event-bases.html"><abbr title="src/Dispatcher/Event/Bases.php">Bases.php</abbr></a></li>
+                            <li><a href="files/src-types-birthdate.html"><abbr title="src/Types/Birthdate.php">Birthdate.php</abbr></a></li>
+                            <li><a href="files/src-filters-f-boolfield.html"><abbr title="src/Filters/F/BoolField.php">BoolField.php</abbr></a></li>
+                            <li><a href="files/src-bot.html"><abbr title="src/Bot.php">Bot.php</abbr></a></li>
+                            <li><a href="files/src-types-botaccesssettings.html"><abbr title="src/Types/BotAccessSettings.php">BotAccessSettings.php</abbr></a></li>
+                            <li><a href="files/src-types-botcommand.html"><abbr title="src/Types/BotCommand.php">BotCommand.php</abbr></a></li>
+                            <li><a href="files/src-types-botcommandscope.html"><abbr title="src/Types/BotCommandScope.php">BotCommandScope.php</abbr></a></li>
+                            <li><a href="files/src-types-botcommandscopeallchatadministrators.html"><abbr title="src/Types/BotCommandScopeAllChatAdministrators.php">BotCommandScopeAllChatAdministrators.php</abbr></a></li>
+                            <li><a href="files/src-types-botcommandscopeallgroupchats.html"><abbr title="src/Types/BotCommandScopeAllGroupChats.php">BotCommandScopeAllGroupChats.php</abbr></a></li>
+                            <li><a href="files/src-types-botcommandscopeallprivatechats.html"><abbr title="src/Types/BotCommandScopeAllPrivateChats.php">BotCommandScopeAllPrivateChats.php</abbr></a></li>
+                            <li><a href="files/src-types-botcommandscopechat.html"><abbr title="src/Types/BotCommandScopeChat.php">BotCommandScopeChat.php</abbr></a></li>
+                            <li><a href="files/src-types-botcommandscopechatadministrators.html"><abbr title="src/Types/BotCommandScopeChatAdministrators.php">BotCommandScopeChatAdministrators.php</abbr></a></li>
+                            <li><a href="files/src-types-botcommandscopechatmember.html"><abbr title="src/Types/BotCommandScopeChatMember.php">BotCommandScopeChatMember.php</abbr></a></li>
+                            <li><a href="files/src-types-botcommandscopedefault.html"><abbr title="src/Types/BotCommandScopeDefault.php">BotCommandScopeDefault.php</abbr></a></li>
+                            <li><a href="files/src-enums-botcommandscopetype.html"><abbr title="src/Enums/BotCommandScopeType.php">BotCommandScopeType.php</abbr></a></li>
+                            <li><a href="files/src-types-botcommandscopeunion.html"><abbr title="src/Types/BotCommandScopeUnion.php">BotCommandScopeUnion.php</abbr></a></li>
+                            <li><a href="files/src-client-botcontextcontroller.html"><abbr title="src/Client/BotContextController.php">BotContextController.php</abbr></a></li>
+                            <li><a href="files/src-client-botdefault.html"><abbr title="src/Client/BotDefault.php">BotDefault.php</abbr></a></li>
+                            <li><a href="files/src-types-botdescription.html"><abbr title="src/Types/BotDescription.php">BotDescription.php</abbr></a></li>
+                            <li><a href="files/src-types-botname.html"><abbr title="src/Types/BotName.php">BotName.php</abbr></a></li>
+                            <li><a href="files/src-types-botshortdescription.html"><abbr title="src/Types/BotShortDescription.php">BotShortDescription.php</abbr></a></li>
+                            <li><a href="files/src-client-botshortcuts.html"><abbr title="src/Client/BotShortcuts.php">BotShortcuts.php</abbr></a></li>
+                            <li><a href="files/src-client-botshortcutscontract.html"><abbr title="src/Client/BotShortcutsContract.php">BotShortcutsContract.php</abbr></a></li>
+                            <li><a href="files/src-types-bufferedinputfile.html"><abbr title="src/Types/BufferedInputFile.php">BufferedInputFile.php</abbr></a></li>
+                            <li><a href="files/src-types-businessbotrights.html"><abbr title="src/Types/BusinessBotRights.php">BusinessBotRights.php</abbr></a></li>
+                            <li><a href="files/src-types-businessconnection.html"><abbr title="src/Types/BusinessConnection.php">BusinessConnection.php</abbr></a></li>
+                            <li><a href="files/src-types-businessintro.html"><abbr title="src/Types/BusinessIntro.php">BusinessIntro.php</abbr></a></li>
+                            <li><a href="files/src-types-businesslocation.html"><abbr title="src/Types/BusinessLocation.php">BusinessLocation.php</abbr></a></li>
+                            <li><a href="files/src-types-businessmessagesdeleted.html"><abbr title="src/Types/BusinessMessagesDeleted.php">BusinessMessagesDeleted.php</abbr></a></li>
+                            <li><a href="files/src-types-businessopeninghours.html"><abbr title="src/Types/BusinessOpeningHours.php">BusinessOpeningHours.php</abbr></a></li>
+                            <li><a href="files/src-types-businessopeninghoursinterval.html"><abbr title="src/Types/BusinessOpeningHoursInterval.php">BusinessOpeningHoursInterval.php</abbr></a></li>
+                            <li><a href="files/src-enums-buttonstyle.html"><abbr title="src/Enums/ButtonStyle.php">ButtonStyle.php</abbr></a></li>
+                        </ul>
+                                                        <h3>C</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-utils-magicfilter-operation-calloperation.html"><abbr title="src/Utils/MagicFilter/Operation/CallOperation.php">CallOperation.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-event-callableobject.html"><abbr title="src/Dispatcher/Event/CallableObject.php">CallableObject.php</abbr></a></li>
+                            <li><a href="files/src-utils-callbackanswer-callbackanswer.html"><abbr title="src/Utils/CallbackAnswer/CallbackAnswer.php">CallbackAnswer.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-callbackanswerexception.html"><abbr title="src/Exceptions/CallbackAnswerException.php">CallbackAnswerException.php</abbr></a></li>
+                            <li><a href="files/src-utils-callbackanswer-callbackanswermiddleware.html"><abbr title="src/Utils/CallbackAnswer/CallbackAnswerMiddleware.php">CallbackAnswerMiddleware.php</abbr></a></li>
+                            <li><a href="files/src-filters-callbackdata.html"><abbr title="src/Filters/CallbackData.php">CallbackData.php</abbr></a></li>
+                            <li><a href="files/src-types-callbackgame.html"><abbr title="src/Types/CallbackGame.php">CallbackGame.php</abbr></a></li>
+                            <li><a href="files/src-filters-callbackprefix.html"><abbr title="src/Filters/CallbackPrefix.php">CallbackPrefix.php</abbr></a></li>
+                            <li><a href="files/src-types-callbackquery.html"><abbr title="src/Types/CallbackQuery.php">CallbackQuery.php</abbr></a></li>
+                            <li><a href="files/src-filters-callbackqueryfilter.html"><abbr title="src/Filters/CallbackQueryFilter.php">CallbackQueryFilter.php</abbr></a></li>
+                            <li><a href="files/src-types-shortcuts-callbackqueryshortcuts.html"><abbr title="src/Types/Shortcuts/CallbackQueryShortcuts.php">CallbackQueryShortcuts.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-event-cancelhandlerexception.html"><abbr title="src/Dispatcher/Event/CancelHandlerException.php">CancelHandlerException.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-castoperation.html"><abbr title="src/Utils/MagicFilter/Operation/CastOperation.php">CastOperation.php</abbr></a></li>
+                            <li><a href="files/src-types-chat.html"><abbr title="src/Types/Chat.php">Chat.php</abbr></a></li>
+                            <li><a href="files/src-enums-chataction.html"><abbr title="src/Enums/ChatAction.php">ChatAction.php</abbr></a></li>
+                            <li><a href="files/src-utils-chataction-chatactionhandle.html"><abbr title="src/Utils/ChatAction/ChatActionHandle.php">ChatActionHandle.php</abbr></a></li>
+                            <li><a href="files/src-utils-chataction-chatactionmiddleware.html"><abbr title="src/Utils/ChatAction/ChatActionMiddleware.php">ChatActionMiddleware.php</abbr></a></li>
+                            <li><a href="files/src-utils-chataction-chatactionsender.html"><abbr title="src/Utils/ChatAction/ChatActionSender.php">ChatActionSender.php</abbr></a></li>
+                            <li><a href="files/src-types-chatadministratorrights.html"><abbr title="src/Types/ChatAdministratorRights.php">ChatAdministratorRights.php</abbr></a></li>
+                            <li><a href="files/src-types-chatbackground.html"><abbr title="src/Types/ChatBackground.php">ChatBackground.php</abbr></a></li>
+                            <li><a href="files/src-types-chatboost.html"><abbr title="src/Types/ChatBoost.php">ChatBoost.php</abbr></a></li>
+                            <li><a href="files/src-types-chatboostadded.html"><abbr title="src/Types/ChatBoostAdded.php">ChatBoostAdded.php</abbr></a></li>
+                            <li><a href="files/src-types-chatboostremoved.html"><abbr title="src/Types/ChatBoostRemoved.php">ChatBoostRemoved.php</abbr></a></li>
+                            <li><a href="files/src-types-chatboostsource.html"><abbr title="src/Types/ChatBoostSource.php">ChatBoostSource.php</abbr></a></li>
+                            <li><a href="files/src-types-chatboostsourcegiftcode.html"><abbr title="src/Types/ChatBoostSourceGiftCode.php">ChatBoostSourceGiftCode.php</abbr></a></li>
+                            <li><a href="files/src-types-chatboostsourcegiveaway.html"><abbr title="src/Types/ChatBoostSourceGiveaway.php">ChatBoostSourceGiveaway.php</abbr></a></li>
+                            <li><a href="files/src-types-chatboostsourcepremium.html"><abbr title="src/Types/ChatBoostSourcePremium.php">ChatBoostSourcePremium.php</abbr></a></li>
+                            <li><a href="files/src-enums-chatboostsourcetype.html"><abbr title="src/Enums/ChatBoostSourceType.php">ChatBoostSourceType.php</abbr></a></li>
+                            <li><a href="files/src-types-chatboostsourceunion.html"><abbr title="src/Types/ChatBoostSourceUnion.php">ChatBoostSourceUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-chatboostupdated.html"><abbr title="src/Types/ChatBoostUpdated.php">ChatBoostUpdated.php</abbr></a></li>
+                            <li><a href="files/src-types-chatfullinfo.html"><abbr title="src/Types/ChatFullInfo.php">ChatFullInfo.php</abbr></a></li>
+                            <li><a href="files/src-types-chatinvitelink.html"><abbr title="src/Types/ChatInviteLink.php">ChatInviteLink.php</abbr></a></li>
+                            <li><a href="files/src-types-chatjoinrequest.html"><abbr title="src/Types/ChatJoinRequest.php">ChatJoinRequest.php</abbr></a></li>
+                            <li><a href="files/src-types-chatlocation.html"><abbr title="src/Types/ChatLocation.php">ChatLocation.php</abbr></a></li>
+                            <li><a href="files/src-types-chatmember.html"><abbr title="src/Types/ChatMember.php">ChatMember.php</abbr></a></li>
+                            <li><a href="files/src-types-chatmemberadministrator.html"><abbr title="src/Types/ChatMemberAdministrator.php">ChatMemberAdministrator.php</abbr></a></li>
+                            <li><a href="files/src-types-chatmemberbanned.html"><abbr title="src/Types/ChatMemberBanned.php">ChatMemberBanned.php</abbr></a></li>
+                            <li><a href="files/src-types-chatmemberleft.html"><abbr title="src/Types/ChatMemberLeft.php">ChatMemberLeft.php</abbr></a></li>
+                            <li><a href="files/src-types-chatmembermember.html"><abbr title="src/Types/ChatMemberMember.php">ChatMemberMember.php</abbr></a></li>
+                            <li><a href="files/src-types-chatmemberowner.html"><abbr title="src/Types/ChatMemberOwner.php">ChatMemberOwner.php</abbr></a></li>
+                            <li><a href="files/src-types-chatmemberrestricted.html"><abbr title="src/Types/ChatMemberRestricted.php">ChatMemberRestricted.php</abbr></a></li>
+                            <li><a href="files/src-enums-chatmemberstatus.html"><abbr title="src/Enums/ChatMemberStatus.php">ChatMemberStatus.php</abbr></a></li>
+                            <li><a href="files/src-types-chatmemberunion.html"><abbr title="src/Types/ChatMemberUnion.php">ChatMemberUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-chatmemberupdated.html"><abbr title="src/Types/ChatMemberUpdated.php">ChatMemberUpdated.php</abbr></a></li>
+                            <li><a href="files/src-filters-chatmemberupdatedfilter.html"><abbr title="src/Filters/ChatMemberUpdatedFilter.php">ChatMemberUpdatedFilter.php</abbr></a></li>
+                            <li><a href="files/src-types-chatownerchanged.html"><abbr title="src/Types/ChatOwnerChanged.php">ChatOwnerChanged.php</abbr></a></li>
+                            <li><a href="files/src-types-chatownerleft.html"><abbr title="src/Types/ChatOwnerLeft.php">ChatOwnerLeft.php</abbr></a></li>
+                            <li><a href="files/src-types-chatpermissions.html"><abbr title="src/Types/ChatPermissions.php">ChatPermissions.php</abbr></a></li>
+                            <li><a href="files/src-types-chatphoto.html"><abbr title="src/Types/ChatPhoto.php">ChatPhoto.php</abbr></a></li>
+                            <li><a href="files/src-types-chatshared.html"><abbr title="src/Types/ChatShared.php">ChatShared.php</abbr></a></li>
+                            <li><a href="files/src-types-shortcuts-chatshortcuts.html"><abbr title="src/Types/Shortcuts/ChatShortcuts.php">ChatShortcuts.php</abbr></a></li>
+                            <li><a href="files/src-enums-chattype.html"><abbr title="src/Enums/ChatType.php">ChatType.php</abbr></a></li>
+                            <li><a href="files/src-types-checklist.html"><abbr title="src/Types/Checklist.php">Checklist.php</abbr></a></li>
+                            <li><a href="files/src-types-checklisttask.html"><abbr title="src/Types/ChecklistTask.php">ChecklistTask.php</abbr></a></li>
+                            <li><a href="files/src-types-checklisttasksadded.html"><abbr title="src/Types/ChecklistTasksAdded.php">ChecklistTasksAdded.php</abbr></a></li>
+                            <li><a href="files/src-types-checklisttasksdone.html"><abbr title="src/Types/ChecklistTasksDone.php">ChecklistTasksDone.php</abbr></a></li>
+                            <li><a href="files/src-types-choseninlineresult.html"><abbr title="src/Types/ChosenInlineResult.php">ChosenInlineResult.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-clientdecodeexception.html"><abbr title="src/Exceptions/ClientDecodeException.php">ClientDecodeException.php</abbr></a></li>
+                            <li><a href="files/src-methods-close.html"><abbr title="src/Methods/Close.php">Close.php</abbr></a></li>
+                            <li><a href="files/src-methods-closeforumtopic.html"><abbr title="src/Methods/CloseForumTopic.php">CloseForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-methods-closegeneralforumtopic.html"><abbr title="src/Methods/CloseGeneralForumTopic.php">CloseGeneralForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-combinationoperation.html"><abbr title="src/Utils/MagicFilter/Operation/CombinationOperation.php">CombinationOperation.php</abbr></a></li>
+                            <li><a href="files/src-filters-command.html"><abbr title="src/Filters/Command.php">Command.php</abbr></a></li>
+                            <li><a href="files/src-filters-commandobject.html"><abbr title="src/Filters/CommandObject.php">CommandObject.php</abbr></a></li>
+                            <li><a href="files/src-filters-commandstart.html"><abbr title="src/Filters/CommandStart.php">CommandStart.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-comparatoroperation.html"><abbr title="src/Utils/MagicFilter/Operation/ComparatorOperation.php">ComparatorOperation.php</abbr></a></li>
+                            <li><a href="files/src-types-contact.html"><abbr title="src/Types/Contact.php">Contact.php</abbr></a></li>
+                            <li><a href="files/src-enums-contenttype.html"><abbr title="src/Enums/ContentType.php">ContentType.php</abbr></a></li>
+                            <li><a href="files/src-methods-convertgifttostars.html"><abbr title="src/Methods/ConvertGiftToStars.php">ConvertGiftToStars.php</abbr></a></li>
+                            <li><a href="files/src-methods-copymessage.html"><abbr title="src/Methods/CopyMessage.php">CopyMessage.php</abbr></a></li>
+                            <li><a href="files/src-methods-copymessages.html"><abbr title="src/Methods/CopyMessages.php">CopyMessages.php</abbr></a></li>
+                            <li><a href="files/src-types-copytextbutton.html"><abbr title="src/Types/CopyTextButton.php">CopyTextButton.php</abbr></a></li>
+                            <li><a href="files/src-methods-createchatinvitelink.html"><abbr title="src/Methods/CreateChatInviteLink.php">CreateChatInviteLink.php</abbr></a></li>
+                            <li><a href="files/src-methods-createchatsubscriptioninvitelink.html"><abbr title="src/Methods/CreateChatSubscriptionInviteLink.php">CreateChatSubscriptionInviteLink.php</abbr></a></li>
+                            <li><a href="files/src-methods-createforumtopic.html"><abbr title="src/Methods/CreateForumTopic.php">CreateForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-methods-createinvoicelink.html"><abbr title="src/Methods/CreateInvoiceLink.php">CreateInvoiceLink.php</abbr></a></li>
+                            <li><a href="files/src-methods-createnewstickerset.html"><abbr title="src/Methods/CreateNewStickerSet.php">CreateNewStickerSet.php</abbr></a></li>
+                            <li><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></li>
+                        </ul>
+                                                        <h3>D</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-exceptions-datanotdictlikeexception.html"><abbr title="src/Exceptions/DataNotDictLikeException.php">DataNotDictLikeException.php</abbr></a></li>
+                            <li><a href="files/src-types-custom-datetime.html"><abbr title="src/Types/Custom/DateTime.php">DateTime.php</abbr></a></li>
+                            <li><a href="files/src-filters-f-datetimefield.html"><abbr title="src/Filters/F/DateTimeField.php">DateTimeField.php</abbr></a></li>
+                            <li><a href="files/src-methods-declinechatjoinrequest.html"><abbr title="src/Methods/DeclineChatJoinRequest.php">DeclineChatJoinRequest.php</abbr></a></li>
+                            <li><a href="files/src-methods-declinesuggestedpost.html"><abbr title="src/Methods/DeclineSuggestedPost.php">DeclineSuggestedPost.php</abbr></a></li>
+                            <li><a href="files/src-utils-deeplinktype.html"><abbr title="src/Utils/DeepLinkType.php">DeepLinkType.php</abbr></a></li>
+                            <li><a href="files/src-utils-deeplinking.html"><abbr title="src/Utils/DeepLinking.php">DeepLinking.php</abbr></a></li>
+                            <li><a href="files/src-client-defaultbotproperties.html"><abbr title="src/Client/DefaultBotProperties.php">DefaultBotProperties.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-defaultkeybuilder.html"><abbr title="src/Fsm/Storage/DefaultKeyBuilder.php">DefaultKeyBuilder.php</abbr></a></li>
+                            <li><a href="files/src-methods-deleteallmessagereactions.html"><abbr title="src/Methods/DeleteAllMessageReactions.php">DeleteAllMessageReactions.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletebusinessmessages.html"><abbr title="src/Methods/DeleteBusinessMessages.php">DeleteBusinessMessages.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletechatphoto.html"><abbr title="src/Methods/DeleteChatPhoto.php">DeleteChatPhoto.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletechatstickerset.html"><abbr title="src/Methods/DeleteChatStickerSet.php">DeleteChatStickerSet.php</abbr></a></li>
+                            <li><a href="files/src-methods-deleteforumtopic.html"><abbr title="src/Methods/DeleteForumTopic.php">DeleteForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletemessage.html"><abbr title="src/Methods/DeleteMessage.php">DeleteMessage.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletemessagereaction.html"><abbr title="src/Methods/DeleteMessageReaction.php">DeleteMessageReaction.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletemessages.html"><abbr title="src/Methods/DeleteMessages.php">DeleteMessages.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletemycommands.html"><abbr title="src/Methods/DeleteMyCommands.php">DeleteMyCommands.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletestickerfromset.html"><abbr title="src/Methods/DeleteStickerFromSet.php">DeleteStickerFromSet.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletestickerset.html"><abbr title="src/Methods/DeleteStickerSet.php">DeleteStickerSet.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletestory.html"><abbr title="src/Methods/DeleteStory.php">DeleteStory.php</abbr></a></li>
+                            <li><a href="files/src-methods-deletewebhook.html"><abbr title="src/Methods/DeleteWebhook.php">DeleteWebhook.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-detailedphpbotgramexception.html"><abbr title="src/Exceptions/DetailedPhpBotGramException.php">DetailedPhpBotGramException.php</abbr></a></li>
+                            <li><a href="files/src-types-dice.html"><abbr title="src/Types/Dice.php">Dice.php</abbr></a></li>
+                            <li><a href="files/src-enums-diceemoji.html"><abbr title="src/Enums/DiceEmoji.php">DiceEmoji.php</abbr></a></li>
+                            <li><a href="files/src-types-directmessagepricechanged.html"><abbr title="src/Types/DirectMessagePriceChanged.php">DirectMessagePriceChanged.php</abbr></a></li>
+                            <li><a href="files/src-types-directmessagestopic.html"><abbr title="src/Types/DirectMessagesTopic.php">DirectMessagesTopic.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-disabledeventisolation.html"><abbr title="src/Fsm/Storage/DisabledEventIsolation.php">DisabledEventIsolation.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-dispatcher.html"><abbr title="src/Dispatcher/Dispatcher.php">Dispatcher.php</abbr></a></li>
+                            <li><a href="files/src-types-document.html"><abbr title="src/Types/Document.php">Document.php</abbr></a></li>
+                            <li><a href="files/src-types-downloadable.html"><abbr title="src/Types/Downloadable.php">Downloadable.php</abbr></a></li>
+                        </ul>
+                                                        <h3>E</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-methods-editchatinvitelink.html"><abbr title="src/Methods/EditChatInviteLink.php">EditChatInviteLink.php</abbr></a></li>
+                            <li><a href="files/src-methods-editchatsubscriptioninvitelink.html"><abbr title="src/Methods/EditChatSubscriptionInviteLink.php">EditChatSubscriptionInviteLink.php</abbr></a></li>
+                            <li><a href="files/src-methods-editforumtopic.html"><abbr title="src/Methods/EditForumTopic.php">EditForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-methods-editgeneralforumtopic.html"><abbr title="src/Methods/EditGeneralForumTopic.php">EditGeneralForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-methods-editmessagecaption.html"><abbr title="src/Methods/EditMessageCaption.php">EditMessageCaption.php</abbr></a></li>
+                            <li><a href="files/src-methods-editmessagechecklist.html"><abbr title="src/Methods/EditMessageChecklist.php">EditMessageChecklist.php</abbr></a></li>
+                            <li><a href="files/src-methods-editmessagelivelocation.html"><abbr title="src/Methods/EditMessageLiveLocation.php">EditMessageLiveLocation.php</abbr></a></li>
+                            <li><a href="files/src-methods-editmessagemedia.html"><abbr title="src/Methods/EditMessageMedia.php">EditMessageMedia.php</abbr></a></li>
+                            <li><a href="files/src-methods-editmessagereplymarkup.html"><abbr title="src/Methods/EditMessageReplyMarkup.php">EditMessageReplyMarkup.php</abbr></a></li>
+                            <li><a href="files/src-methods-editmessagetext.html"><abbr title="src/Methods/EditMessageText.php">EditMessageText.php</abbr></a></li>
+                            <li><a href="files/src-methods-editstory.html"><abbr title="src/Methods/EditStory.php">EditStory.php</abbr></a></li>
+                            <li><a href="files/src-methods-edituserstarsubscription.html"><abbr title="src/Methods/EditUserStarSubscription.php">EditUserStarSubscription.php</abbr></a></li>
+                            <li><a href="files/src-types-encryptedcredentials.html"><abbr title="src/Types/EncryptedCredentials.php">EncryptedCredentials.php</abbr></a></li>
+                            <li><a href="files/src-enums-encryptedpassportelement.html"><abbr title="src/Enums/EncryptedPassportElement.php">EncryptedPassportElement.php</abbr></a></li>
+                            <li><a href="files/src-types-encryptedpassportelement.html"><abbr title="src/Types/EncryptedPassportElement.php">EncryptedPassportElement.php</abbr></a></li>
+                            <li><a href="files/src-types-errorevent.html"><abbr title="src/Types/ErrorEvent.php">ErrorEvent.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-middlewares-errorsmiddleware.html"><abbr title="src/Dispatcher/Middlewares/ErrorsMiddleware.php">ErrorsMiddleware.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-middlewares-eventcontext.html"><abbr title="src/Dispatcher/Middlewares/EventContext.php">EventContext.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-event-eventobserver.html"><abbr title="src/Dispatcher/Event/EventObserver.php">EventObserver.php</abbr></a></li>
+                            <li><a href="files/src-filters-exceptionmessagefilter.html"><abbr title="src/Filters/ExceptionMessageFilter.php">ExceptionMessageFilter.php</abbr></a></li>
+                            <li><a href="files/src-filters-exceptiontypefilter.html"><abbr title="src/Filters/ExceptionTypeFilter.php">ExceptionTypeFilter.php</abbr></a></li>
+                            <li><a href="files/src-methods-exportchatinvitelink.html"><abbr title="src/Methods/ExportChatInviteLink.php">ExportChatInviteLink.php</abbr></a></li>
+                            <li><a href="files/src-types-externalreplyinfo.html"><abbr title="src/Types/ExternalReplyInfo.php">ExternalReplyInfo.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-extractoperation.html"><abbr title="src/Utils/MagicFilter/Operation/ExtractOperation.php">ExtractOperation.php</abbr></a></li>
+                        </ul>
+                                                        <h3>F</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-f.html"><abbr title="src/F.php">F.php</abbr></a></li>
+                            <li><a href="files/src-types-file.html"><abbr title="src/Types/File.php">File.php</abbr></a></li>
+                            <li><a href="files/src-filters-filter.html"><abbr title="src/Filters/Filter.php">Filter.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-event-filterobject.html"><abbr title="src/Dispatcher/Event/FilterObject.php">FilterObject.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-flags-flag.html"><abbr title="src/Dispatcher/Flags/Flag.php">Flag.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-flags-flagdecorator.html"><abbr title="src/Dispatcher/Flags/FlagDecorator.php">FlagDecorator.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-flags-flaggenerator.html"><abbr title="src/Dispatcher/Flags/FlagGenerator.php">FlagGenerator.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-flags-flags.html"><abbr title="src/Dispatcher/Flags/Flags.php">Flags.php</abbr></a></li>
+                            <li><a href="files/src-types-forcereply.html"><abbr title="src/Types/ForceReply.php">ForceReply.php</abbr></a></li>
+                            <li><a href="files/src-types-forumtopic.html"><abbr title="src/Types/ForumTopic.php">ForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-types-forumtopicclosed.html"><abbr title="src/Types/ForumTopicClosed.php">ForumTopicClosed.php</abbr></a></li>
+                            <li><a href="files/src-types-forumtopiccreated.html"><abbr title="src/Types/ForumTopicCreated.php">ForumTopicCreated.php</abbr></a></li>
+                            <li><a href="files/src-types-forumtopicedited.html"><abbr title="src/Types/ForumTopicEdited.php">ForumTopicEdited.php</abbr></a></li>
+                            <li><a href="files/src-types-forumtopicreopened.html"><abbr title="src/Types/ForumTopicReopened.php">ForumTopicReopened.php</abbr></a></li>
+                            <li><a href="files/src-methods-forwardmessage.html"><abbr title="src/Methods/ForwardMessage.php">ForwardMessage.php</abbr></a></li>
+                            <li><a href="files/src-methods-forwardmessages.html"><abbr title="src/Methods/ForwardMessages.php">ForwardMessages.php</abbr></a></li>
+                            <li><a href="files/src-types-fsinputfile.html"><abbr title="src/Types/FsInputFile.php">FsInputFile.php</abbr></a></li>
+                            <li><a href="files/src-fsm-fsmcontext.html"><abbr title="src/Fsm/FsmContext.php">FsmContext.php</abbr></a></li>
+                            <li><a href="files/src-fsm-fsmcontextmiddleware.html"><abbr title="src/Fsm/FsmContextMiddleware.php">FsmContextMiddleware.php</abbr></a></li>
+                            <li><a href="files/src-fsm-fsmstrategy.html"><abbr title="src/Fsm/FsmStrategy.php">FsmStrategy.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-functionoperation.html"><abbr title="src/Utils/MagicFilter/Operation/FunctionOperation.php">FunctionOperation.php</abbr></a></li>
+                        </ul>
+                                                        <h3>G</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-types-game.html"><abbr title="src/Types/Game.php">Game.php</abbr></a></li>
+                            <li><a href="files/src-types-gamehighscore.html"><abbr title="src/Types/GameHighScore.php">GameHighScore.php</abbr></a></li>
+                            <li><a href="files/src-types-generalforumtopichidden.html"><abbr title="src/Types/GeneralForumTopicHidden.php">GeneralForumTopicHidden.php</abbr></a></li>
+                            <li><a href="files/src-types-generalforumtopicunhidden.html"><abbr title="src/Types/GeneralForumTopicUnhidden.php">GeneralForumTopicUnhidden.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-getattributeoperation.html"><abbr title="src/Utils/MagicFilter/Operation/GetAttributeOperation.php">GetAttributeOperation.php</abbr></a></li>
+                            <li><a href="files/src-methods-getavailablegifts.html"><abbr title="src/Methods/GetAvailableGifts.php">GetAvailableGifts.php</abbr></a></li>
+                            <li><a href="files/src-methods-getbusinessaccountgifts.html"><abbr title="src/Methods/GetBusinessAccountGifts.php">GetBusinessAccountGifts.php</abbr></a></li>
+                            <li><a href="files/src-methods-getbusinessaccountstarbalance.html"><abbr title="src/Methods/GetBusinessAccountStarBalance.php">GetBusinessAccountStarBalance.php</abbr></a></li>
+                            <li><a href="files/src-methods-getbusinessconnection.html"><abbr title="src/Methods/GetBusinessConnection.php">GetBusinessConnection.php</abbr></a></li>
+                            <li><a href="files/src-methods-getchat.html"><abbr title="src/Methods/GetChat.php">GetChat.php</abbr></a></li>
+                            <li><a href="files/src-methods-getchatadministrators.html"><abbr title="src/Methods/GetChatAdministrators.php">GetChatAdministrators.php</abbr></a></li>
+                            <li><a href="files/src-methods-getchatgifts.html"><abbr title="src/Methods/GetChatGifts.php">GetChatGifts.php</abbr></a></li>
+                            <li><a href="files/src-methods-getchatmember.html"><abbr title="src/Methods/GetChatMember.php">GetChatMember.php</abbr></a></li>
+                            <li><a href="files/src-methods-getchatmembercount.html"><abbr title="src/Methods/GetChatMemberCount.php">GetChatMemberCount.php</abbr></a></li>
+                            <li><a href="files/src-methods-getchatmenubutton.html"><abbr title="src/Methods/GetChatMenuButton.php">GetChatMenuButton.php</abbr></a></li>
+                            <li><a href="files/src-methods-getcustomemojistickers.html"><abbr title="src/Methods/GetCustomEmojiStickers.php">GetCustomEmojiStickers.php</abbr></a></li>
+                            <li><a href="files/src-methods-getfile.html"><abbr title="src/Methods/GetFile.php">GetFile.php</abbr></a></li>
+                            <li><a href="files/src-methods-getforumtopiciconstickers.html"><abbr title="src/Methods/GetForumTopicIconStickers.php">GetForumTopicIconStickers.php</abbr></a></li>
+                            <li><a href="files/src-methods-getgamehighscores.html"><abbr title="src/Methods/GetGameHighScores.php">GetGameHighScores.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-getitemoperation.html"><abbr title="src/Utils/MagicFilter/Operation/GetItemOperation.php">GetItemOperation.php</abbr></a></li>
+                            <li><a href="files/src-methods-getmanagedbotaccesssettings.html"><abbr title="src/Methods/GetManagedBotAccessSettings.php">GetManagedBotAccessSettings.php</abbr></a></li>
+                            <li><a href="files/src-methods-getmanagedbottoken.html"><abbr title="src/Methods/GetManagedBotToken.php">GetManagedBotToken.php</abbr></a></li>
+                            <li><a href="files/src-methods-getme.html"><abbr title="src/Methods/GetMe.php">GetMe.php</abbr></a></li>
+                            <li><a href="files/src-methods-getmycommands.html"><abbr title="src/Methods/GetMyCommands.php">GetMyCommands.php</abbr></a></li>
+                            <li><a href="files/src-methods-getmydefaultadministratorrights.html"><abbr title="src/Methods/GetMyDefaultAdministratorRights.php">GetMyDefaultAdministratorRights.php</abbr></a></li>
+                            <li><a href="files/src-methods-getmydescription.html"><abbr title="src/Methods/GetMyDescription.php">GetMyDescription.php</abbr></a></li>
+                            <li><a href="files/src-methods-getmyname.html"><abbr title="src/Methods/GetMyName.php">GetMyName.php</abbr></a></li>
+                            <li><a href="files/src-methods-getmyshortdescription.html"><abbr title="src/Methods/GetMyShortDescription.php">GetMyShortDescription.php</abbr></a></li>
+                            <li><a href="files/src-methods-getmystarbalance.html"><abbr title="src/Methods/GetMyStarBalance.php">GetMyStarBalance.php</abbr></a></li>
+                            <li><a href="files/src-methods-getstartransactions.html"><abbr title="src/Methods/GetStarTransactions.php">GetStarTransactions.php</abbr></a></li>
+                            <li><a href="files/src-methods-getstickerset.html"><abbr title="src/Methods/GetStickerSet.php">GetStickerSet.php</abbr></a></li>
+                            <li><a href="files/src-methods-getupdates.html"><abbr title="src/Methods/GetUpdates.php">GetUpdates.php</abbr></a></li>
+                            <li><a href="files/src-methods-getuserchatboosts.html"><abbr title="src/Methods/GetUserChatBoosts.php">GetUserChatBoosts.php</abbr></a></li>
+                            <li><a href="files/src-methods-getusergifts.html"><abbr title="src/Methods/GetUserGifts.php">GetUserGifts.php</abbr></a></li>
+                            <li><a href="files/src-methods-getuserpersonalchatmessages.html"><abbr title="src/Methods/GetUserPersonalChatMessages.php">GetUserPersonalChatMessages.php</abbr></a></li>
+                            <li><a href="files/src-methods-getuserprofileaudios.html"><abbr title="src/Methods/GetUserProfileAudios.php">GetUserProfileAudios.php</abbr></a></li>
+                            <li><a href="files/src-methods-getuserprofilephotos.html"><abbr title="src/Methods/GetUserProfilePhotos.php">GetUserProfilePhotos.php</abbr></a></li>
+                            <li><a href="files/src-methods-getwebhookinfo.html"><abbr title="src/Methods/GetWebhookInfo.php">GetWebhookInfo.php</abbr></a></li>
+                            <li><a href="files/src-types-gift.html"><abbr title="src/Types/Gift.php">Gift.php</abbr></a></li>
+                            <li><a href="files/src-types-giftbackground.html"><abbr title="src/Types/GiftBackground.php">GiftBackground.php</abbr></a></li>
+                            <li><a href="files/src-types-giftinfo.html"><abbr title="src/Types/GiftInfo.php">GiftInfo.php</abbr></a></li>
+                            <li><a href="files/src-methods-giftpremiumsubscription.html"><abbr title="src/Methods/GiftPremiumSubscription.php">GiftPremiumSubscription.php</abbr></a></li>
+                            <li><a href="files/src-types-gifts.html"><abbr title="src/Types/Gifts.php">Gifts.php</abbr></a></li>
+                            <li><a href="files/src-types-giveaway.html"><abbr title="src/Types/Giveaway.php">Giveaway.php</abbr></a></li>
+                            <li><a href="files/src-types-giveawaycompleted.html"><abbr title="src/Types/GiveawayCompleted.php">GiveawayCompleted.php</abbr></a></li>
+                            <li><a href="files/src-types-giveawaycreated.html"><abbr title="src/Types/GiveawayCreated.php">GiveawayCreated.php</abbr></a></li>
+                            <li><a href="files/src-types-giveawaywinners.html"><abbr title="src/Types/GiveawayWinners.php">GiveawayWinners.php</abbr></a></li>
+                        </ul>
+                                                        <h3>H</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-fsm-scene-handlercontainer.html"><abbr title="src/Fsm/Scene/HandlerContainer.php">HandlerContainer.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-event-handlerobject.html"><abbr title="src/Dispatcher/Event/HandlerObject.php">HandlerObject.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-helper.html"><abbr title="src/Utils/MagicFilter/Operation/Helper.php">Helper.php</abbr></a></li>
+                            <li><a href="files/src-methods-hidegeneralforumtopic.html"><abbr title="src/Methods/HideGeneralForumTopic.php">HideGeneralForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-historymanager.html"><abbr title="src/Fsm/Scene/HistoryManager.php">HistoryManager.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-historymanagerinterface.html"><abbr title="src/Fsm/Scene/HistoryManagerInterface.php">HistoryManagerInterface.php</abbr></a></li>
+                            <li><a href="files/src-utils-text-htmldecoration.html"><abbr title="src/Utils/Text/HtmlDecoration.php">HtmlDecoration.php</abbr></a></li>
+                        </ul>
+                                                        <h3>I</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-utils-magicfilter-operation-importantbaseoperation.html"><abbr title="src/Utils/MagicFilter/Operation/ImportantBaseOperation.php">ImportantBaseOperation.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-importantcombinationoperation.html"><abbr title="src/Utils/MagicFilter/Operation/ImportantCombinationOperation.php">ImportantCombinationOperation.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-importantfunctionoperation.html"><abbr title="src/Utils/MagicFilter/Operation/ImportantFunctionOperation.php">ImportantFunctionOperation.php</abbr></a></li>
+                            <li><a href="files/src-types-inaccessiblemessage.html"><abbr title="src/Types/InaccessibleMessage.php">InaccessibleMessage.php</abbr></a></li>
+                            <li><a href="files/src-types-shortcuts-inaccessiblemessageshortcuts.html"><abbr title="src/Types/Shortcuts/InaccessibleMessageShortcuts.php">InaccessibleMessageShortcuts.php</abbr></a></li>
+                            <li><a href="files/src-utils-keyboard-inlinekeyboardbuilder.html"><abbr title="src/Utils/Keyboard/InlineKeyboardBuilder.php">InlineKeyboardBuilder.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinekeyboardbutton.html"><abbr title="src/Types/InlineKeyboardButton.php">InlineKeyboardButton.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinekeyboardmarkup.html"><abbr title="src/Types/InlineKeyboardMarkup.php">InlineKeyboardMarkup.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequery.html"><abbr title="src/Types/InlineQuery.php">InlineQuery.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresult.html"><abbr title="src/Types/InlineQueryResult.php">InlineQueryResult.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultarticle.html"><abbr title="src/Types/InlineQueryResultArticle.php">InlineQueryResultArticle.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultaudio.html"><abbr title="src/Types/InlineQueryResultAudio.php">InlineQueryResultAudio.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultcachedaudio.html"><abbr title="src/Types/InlineQueryResultCachedAudio.php">InlineQueryResultCachedAudio.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultcacheddocument.html"><abbr title="src/Types/InlineQueryResultCachedDocument.php">InlineQueryResultCachedDocument.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultcachedgif.html"><abbr title="src/Types/InlineQueryResultCachedGif.php">InlineQueryResultCachedGif.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultcachedmpeg4gif.html"><abbr title="src/Types/InlineQueryResultCachedMpeg4Gif.php">InlineQueryResultCachedMpeg4Gif.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultcachedphoto.html"><abbr title="src/Types/InlineQueryResultCachedPhoto.php">InlineQueryResultCachedPhoto.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultcachedsticker.html"><abbr title="src/Types/InlineQueryResultCachedSticker.php">InlineQueryResultCachedSticker.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultcachedvideo.html"><abbr title="src/Types/InlineQueryResultCachedVideo.php">InlineQueryResultCachedVideo.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultcachedvoice.html"><abbr title="src/Types/InlineQueryResultCachedVoice.php">InlineQueryResultCachedVoice.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultcontact.html"><abbr title="src/Types/InlineQueryResultContact.php">InlineQueryResultContact.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultdocument.html"><abbr title="src/Types/InlineQueryResultDocument.php">InlineQueryResultDocument.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultgame.html"><abbr title="src/Types/InlineQueryResultGame.php">InlineQueryResultGame.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultgif.html"><abbr title="src/Types/InlineQueryResultGif.php">InlineQueryResultGif.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultlocation.html"><abbr title="src/Types/InlineQueryResultLocation.php">InlineQueryResultLocation.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultmpeg4gif.html"><abbr title="src/Types/InlineQueryResultMpeg4Gif.php">InlineQueryResultMpeg4Gif.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultphoto.html"><abbr title="src/Types/InlineQueryResultPhoto.php">InlineQueryResultPhoto.php</abbr></a></li>
+                            <li><a href="files/src-enums-inlinequeryresulttype.html"><abbr title="src/Enums/InlineQueryResultType.php">InlineQueryResultType.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultunion.html"><abbr title="src/Types/InlineQueryResultUnion.php">InlineQueryResultUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultvenue.html"><abbr title="src/Types/InlineQueryResultVenue.php">InlineQueryResultVenue.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultvideo.html"><abbr title="src/Types/InlineQueryResultVideo.php">InlineQueryResultVideo.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultvoice.html"><abbr title="src/Types/InlineQueryResultVoice.php">InlineQueryResultVoice.php</abbr></a></li>
+                            <li><a href="files/src-types-inlinequeryresultsbutton.html"><abbr title="src/Types/InlineQueryResultsButton.php">InlineQueryResultsButton.php</abbr></a></li>
+                            <li><a href="files/src-types-inputchecklist.html"><abbr title="src/Types/InputChecklist.php">InputChecklist.php</abbr></a></li>
+                            <li><a href="files/src-types-inputchecklisttask.html"><abbr title="src/Types/InputChecklistTask.php">InputChecklistTask.php</abbr></a></li>
+                            <li><a href="files/src-types-inputcontactmessagecontent.html"><abbr title="src/Types/InputContactMessageContent.php">InputContactMessageContent.php</abbr></a></li>
+                            <li><a href="files/src-types-inputfile.html"><abbr title="src/Types/InputFile.php">InputFile.php</abbr></a></li>
+                            <li><a href="files/src-types-inputinvoicemessagecontent.html"><abbr title="src/Types/InputInvoiceMessageContent.php">InputInvoiceMessageContent.php</abbr></a></li>
+                            <li><a href="files/src-types-inputlocationmessagecontent.html"><abbr title="src/Types/InputLocationMessageContent.php">InputLocationMessageContent.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmedia.html"><abbr title="src/Types/InputMedia.php">InputMedia.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmediaanimation.html"><abbr title="src/Types/InputMediaAnimation.php">InputMediaAnimation.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmediaaudio.html"><abbr title="src/Types/InputMediaAudio.php">InputMediaAudio.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmediadocument.html"><abbr title="src/Types/InputMediaDocument.php">InputMediaDocument.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmedialink.html"><abbr title="src/Types/InputMediaLink.php">InputMediaLink.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmedialivephoto.html"><abbr title="src/Types/InputMediaLivePhoto.php">InputMediaLivePhoto.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmedialocation.html"><abbr title="src/Types/InputMediaLocation.php">InputMediaLocation.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmediaphoto.html"><abbr title="src/Types/InputMediaPhoto.php">InputMediaPhoto.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmediasticker.html"><abbr title="src/Types/InputMediaSticker.php">InputMediaSticker.php</abbr></a></li>
+                            <li><a href="files/src-enums-inputmediatype.html"><abbr title="src/Enums/InputMediaType.php">InputMediaType.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmediaunion.html"><abbr title="src/Types/InputMediaUnion.php">InputMediaUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmediavenue.html"><abbr title="src/Types/InputMediaVenue.php">InputMediaVenue.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmediavideo.html"><abbr title="src/Types/InputMediaVideo.php">InputMediaVideo.php</abbr></a></li>
+                            <li><a href="files/src-types-inputmessagecontent.html"><abbr title="src/Types/InputMessageContent.php">InputMessageContent.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpaidmedia.html"><abbr title="src/Types/InputPaidMedia.php">InputPaidMedia.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpaidmedialivephoto.html"><abbr title="src/Types/InputPaidMediaLivePhoto.php">InputPaidMediaLivePhoto.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpaidmediaphoto.html"><abbr title="src/Types/InputPaidMediaPhoto.php">InputPaidMediaPhoto.php</abbr></a></li>
+                            <li><a href="files/src-enums-inputpaidmediatype.html"><abbr title="src/Enums/InputPaidMediaType.php">InputPaidMediaType.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpaidmediaunion.html"><abbr title="src/Types/InputPaidMediaUnion.php">InputPaidMediaUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpaidmediavideo.html"><abbr title="src/Types/InputPaidMediaVideo.php">InputPaidMediaVideo.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpollmedia.html"><abbr title="src/Types/InputPollMedia.php">InputPollMedia.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpollmediainterface.html"><abbr title="src/Types/InputPollMediaInterface.php">InputPollMediaInterface.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpollmediaunion.html"><abbr title="src/Types/InputPollMediaUnion.php">InputPollMediaUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpolloption.html"><abbr title="src/Types/InputPollOption.php">InputPollOption.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpolloptionmedia.html"><abbr title="src/Types/InputPollOptionMedia.php">InputPollOptionMedia.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpolloptionmediainterface.html"><abbr title="src/Types/InputPollOptionMediaInterface.php">InputPollOptionMediaInterface.php</abbr></a></li>
+                            <li><a href="files/src-types-inputpolloptionmediaunion.html"><abbr title="src/Types/InputPollOptionMediaUnion.php">InputPollOptionMediaUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-inputprofilephoto.html"><abbr title="src/Types/InputProfilePhoto.php">InputProfilePhoto.php</abbr></a></li>
+                            <li><a href="files/src-types-inputprofilephotoanimated.html"><abbr title="src/Types/InputProfilePhotoAnimated.php">InputProfilePhotoAnimated.php</abbr></a></li>
+                            <li><a href="files/src-types-inputprofilephotostatic.html"><abbr title="src/Types/InputProfilePhotoStatic.php">InputProfilePhotoStatic.php</abbr></a></li>
+                            <li><a href="files/src-enums-inputprofilephototype.html"><abbr title="src/Enums/InputProfilePhotoType.php">InputProfilePhotoType.php</abbr></a></li>
+                            <li><a href="files/src-types-inputprofilephotounion.html"><abbr title="src/Types/InputProfilePhotoUnion.php">InputProfilePhotoUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-inputrichmessage.html"><abbr title="src/Types/InputRichMessage.php">InputRichMessage.php</abbr></a></li>
+                            <li><a href="files/src-types-inputrichmessagecontent.html"><abbr title="src/Types/InputRichMessageContent.php">InputRichMessageContent.php</abbr></a></li>
+                            <li><a href="files/src-types-inputsticker.html"><abbr title="src/Types/InputSticker.php">InputSticker.php</abbr></a></li>
+                            <li><a href="files/src-types-inputstorycontent.html"><abbr title="src/Types/InputStoryContent.php">InputStoryContent.php</abbr></a></li>
+                            <li><a href="files/src-types-inputstorycontentphoto.html"><abbr title="src/Types/InputStoryContentPhoto.php">InputStoryContentPhoto.php</abbr></a></li>
+                            <li><a href="files/src-enums-inputstorycontenttype.html"><abbr title="src/Enums/InputStoryContentType.php">InputStoryContentType.php</abbr></a></li>
+                            <li><a href="files/src-types-inputstorycontentunion.html"><abbr title="src/Types/InputStoryContentUnion.php">InputStoryContentUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-inputstorycontentvideo.html"><abbr title="src/Types/InputStoryContentVideo.php">InputStoryContentVideo.php</abbr></a></li>
+                            <li><a href="files/src-types-inputtextmessagecontent.html"><abbr title="src/Types/InputTextMessageContent.php">InputTextMessageContent.php</abbr></a></li>
+                            <li><a href="files/src-types-inputvenuemessagecontent.html"><abbr title="src/Types/InputVenueMessageContent.php">InputVenueMessageContent.php</abbr></a></li>
+                            <li><a href="files/src-filters-f-intfield.html"><abbr title="src/Filters/F/IntField.php">IntField.php</abbr></a></li>
+                            <li><a href="files/src-filters-logic-invertfilter.html"><abbr title="src/Filters/Logic/InvertFilter.php">InvertFilter.php</abbr></a></li>
+                            <li><a href="files/src-types-invoice.html"><abbr title="src/Types/Invoice.php">Invoice.php</abbr></a></li>
+                            <li><a href="files/src-webhook-ipfilter.html"><abbr title="src/Webhook/IpFilter.php">IpFilter.php</abbr></a></li>
+                            <li><a href="files/src-webhook-server-ipfiltermiddleware.html"><abbr title="src/Webhook/Server/IpFilterMiddleware.php">IpFilterMiddleware.php</abbr></a></li>
+                        </ul>
+                                                                                        <h3>K</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-fsm-storage-keybuilder.html"><abbr title="src/Fsm/Storage/KeyBuilder.php">KeyBuilder.php</abbr></a></li>
+                            <li><a href="files/src-utils-keyboard-keyboardbuilder.html"><abbr title="src/Utils/Keyboard/KeyboardBuilder.php">KeyboardBuilder.php</abbr></a></li>
+                            <li><a href="files/src-types-keyboardbutton.html"><abbr title="src/Types/KeyboardButton.php">KeyboardButton.php</abbr></a></li>
+                            <li><a href="files/src-types-keyboardbuttonpolltype.html"><abbr title="src/Types/KeyboardButtonPollType.php">KeyboardButtonPollType.php</abbr></a></li>
+                            <li><a href="files/src-enums-keyboardbuttonpolltypetype.html"><abbr title="src/Enums/KeyboardButtonPollTypeType.php">KeyboardButtonPollTypeType.php</abbr></a></li>
+                            <li><a href="files/src-types-keyboardbuttonrequestchat.html"><abbr title="src/Types/KeyboardButtonRequestChat.php">KeyboardButtonRequestChat.php</abbr></a></li>
+                            <li><a href="files/src-types-keyboardbuttonrequestmanagedbot.html"><abbr title="src/Types/KeyboardButtonRequestManagedBot.php">KeyboardButtonRequestManagedBot.php</abbr></a></li>
+                            <li><a href="files/src-types-keyboardbuttonrequestusers.html"><abbr title="src/Types/KeyboardButtonRequestUsers.php">KeyboardButtonRequestUsers.php</abbr></a></li>
+                        </ul>
+                                                        <h3>L</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-types-labeledprice.html"><abbr title="src/Types/LabeledPrice.php">LabeledPrice.php</abbr></a></li>
+                            <li><a href="files/src-methods-leavechat.html"><abbr title="src/Methods/LeaveChat.php">LeaveChat.php</abbr></a></li>
+                            <li><a href="files/src-types-link.html"><abbr title="src/Types/Link.php">Link.php</abbr></a></li>
+                            <li><a href="files/src-utils-link-link.html"><abbr title="src/Utils/Link/Link.php">Link.php</abbr></a></li>
+                            <li><a href="files/src-types-linkpreviewoptions.html"><abbr title="src/Types/LinkPreviewOptions.php">LinkPreviewOptions.php</abbr></a></li>
+                            <li><a href="files/src-types-livephoto.html"><abbr title="src/Types/LivePhoto.php">LivePhoto.php</abbr></a></li>
+                            <li><a href="files/src-types-location.html"><abbr title="src/Types/Location.php">Location.php</abbr></a></li>
+                            <li><a href="files/src-types-locationaddress.html"><abbr title="src/Types/LocationAddress.php">LocationAddress.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-lock.html"><abbr title="src/Fsm/Storage/Lock.php">Lock.php</abbr></a></li>
+                            <li><a href="files/src-methods-logout.html"><abbr title="src/Methods/LogOut.php">LogOut.php</abbr></a></li>
+                            <li><a href="files/src-types-loginurl.html"><abbr title="src/Types/LoginUrl.php">LoginUrl.php</abbr></a></li>
+                        </ul>
+                                                        <h3>M</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-filters-magicdata.html"><abbr title="src/Filters/MagicData.php">MagicData.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-magicfilter.html"><abbr title="src/Utils/MagicFilter/MagicFilter.php">MagicFilter.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-magicfilterasfilter.html"><abbr title="src/Utils/MagicFilter/MagicFilterAsFilter.php">MagicFilterAsFilter.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-exception-magicfilterexception.html"><abbr title="src/Utils/MagicFilter/Exception/MagicFilterException.php">MagicFilterException.php</abbr></a></li>
+                            <li><a href="files/src-types-managedbotcreated.html"><abbr title="src/Types/ManagedBotCreated.php">ManagedBotCreated.php</abbr></a></li>
+                            <li><a href="files/src-types-managedbotupdated.html"><abbr title="src/Types/ManagedBotUpdated.php">ManagedBotUpdated.php</abbr></a></li>
+                            <li><a href="files/src-utils-text-markdowndecoration.html"><abbr title="src/Utils/Text/MarkdownDecoration.php">MarkdownDecoration.php</abbr></a></li>
+                            <li><a href="files/src-types-maskposition.html"><abbr title="src/Types/MaskPosition.php">MaskPosition.php</abbr></a></li>
+                            <li><a href="files/src-enums-maskpositionpoint.html"><abbr title="src/Enums/MaskPositionPoint.php">MaskPositionPoint.php</abbr></a></li>
+                            <li><a href="files/src-types-maybeinaccessiblemessage.html"><abbr title="src/Types/MaybeInaccessibleMessage.php">MaybeInaccessibleMessage.php</abbr></a></li>
+                            <li><a href="files/src-utils-mediagroup-mediagroupbuilder.html"><abbr title="src/Utils/MediaGroup/MediaGroupBuilder.php">MediaGroupBuilder.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-memorystorage.html"><abbr title="src/Fsm/Storage/MemoryStorage.php">MemoryStorage.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-memorystoragerecord.html"><abbr title="src/Fsm/Storage/MemoryStorageRecord.php">MemoryStorageRecord.php</abbr></a></li>
+                            <li><a href="files/src-types-menubutton.html"><abbr title="src/Types/MenuButton.php">MenuButton.php</abbr></a></li>
+                            <li><a href="files/src-types-menubuttoncommands.html"><abbr title="src/Types/MenuButtonCommands.php">MenuButtonCommands.php</abbr></a></li>
+                            <li><a href="files/src-types-menubuttondefault.html"><abbr title="src/Types/MenuButtonDefault.php">MenuButtonDefault.php</abbr></a></li>
+                            <li><a href="files/src-enums-menubuttontype.html"><abbr title="src/Enums/MenuButtonType.php">MenuButtonType.php</abbr></a></li>
+                            <li><a href="files/src-types-menubuttonunion.html"><abbr title="src/Types/MenuButtonUnion.php">MenuButtonUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-menubuttonwebapp.html"><abbr title="src/Types/MenuButtonWebApp.php">MenuButtonWebApp.php</abbr></a></li>
+                            <li><a href="files/src-types-message.html"><abbr title="src/Types/Message.php">Message.php</abbr></a></li>
+                            <li><a href="files/src-types-messageautodeletetimerchanged.html"><abbr title="src/Types/MessageAutoDeleteTimerChanged.php">MessageAutoDeleteTimerChanged.php</abbr></a></li>
+                            <li><a href="files/src-types-messageentity.html"><abbr title="src/Types/MessageEntity.php">MessageEntity.php</abbr></a></li>
+                            <li><a href="files/src-enums-messageentitytype.html"><abbr title="src/Enums/MessageEntityType.php">MessageEntityType.php</abbr></a></li>
+                            <li><a href="files/src-types-messageid.html"><abbr title="src/Types/MessageId.php">MessageId.php</abbr></a></li>
+                            <li><a href="files/src-types-messageorigin.html"><abbr title="src/Types/MessageOrigin.php">MessageOrigin.php</abbr></a></li>
+                            <li><a href="files/src-types-messageoriginchannel.html"><abbr title="src/Types/MessageOriginChannel.php">MessageOriginChannel.php</abbr></a></li>
+                            <li><a href="files/src-types-messageoriginchat.html"><abbr title="src/Types/MessageOriginChat.php">MessageOriginChat.php</abbr></a></li>
+                            <li><a href="files/src-types-messageoriginhiddenuser.html"><abbr title="src/Types/MessageOriginHiddenUser.php">MessageOriginHiddenUser.php</abbr></a></li>
+                            <li><a href="files/src-enums-messageorigintype.html"><abbr title="src/Enums/MessageOriginType.php">MessageOriginType.php</abbr></a></li>
+                            <li><a href="files/src-types-messageoriginunion.html"><abbr title="src/Types/MessageOriginUnion.php">MessageOriginUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-messageoriginuser.html"><abbr title="src/Types/MessageOriginUser.php">MessageOriginUser.php</abbr></a></li>
+                            <li><a href="files/src-types-messagereactioncountupdated.html"><abbr title="src/Types/MessageReactionCountUpdated.php">MessageReactionCountUpdated.php</abbr></a></li>
+                            <li><a href="files/src-types-messagereactionupdated.html"><abbr title="src/Types/MessageReactionUpdated.php">MessageReactionUpdated.php</abbr></a></li>
+                            <li><a href="files/src-types-shortcuts-messageshortcuts.html"><abbr title="src/Types/Shortcuts/MessageShortcuts.php">MessageShortcuts.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-methodcalloperation.html"><abbr title="src/Utils/MagicFilter/Operation/MethodCallOperation.php">MethodCallOperation.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-middlewares-middlewaremanager.html"><abbr title="src/Dispatcher/Middlewares/MiddlewareManager.php">MiddlewareManager.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-mongocollectionadapter.html"><abbr title="src/Fsm/Storage/MongoCollectionAdapter.php">MongoCollectionAdapter.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-mongocollectioninterface.html"><abbr title="src/Fsm/Storage/MongoCollectionInterface.php">MongoCollectionInterface.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-mongostorage.html"><abbr title="src/Fsm/Storage/MongoStorage.php">MongoStorage.php</abbr></a></li>
+                            <li><a href="files/src-types-mutabletelegramobject.html"><abbr title="src/Types/MutableTelegramObject.php">MutableTelegramObject.php</abbr></a></li>
+                        </ul>
+                                                        <h3>N</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-utils-magicfilter-operation-notoperation.html"><abbr title="src/Utils/MagicFilter/Operation/NotOperation.php">NotOperation.php</abbr></a></li>
+                            <li><a href="files/src-filters-f-nullableintfield.html"><abbr title="src/Filters/F/NullableIntField.php">NullableIntField.php</abbr></a></li>
+                            <li><a href="files/src-filters-f-nullableobjectfield.html"><abbr title="src/Filters/F/NullableObjectField.php">NullableObjectField.php</abbr></a></li>
+                            <li><a href="files/src-filters-f-nullablestringfield.html"><abbr title="src/Filters/F/NullableStringField.php">NullableStringField.php</abbr></a></li>
+                        </ul>
+                                                        <h3>O</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-fsm-scene-attribute-onattribute.html"><abbr title="src/Fsm/Scene/Attribute/OnAttribute.php">OnAttribute.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-oncallbackquery.html"><abbr title="src/Fsm/Scene/Attribute/OnCallbackQuery.php">OnCallbackQuery.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-onchannelpost.html"><abbr title="src/Fsm/Scene/Attribute/OnChannelPost.php">OnChannelPost.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-onchatjoinrequest.html"><abbr title="src/Fsm/Scene/Attribute/OnChatJoinRequest.php">OnChatJoinRequest.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-onchatmember.html"><abbr title="src/Fsm/Scene/Attribute/OnChatMember.php">OnChatMember.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-onchoseninlineresult.html"><abbr title="src/Fsm/Scene/Attribute/OnChosenInlineResult.php">OnChosenInlineResult.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-oneditedchannelpost.html"><abbr title="src/Fsm/Scene/Attribute/OnEditedChannelPost.php">OnEditedChannelPost.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-oneditedmessage.html"><abbr title="src/Fsm/Scene/Attribute/OnEditedMessage.php">OnEditedMessage.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-oninlinequery.html"><abbr title="src/Fsm/Scene/Attribute/OnInlineQuery.php">OnInlineQuery.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-onmessage.html"><abbr title="src/Fsm/Scene/Attribute/OnMessage.php">OnMessage.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-onmychatmember.html"><abbr title="src/Fsm/Scene/Attribute/OnMyChatMember.php">OnMyChatMember.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-onpoll.html"><abbr title="src/Fsm/Scene/Attribute/OnPoll.php">OnPoll.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-onpollanswer.html"><abbr title="src/Fsm/Scene/Attribute/OnPollAnswer.php">OnPollAnswer.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-onprecheckoutquery.html"><abbr title="src/Fsm/Scene/Attribute/OnPreCheckoutQuery.php">OnPreCheckoutQuery.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-onshippingquery.html"><abbr title="src/Fsm/Scene/Attribute/OnShippingQuery.php">OnShippingQuery.php</abbr></a></li>
+                            <li><a href="files/src-filters-logic-orfilter.html"><abbr title="src/Filters/Logic/OrFilter.php">OrFilter.php</abbr></a></li>
+                            <li><a href="files/src-types-orderinfo.html"><abbr title="src/Types/OrderInfo.php">OrderInfo.php</abbr></a></li>
+                            <li><a href="files/src-types-ownedgift.html"><abbr title="src/Types/OwnedGift.php">OwnedGift.php</abbr></a></li>
+                            <li><a href="files/src-types-ownedgiftregular.html"><abbr title="src/Types/OwnedGiftRegular.php">OwnedGiftRegular.php</abbr></a></li>
+                            <li><a href="files/src-enums-ownedgifttype.html"><abbr title="src/Enums/OwnedGiftType.php">OwnedGiftType.php</abbr></a></li>
+                            <li><a href="files/src-types-ownedgiftunion.html"><abbr title="src/Types/OwnedGiftUnion.php">OwnedGiftUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-ownedgiftunique.html"><abbr title="src/Types/OwnedGiftUnique.php">OwnedGiftUnique.php</abbr></a></li>
+                            <li><a href="files/src-types-ownedgifts.html"><abbr title="src/Types/OwnedGifts.php">OwnedGifts.php</abbr></a></li>
+                        </ul>
+                                                        <h3>P</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-types-paidmedia.html"><abbr title="src/Types/PaidMedia.php">PaidMedia.php</abbr></a></li>
+                            <li><a href="files/src-types-paidmediainfo.html"><abbr title="src/Types/PaidMediaInfo.php">PaidMediaInfo.php</abbr></a></li>
+                            <li><a href="files/src-types-paidmedialivephoto.html"><abbr title="src/Types/PaidMediaLivePhoto.php">PaidMediaLivePhoto.php</abbr></a></li>
+                            <li><a href="files/src-types-paidmediaphoto.html"><abbr title="src/Types/PaidMediaPhoto.php">PaidMediaPhoto.php</abbr></a></li>
+                            <li><a href="files/src-types-paidmediapreview.html"><abbr title="src/Types/PaidMediaPreview.php">PaidMediaPreview.php</abbr></a></li>
+                            <li><a href="files/src-types-paidmediapurchased.html"><abbr title="src/Types/PaidMediaPurchased.php">PaidMediaPurchased.php</abbr></a></li>
+                            <li><a href="files/src-enums-paidmediatype.html"><abbr title="src/Enums/PaidMediaType.php">PaidMediaType.php</abbr></a></li>
+                            <li><a href="files/src-types-paidmediaunion.html"><abbr title="src/Types/PaidMediaUnion.php">PaidMediaUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-paidmediavideo.html"><abbr title="src/Types/PaidMediaVideo.php">PaidMediaVideo.php</abbr></a></li>
+                            <li><a href="files/src-types-paidmessagepricechanged.html"><abbr title="src/Types/PaidMessagePriceChanged.php">PaidMessagePriceChanged.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-exception-paramsconflict.html"><abbr title="src/Utils/MagicFilter/Exception/ParamsConflict.php">ParamsConflict.php</abbr></a></li>
+                            <li><a href="files/src-enums-parsemode.html"><abbr title="src/Enums/ParseMode.php">ParseMode.php</abbr></a></li>
+                            <li><a href="files/src-types-passportdata.html"><abbr title="src/Types/PassportData.php">PassportData.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerror.html"><abbr title="src/Types/PassportElementError.php">PassportElementError.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerrordatafield.html"><abbr title="src/Types/PassportElementErrorDataField.php">PassportElementErrorDataField.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerrorfile.html"><abbr title="src/Types/PassportElementErrorFile.php">PassportElementErrorFile.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerrorfiles.html"><abbr title="src/Types/PassportElementErrorFiles.php">PassportElementErrorFiles.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerrorfrontside.html"><abbr title="src/Types/PassportElementErrorFrontSide.php">PassportElementErrorFrontSide.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerrorreverseside.html"><abbr title="src/Types/PassportElementErrorReverseSide.php">PassportElementErrorReverseSide.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerrorselfie.html"><abbr title="src/Types/PassportElementErrorSelfie.php">PassportElementErrorSelfie.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerrortranslationfile.html"><abbr title="src/Types/PassportElementErrorTranslationFile.php">PassportElementErrorTranslationFile.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerrortranslationfiles.html"><abbr title="src/Types/PassportElementErrorTranslationFiles.php">PassportElementErrorTranslationFiles.php</abbr></a></li>
+                            <li><a href="files/src-enums-passportelementerrortype.html"><abbr title="src/Enums/PassportElementErrorType.php">PassportElementErrorType.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerrorunion.html"><abbr title="src/Types/PassportElementErrorUnion.php">PassportElementErrorUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-passportelementerrorunspecified.html"><abbr title="src/Types/PassportElementErrorUnspecified.php">PassportElementErrorUnspecified.php</abbr></a></li>
+                            <li><a href="files/src-types-passportfile.html"><abbr title="src/Types/PassportFile.php">PassportFile.php</abbr></a></li>
+                            <li><a href="files/src-webhook-server-pathrouter.html"><abbr title="src/Webhook/Server/PathRouter.php">PathRouter.php</abbr></a></li>
+                            <li><a href="files/src-utils-payload.html"><abbr title="src/Utils/Payload.php">Payload.php</abbr></a></li>
+                            <li><a href="files/src-types-photosize.html"><abbr title="src/Types/PhotoSize.php">PhotoSize.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-phpbotgramexception.html"><abbr title="src/Exceptions/PhpBotGramException.php">PhpBotGramException.php</abbr></a></li>
+                            <li><a href="files/src-methods-pinchatmessage.html"><abbr title="src/Methods/PinChatMessage.php">PinChatMessage.php</abbr></a></li>
+                            <li><a href="files/src-types-poll.html"><abbr title="src/Types/Poll.php">Poll.php</abbr></a></li>
+                            <li><a href="files/src-types-pollanswer.html"><abbr title="src/Types/PollAnswer.php">PollAnswer.php</abbr></a></li>
+                            <li><a href="files/src-types-pollmedia.html"><abbr title="src/Types/PollMedia.php">PollMedia.php</abbr></a></li>
+                            <li><a href="files/src-types-polloption.html"><abbr title="src/Types/PollOption.php">PollOption.php</abbr></a></li>
+                            <li><a href="files/src-types-polloptionadded.html"><abbr title="src/Types/PollOptionAdded.php">PollOptionAdded.php</abbr></a></li>
+                            <li><a href="files/src-types-polloptiondeleted.html"><abbr title="src/Types/PollOptionDeleted.php">PollOptionDeleted.php</abbr></a></li>
+                            <li><a href="files/src-enums-polltype.html"><abbr title="src/Enums/PollType.php">PollType.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-pollingoptions.html"><abbr title="src/Dispatcher/PollingOptions.php">PollingOptions.php</abbr></a></li>
+                            <li><a href="files/src-methods-poststory.html"><abbr title="src/Methods/PostStory.php">PostStory.php</abbr></a></li>
+                            <li><a href="files/src-types-precheckoutquery.html"><abbr title="src/Types/PreCheckoutQuery.php">PreCheckoutQuery.php</abbr></a></li>
+                            <li><a href="files/src-types-preparedinlinemessage.html"><abbr title="src/Types/PreparedInlineMessage.php">PreparedInlineMessage.php</abbr></a></li>
+                            <li><a href="files/src-types-preparedkeyboardbutton.html"><abbr title="src/Types/PreparedKeyboardButton.php">PreparedKeyboardButton.php</abbr></a></li>
+                            <li><a href="files/src-methods-promotechatmember.html"><abbr title="src/Methods/PromoteChatMember.php">PromoteChatMember.php</abbr></a></li>
+                            <li><a href="files/src-types-proximityalerttriggered.html"><abbr title="src/Types/ProximityAlertTriggered.php">ProximityAlertTriggered.php</abbr></a></li>
+                        </ul>
+                                                                                        <h3>R</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-utils-magicfilter-operation-rcombinationoperation.html"><abbr title="src/Utils/MagicFilter/Operation/RCombinationOperation.php">RCombinationOperation.php</abbr></a></li>
+                            <li><a href="files/src-types-reactioncount.html"><abbr title="src/Types/ReactionCount.php">ReactionCount.php</abbr></a></li>
+                            <li><a href="files/src-types-reactiontype.html"><abbr title="src/Types/ReactionType.php">ReactionType.php</abbr></a></li>
+                            <li><a href="files/src-types-reactiontypecustomemoji.html"><abbr title="src/Types/ReactionTypeCustomEmoji.php">ReactionTypeCustomEmoji.php</abbr></a></li>
+                            <li><a href="files/src-types-reactiontypeemoji.html"><abbr title="src/Types/ReactionTypeEmoji.php">ReactionTypeEmoji.php</abbr></a></li>
+                            <li><a href="files/src-types-reactiontypepaid.html"><abbr title="src/Types/ReactionTypePaid.php">ReactionTypePaid.php</abbr></a></li>
+                            <li><a href="files/src-enums-reactiontypetype.html"><abbr title="src/Enums/ReactionTypeType.php">ReactionTypeType.php</abbr></a></li>
+                            <li><a href="files/src-types-reactiontypeunion.html"><abbr title="src/Types/ReactionTypeUnion.php">ReactionTypeUnion.php</abbr></a></li>
+                            <li><a href="files/src-methods-readbusinessmessage.html"><abbr title="src/Methods/ReadBusinessMessage.php">ReadBusinessMessage.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-rediseventisolation.html"><abbr title="src/Fsm/Storage/RedisEventIsolation.php">RedisEventIsolation.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-redisstorage.html"><abbr title="src/Fsm/Storage/RedisStorage.php">RedisStorage.php</abbr></a></li>
+                            <li><a href="files/src-methods-refundstarpayment.html"><abbr title="src/Methods/RefundStarPayment.php">RefundStarPayment.php</abbr></a></li>
+                            <li><a href="files/src-types-refundedpayment.html"><abbr title="src/Types/RefundedPayment.php">RefundedPayment.php</abbr></a></li>
+                            <li><a href="files/src-filters-f-regexfield.html"><abbr title="src/Filters/F/RegexField.php">RegexField.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-regexpmode.html"><abbr title="src/Utils/MagicFilter/RegexpMode.php">RegexpMode.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-exception-rejectoperations.html"><abbr title="src/Utils/MagicFilter/Exception/RejectOperations.php">RejectOperations.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-event-rejectedsentinel.html"><abbr title="src/Dispatcher/Event/RejectedSentinel.php">RejectedSentinel.php</abbr></a></li>
+                            <li><a href="files/src-methods-removebusinessaccountprofilephoto.html"><abbr title="src/Methods/RemoveBusinessAccountProfilePhoto.php">RemoveBusinessAccountProfilePhoto.php</abbr></a></li>
+                            <li><a href="files/src-methods-removechatverification.html"><abbr title="src/Methods/RemoveChatVerification.php">RemoveChatVerification.php</abbr></a></li>
+                            <li><a href="files/src-methods-removemyprofilephoto.html"><abbr title="src/Methods/RemoveMyProfilePhoto.php">RemoveMyProfilePhoto.php</abbr></a></li>
+                            <li><a href="files/src-methods-removeuserverification.html"><abbr title="src/Methods/RemoveUserVerification.php">RemoveUserVerification.php</abbr></a></li>
+                            <li><a href="files/src-methods-reopenforumtopic.html"><abbr title="src/Methods/ReopenForumTopic.php">ReopenForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-methods-reopengeneralforumtopic.html"><abbr title="src/Methods/ReopenGeneralForumTopic.php">ReopenGeneralForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-methods-replacemanagedbottoken.html"><abbr title="src/Methods/ReplaceManagedBotToken.php">ReplaceManagedBotToken.php</abbr></a></li>
+                            <li><a href="files/src-methods-replacestickerinset.html"><abbr title="src/Methods/ReplaceStickerInSet.php">ReplaceStickerInSet.php</abbr></a></li>
+                            <li><a href="files/src-utils-keyboard-replykeyboardbuilder.html"><abbr title="src/Utils/Keyboard/ReplyKeyboardBuilder.php">ReplyKeyboardBuilder.php</abbr></a></li>
+                            <li><a href="files/src-types-replykeyboardmarkup.html"><abbr title="src/Types/ReplyKeyboardMarkup.php">ReplyKeyboardMarkup.php</abbr></a></li>
+                            <li><a href="files/src-types-replykeyboardremove.html"><abbr title="src/Types/ReplyKeyboardRemove.php">ReplyKeyboardRemove.php</abbr></a></li>
+                            <li><a href="files/src-types-replyparameters.html"><abbr title="src/Types/ReplyParameters.php">ReplyParameters.php</abbr></a></li>
+                            <li><a href="files/src-methods-repoststory.html"><abbr title="src/Methods/RepostStory.php">RepostStory.php</abbr></a></li>
+                            <li><a href="files/src-methods-request.html"><abbr title="src/Methods/Request.php">Request.php</abbr></a></li>
+                            <li><a href="files/src-client-session-middleware-requestmiddlewaremanager.html"><abbr title="src/Client/Session/Middleware/RequestMiddlewareManager.php">RequestMiddlewareManager.php</abbr></a></li>
+                            <li><a href="files/src-methods-response.html"><abbr title="src/Methods/Response.php">Response.php</abbr></a></li>
+                            <li><a href="files/src-types-responseparameters.html"><abbr title="src/Types/ResponseParameters.php">ResponseParameters.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-restartingtelegram.html"><abbr title="src/Exceptions/RestartingTelegram.php">RestartingTelegram.php</abbr></a></li>
+                            <li><a href="files/src-methods-restrictchatmember.html"><abbr title="src/Methods/RestrictChatMember.php">RestrictChatMember.php</abbr></a></li>
+                            <li><a href="files/src-types-revenuewithdrawalstate.html"><abbr title="src/Types/RevenueWithdrawalState.php">RevenueWithdrawalState.php</abbr></a></li>
+                            <li><a href="files/src-types-revenuewithdrawalstatefailed.html"><abbr title="src/Types/RevenueWithdrawalStateFailed.php">RevenueWithdrawalStateFailed.php</abbr></a></li>
+                            <li><a href="files/src-types-revenuewithdrawalstatepending.html"><abbr title="src/Types/RevenueWithdrawalStatePending.php">RevenueWithdrawalStatePending.php</abbr></a></li>
+                            <li><a href="files/src-types-revenuewithdrawalstatesucceeded.html"><abbr title="src/Types/RevenueWithdrawalStateSucceeded.php">RevenueWithdrawalStateSucceeded.php</abbr></a></li>
+                            <li><a href="files/src-enums-revenuewithdrawalstatetype.html"><abbr title="src/Enums/RevenueWithdrawalStateType.php">RevenueWithdrawalStateType.php</abbr></a></li>
+                            <li><a href="files/src-types-revenuewithdrawalstateunion.html"><abbr title="src/Types/RevenueWithdrawalStateUnion.php">RevenueWithdrawalStateUnion.php</abbr></a></li>
+                            <li><a href="files/src-methods-revokechatinvitelink.html"><abbr title="src/Methods/RevokeChatInviteLink.php">RevokeChatInviteLink.php</abbr></a></li>
+                            <li><a href="files/src-types-richblock.html"><abbr title="src/Types/RichBlock.php">RichBlock.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockanchor.html"><abbr title="src/Types/RichBlockAnchor.php">RichBlockAnchor.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockanimation.html"><abbr title="src/Types/RichBlockAnimation.php">RichBlockAnimation.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockaudio.html"><abbr title="src/Types/RichBlockAudio.php">RichBlockAudio.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockblockquotation.html"><abbr title="src/Types/RichBlockBlockQuotation.php">RichBlockBlockQuotation.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockcaption.html"><abbr title="src/Types/RichBlockCaption.php">RichBlockCaption.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockcollage.html"><abbr title="src/Types/RichBlockCollage.php">RichBlockCollage.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockdetails.html"><abbr title="src/Types/RichBlockDetails.php">RichBlockDetails.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockdivider.html"><abbr title="src/Types/RichBlockDivider.php">RichBlockDivider.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockfooter.html"><abbr title="src/Types/RichBlockFooter.php">RichBlockFooter.php</abbr></a></li>
+                            <li><a href="files/src-types-richblocklist.html"><abbr title="src/Types/RichBlockList.php">RichBlockList.php</abbr></a></li>
+                            <li><a href="files/src-types-richblocklistitem.html"><abbr title="src/Types/RichBlockListItem.php">RichBlockListItem.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockmap.html"><abbr title="src/Types/RichBlockMap.php">RichBlockMap.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockmathematicalexpression.html"><abbr title="src/Types/RichBlockMathematicalExpression.php">RichBlockMathematicalExpression.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockparagraph.html"><abbr title="src/Types/RichBlockParagraph.php">RichBlockParagraph.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockphoto.html"><abbr title="src/Types/RichBlockPhoto.php">RichBlockPhoto.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockpreformatted.html"><abbr title="src/Types/RichBlockPreformatted.php">RichBlockPreformatted.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockpullquotation.html"><abbr title="src/Types/RichBlockPullQuotation.php">RichBlockPullQuotation.php</abbr></a></li>
+                            <li><a href="files/src-types-richblocksectionheading.html"><abbr title="src/Types/RichBlockSectionHeading.php">RichBlockSectionHeading.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockslideshow.html"><abbr title="src/Types/RichBlockSlideshow.php">RichBlockSlideshow.php</abbr></a></li>
+                            <li><a href="files/src-types-richblocktable.html"><abbr title="src/Types/RichBlockTable.php">RichBlockTable.php</abbr></a></li>
+                            <li><a href="files/src-types-richblocktablecell.html"><abbr title="src/Types/RichBlockTableCell.php">RichBlockTableCell.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockthinking.html"><abbr title="src/Types/RichBlockThinking.php">RichBlockThinking.php</abbr></a></li>
+                            <li><a href="files/src-enums-richblocktype.html"><abbr title="src/Enums/RichBlockType.php">RichBlockType.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockunion.html"><abbr title="src/Types/RichBlockUnion.php">RichBlockUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockvideo.html"><abbr title="src/Types/RichBlockVideo.php">RichBlockVideo.php</abbr></a></li>
+                            <li><a href="files/src-types-richblockvoicenote.html"><abbr title="src/Types/RichBlockVoiceNote.php">RichBlockVoiceNote.php</abbr></a></li>
+                            <li><a href="files/src-types-richmessage.html"><abbr title="src/Types/RichMessage.php">RichMessage.php</abbr></a></li>
+                            <li><a href="files/src-types-richtext.html"><abbr title="src/Types/RichText.php">RichText.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextanchor.html"><abbr title="src/Types/RichTextAnchor.php">RichTextAnchor.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextanchorlink.html"><abbr title="src/Types/RichTextAnchorLink.php">RichTextAnchorLink.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextbankcardnumber.html"><abbr title="src/Types/RichTextBankCardNumber.php">RichTextBankCardNumber.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextbold.html"><abbr title="src/Types/RichTextBold.php">RichTextBold.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextbotcommand.html"><abbr title="src/Types/RichTextBotCommand.php">RichTextBotCommand.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextcashtag.html"><abbr title="src/Types/RichTextCashtag.php">RichTextCashtag.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextcode.html"><abbr title="src/Types/RichTextCode.php">RichTextCode.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextcustomemoji.html"><abbr title="src/Types/RichTextCustomEmoji.php">RichTextCustomEmoji.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextdatetime.html"><abbr title="src/Types/RichTextDateTime.php">RichTextDateTime.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextemailaddress.html"><abbr title="src/Types/RichTextEmailAddress.php">RichTextEmailAddress.php</abbr></a></li>
+                            <li><a href="files/src-types-richtexthashtag.html"><abbr title="src/Types/RichTextHashtag.php">RichTextHashtag.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextitalic.html"><abbr title="src/Types/RichTextItalic.php">RichTextItalic.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextmarked.html"><abbr title="src/Types/RichTextMarked.php">RichTextMarked.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextmathematicalexpression.html"><abbr title="src/Types/RichTextMathematicalExpression.php">RichTextMathematicalExpression.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextmention.html"><abbr title="src/Types/RichTextMention.php">RichTextMention.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextphonenumber.html"><abbr title="src/Types/RichTextPhoneNumber.php">RichTextPhoneNumber.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextreference.html"><abbr title="src/Types/RichTextReference.php">RichTextReference.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextreferencelink.html"><abbr title="src/Types/RichTextReferenceLink.php">RichTextReferenceLink.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextspoiler.html"><abbr title="src/Types/RichTextSpoiler.php">RichTextSpoiler.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextstrikethrough.html"><abbr title="src/Types/RichTextStrikethrough.php">RichTextStrikethrough.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextsubscript.html"><abbr title="src/Types/RichTextSubscript.php">RichTextSubscript.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextsuperscript.html"><abbr title="src/Types/RichTextSuperscript.php">RichTextSuperscript.php</abbr></a></li>
+                            <li><a href="files/src-types-richtexttextmention.html"><abbr title="src/Types/RichTextTextMention.php">RichTextTextMention.php</abbr></a></li>
+                            <li><a href="files/src-enums-richtexttype.html"><abbr title="src/Enums/RichTextType.php">RichTextType.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextunderline.html"><abbr title="src/Types/RichTextUnderline.php">RichTextUnderline.php</abbr></a></li>
+                            <li><a href="files/src-types-richtextunion.html"><abbr title="src/Types/RichTextUnion.php">RichTextUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-richtexturl.html"><abbr title="src/Types/RichTextUrl.php">RichTextUrl.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></li>
+                        </ul>
+                                                        <h3>S</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-methods-savepreparedinlinemessage.html"><abbr title="src/Methods/SavePreparedInlineMessage.php">SavePreparedInlineMessage.php</abbr></a></li>
+                            <li><a href="files/src-methods-savepreparedkeyboardbutton.html"><abbr title="src/Methods/SavePreparedKeyboardButton.php">SavePreparedKeyboardButton.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene.html"><abbr title="src/Fsm/Scene.php">Scene.php</abbr></a></li>
+                            <li><a href="files/src-fsm-sceneaction.html"><abbr title="src/Fsm/SceneAction.php">SceneAction.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-sceneconfig.html"><abbr title="src/Fsm/Scene/SceneConfig.php">SceneConfig.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-sceneexception.html"><abbr title="src/Exceptions/SceneException.php">SceneException.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-scenehandlerwrapper.html"><abbr title="src/Fsm/Scene/SceneHandlerWrapper.php">SceneHandlerWrapper.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-scenemanagerinterface.html"><abbr title="src/Fsm/Scene/SceneManagerInterface.php">SceneManagerInterface.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-sceneregistry.html"><abbr title="src/Fsm/Scene/SceneRegistry.php">SceneRegistry.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-sceneregistryinterface.html"><abbr title="src/Fsm/Scene/SceneRegistryInterface.php">SceneRegistryInterface.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-attribute-scenestate.html"><abbr title="src/Fsm/Scene/Attribute/SceneState.php">SceneState.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scenewizard.html"><abbr title="src/Fsm/SceneWizard.php">SceneWizard.php</abbr></a></li>
+                            <li><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-operation-selectoroperation.html"><abbr title="src/Utils/MagicFilter/Operation/SelectorOperation.php">SelectorOperation.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendanimation.html"><abbr title="src/Methods/SendAnimation.php">SendAnimation.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendaudio.html"><abbr title="src/Methods/SendAudio.php">SendAudio.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendchataction.html"><abbr title="src/Methods/SendChatAction.php">SendChatAction.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendchatjoinrequestwebapp.html"><abbr title="src/Methods/SendChatJoinRequestWebApp.php">SendChatJoinRequestWebApp.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendchecklist.html"><abbr title="src/Methods/SendChecklist.php">SendChecklist.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendcontact.html"><abbr title="src/Methods/SendContact.php">SendContact.php</abbr></a></li>
+                            <li><a href="files/src-methods-senddice.html"><abbr title="src/Methods/SendDice.php">SendDice.php</abbr></a></li>
+                            <li><a href="files/src-methods-senddocument.html"><abbr title="src/Methods/SendDocument.php">SendDocument.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendgame.html"><abbr title="src/Methods/SendGame.php">SendGame.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendgift.html"><abbr title="src/Methods/SendGift.php">SendGift.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendinvoice.html"><abbr title="src/Methods/SendInvoice.php">SendInvoice.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendlivephoto.html"><abbr title="src/Methods/SendLivePhoto.php">SendLivePhoto.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendlocation.html"><abbr title="src/Methods/SendLocation.php">SendLocation.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendmediagroup.html"><abbr title="src/Methods/SendMediaGroup.php">SendMediaGroup.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendmessage.html"><abbr title="src/Methods/SendMessage.php">SendMessage.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendmessagedraft.html"><abbr title="src/Methods/SendMessageDraft.php">SendMessageDraft.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendpaidmedia.html"><abbr title="src/Methods/SendPaidMedia.php">SendPaidMedia.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendphoto.html"><abbr title="src/Methods/SendPhoto.php">SendPhoto.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendpoll.html"><abbr title="src/Methods/SendPoll.php">SendPoll.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendrichmessage.html"><abbr title="src/Methods/SendRichMessage.php">SendRichMessage.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendrichmessagedraft.html"><abbr title="src/Methods/SendRichMessageDraft.php">SendRichMessageDraft.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendsticker.html"><abbr title="src/Methods/SendSticker.php">SendSticker.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendvenue.html"><abbr title="src/Methods/SendVenue.php">SendVenue.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendvideo.html"><abbr title="src/Methods/SendVideo.php">SendVideo.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendvideonote.html"><abbr title="src/Methods/SendVideoNote.php">SendVideoNote.php</abbr></a></li>
+                            <li><a href="files/src-methods-sendvoice.html"><abbr title="src/Methods/SendVoice.php">SendVoice.php</abbr></a></li>
+                            <li><a href="files/src-types-sentguestmessage.html"><abbr title="src/Types/SentGuestMessage.php">SentGuestMessage.php</abbr></a></li>
+                            <li><a href="files/src-types-sentwebappmessage.html"><abbr title="src/Types/SentWebAppMessage.php">SentWebAppMessage.php</abbr></a></li>
+                            <li><a href="files/src-client-serializer.html"><abbr title="src/Client/Serializer.php">Serializer.php</abbr></a></li>
+                            <li><a href="files/src-methods-setbusinessaccountbio.html"><abbr title="src/Methods/SetBusinessAccountBio.php">SetBusinessAccountBio.php</abbr></a></li>
+                            <li><a href="files/src-methods-setbusinessaccountgiftsettings.html"><abbr title="src/Methods/SetBusinessAccountGiftSettings.php">SetBusinessAccountGiftSettings.php</abbr></a></li>
+                            <li><a href="files/src-methods-setbusinessaccountname.html"><abbr title="src/Methods/SetBusinessAccountName.php">SetBusinessAccountName.php</abbr></a></li>
+                            <li><a href="files/src-methods-setbusinessaccountprofilephoto.html"><abbr title="src/Methods/SetBusinessAccountProfilePhoto.php">SetBusinessAccountProfilePhoto.php</abbr></a></li>
+                            <li><a href="files/src-methods-setbusinessaccountusername.html"><abbr title="src/Methods/SetBusinessAccountUsername.php">SetBusinessAccountUsername.php</abbr></a></li>
+                            <li><a href="files/src-methods-setchatadministratorcustomtitle.html"><abbr title="src/Methods/SetChatAdministratorCustomTitle.php">SetChatAdministratorCustomTitle.php</abbr></a></li>
+                            <li><a href="files/src-methods-setchatdescription.html"><abbr title="src/Methods/SetChatDescription.php">SetChatDescription.php</abbr></a></li>
+                            <li><a href="files/src-methods-setchatmembertag.html"><abbr title="src/Methods/SetChatMemberTag.php">SetChatMemberTag.php</abbr></a></li>
+                            <li><a href="files/src-methods-setchatmenubutton.html"><abbr title="src/Methods/SetChatMenuButton.php">SetChatMenuButton.php</abbr></a></li>
+                            <li><a href="files/src-methods-setchatpermissions.html"><abbr title="src/Methods/SetChatPermissions.php">SetChatPermissions.php</abbr></a></li>
+                            <li><a href="files/src-methods-setchatphoto.html"><abbr title="src/Methods/SetChatPhoto.php">SetChatPhoto.php</abbr></a></li>
+                            <li><a href="files/src-methods-setchatstickerset.html"><abbr title="src/Methods/SetChatStickerSet.php">SetChatStickerSet.php</abbr></a></li>
+                            <li><a href="files/src-methods-setchattitle.html"><abbr title="src/Methods/SetChatTitle.php">SetChatTitle.php</abbr></a></li>
+                            <li><a href="files/src-methods-setcustomemojistickersetthumbnail.html"><abbr title="src/Methods/SetCustomEmojiStickerSetThumbnail.php">SetCustomEmojiStickerSetThumbnail.php</abbr></a></li>
+                            <li><a href="files/src-methods-setgamescore.html"><abbr title="src/Methods/SetGameScore.php">SetGameScore.php</abbr></a></li>
+                            <li><a href="files/src-methods-setmanagedbotaccesssettings.html"><abbr title="src/Methods/SetManagedBotAccessSettings.php">SetManagedBotAccessSettings.php</abbr></a></li>
+                            <li><a href="files/src-methods-setmessagereaction.html"><abbr title="src/Methods/SetMessageReaction.php">SetMessageReaction.php</abbr></a></li>
+                            <li><a href="files/src-methods-setmycommands.html"><abbr title="src/Methods/SetMyCommands.php">SetMyCommands.php</abbr></a></li>
+                            <li><a href="files/src-methods-setmydefaultadministratorrights.html"><abbr title="src/Methods/SetMyDefaultAdministratorRights.php">SetMyDefaultAdministratorRights.php</abbr></a></li>
+                            <li><a href="files/src-methods-setmydescription.html"><abbr title="src/Methods/SetMyDescription.php">SetMyDescription.php</abbr></a></li>
+                            <li><a href="files/src-methods-setmyname.html"><abbr title="src/Methods/SetMyName.php">SetMyName.php</abbr></a></li>
+                            <li><a href="files/src-methods-setmyprofilephoto.html"><abbr title="src/Methods/SetMyProfilePhoto.php">SetMyProfilePhoto.php</abbr></a></li>
+                            <li><a href="files/src-methods-setmyshortdescription.html"><abbr title="src/Methods/SetMyShortDescription.php">SetMyShortDescription.php</abbr></a></li>
+                            <li><a href="files/src-methods-setpassportdataerrors.html"><abbr title="src/Methods/SetPassportDataErrors.php">SetPassportDataErrors.php</abbr></a></li>
+                            <li><a href="files/src-methods-setstickeremojilist.html"><abbr title="src/Methods/SetStickerEmojiList.php">SetStickerEmojiList.php</abbr></a></li>
+                            <li><a href="files/src-methods-setstickerkeywords.html"><abbr title="src/Methods/SetStickerKeywords.php">SetStickerKeywords.php</abbr></a></li>
+                            <li><a href="files/src-methods-setstickermaskposition.html"><abbr title="src/Methods/SetStickerMaskPosition.php">SetStickerMaskPosition.php</abbr></a></li>
+                            <li><a href="files/src-methods-setstickerpositioninset.html"><abbr title="src/Methods/SetStickerPositionInSet.php">SetStickerPositionInSet.php</abbr></a></li>
+                            <li><a href="files/src-methods-setstickersetthumbnail.html"><abbr title="src/Methods/SetStickerSetThumbnail.php">SetStickerSetThumbnail.php</abbr></a></li>
+                            <li><a href="files/src-methods-setstickersettitle.html"><abbr title="src/Methods/SetStickerSetTitle.php">SetStickerSetTitle.php</abbr></a></li>
+                            <li><a href="files/src-methods-setuseremojistatus.html"><abbr title="src/Methods/SetUserEmojiStatus.php">SetUserEmojiStatus.php</abbr></a></li>
+                            <li><a href="files/src-methods-setwebhook.html"><abbr title="src/Methods/SetWebhook.php">SetWebhook.php</abbr></a></li>
+                            <li><a href="files/src-webhook-setup.html"><abbr title="src/Webhook/Setup.php">Setup.php</abbr></a></li>
+                            <li><a href="files/src-types-shareduser.html"><abbr title="src/Types/SharedUser.php">SharedUser.php</abbr></a></li>
+                            <li><a href="files/src-types-shippingaddress.html"><abbr title="src/Types/ShippingAddress.php">ShippingAddress.php</abbr></a></li>
+                            <li><a href="files/src-types-shippingoption.html"><abbr title="src/Types/ShippingOption.php">ShippingOption.php</abbr></a></li>
+                            <li><a href="files/src-types-shippingquery.html"><abbr title="src/Types/ShippingQuery.php">ShippingQuery.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-simpleeventisolation.html"><abbr title="src/Fsm/Storage/SimpleEventIsolation.php">SimpleEventIsolation.php</abbr></a></li>
+                            <li><a href="files/src-webhook-simplerequesthandler.html"><abbr title="src/Webhook/SimpleRequestHandler.php">SimpleRequestHandler.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-event-skiphandlerexception.html"><abbr title="src/Dispatcher/Event/SkipHandlerException.php">SkipHandlerException.php</abbr></a></li>
+                            <li><a href="files/src-types-staramount.html"><abbr title="src/Types/StarAmount.php">StarAmount.php</abbr></a></li>
+                            <li><a href="files/src-types-startransaction.html"><abbr title="src/Types/StarTransaction.php">StarTransaction.php</abbr></a></li>
+                            <li><a href="files/src-types-startransactions.html"><abbr title="src/Types/StarTransactions.php">StarTransactions.php</abbr></a></li>
+                            <li><a href="files/src-fsm-state.html"><abbr title="src/Fsm/State.php">State.php</abbr></a></li>
+                            <li><a href="files/src-filters-statefilter.html"><abbr title="src/Filters/StateFilter.php">StateFilter.php</abbr></a></li>
+                            <li><a href="files/src-fsm-states.html"><abbr title="src/Fsm/States.php">States.php</abbr></a></li>
+                            <li><a href="files/src-fsm-statesgroup.html"><abbr title="src/Fsm/StatesGroup.php">StatesGroup.php</abbr></a></li>
+                            <li><a href="files/src-types-sticker.html"><abbr title="src/Types/Sticker.php">Sticker.php</abbr></a></li>
+                            <li><a href="files/src-enums-stickerformat.html"><abbr title="src/Enums/StickerFormat.php">StickerFormat.php</abbr></a></li>
+                            <li><a href="files/src-types-stickerset.html"><abbr title="src/Types/StickerSet.php">StickerSet.php</abbr></a></li>
+                            <li><a href="files/src-enums-stickertype.html"><abbr title="src/Enums/StickerType.php">StickerType.php</abbr></a></li>
+                            <li><a href="files/src-methods-stopmessagelivelocation.html"><abbr title="src/Methods/StopMessageLiveLocation.php">StopMessageLiveLocation.php</abbr></a></li>
+                            <li><a href="files/src-methods-stoppoll.html"><abbr title="src/Methods/StopPoll.php">StopPoll.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-storagekey.html"><abbr title="src/Fsm/Storage/StorageKey.php">StorageKey.php</abbr></a></li>
+                            <li><a href="files/src-fsm-storage-storagepart.html"><abbr title="src/Fsm/Storage/StoragePart.php">StoragePart.php</abbr></a></li>
+                            <li><a href="files/src-types-story.html"><abbr title="src/Types/Story.php">Story.php</abbr></a></li>
+                            <li><a href="files/src-types-storyarea.html"><abbr title="src/Types/StoryArea.php">StoryArea.php</abbr></a></li>
+                            <li><a href="files/src-types-storyareaposition.html"><abbr title="src/Types/StoryAreaPosition.php">StoryAreaPosition.php</abbr></a></li>
+                            <li><a href="files/src-types-storyareatype.html"><abbr title="src/Types/StoryAreaType.php">StoryAreaType.php</abbr></a></li>
+                            <li><a href="files/src-types-storyareatypelink.html"><abbr title="src/Types/StoryAreaTypeLink.php">StoryAreaTypeLink.php</abbr></a></li>
+                            <li><a href="files/src-types-storyareatypelocation.html"><abbr title="src/Types/StoryAreaTypeLocation.php">StoryAreaTypeLocation.php</abbr></a></li>
+                            <li><a href="files/src-types-storyareatypesuggestedreaction.html"><abbr title="src/Types/StoryAreaTypeSuggestedReaction.php">StoryAreaTypeSuggestedReaction.php</abbr></a></li>
+                            <li><a href="files/src-enums-storyareatypetype.html"><abbr title="src/Enums/StoryAreaTypeType.php">StoryAreaTypeType.php</abbr></a></li>
+                            <li><a href="files/src-types-storyareatypeunion.html"><abbr title="src/Types/StoryAreaTypeUnion.php">StoryAreaTypeUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-storyareatypeuniquegift.html"><abbr title="src/Types/StoryAreaTypeUniqueGift.php">StoryAreaTypeUniqueGift.php</abbr></a></li>
+                            <li><a href="files/src-types-storyareatypeweather.html"><abbr title="src/Types/StoryAreaTypeWeather.php">StoryAreaTypeWeather.php</abbr></a></li>
+                            <li><a href="files/src-filters-f-stringfield.html"><abbr title="src/Filters/F/StringField.php">StringField.php</abbr></a></li>
+                            <li><a href="files/src-types-successfulpayment.html"><abbr title="src/Types/SuccessfulPayment.php">SuccessfulPayment.php</abbr></a></li>
+                            <li><a href="files/src-types-suggestedpostapprovalfailed.html"><abbr title="src/Types/SuggestedPostApprovalFailed.php">SuggestedPostApprovalFailed.php</abbr></a></li>
+                            <li><a href="files/src-types-suggestedpostapproved.html"><abbr title="src/Types/SuggestedPostApproved.php">SuggestedPostApproved.php</abbr></a></li>
+                            <li><a href="files/src-types-suggestedpostdeclined.html"><abbr title="src/Types/SuggestedPostDeclined.php">SuggestedPostDeclined.php</abbr></a></li>
+                            <li><a href="files/src-types-suggestedpostinfo.html"><abbr title="src/Types/SuggestedPostInfo.php">SuggestedPostInfo.php</abbr></a></li>
+                            <li><a href="files/src-types-suggestedpostpaid.html"><abbr title="src/Types/SuggestedPostPaid.php">SuggestedPostPaid.php</abbr></a></li>
+                            <li><a href="files/src-types-suggestedpostparameters.html"><abbr title="src/Types/SuggestedPostParameters.php">SuggestedPostParameters.php</abbr></a></li>
+                            <li><a href="files/src-types-suggestedpostprice.html"><abbr title="src/Types/SuggestedPostPrice.php">SuggestedPostPrice.php</abbr></a></li>
+                            <li><a href="files/src-types-suggestedpostrefunded.html"><abbr title="src/Types/SuggestedPostRefunded.php">SuggestedPostRefunded.php</abbr></a></li>
+                            <li><a href="files/src-types-switchinlinequerychosenchat.html"><abbr title="src/Types/SwitchInlineQueryChosenChat.php">SwitchInlineQueryChosenChat.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-exception-switchmode.html"><abbr title="src/Utils/MagicFilter/Exception/SwitchMode.php">SwitchMode.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-exception-switchmodetoall.html"><abbr title="src/Utils/MagicFilter/Exception/SwitchModeToAll.php">SwitchModeToAll.php</abbr></a></li>
+                            <li><a href="files/src-utils-magicfilter-exception-switchmodetoany.html"><abbr title="src/Utils/MagicFilter/Exception/SwitchModeToAny.php">SwitchModeToAny.php</abbr></a></li>
+                        </ul>
+                                                        <h3>T</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-exceptions-telegramapiexception.html"><abbr title="src/Exceptions/TelegramApiException.php">TelegramApiException.php</abbr></a></li>
+                            <li><a href="files/src-client-telegramapiserver.html"><abbr title="src/Client/TelegramApiServer.php">TelegramApiServer.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-telegrambadrequestexception.html"><abbr title="src/Exceptions/TelegramBadRequestException.php">TelegramBadRequestException.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-telegramconflictexception.html"><abbr title="src/Exceptions/TelegramConflictException.php">TelegramConflictException.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-telegramentitytoolarge.html"><abbr title="src/Exceptions/TelegramEntityTooLarge.php">TelegramEntityTooLarge.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-event-telegrameventobserver.html"><abbr title="src/Dispatcher/Event/TelegramEventObserver.php">TelegramEventObserver.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-telegramforbiddenexception.html"><abbr title="src/Exceptions/TelegramForbiddenException.php">TelegramForbiddenException.php</abbr></a></li>
+                            <li><a href="files/src-methods-telegrammethod.html"><abbr title="src/Methods/TelegramMethod.php">TelegramMethod.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-telegrammigratetochat.html"><abbr title="src/Exceptions/TelegramMigrateToChat.php">TelegramMigrateToChat.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-telegramnetworkexception.html"><abbr title="src/Exceptions/TelegramNetworkException.php">TelegramNetworkException.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-telegramnotfoundexception.html"><abbr title="src/Exceptions/TelegramNotFoundException.php">TelegramNotFoundException.php</abbr></a></li>
+                            <li><a href="files/src-types-telegramobject.html"><abbr title="src/Types/TelegramObject.php">TelegramObject.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-telegramretryafter.html"><abbr title="src/Exceptions/TelegramRetryAfter.php">TelegramRetryAfter.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-telegramserverexception.html"><abbr title="src/Exceptions/TelegramServerException.php">TelegramServerException.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-telegramunauthorizedexception.html"><abbr title="src/Exceptions/TelegramUnauthorizedException.php">TelegramUnauthorizedException.php</abbr></a></li>
+                            <li><a href="files/src-utils-text-textdecoration.html"><abbr title="src/Utils/Text/TextDecoration.php">TextDecoration.php</abbr></a></li>
+                            <li><a href="files/src-types-textquote.html"><abbr title="src/Types/TextQuote.php">TextQuote.php</abbr></a></li>
+                            <li><a href="files/src-utils-token.html"><abbr title="src/Utils/Token.php">Token.php</abbr></a></li>
+                            <li><a href="files/src-webhook-tokenbasedrequesthandler.html"><abbr title="src/Webhook/TokenBasedRequestHandler.php">TokenBasedRequestHandler.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-tokenvalidationexception.html"><abbr title="src/Exceptions/TokenValidationException.php">TokenValidationException.php</abbr></a></li>
+                            <li><a href="files/src-enums-topiciconcolor.html"><abbr title="src/Enums/TopicIconColor.php">TopicIconColor.php</abbr></a></li>
+                            <li><a href="files/src-types-transactionpartner.html"><abbr title="src/Types/TransactionPartner.php">TransactionPartner.php</abbr></a></li>
+                            <li><a href="files/src-types-transactionpartneraffiliateprogram.html"><abbr title="src/Types/TransactionPartnerAffiliateProgram.php">TransactionPartnerAffiliateProgram.php</abbr></a></li>
+                            <li><a href="files/src-types-transactionpartnerchat.html"><abbr title="src/Types/TransactionPartnerChat.php">TransactionPartnerChat.php</abbr></a></li>
+                            <li><a href="files/src-types-transactionpartnerfragment.html"><abbr title="src/Types/TransactionPartnerFragment.php">TransactionPartnerFragment.php</abbr></a></li>
+                            <li><a href="files/src-types-transactionpartnerother.html"><abbr title="src/Types/TransactionPartnerOther.php">TransactionPartnerOther.php</abbr></a></li>
+                            <li><a href="files/src-types-transactionpartnertelegramads.html"><abbr title="src/Types/TransactionPartnerTelegramAds.php">TransactionPartnerTelegramAds.php</abbr></a></li>
+                            <li><a href="files/src-types-transactionpartnertelegramapi.html"><abbr title="src/Types/TransactionPartnerTelegramApi.php">TransactionPartnerTelegramApi.php</abbr></a></li>
+                            <li><a href="files/src-enums-transactionpartnertype.html"><abbr title="src/Enums/TransactionPartnerType.php">TransactionPartnerType.php</abbr></a></li>
+                            <li><a href="files/src-types-transactionpartnerunion.html"><abbr title="src/Types/TransactionPartnerUnion.php">TransactionPartnerUnion.php</abbr></a></li>
+                            <li><a href="files/src-types-transactionpartneruser.html"><abbr title="src/Types/TransactionPartnerUser.php">TransactionPartnerUser.php</abbr></a></li>
+                            <li><a href="files/src-enums-transactionpartnerusertransactiontypeenum.html"><abbr title="src/Enums/TransactionPartnerUserTransactionTypeEnum.php">TransactionPartnerUserTransactionTypeEnum.php</abbr></a></li>
+                            <li><a href="files/src-methods-transferbusinessaccountstars.html"><abbr title="src/Methods/TransferBusinessAccountStars.php">TransferBusinessAccountStars.php</abbr></a></li>
+                            <li><a href="files/src-methods-transfergift.html"><abbr title="src/Methods/TransferGift.php">TransferGift.php</abbr></a></li>
+                        </ul>
+                                                        <h3>U</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-methods-unbanchatmember.html"><abbr title="src/Methods/UnbanChatMember.php">UnbanChatMember.php</abbr></a></li>
+                            <li><a href="files/src-methods-unbanchatsenderchat.html"><abbr title="src/Methods/UnbanChatSenderChat.php">UnbanChatSenderChat.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-event-unhandledsentinel.html"><abbr title="src/Dispatcher/Event/UnhandledSentinel.php">UnhandledSentinel.php</abbr></a></li>
+                            <li><a href="files/src-methods-unhidegeneralforumtopic.html"><abbr title="src/Methods/UnhideGeneralForumTopic.php">UnhideGeneralForumTopic.php</abbr></a></li>
+                            <li><a href="files/src-types-uniquegift.html"><abbr title="src/Types/UniqueGift.php">UniqueGift.php</abbr></a></li>
+                            <li><a href="files/src-types-uniquegiftbackdrop.html"><abbr title="src/Types/UniqueGiftBackdrop.php">UniqueGiftBackdrop.php</abbr></a></li>
+                            <li><a href="files/src-types-uniquegiftbackdropcolors.html"><abbr title="src/Types/UniqueGiftBackdropColors.php">UniqueGiftBackdropColors.php</abbr></a></li>
+                            <li><a href="files/src-types-uniquegiftcolors.html"><abbr title="src/Types/UniqueGiftColors.php">UniqueGiftColors.php</abbr></a></li>
+                            <li><a href="files/src-types-uniquegiftinfo.html"><abbr title="src/Types/UniqueGiftInfo.php">UniqueGiftInfo.php</abbr></a></li>
+                            <li><a href="files/src-types-uniquegiftmodel.html"><abbr title="src/Types/UniqueGiftModel.php">UniqueGiftModel.php</abbr></a></li>
+                            <li><a href="files/src-types-uniquegiftsymbol.html"><abbr title="src/Types/UniqueGiftSymbol.php">UniqueGiftSymbol.php</abbr></a></li>
+                            <li><a href="files/src-methods-unpinallchatmessages.html"><abbr title="src/Methods/UnpinAllChatMessages.php">UnpinAllChatMessages.php</abbr></a></li>
+                            <li><a href="files/src-methods-unpinallforumtopicmessages.html"><abbr title="src/Methods/UnpinAllForumTopicMessages.php">UnpinAllForumTopicMessages.php</abbr></a></li>
+                            <li><a href="files/src-methods-unpinallgeneralforumtopicmessages.html"><abbr title="src/Methods/UnpinAllGeneralForumTopicMessages.php">UnpinAllGeneralForumTopicMessages.php</abbr></a></li>
+                            <li><a href="files/src-methods-unpinchatmessage.html"><abbr title="src/Methods/UnpinChatMessage.php">UnpinChatMessage.php</abbr></a></li>
+                            <li><a href="files/src-types-unspecified.html"><abbr title="src/Types/Unspecified.php">Unspecified.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-unsupportedkeywordargumentexception.html"><abbr title="src/Exceptions/UnsupportedKeywordArgumentException.php">UnsupportedKeywordArgumentException.php</abbr></a></li>
+                            <li><a href="files/src-types-update.html"><abbr title="src/Types/Update.php">Update.php</abbr></a></li>
+                            <li><a href="files/src-types-shortcuts-updateshortcuts.html"><abbr title="src/Types/Shortcuts/UpdateShortcuts.php">UpdateShortcuts.php</abbr></a></li>
+                            <li><a href="files/src-enums-updatetype.html"><abbr title="src/Enums/UpdateType.php">UpdateType.php</abbr></a></li>
+                            <li><a href="files/src-exceptions-updatetypelookupexception.html"><abbr title="src/Exceptions/UpdateTypeLookupException.php">UpdateTypeLookupException.php</abbr></a></li>
+                            <li><a href="files/src-methods-upgradegift.html"><abbr title="src/Methods/UpgradeGift.php">UpgradeGift.php</abbr></a></li>
+                            <li><a href="files/src-methods-uploadstickerfile.html"><abbr title="src/Methods/UploadStickerFile.php">UploadStickerFile.php</abbr></a></li>
+                            <li><a href="files/src-types-urlinputfile.html"><abbr title="src/Types/UrlInputFile.php">UrlInputFile.php</abbr></a></li>
+                            <li><a href="files/src-types-user.html"><abbr title="src/Types/User.php">User.php</abbr></a></li>
+                            <li><a href="files/src-types-userchatboosts.html"><abbr title="src/Types/UserChatBoosts.php">UserChatBoosts.php</abbr></a></li>
+                            <li><a href="files/src-dispatcher-middlewares-usercontextmiddleware.html"><abbr title="src/Dispatcher/Middlewares/UserContextMiddleware.php">UserContextMiddleware.php</abbr></a></li>
+                            <li><a href="files/src-types-userprofileaudios.html"><abbr title="src/Types/UserProfileAudios.php">UserProfileAudios.php</abbr></a></li>
+                            <li><a href="files/src-types-userprofilephotos.html"><abbr title="src/Types/UserProfilePhotos.php">UserProfilePhotos.php</abbr></a></li>
+                            <li><a href="files/src-types-userrating.html"><abbr title="src/Types/UserRating.php">UserRating.php</abbr></a></li>
+                            <li><a href="files/src-types-shortcuts-usershortcuts.html"><abbr title="src/Types/Shortcuts/UserShortcuts.php">UserShortcuts.php</abbr></a></li>
+                            <li><a href="files/src-types-usersshared.html"><abbr title="src/Types/UsersShared.php">UsersShared.php</abbr></a></li>
+                        </ul>
+                                                        <h3>V</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-types-venue.html"><abbr title="src/Types/Venue.php">Venue.php</abbr></a></li>
+                            <li><a href="files/src-methods-verifychat.html"><abbr title="src/Methods/VerifyChat.php">VerifyChat.php</abbr></a></li>
+                            <li><a href="files/src-methods-verifyuser.html"><abbr title="src/Methods/VerifyUser.php">VerifyUser.php</abbr></a></li>
+                            <li><a href="files/src-types-video.html"><abbr title="src/Types/Video.php">Video.php</abbr></a></li>
+                            <li><a href="files/src-types-videochatended.html"><abbr title="src/Types/VideoChatEnded.php">VideoChatEnded.php</abbr></a></li>
+                            <li><a href="files/src-types-videochatparticipantsinvited.html"><abbr title="src/Types/VideoChatParticipantsInvited.php">VideoChatParticipantsInvited.php</abbr></a></li>
+                            <li><a href="files/src-types-videochatscheduled.html"><abbr title="src/Types/VideoChatScheduled.php">VideoChatScheduled.php</abbr></a></li>
+                            <li><a href="files/src-types-videochatstarted.html"><abbr title="src/Types/VideoChatStarted.php">VideoChatStarted.php</abbr></a></li>
+                            <li><a href="files/src-types-videonote.html"><abbr title="src/Types/VideoNote.php">VideoNote.php</abbr></a></li>
+                            <li><a href="files/src-types-videoquality.html"><abbr title="src/Types/VideoQuality.php">VideoQuality.php</abbr></a></li>
+                            <li><a href="files/src-types-voice.html"><abbr title="src/Types/Voice.php">Voice.php</abbr></a></li>
+                        </ul>
+                                                        <h3>W</h3>
+            <ul class="phpdocumentor-list">
+                            <li><a href="files/src-utils-webapp-webapp.html"><abbr title="src/Utils/WebApp/WebApp.php">WebApp.php</abbr></a></li>
+                            <li><a href="files/src-utils-webapp-webappchat.html"><abbr title="src/Utils/WebApp/WebAppChat.php">WebAppChat.php</abbr></a></li>
+                            <li><a href="files/src-types-webappdata.html"><abbr title="src/Types/WebAppData.php">WebAppData.php</abbr></a></li>
+                            <li><a href="files/src-types-webappinfo.html"><abbr title="src/Types/WebAppInfo.php">WebAppInfo.php</abbr></a></li>
+                            <li><a href="files/src-utils-webapp-webappinitdata.html"><abbr title="src/Utils/WebApp/WebAppInitData.php">WebAppInitData.php</abbr></a></li>
+                            <li><a href="files/src-utils-webapp-webappsignature.html"><abbr title="src/Utils/WebApp/WebAppSignature.php">WebAppSignature.php</abbr></a></li>
+                            <li><a href="files/src-utils-webapp-webappuser.html"><abbr title="src/Utils/WebApp/WebAppUser.php">WebAppUser.php</abbr></a></li>
+                            <li><a href="files/src-types-webhookinfo.html"><abbr title="src/Types/WebhookInfo.php">WebhookInfo.php</abbr></a></li>
+                            <li><a href="files/src-types-writeaccessallowed.html"><abbr title="src/Types/WriteAccessAllowed.php">WriteAccessAllowed.php</abbr></a></li>
+                        </ul>
+                                                                                                                        </section>
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="indices/files.html#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>

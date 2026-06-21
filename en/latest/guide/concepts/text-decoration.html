@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&amp;display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&amp;display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button">
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewbox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"></circle>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"></line>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled>
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button">
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                        
+<section class="section " id="text-decoration">
+            <h1>Text decoration</h1>
+
+            
+    <p><code>TextDecoration</code>
+ turns plain text plus a list of <code>MessageEntity</code>
+ entries into a Telegram-flavoured Markdown V2 or HTML string. It is the inverse of Telegram's "parse_mode" &mdash; given the structured form, produce the wire string.</p>
+
+            <section class="section " id="how-it-works">
+            <h2>How it works</h2>
+
+            <section class="section " id="strategy-and-subclasses">
+            <h3>Strategy and subclasses</h3>
+
+            
+    <p><a href="classes/Gruven-PhpBotGram-Utils-Text-TextDecoration.html"><code>TextDecoration</code></a> is the abstract strategy. Concrete subclasses <a href="classes/Gruven-PhpBotGram-Utils-Text-HtmlDecoration.html"><code>HtmlDecoration</code></a> and <a href="classes/Gruven-PhpBotGram-Utils-Text-MarkdownDecoration.html"><code>MarkdownDecoration</code></a> implement the per-entity emitters (<code>bold</code>
+, <code>italic</code>
+, <code>code</code>
+, <code>preLanguage</code>
+, <code>link</code>
+, <code>customEmoji</code>
+, &hellip;) plus the escape-for-quoting function (<code>quote</code>
+). The recursive emitter <code>applyEntity</code>
+ dispatches on <code>MessageEntityType</code>
+ via a <code>match (true)</code>
+ expression &mdash; bold goes to <code>bold()</code>
+, code goes to <code>code()</code>
+, and so on. Pass-through types (<code>Url</code>
+, <code>Mention</code>
+, <code>Hashtag</code>
+, <code>Email</code>
+, &hellip;) return the inner text unchanged because escaping would corrupt them.</p>
+
+            
+    <p>Both subclasses expose a singleton via <code>instance()</code>
+ so you never need to construct them manually:</p>
+
+            <pre><code class="language-php">use Gruven\PhpBotGram\Enums\MessageEntityType;
+use Gruven\PhpBotGram\Enums\ParseMode;
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Types\MessageEntity;
+use Gruven\PhpBotGram\Utils\Text\HtmlDecoration;
+
+$dispatcher-&gt;message-&gt;register(static function (Message $event): void {
+    $text = 'Hello world visit us';
+    $entities = [
+        new MessageEntity(type: MessageEntityType::Bold-&gt;value,   offset: 0, length: 5),
+        new MessageEntity(type: MessageEntityType::Italic-&gt;value,  offset: 6, length: 5),
+        new MessageEntity(
+            type: MessageEntityType::TextLink-&gt;value,
+            offset: 18,
+            length: 2,
+            url: 'https://example.com',
+        ),
+    ];
+
+    $wire = HtmlDecoration::instance()-&gt;unparse($text, $entities);
+    // $wire === '&lt;b&gt;Hello&lt;/b&gt; &lt;i&gt;world&lt;/i&gt; visit &lt;a href="https://example.com"&gt;us&lt;/a&gt;'
+
+    $event-&gt;answer($wire, parseMode: ParseMode::Html-&gt;value)-&gt;emit();
+});
+</code></pre>
+
+            
+    <p>Pass the result to <code>$event-&gt;answer(..., parseMode: ParseMode::Html-&gt;value)</code>
+ or <code>ParseMode::MarkdownV2-&gt;value</code>
+ to tell Telegram how to interpret the wire string.</p>
+
+    </section>
+
+            <section class="section " id="unparse-and-utf-16-offsets">
+            <h3>unparse and UTF-16 offsets</h3>
+
+            
+    <p><code>unparse(string $text, ?list&lt;MessageEntity&gt; $entities)</code>
+ is the top-level entry. It sorts the entities by offset, then walks them. Telegram's entity offsets are in <strong>UTF-16 code units</strong>
+, not bytes or PHP characters &mdash; a surrogate-pair emoji is two units. The implementation converts the input to UTF-16LE via <code>mb_convert_encoding</code>
+, indexes by 2-byte units, and converts back to UTF-8 at each yield. This is the only correct way to handle the offset semantics; substring-by-byte would corrupt any text past the first non-ASCII code point. The PHP port matches aiogram's same UTF-16 handling at the implementation level.</p>
+
+            
+    <p>The walk handles nested entities. An entity fully inside another (<code>&lt;b&gt;hello &lt;i&gt;world&lt;/i&gt;&lt;/b&gt;</code>
+) is collected as a nested batch and recursively decorated before the outer entity wraps the result. This matches Telegram's documented "entities can nest" rule and matches upstream <code>text_decorations.py</code>
+'s implementation. Overlapping (but not nested) entities are not supported &mdash; the API rejects them anyway on the inbound side, so an outbound rendering pipeline never has to handle them. The recursive walk is a <code>Generator</code>
+ that yields decorated segments in order; <code>unparse</code>
+ joins them once at the top level.</p>
+
+    </section>
+
+            <section class="section " id="quote-escaping-plain-text">
+            <h3>quote &mdash; escaping plain text</h3>
+
+            
+    <p>The <code>quote</code>
+ method on each subclass is the escape function for the target dialect. <code>MarkdownDecoration::quote</code>
+ escapes the Markdown V2 special-character set defined by the Telegram Bot API (underscore, asterisk, tilde, backslash, square brackets, parentheses, backtick, greater-than, hash, plus, minus, equals, pipe, curly braces, period, exclamation mark). <code>HtmlDecoration::quote</code>
+ escapes the three XML-sensitive characters (less-than, greater-than, ampersand). Apply it to any text segment that is not already inside an entity emitter &mdash; <code>unparse</code>
+ does this automatically for untagged gaps between entities, so user code rarely calls <code>quote</code>
+ directly.</p>
+
+            
+    <p>When you need to embed user-supplied text safely in a Markdown V2 message without constructing <code>MessageEntity</code>
+ objects, call <code>quote</code>
+ yourself before concatenating:</p>
+
+            <pre><code class="language-php">use Gruven\PhpBotGram\Enums\ParseMode;
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Utils\Text\MarkdownDecoration;
+
+$dispatcher-&gt;message-&gt;register(static function (Message $event): void {
+    $md = MarkdownDecoration::instance();
+
+    // quote() escapes special Markdown V2 characters in plain text.
+    $username = $event-&gt;fromUser?-&gt;username ?? 'stranger';
+    $safe = $md-&gt;quote("Hello, @{$username}! (your score: 100%)");
+
+    $event-&gt;answer($safe, parseMode: ParseMode::MarkdownV2-&gt;value)-&gt;emit();
+});
+</code></pre>
+
+    </section>
+
+            <section class="section " id="entity-dispatch-and-extensibility">
+            <h3>Entity dispatch and extensibility</h3>
+
+            
+    <p>The <code>MessageEntityType</code>
+ enum drives the dispatch. Each Telegram entity type maps to a method on the decoration subclass. Adding a new entity type (which Telegram does occasionally) is a Phase 2 codegen update plus two method overrides on each decoration subclass &mdash; small, mechanical work.</p>
+
+            
+    <p>The public surface is <code>unparse()</code>
+ plus <code>quote()</code>
+; the per-entity emitters (<code>bold</code>
+, <code>italic</code>
+, &hellip;) stay <code>protected</code>
+. A handler that wants to compose a Markdown V2 message manually can escape user input with <a href="classes/Gruven-PhpBotGram-Utils-Text-MarkdownDecoration.html"><code>MarkdownDecoration::quote</code></a> and concatenate it with its own markup. The framework's preferred path is to assemble the structured form (text + entities) and let <code>unparse</code>
+ produce the wire string.</p>
+
+    </section>
+
+    </section>
+
+            <section class="section " id="trade-offs">
+            <h2>Trade-offs</h2>
+
+            
+    <p>UTF-16 conversion runs on every <code>unparse</code>
+ call. For long messages the cost is non-trivial &mdash; proportional to the text length, not the entity count. We do not cache because messages are typically built once and sent once; if you find yourself rendering the same <code>Message</code>
+ repeatedly (unusual), cache the result yourself. The conversion is necessary <em>because</em>
+ of Telegram's wire-protocol contract, not a choice. The two <code>mb_convert_encoding</code>
+ calls per unparse are the unavoidable cost of supporting non-BMP characters correctly.</p>
+
+            
+    <p>Pass-through types are an asymmetry. A URL entity returns its inner text unchanged, including any reserved-character collisions with the target dialect. The HTML decoration escapes <code>&lt;</code>
+ and <code>&gt;</code>
+ everywhere, even inside a <code>Url</code>
+ entity &mdash; but Markdown V2 does not, because the URL syntax already handles escaping internally. The trade is "match Telegram's accepted formatting" vs. "make every output universally safe"; the framework chooses the former, matching aiogram. A URL that genuinely contains an angle bracket has to be encoded upstream of the message build.</p>
+
+            
+    <p>Date-time entities require a <code>unixTime</code>
+ plus optional format string. The decoration emits a Telegram <code>tg://datetime?date=...</code>
+ link for HTML and the equivalent Markdown V2 form. This is a Telegram-internal extension; the standard parse modes don't include it but the framework supports it because the upstream entity type does. The <code>dateTimeFormat</code>
+ argument follows PHP's <code>DateTimeImmutable::format</code>
+ syntax, since the value is a Unix timestamp at the wire level and gets formatted client-side.</p>
+
+            
+    <p>Custom emoji entities embed the emoji ID. The decoration emits a <code>tg://emoji?id=...</code>
+ URL for both HTML and Markdown V2 forms. Telegram clients render this as the actual custom emoji, but clients that don't support custom emoji (or for media that doesn't support them at all) see the underlying ID &mdash; there's no automatic fallback to a generic emoji.</p>
+
+    </section>
+
+            <section class="section " id="see-also">
+            <h2>See also</h2>
+
+            
+
+<ul>
+    <li class="dash"><a href="guide/concepts/keyboards.html#keyboards">Keyboards</a></li>
+
+    <li class="dash"><a href="guide/concepts/bot-and-session.html#bot-and-session">Bot and Session</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Utils-Text-TextDecoration.html">API reference: TextDecoration</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Utils-Text-HtmlDecoration.html">API reference: HtmlDecoration</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Utils-Text-MarkdownDecoration.html">API reference: MarkdownDecoration</a></li>
+
+</ul>
+
+    </section>
+
+    </section>
+
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>

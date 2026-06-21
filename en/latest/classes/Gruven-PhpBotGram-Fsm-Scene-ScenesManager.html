@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png"/>
+    <link rel="icon" href="images/favicon.ico"/>
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button" />
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"/>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"/>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled />
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button" />
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show &quot;typing…&quot; while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                <section>
+                                        <ul class="phpdocumentor-breadcrumbs">
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven.html">Gruven</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram.html">PhpBotGram</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram-fsm.html">Fsm</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram-fsm-scene.html">Scene</a></li>
+    </ul>
+
+    <article class="phpdocumentor-element -class">
+        <h2 class="phpdocumentor-content__title">
+    ScenesManager
+
+    
+            <div class="phpdocumentor-element__package">
+            in package
+            <ul class="phpdocumentor-breadcrumbs">
+                                    <li class="phpdocumentor-breadcrumb"><a href="packages/Application.html">Application</a></li>
+                            </ul>
+        </div>
+    
+            <span class="phpdocumentor-element__implements">
+            implements
+                            <a href="classes/Gruven-PhpBotGram-Fsm-Scene-SceneManagerInterface.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\SceneManagerInterface">SceneManagerInterface</abbr></a>                    </span>
+    
+    </h2>
+
+<div class="phpdocumentor-label-line">
+
+    <div class="phpdocumentor-label phpdocumentor-label--success"><span>Final</span><span>Yes</span></div>
+
+
+</div>
+
+        <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">42</span>
+
+    </aside>
+
+            <p class="phpdocumentor-summary">Per-update scene transition front-end.</p>
+
+
+    <section class="phpdocumentor-description"><p><code class="prettyprint">ScenesManager</code> is the entry point for wizard-style navigation. It resolves
+the current active scene (by looking up the FSM state in the registry),
+instantiates scene objects, and delegates lifecycle calls (<code class="prettyprint">enter</code>, <code class="prettyprint">exit</code>)
+through <code class="prettyprint">SceneWizard</code>.</p>
+<p>Mirrors <code class="prettyprint">ScenesManager</code> (<code class="prettyprint">aiogram/fsm/scene.py:659-743</code>).</p>
+<h2>Responsibilities</h2>
+<ul>
+<li><code class="prettyprint">enter($scene)</code> — exits the currently active scene (if any) and enters the
+requested one.  When <code class="prettyprint">$checkActive</code> is <code class="prettyprint">false</code> the exit step is skipped
+(used by <code class="prettyprint">SceneWizard</code> for chained transitions that have already handled
+leaving the old scene).</li>
+<li><code class="prettyprint">close()</code> — exits the currently active scene without transitioning to a
+new one.</li>
+<li><code class="prettyprint">history()</code> — accessor for the bound <code class="prettyprint">HistoryManager</code> instance.</li>
+</ul>
+<h2>Registry contract</h2>
+<p>The injected <code class="prettyprint">SceneRegistryInterface::get()</code> resolves a class-string, <code class="prettyprint">State</code>
+instance, or bare state string to a concrete <code class="prettyprint">class-string&lt;Scene&gt;</code>.  It
+throws <code class="prettyprint">SceneException</code> when the identifier is unknown (including <code class="prettyprint">null</code>).
+<code class="prettyprint">ScenesManager</code> relies on this exception to detect the &quot;clear FSM state&quot;
+path: when <code class="prettyprint">$scene</code> is <code class="prettyprint">null</code> and <code class="prettyprint">get()</code> throws, FSM state is cleared
+instead of entering a new scene.</p>
+</section>
+
+
+
+    
+    
+<h3 id="toc">
+    Table of Contents
+    <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#toc" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h3>
+
+
+
+    <h4 id="toc-interfaces">
+        Interfaces
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#toc-interfaces" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <dl class="phpdocumentor-table-of-contents">
+                    <dt class="phpdocumentor-table-of-contents__entry -interface"><a href="classes/Gruven-PhpBotGram-Fsm-Scene-SceneManagerInterface.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\SceneManagerInterface">SceneManagerInterface</abbr></a></dt><dd>Controls scene transitions on behalf of `SceneWizard`.</dd>    </dl>
+
+
+
+
+
+
+<h4 id="toc-properties">
+    Properties
+    <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#toc-properties" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -property -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_data">$data</a>
+    <span>
+                        &nbsp;: array&lt;string, mixed&gt;            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_event">$event</a>
+    <span>
+                        &nbsp;: object            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_historyManager">$historyManager</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Fsm-Scene-HistoryManager.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\HistoryManager">HistoryManager</abbr></a>            </span>
+</dt>
+<dd>History manager for this update session.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_registry">$registry</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Fsm-Scene-SceneRegistryInterface.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\SceneRegistryInterface">SceneRegistryInterface</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_state">$state</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Fsm-FsmContext.html"><abbr title="\Gruven\PhpBotGram\Fsm\FsmContext">FsmContext</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_updateType">$updateType</a>
+    <span>
+                        &nbsp;: string            </span>
+</dt>
+
+    </dl>
+
+<h4 id="toc-methods">
+    Methods
+    <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#toc-methods" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method___construct">__construct()</a>
+    <span>
+                                &nbsp;: mixed    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_close">close()</a>
+    <span>
+                                &nbsp;: void    </span>
+</dt>
+<dd>Exit the currently active scene without entering a new one.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_enter">enter()</a>
+    <span>
+                                &nbsp;: void    </span>
+</dt>
+<dd>Transition to the given scene (or clear FSM state when `null`).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_history">history()</a>
+    <span>
+                                &nbsp;: <a href="classes/Gruven-PhpBotGram-Fsm-Scene-HistoryManagerInterface.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\HistoryManagerInterface">HistoryManagerInterface</abbr></a>    </span>
+</dt>
+<dd>Access the history manager for this scene session.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_mergeData">mergeData()</a>
+    <span>
+                                &nbsp;: void    </span>
+</dt>
+<dd>Merge additional data into this manager&#039;s data bag.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_updateType">updateType()</a>
+    <span>
+                                &nbsp;: string    </span>
+</dt>
+<dd>Return the update-type key this manager was created for.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_getActiveScene">getActiveScene()</a>
+    <span>
+                                &nbsp;: <a href="classes/Gruven-PhpBotGram-Fsm-Scene.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene">Scene</abbr></a>|null    </span>
+</dt>
+<dd>Return the currently active `Scene` instance, or `null` if none.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_getScene">getScene()</a>
+    <span>
+                                &nbsp;: <a href="classes/Gruven-PhpBotGram-Fsm-Scene.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene">Scene</abbr></a>    </span>
+</dt>
+<dd>Instantiate the scene identified by `$sceneType`.</dd>
+
+    </dl>
+
+
+
+        
+
+        
+    <section class="phpdocumentor-properties">
+        <h3 class="phpdocumentor-elements__header" id="properties">
+            Properties
+            <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#properties" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -private
+                                                                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_data">
+        $data
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_data" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                                            </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">62</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__type">array&lt;string, mixed&gt;</span>
+    <span class="phpdocumentor-signature__name">$data</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -private
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_event">
+        $event
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_event" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">59</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__type">object</span>
+    <span class="phpdocumentor-signature__name">$event</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -private
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_historyManager">
+        $historyManager
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_historyManager" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">47</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">History manager for this update session.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene-HistoryManager.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\HistoryManager">HistoryManager</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$historyManager</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -private
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_registry">
+        $registry
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_registry" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">57</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene-SceneRegistryInterface.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\SceneRegistryInterface">SceneRegistryInterface</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$registry</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -private
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_state">
+        $state
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_state" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">60</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Fsm-FsmContext.html"><abbr title="\Gruven\PhpBotGram\Fsm\FsmContext">FsmContext</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$state</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -private
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_updateType">
+        $updateType
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_updateType" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">58</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">private</span>
+            <span class="phpdocumentor-signature__type">string</span>
+    <span class="phpdocumentor-signature__name">$updateType</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+            </section>
+
+            <section class="phpdocumentor-methods">
+        <h3 class="phpdocumentor-elements__header" id="methods">
+            Methods
+            <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#methods" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method___construct">
+        __construct()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method___construct" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">56</span>
+
+    </aside>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">__construct</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene-SceneRegistryInterface.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\SceneRegistryInterface">SceneRegistryInterface</abbr></a>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$registry</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$updateType</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">object&nbsp;</span><span class="phpdocumentor-signature__argument__name">$event</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Fsm-FsmContext.html"><abbr title="\Gruven\PhpBotGram\Fsm\FsmContext">FsmContext</abbr></a>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$state</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">array&lt;string, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$data</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">mixed</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$registry</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene-SceneRegistryInterface.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\SceneRegistryInterface">SceneRegistryInterface</abbr></a></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Scene-class resolver.</p>
+</section>
+
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$updateType</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Telegram update-type key (e.g. <code class="prettyprint">'message'</code>).</p>
+</section>
+
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$event</span>
+                : <span class="phpdocumentor-argument-list__argument__type">object</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>The raw Telegram event object.</p>
+</section>
+
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$state</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Fsm-FsmContext.html"><abbr title="\Gruven\PhpBotGram\Fsm\FsmContext">FsmContext</abbr></a></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>FSM context for state + data operations.</p>
+</section>
+
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$data</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;string, mixed&gt;</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Dispatcher kwargs bag.</p>
+</section>
+
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_close">
+        close()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_close" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">173</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Exit the currently active scene without entering a new one.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">close</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">mixed&nbsp;</span><span class="phpdocumentor-signature__argument__variadic-operator">...</span><span class="phpdocumentor-signature__argument__name">$kwargs</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">void</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>When no scene is currently active this method is a no-op (matches upstream
+Python behaviour where <code class="prettyprint">close()</code> silently returns when <code class="prettyprint">_get_active_scene</code>
+yields <code class="prettyprint">None</code>).</p>
+<p>Mirrors <code class="prettyprint">ScenesManager.close</code> (<code class="prettyprint">aiogram/fsm/scene.py:708-712</code>).</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$kwargs</span>
+                : <span class="phpdocumentor-argument-list__argument__type">mixed</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Additional context forwarded to the exit handler.</p>
+</section>
+
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_enter">
+        enter()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_enter" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">132</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Transition to the given scene (or clear FSM state when `null`).</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">enter</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">null|<abbr title="class-string<\Gruven\PhpBotGram\Fsm\Scene>">Scene></abbr>|<a href="classes/Gruven-PhpBotGram-Fsm-State.html"><abbr title="\Gruven\PhpBotGram\Fsm\State">State</abbr></a>|string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$scene</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">bool&nbsp;</span><span class="phpdocumentor-signature__argument__name">$checkActive</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">true</span><span> ]</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">mixed&nbsp;</span><span class="phpdocumentor-signature__argument__variadic-operator">...</span><span class="phpdocumentor-signature__argument__name">$kwargs</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">void</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>When <code class="prettyprint">$checkActive</code> is <code class="prettyprint">true</code> (the default) and a scene is currently
+active, its <code class="prettyprint">SceneWizard::exit()</code> is invoked before entering the new scene.</p>
+<p>Passing <code class="prettyprint">null</code> for <code class="prettyprint">$scene</code> combined with an unknown registry entry causes
+the FSM state to be cleared via <code class="prettyprint">FsmContext::setState(null)</code>.  Any extra
+<code class="prettyprint">$kwargs</code> are merged into the data bag and forwarded to lifecycle methods.</p>
+<p>Mirrors <code class="prettyprint">ScenesManager.enter</code> (<code class="prettyprint">aiogram/fsm/scene.py:687-706</code>).</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$scene</span>
+                : <span class="phpdocumentor-argument-list__argument__type">null|<abbr title="class-string<\Gruven\PhpBotGram\Fsm\Scene>">Scene></abbr>|<a href="classes/Gruven-PhpBotGram-Fsm-State.html"><abbr title="\Gruven\PhpBotGram\Fsm\State">State</abbr></a>|string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Target scene.</p>
+</section>
+
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$checkActive</span>
+                : <span class="phpdocumentor-argument-list__argument__type">bool</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">true</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Skip the &quot;exit active scene&quot; guard when <code class="prettyprint">false</code>.</p>
+</section>
+
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$kwargs</span>
+                : <span class="phpdocumentor-argument-list__argument__type">mixed</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Additional context merged into the data bag.</p>
+</section>
+
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_history">
+        history()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_history" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">111</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Access the history manager for this scene session.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">history</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene-HistoryManagerInterface.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\HistoryManagerInterface">HistoryManagerInterface</abbr></a></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Mirrors <code class="prettyprint">ScenesManager.history</code> (implicit property, <code class="prettyprint">aiogram/fsm/scene.py:665</code>).</p>
+</section>
+
+    
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene-HistoryManagerInterface.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene\HistoryManagerInterface">HistoryManagerInterface</abbr></a></span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_mergeData">
+        mergeData()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_mergeData" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">97</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Merge additional data into this manager&#039;s data bag.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">mergeData</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">array&lt;string, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$extra</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">void</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Used by <code class="prettyprint">SceneHandlerWrapper</code> to inject the full dispatcher kwargs bag
+so the scene wizard and lifecycle actions have access to <code class="prettyprint">bot</code>,
+<code class="prettyprint">event_context</code>, etc.</p>
+<p>Mirrors <code class="prettyprint">scenes.data = {**scenes.data, **kwargs}</code> in
+<code class="prettyprint">SceneHandlerWrapper.__call__</code> (<code class="prettyprint">aiogram/fsm/scene.py:262</code>).</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$extra</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;string, mixed&gt;</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_updateType">
+        updateType()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_updateType" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">80</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Return the update-type key this manager was created for.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">updateType</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">string</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Used by <code class="prettyprint">SceneHandlerWrapper</code> to populate the <code class="prettyprint">SceneWizard</code>'s
+<code class="prettyprint">$updateType</code> field without requiring access to the private property.</p>
+<p>Mirrors the <code class="prettyprint">update_type</code> field on <code class="prettyprint">ScenesManager</code>
+(<code class="prettyprint">aiogram/fsm/scene.py:659</code>).</p>
+</section>
+
+    
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">string</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_getActiveScene">
+        getActiveScene()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_getActiveScene" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">230</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Return the currently active `Scene` instance, or `null` if none.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+                    <span class="phpdocumentor-signature__name">getActiveScene</span><span>(</span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene">Scene</abbr></a>|null</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Reads the current FSM state and attempts to resolve it via the registry.
+When the state is <code class="prettyprint">null</code> or the registry does not know it, <code class="prettyprint">null</code> is
+returned rather than propagating a <code class="prettyprint">SceneException</code>.</p>
+<p>Mirrors <code class="prettyprint">ScenesManager._get_active_scene</code> (<code class="prettyprint">aiogram/fsm/scene.py:681-685</code>).</p>
+</section>
+
+    
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene">Scene</abbr></a>|null</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -private
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_getScene">
+        getScene()
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_getScene" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Fsm/Scene/ScenesManager.php"><a href="files/src-fsm-scene-scenesmanager.html"><abbr title="src/Fsm/Scene/ScenesManager.php">ScenesManager.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">198</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Instantiate the scene identified by `$sceneType`.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+                    <span class="phpdocumentor-signature__name">getScene</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">null|<abbr title="class-string<\Gruven\PhpBotGram\Fsm\Scene>">Scene></abbr>|<a href="classes/Gruven-PhpBotGram-Fsm-State.html"><abbr title="\Gruven\PhpBotGram\Fsm\State">State</abbr></a>|string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$sceneType</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene">Scene</abbr></a></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Resolves <code class="prettyprint">$sceneType</code> through the registry and constructs a <code class="prettyprint">SceneWizard</code></p>
+<ul>
+<li><code class="prettyprint">Scene</code> pair with a circular back-reference.</li>
+</ul>
+<p>Mirrors <code class="prettyprint">ScenesManager._get_scene</code> (<code class="prettyprint">aiogram/fsm/scene.py:669-679</code>).</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$sceneType</span>
+                : <span class="phpdocumentor-argument-list__argument__type">null|<abbr title="class-string<\Gruven\PhpBotGram\Fsm\Scene>">Scene></abbr>|<a href="classes/Gruven-PhpBotGram-Fsm-State.html"><abbr title="\Gruven\PhpBotGram\Fsm\State">State</abbr></a>|string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+    <h5 class="phpdocumentor-tag-list__heading" id="method_getScene_tags">
+        Tags
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_getScene_tags" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h5>
+    <dl class="phpdocumentor-tag-list">
+                    <dt class="phpdocumentor-tag-list__entry">
+                <span class="phpdocumentor-tag__name">throws</span>
+            </dt>
+                            <dd class="phpdocumentor-tag-list__definition">
+                                                                <span class="phpdocumentor-tag-link"><a href="classes/Gruven-PhpBotGram-Exceptions-SceneException.html"><abbr title="\Gruven\PhpBotGram\Exceptions\SceneException">SceneException</abbr></a></span>
+                                                                                        <section class="phpdocumentor-description"><p>When <code class="prettyprint">$sceneType</code> cannot be resolved.</p>
+</section>
+
+                                    </dd>
+                        </dl>
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Fsm-Scene.html"><abbr title="\Gruven\PhpBotGram\Fsm\Scene">Scene</abbr></a></span>
+            </section>
+
+</article>
+            </section>
+
+        
+    </article>
+                                </section>
+                <section class="phpdocumentor-on-this-page__sidebar">
+                                
+    <section class="phpdocumentor-on-this-page__content">
+        <strong class="phpdocumentor-on-this-page__title">On this page</strong>
+
+        <ul class="phpdocumentor-list -clean">
+            <li class="phpdocumentor-on-this-page-section__title">Table Of Contents</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                                            <li><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#toc-properties">Properties</a></li>
+                                                            <li><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#toc-methods">Methods</a></li>
+                                    </ul>
+            </li>
+            
+                            <li class="phpdocumentor-on-this-page-section__title">Properties</li>
+                <li>
+                    <ul class="phpdocumentor-list -clean">
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_data">$data</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_event">$event</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_historyManager">$historyManager</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_registry">$registry</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_state">$state</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#property_updateType">$updateType</a></li>
+                                            </ul>
+                </li>
+            
+                        <li class="phpdocumentor-on-this-page-section__title">Methods</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method___construct">__construct()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_close">close()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_enter">enter()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_history">history()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_mergeData">mergeData()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_updateType">updateType()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_getActiveScene">getActiveScene()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#method_getScene">getScene()</a></li>
+                                    </ul>
+            </li>
+                    </ul>
+    </section>
+
+                </section>
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="classes/Gruven-PhpBotGram-Fsm-Scene-ScenesManager.html#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>
