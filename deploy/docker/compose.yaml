@@ -42,8 +42,10 @@ services:
         required: false
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     profiles: ["redis"]
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -53,8 +55,10 @@ services:
       - redis-data:/data
 
   mongo:
-    image: mongo:7
+    image: mongo:8
     profiles: ["mongo"]
+    ports:
+      - "27017:27017"
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
       interval: 5s
