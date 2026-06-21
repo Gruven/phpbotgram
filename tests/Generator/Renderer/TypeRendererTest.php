@@ -390,6 +390,29 @@ final class TypeRendererTest extends TestCase
     );
   }
 
+  public function testRichTextFieldsAcceptRecursiveWireUnionShapes(): void
+  {
+    $paragraph = $this->render('RichBlockParagraph');
+    self::assertStringContainsString('@param RichText|list<RichText|array<array-key,mixed>|string>|string $text', $paragraph);
+    self::assertStringContainsString('public readonly RichText|array|string $text,', $paragraph);
+
+    $bold = $this->render('RichTextBold');
+    self::assertStringContainsString('@param RichText|list<RichText|array<array-key,mixed>|string>|string $text', $bold);
+    self::assertStringContainsString('public readonly RichText|array|string $text,', $bold);
+    self::assertMatchesRegularExpression(
+      "/public readonly string \\\$type\\s*=\\s*'bold'/",
+      $bold,
+    );
+  }
+
+  public function testNullableRichTextPhpdocIncludesNull(): void
+  {
+    $caption = $this->render('RichBlockCaption');
+
+    self::assertStringContainsString('@param RichText|list<RichText|array<array-key,mixed>|string>|string|null $credit', $caption);
+    self::assertStringContainsString('public readonly null|RichText|array|string $credit = null,', $caption);
+  }
+
   public function testRendersInlineKeyboardMarkupAsMutable(): void
   {
     $out = $this->render('InlineKeyboardMarkup');

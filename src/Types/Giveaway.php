@@ -18,7 +18,7 @@ final class Giveaway extends TelegramObject
 {
   /**
    * @param list<Chat> $chats
-   * @param list<string> $countryCodes
+   * @param null|list<string> $countryCodes
    */
   public function __construct(
     public readonly array $chats,

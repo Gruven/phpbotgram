@@ -17,7 +17,7 @@ use Gruven\PhpBotGram\Client\BotDefault;
 final class InputPollOption extends TelegramObject
 {
   /**
-   * @param list<MessageEntity> $textEntities
+   * @param null|list<MessageEntity> $textEntities
    */
   public function __construct(
     public readonly string $text,

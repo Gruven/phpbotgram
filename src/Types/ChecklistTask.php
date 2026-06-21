@@ -16,7 +16,7 @@ use Gruven\PhpBotGram\Bot;
 final class ChecklistTask extends TelegramObject
 {
   /**
-   * @param list<MessageEntity> $textEntities
+   * @param null|list<MessageEntity> $textEntities
    */
   public function __construct(
     public readonly int $id,

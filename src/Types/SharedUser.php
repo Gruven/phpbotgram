@@ -16,7 +16,7 @@ use Gruven\PhpBotGram\Bot;
 final class SharedUser extends TelegramObject
 {
   /**
-   * @param list<PhotoSize> $photo
+   * @param null|list<PhotoSize> $photo
    */
   public function __construct(
     public readonly int $userId,

@@ -17,7 +17,7 @@ use Gruven\PhpBotGram\Client\BotDefault;
 final class InputMediaAnimation extends InputMedia implements InputPollMediaInterface, InputPollOptionMediaInterface
 {
   /**
-   * @param list<MessageEntity> $captionEntities
+   * @param null|list<MessageEntity> $captionEntities
    */
   public function __construct(
     public readonly InputFile|string $media,

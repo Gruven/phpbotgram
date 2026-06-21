@@ -36,19 +36,19 @@ final class SchemaLoaderTest extends TestCase
   public function testApiVersionAndReleaseDate(): void
   {
     $loaded = $this->loaded();
-    self::assertSame('10.0', $loaded->apiVersion);
-    self::assertSame('2026-05-08', $loaded->releaseDate);
+    self::assertSame('10.1', $loaded->apiVersion);
+    self::assertSame('2026-06-11', $loaded->releaseDate);
   }
 
   public function testCountsTypesMethodsEnums(): void
   {
-    // schema.json itself has 303 children with category=types (KeyboardButtonRequestUser
+    // schema.json itself has 359 children with category=types (KeyboardButtonRequestUser
     // and UserShared exist on the filesystem as legacy/deprecated, but are no longer
     // listed under items[].children[]).
     $loaded = $this->loaded();
-    self::assertCount(303, $loaded->types);
-    self::assertCount(176, $loaded->methods);
-    self::assertCount(34, $loaded->enums);
+    self::assertCount(359, $loaded->types);
+    self::assertCount(180, $loaded->methods);
+    self::assertCount(36, $loaded->enums);
   }
 
   public function testMessageTypeWithRequiredMessageIdAnnotation(): void
@@ -203,6 +203,14 @@ final class SchemaLoaderTest extends TestCase
     self::assertContains('BackgroundFillFreeformGradient', $bg->subtypes);
     self::assertSame('type', $bg->discriminator);
     self::assertNull($bg->subtypeOf);
+  }
+
+  public function testRichTextExtraUnionItemsAreLoaded(): void
+  {
+    $richText = $this->findType('RichText');
+
+    self::assertSame('type', $richText->discriminator);
+    self::assertSame(['String', 'Array of RichText'], $richText->extraUnionItems);
   }
 
   public function testBackgroundFillSolidIsUnionChild(): void

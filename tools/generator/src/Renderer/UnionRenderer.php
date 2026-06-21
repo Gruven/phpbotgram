@@ -155,7 +155,7 @@ final class UnionRenderer
    * Escape a wire-side literal for safe inclusion inside a PHP
    * single-quoted string.
    *
-   * The vendored 10.0 schema never ships a discriminator with embedded
+   * The vendored schema never ships a discriminator with embedded
    * apostrophes or backslashes, but the escape costs nothing and makes
    * the renderer forward-compatible.
    */

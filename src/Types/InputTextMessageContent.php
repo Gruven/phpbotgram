@@ -17,7 +17,7 @@ use Gruven\PhpBotGram\Client\BotDefault;
 final class InputTextMessageContent extends InputMessageContent
 {
   /**
-   * @param list<MessageEntity> $entities
+   * @param null|list<MessageEntity> $entities
    */
   public function __construct(
     public readonly string $messageText,

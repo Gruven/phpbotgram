@@ -17,7 +17,7 @@ final class InputSticker extends TelegramObject
 {
   /**
    * @param list<string> $emojiList
-   * @param list<string> $keywords
+   * @param null|list<string> $keywords
    */
   public function __construct(
     public readonly InputFile|string $sticker,

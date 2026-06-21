@@ -8,3 +8,14 @@ returning:
           name: Message
       - type: std
         name: bool
+annotations_order:
+  - text
+  - business_connection_id
+  - chat_id
+  - message_id
+  - inline_message_id
+  - parse_mode
+  - entities
+  - link_preview_options
+  - reply_markup
+  - rich_message

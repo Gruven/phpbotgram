@@ -1,0 +1,4 @@
+discriminator: type
+extra_items:
+  - String
+  - Array of RichText

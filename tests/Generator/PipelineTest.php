@@ -66,13 +66,10 @@ final class PipelineTest extends TestCase
     $enumFiles = $this->phpFilesIn($this->tmpOut . '/Enums');
 
     // Types include both schema types AND <Parent>Union resolvers — combined
-    // the count exceeds 300 (305 schema types + 21 unions in the vendored
-    // 10.0 schema). Pinning the lower bound at 300 leaves headroom for
-    // schema patches that add/remove a handful of types without breaking
-    // the test on every minor refresh.
+    // the count exceeds the raw schema entity count.
     self::assertGreaterThanOrEqual(300, count($typeFiles));
-    self::assertCount(176, $methodFiles);
-    self::assertCount(34, $enumFiles);
+    self::assertCount(180, $methodFiles);
+    self::assertCount(36, $enumFiles);
     self::assertFileExists($this->tmpOut . '/Bot.php');
   }
 

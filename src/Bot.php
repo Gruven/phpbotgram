@@ -13,6 +13,7 @@ use Gruven\PhpBotGram\Client\Session\AmphpSession;
 use Gruven\PhpBotGram\Client\Session\BaseSession;
 use Gruven\PhpBotGram\Methods\AddStickerToSet;
 use Gruven\PhpBotGram\Methods\AnswerCallbackQuery;
+use Gruven\PhpBotGram\Methods\AnswerChatJoinRequestQuery;
 use Gruven\PhpBotGram\Methods\AnswerGuestQuery;
 use Gruven\PhpBotGram\Methods\AnswerInlineQuery;
 use Gruven\PhpBotGram\Methods\AnswerPreCheckoutQuery;
@@ -120,6 +121,7 @@ use Gruven\PhpBotGram\Methods\SavePreparedKeyboardButton;
 use Gruven\PhpBotGram\Methods\SendAnimation;
 use Gruven\PhpBotGram\Methods\SendAudio;
 use Gruven\PhpBotGram\Methods\SendChatAction;
+use Gruven\PhpBotGram\Methods\SendChatJoinRequestWebApp;
 use Gruven\PhpBotGram\Methods\SendChecklist;
 use Gruven\PhpBotGram\Methods\SendContact;
 use Gruven\PhpBotGram\Methods\SendDice;
@@ -135,6 +137,8 @@ use Gruven\PhpBotGram\Methods\SendMessageDraft;
 use Gruven\PhpBotGram\Methods\SendPaidMedia;
 use Gruven\PhpBotGram\Methods\SendPhoto;
 use Gruven\PhpBotGram\Methods\SendPoll;
+use Gruven\PhpBotGram\Methods\SendRichMessage;
+use Gruven\PhpBotGram\Methods\SendRichMessageDraft;
 use Gruven\PhpBotGram\Methods\SendSticker;
 use Gruven\PhpBotGram\Methods\SendVenue;
 use Gruven\PhpBotGram\Methods\SendVideo;
@@ -222,6 +226,7 @@ use Gruven\PhpBotGram\Types\InputPaidMedia;
 use Gruven\PhpBotGram\Types\InputPollMediaInterface;
 use Gruven\PhpBotGram\Types\InputPollOption;
 use Gruven\PhpBotGram\Types\InputProfilePhoto;
+use Gruven\PhpBotGram\Types\InputRichMessage;
 use Gruven\PhpBotGram\Types\InputSticker;
 use Gruven\PhpBotGram\Types\InputStoryContent;
 use Gruven\PhpBotGram\Types\KeyboardButton;
@@ -1627,6 +1632,28 @@ class Bot implements BotShortcutsContract
     ), $timeout);
   }
 
+  public function answerChatJoinRequestQuery(
+    string $chatJoinRequestQueryId,
+    string $result,
+    ?int $timeout = null,
+  ): bool {
+    return $this(new AnswerChatJoinRequestQuery(
+      chatJoinRequestQueryId: $chatJoinRequestQueryId,
+      result: $result,
+    ), $timeout);
+  }
+
+  public function sendChatJoinRequestWebApp(
+    string $chatJoinRequestQueryId,
+    string $webAppUrl,
+    ?int $timeout = null,
+  ): bool {
+    return $this(new SendChatJoinRequestWebApp(
+      chatJoinRequestQueryId: $chatJoinRequestQueryId,
+      webAppUrl: $webAppUrl,
+    ), $timeout);
+  }
+
   public function setChatPhoto(
     int|string $chatId,
     InputFile $photo,
@@ -2649,7 +2676,7 @@ class Bot implements BotShortcutsContract
    * @param null|list<MessageEntity> $entities
    */
   public function editMessageText(
-    string $text,
+    ?string $text = null,
     ?string $businessConnectionId = null,
     int|string|null $chatId = null,
     ?int $messageId = null,
@@ -2658,6 +2685,7 @@ class Bot implements BotShortcutsContract
     ?array $entities = null,
     BotDefault|LinkPreviewOptions|null $linkPreviewOptions = new BotDefault('link_preview'),
     ?InlineKeyboardMarkup $replyMarkup = null,
+    ?InputRichMessage $richMessage = null,
     ?int $timeout = null,
   ): bool|Message {
     return $this(new EditMessageText(
@@ -2670,6 +2698,7 @@ class Bot implements BotShortcutsContract
       entities: $entities,
       linkPreviewOptions: $linkPreviewOptions,
       replyMarkup: $replyMarkup,
+      richMessage: $richMessage,
     ), $timeout);
   }
 
@@ -3116,6 +3145,52 @@ class Bot implements BotShortcutsContract
   ): bool {
     return $this(new DeleteStickerSet(
       name: $name,
+    ), $timeout);
+  }
+
+  public function sendRichMessage(
+    int|string $chatId,
+    InputRichMessage $richMessage,
+    ?string $businessConnectionId = null,
+    ?int $messageThreadId = null,
+    ?int $directMessagesTopicId = null,
+    ?bool $disableNotification = null,
+    ?bool $protectContent = null,
+    ?bool $allowPaidBroadcast = null,
+    ?string $messageEffectId = null,
+    ?SuggestedPostParameters $suggestedPostParameters = null,
+    ?ReplyParameters $replyParameters = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
+    ?int $timeout = null,
+  ): Message {
+    return $this(new SendRichMessage(
+      chatId: $chatId,
+      richMessage: $richMessage,
+      businessConnectionId: $businessConnectionId,
+      messageThreadId: $messageThreadId,
+      directMessagesTopicId: $directMessagesTopicId,
+      disableNotification: $disableNotification,
+      protectContent: $protectContent,
+      allowPaidBroadcast: $allowPaidBroadcast,
+      messageEffectId: $messageEffectId,
+      suggestedPostParameters: $suggestedPostParameters,
+      replyParameters: $replyParameters,
+      replyMarkup: $replyMarkup,
+    ), $timeout);
+  }
+
+  public function sendRichMessageDraft(
+    int $chatId,
+    int $draftId,
+    InputRichMessage $richMessage,
+    ?int $messageThreadId = null,
+    ?int $timeout = null,
+  ): bool {
+    return $this(new SendRichMessageDraft(
+      chatId: $chatId,
+      draftId: $draftId,
+      richMessage: $richMessage,
+      messageThreadId: $messageThreadId,
     ), $timeout);
   }
 

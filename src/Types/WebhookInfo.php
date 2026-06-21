@@ -17,7 +17,7 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class WebhookInfo extends TelegramObject
 {
   /**
-   * @param list<string> $allowedUpdates
+   * @param null|list<string> $allowedUpdates
    */
   public function __construct(
     public readonly string $url,

@@ -17,8 +17,8 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class Video extends TelegramObject
 {
   /**
-   * @param list<PhotoSize> $cover
-   * @param list<VideoQuality> $qualities
+   * @param null|list<PhotoSize> $cover
+   * @param null|list<VideoQuality> $qualities
    */
   public function __construct(
     public readonly string $fileId,

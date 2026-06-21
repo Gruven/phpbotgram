@@ -17,7 +17,7 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class PollOption extends TelegramObject
 {
   /**
-   * @param list<MessageEntity> $textEntities
+   * @param null|list<MessageEntity> $textEntities
    */
   public function __construct(
     public readonly string $persistentId,

@@ -17,8 +17,8 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class ChatFullInfo extends Chat
 {
   /**
-   * @param list<string> $activeUsernames
-   * @param list<ReactionType> $availableReactions
+   * @param null|list<string> $activeUsernames
+   * @param null|list<ReactionType> $availableReactions
    */
   public function __construct(
     int $id,
@@ -72,6 +72,7 @@ final class ChatFullInfo extends Chat
     public readonly ?Audio $firstProfileAudio = null,
     public readonly ?UniqueGiftColors $uniqueGiftColors = null,
     public readonly ?int $paidMessageStarCount = null,
+    public readonly ?User $guardBot = null,
     ?Bot $bot = null,
   ) {
     parent::__construct(

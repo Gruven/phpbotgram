@@ -37,10 +37,10 @@ final class ShortcutDetectorTest extends TestCase
 
   public function testPlansCountMatchesVendoredAliasTotal(): void
   {
-    // Hand-counted (and `php -r` verified) total across all 11 aliases.yml
-    // fixtures in the vendored 10.0 schema. Every alias in the current
+    // Hand-counted (and `php -r` verified) total across all aliases.yml
+    // fixtures in the vendored 10.1 schema. Every alias in the current
     // schema carries a `method:` key, so the per-alias output is the total.
-    self::assertCount(176, $this->plans());
+    self::assertCount(182, $this->plans());
   }
 
   public function testEveryPlanReferencesAKnownMethod(): void
@@ -141,6 +141,21 @@ final class ShortcutDetectorTest extends TestCase
       ],
       $plan->fill,
     );
+  }
+
+  public function testChatJoinRequestQueryPlansRequireQueryId(): void
+  {
+    $answer = $this->findPlan('ChatJoinRequest', 'answer_query');
+    self::assertSame('answerChatJoinRequestQuery', $answer->methodEntityName);
+    self::assertSame('answerQuery', $answer->phpMethodName);
+    self::assertSame(['chat_join_request_query_id' => 'self.query_id'], $answer->fill);
+    self::assertSame([], $answer->ignore);
+
+    $webapp = $this->findPlan('ChatJoinRequest', 'send_webapp');
+    self::assertSame('sendChatJoinRequestWebApp', $webapp->methodEntityName);
+    self::assertSame('sendWebapp', $webapp->phpMethodName);
+    self::assertSame(['chat_join_request_query_id' => 'self.query_id'], $webapp->fill);
+    self::assertSame([], $webapp->ignore);
   }
 
   public function testMessageDeleteReplyMarkupPlanCarriesNoneSentinel(): void

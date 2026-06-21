@@ -18,11 +18,11 @@ final class Poll extends TelegramObject
 {
   /**
    * @param list<PollOption> $options
-   * @param list<MessageEntity> $questionEntities
-   * @param list<string> $countryCodes
-   * @param list<int> $correctOptionIds
-   * @param list<MessageEntity> $explanationEntities
-   * @param list<MessageEntity> $descriptionEntities
+   * @param null|list<MessageEntity> $questionEntities
+   * @param null|list<string> $countryCodes
+   * @param null|list<int> $correctOptionIds
+   * @param null|list<MessageEntity> $explanationEntities
+   * @param null|list<MessageEntity> $descriptionEntities
    */
   public function __construct(
     public readonly string $id,

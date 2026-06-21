@@ -16,7 +16,7 @@ use Gruven\PhpBotGram\Bot;
 final class InputMediaLivePhoto extends InputMedia implements InputPollMediaInterface, InputPollOptionMediaInterface
 {
   /**
-   * @param list<MessageEntity> $captionEntities
+   * @param null|list<MessageEntity> $captionEntities
    */
   public function __construct(
     public readonly string $media,

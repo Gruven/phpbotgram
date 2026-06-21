@@ -179,7 +179,7 @@ final class DefaultsResolverTest extends TestCase
   public function testTotalBotDefaultCountMatchesMatchedYamlEntries(): void
   {
     // Aggregate count across the whole schema: 41 keys across 21 default.yml
-    // files in the vendored 10.0 schema. Two of those keys (the legacy
+    // files in the vendored 10.1 schema. Two of those keys (the legacy
     // `disable_web_page_preview` entries on sendMessage and editMessageText)
     // are orphans — the modern schema renamed them to `link_preview_options`
     // — so the resolver only emits ParameterDefaults for the 39 matched
@@ -226,11 +226,11 @@ final class DefaultsResolverTest extends TestCase
 
   public function testDefaultsTotalCountMatchesOptionalAnnotationCount(): void
   {
-    // Every `required: false` annotation across all 176 methods lands in
+    // Every `required: false` annotation across all 180 methods lands in
     // defaults() — either as a BotDefault (41 entries) or as a null default.
-    // The schema reports 574 optional annotations in total.
+    // The schema reports 587 optional annotations in total.
     $defaults = $this->resolver()->defaults();
-    self::assertCount(574, $defaults);
+    self::assertCount(587, $defaults);
   }
 
   public function testDefaultsAreEmittedInAnnotationOrderPerMethod(): void

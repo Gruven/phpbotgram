@@ -15,11 +15,11 @@ namespace Gruven\PhpBotGram\Generator;
  *
  *   When a union **parent** declares `bases:` in its `replace.yml`, every
  *   subtype that did not declare its own `bases:` inherits the parent's
- *   bases. The 5 propagating parents in the vendored 10.0 schema are
+ *   bases. The propagating parents in the vendored schema are
  *   `InlineQueryResult`, `InputMedia`, `InputMessageContent`, `MenuButton`,
  *   and `PassportElementError` — all lifting their children to
  *   `MutableTelegramObject`. A child that explicitly overrides `bases:` keeps
- *   its own list (no overwrite); none of the vendored 10.0 children actually
+ *   its own list (no overwrite); none of the vendored schema children actually
  *   do this today, but the rule is enforced for forward-compatibility.
  *
  * Note: `AnnotationEntity::$parsedType` is already populated by `SchemaLoader`
@@ -98,6 +98,7 @@ final class TypeOverrideApplier
       bases: $propagatedBases[$t->name],
       aliases: $t->aliases,
       subtypes: $t->subtypes,
+      extraUnionItems: $t->extraUnionItems,
       subtypeOf: $t->subtypeOf,
       discriminator: $t->discriminator,
       defaults: $t->defaults,

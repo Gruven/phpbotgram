@@ -144,7 +144,7 @@ final class DefaultsResolver
    * single-quoting the sentinel name and escaping embedded apostrophes and
    * backslashes so the emitted PHP literal is always syntactically valid.
    *
-   * No sentinel name in the vendored 10.0 schema contains either character,
+   * No sentinel name in the vendored schema contains either character,
    * but the defensive escape costs nothing and forecloses a future surprise
    * where a schema patch introduces a quote-bearing name.
    */

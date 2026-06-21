@@ -16,7 +16,7 @@ use Gruven\PhpBotGram\Bot;
 final class TransactionPartnerUser extends TransactionPartner
 {
   /**
-   * @param list<PaidMedia> $paidMedia
+   * @param null|list<PaidMedia> $paidMedia
    */
   public function __construct(
     public readonly string $transactionType,

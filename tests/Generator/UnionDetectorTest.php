@@ -53,9 +53,9 @@ final class UnionDetectorTest extends TestCase
     }
 
     self::assertSame($expected, \count($this->plans()));
-    // Sanity-pin the vendored 10.0 count so a future regression in either the
+    // Sanity-pin the vendored 10.1 count so a future regression in either the
     // SchemaLoader or the detector surfaces here, not five layers downstream.
-    self::assertSame(21, $expected);
+    self::assertSame(23, $expected);
   }
 
   public function testNullDiscriminatorUnionsAreSkipped(): void

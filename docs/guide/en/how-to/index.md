@@ -22,6 +22,7 @@ Task-oriented cookbook. Each recipe starts with "When to use this", shows workin
 
 - [Upload and download files](file-upload-download.md)
 - [Send a media group (album)](media-group.md)
+- [Send rich messages](rich-messages.md)
 - [Show "typing…" while a slow handler runs](chat-action-typing.md)
 
 ## Payments and Web Apps

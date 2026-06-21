@@ -49,12 +49,12 @@ final class TypeOverrideApplierTest extends TestCase
 
   public function testTypeMethodEnumCountsPreserved(): void
   {
-    // Match the Task 2.2 reconciliation: 303 / 176 / 34.
+    // Match the Bot API 10.1 schema refresh reconciliation: 359 / 180 / 36.
     $applied = $this->applied();
 
-    self::assertCount(303, $applied->types);
-    self::assertCount(176, $applied->methods);
-    self::assertCount(34, $applied->enums);
+    self::assertCount(359, $applied->types);
+    self::assertCount(180, $applied->methods);
+    self::assertCount(36, $applied->enums);
   }
 
   public function testChatFullInfoBasesPassThroughUnchanged(): void

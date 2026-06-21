@@ -66,6 +66,14 @@ final class TypeResolver
    */
   private array $unionsWithShadowMembers;
 
+  /**
+   * Union parents whose `subtypes.yml` declares scalar/list alternatives in
+   * addition to child entity names.
+   *
+   * @var array<string, list<string>>
+   */
+  private array $unionExtraItems;
+
   public function __construct(LoadedSchema $schema)
   {
     $this->enumNames = [];
@@ -75,8 +83,13 @@ final class TypeResolver
     }
 
     $this->unionsWithShadowMembers = [];
+    $this->unionExtraItems = [];
 
     foreach ($schema->types as $t) {
+      if ($t->extraUnionItems !== []) {
+        $this->unionExtraItems[$t->name] = $t->extraUnionItems;
+      }
+
       foreach ($t->additionalUnionMemberships as $shadowParent) {
         $this->unionsWithShadowMembers[$shadowParent] = true;
       }
@@ -155,6 +168,15 @@ final class TypeResolver
       );
     }
 
+    if (isset($this->unionExtraItems[$name])) {
+      return $this->buildExtraUnionParentType($name, $this->unionExtraItems[$name]);
+    }
+
+    return $this->buildSchemaClassName($name);
+  }
+
+  private function buildSchemaClassName(string $name): PhpType
+  {
     // Union-parent substitution: when the union has at least one shadow
     // member — a child whose canonical PHP `extends` chain points
     // elsewhere — the property type slot is widened to the marker
@@ -184,15 +206,95 @@ final class TypeResolver
   }
 
   /**
+   * @param list<string> $extraItems
+   */
+  private function buildExtraUnionParentType(string $name, array $extraItems): PhpType
+  {
+    /** @var list<PhpType> $members */
+    $members = [$this->buildSchemaClassName($name)];
+
+    foreach ($extraItems as $raw) {
+      $members[] = $this->resolveExtraUnionItem($name, $raw);
+    }
+
+    return $this->buildUnionFromResolvedMembers($members);
+  }
+
+  private function resolveExtraUnionItem(string $parentName, string $raw): PhpType
+  {
+    $item = trim($raw);
+
+    if ($item === $parentName) {
+      return $this->buildSchemaClassName($parentName);
+    }
+
+    if ($item === 'Array of ' . $parentName) {
+      // Recursive PHP type aliases do not exist. At runtime this branch is a
+      // list whose elements are the same union again; use a PHPDoc-grade list
+      // shape and let renderers lower the runtime declaration to `array`.
+      $inner = $this->buildRecursiveExtraUnionInnerType($parentName);
+
+      return new PhpType(
+        kind: PhpTypeKind::ListOf,
+        phpType: 'list<' . $inner->phpType . '>',
+        importFqcn: $inner->importFqcn,
+        innerType: $inner,
+      );
+    }
+
+    return $this->resolveWire($item);
+  }
+
+  private function buildRecursiveExtraUnionInnerType(string $parentName): PhpType
+  {
+    /** @var list<PhpType> $members */
+    $members = [$this->buildSchemaClassName($parentName)];
+
+    foreach ($this->unionExtraItems[$parentName] ?? [] as $raw) {
+      $item = trim($raw);
+
+      if ($item === $parentName) {
+        $members[] = $this->buildSchemaClassName($parentName);
+
+        continue;
+      }
+
+      if ($item === 'Array of ' . $parentName) {
+        $members[] = new PhpType(PhpTypeKind::Scalar, 'array<array-key,mixed>');
+
+        continue;
+      }
+
+      $members[] = $this->resolveWire($item);
+    }
+
+    return $this->buildUnionFromResolvedMembers($members);
+  }
+
+  /**
    * @param list<string> $rawMembers
    */
   private function buildUnion(array $rawMembers): PhpType
   {
+    /** @var list<PhpType> $members */
+    $members = [];
+
+    foreach ($rawMembers as $raw) {
+      $members[] = $this->resolveWire(trim($raw));
+    }
+
+    return $this->buildUnionFromResolvedMembers($members);
+  }
+
+  /**
+   * @param list<PhpType> $members
+   */
+  private function buildUnionFromResolvedMembers(array $members): PhpType
+  {
     /** @var array<string, PhpType> $byPhpType */
     $byPhpType = [];
 
-    foreach ($rawMembers as $raw) {
-      $resolved = $this->resolveWire(trim($raw));
+    foreach ($members as $resolved) {
       $byPhpType[$resolved->phpType] = $resolved;
     }
 

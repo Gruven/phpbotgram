@@ -16,7 +16,7 @@ use Gruven\PhpBotGram\Bot;
 final class BotAccessSettings extends TelegramObject
 {
   /**
-   * @param list<User> $addedUsers
+   * @param null|list<User> $addedUsers
    */
   public function __construct(
     public readonly bool $isAccessRestricted,

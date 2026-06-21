@@ -36,6 +36,13 @@ final class EditMessageTextTest extends TestCase
     self::assertNull($method->replyMarkup);
   }
 
+  public function testPositionalTextOnlyKeepsLegacyCallShape(): void
+  {
+    $method = new EditMessageText('Updated text');
+    self::assertSame('Updated text', $method->text);
+    self::assertNull($method->businessConnectionId);
+  }
+
   public function testWithChatAndMessageId(): void
   {
     $method = new EditMessageText(text: 'Updated', chatId: 100, messageId: 42);
@@ -110,5 +117,22 @@ final class EditMessageTextTest extends TestCase
     self::assertInstanceOf(EditMessageText::class, $sent);
     self::assertSame('New text', $sent->text);
     self::assertSame('MarkdownV2', $sent->parseMode);
+  }
+
+  public function testBotWrapperAcceptsTextAsFirstPositionalArgument(): void
+  {
+    $bot = new MockedBot();
+    $bot->addResultFor(
+      EditMessageText::class,
+      ok: true,
+      result: new Message(messageId: 1, date: new DateTime('@0'), chat: new Chat(id: 1, type: 'private')),
+    );
+
+    $bot->editMessageText('New text', chatId: 5, messageId: 10);
+
+    $sent = $bot->getRequest();
+    self::assertInstanceOf(EditMessageText::class, $sent);
+    self::assertSame('New text', $sent->text);
+    self::assertNull($sent->businessConnectionId);
   }
 }

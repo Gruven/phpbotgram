@@ -522,6 +522,12 @@ final class TypeRenderer
       // multiple alternatives are involved).
       if ($default === 'null') {
         $declType = $this->widenNullable($declType);
+
+        if ($phpdocType !== null) {
+          // Mirror the runtime declaration's nullable widening in the
+          // PHPDoc so static readers see optional list/union params admit null.
+          $phpdocType = $this->widenPhpdocNullable($phpdocType);
+        }
       }
 
       // Sort rank for the constructor signature:
@@ -687,18 +693,19 @@ final class TypeRenderer
     }
 
     if ($type->kind === PhpTypeKind::Union) {
+      /** @var array<string, string> $members */
+      $members = [];
       $hasList = false;
 
       foreach ($type->unionMembers as $m) {
-        if ($m->kind === PhpTypeKind::ListOf) {
-          $hasList = true;
-
-          break;
-        }
+        $hasList = $hasList || $m->kind === PhpTypeKind::ListOf;
+        $members[$m->kind === PhpTypeKind::ListOf ? 'array' : $m->phpType] = $m->kind === PhpTypeKind::ListOf ? 'array' : $m->phpType;
       }
 
       if ($hasList) {
-        return 'array';
+        ksort($members);
+
+        return implode('|', array_values($members));
       }
     }
 
@@ -1040,7 +1047,7 @@ final class TypeRenderer
     }
 
     if (!str_starts_with($expr, 'self.')) {
-      // Non-self expressions pass through unchanged. The vendored 10.0
+      // Non-self expressions pass through unchanged. The vendored schema
       // schema does ship `self.as_reply_parameters()` (a method call)
       // which the PHP port will reify when it lands a corresponding
       // `Message::asReplyParameters()` helper. Until then we keep the raw

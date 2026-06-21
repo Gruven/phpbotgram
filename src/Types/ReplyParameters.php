@@ -17,7 +17,7 @@ use Gruven\PhpBotGram\Client\BotDefault;
 final class ReplyParameters extends TelegramObject
 {
   /**
-   * @param list<MessageEntity> $quoteEntities
+   * @param null|list<MessageEntity> $quoteEntities
    */
   public function __construct(
     public readonly int $messageId,

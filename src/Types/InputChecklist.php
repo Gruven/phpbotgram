@@ -17,7 +17,7 @@ final class InputChecklist extends TelegramObject
 {
   /**
    * @param list<InputChecklistTask> $tasks
-   * @param list<MessageEntity> $titleEntities
+   * @param null|list<MessageEntity> $titleEntities
    */
   public function __construct(
     public readonly string $title,

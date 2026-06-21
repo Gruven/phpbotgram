@@ -19,7 +19,7 @@ use Gruven\PhpBotGram\Types\Custom\DateTime;
 final class InputMediaVideo extends InputMedia implements InputPollMediaInterface, InputPollOptionMediaInterface
 {
   /**
-   * @param list<MessageEntity> $captionEntities
+   * @param null|list<MessageEntity> $captionEntities
    */
   public function __construct(
     public readonly InputFile|string $media,

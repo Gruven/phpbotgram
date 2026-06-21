@@ -16,8 +16,8 @@ use Gruven\PhpBotGram\Bot;
 final class EncryptedPassportElement extends TelegramObject
 {
   /**
-   * @param list<PassportFile> $files
-   * @param list<PassportFile> $translation
+   * @param null|list<PassportFile> $files
+   * @param null|list<PassportFile> $translation
    */
   public function __construct(
     public readonly string $type,

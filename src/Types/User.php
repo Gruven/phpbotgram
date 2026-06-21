@@ -38,6 +38,7 @@ final class User extends TelegramObject
     public readonly ?bool $hasTopicsEnabled = null,
     public readonly ?bool $allowsUsersToCreateTopics = null,
     public readonly ?bool $canManageBots = null,
+    public readonly ?bool $supportsJoinRequestQueries = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

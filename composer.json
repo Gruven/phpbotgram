@@ -62,7 +62,7 @@
 	},
 	"scripts" : {
 		"test" : "phpunit",
-		"stan" : "phpstan analyze",
+		"stan" : "phpstan analyze --memory-limit=1G",
 		"lint" : "php-cs-fixer fix --dry-run --diff",
 		"fix" : "php-cs-fixer fix",
 		"docs-api" : "bash scripts/build-docs.sh",

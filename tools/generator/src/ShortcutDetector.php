@@ -34,7 +34,7 @@ use LogicException;
  * Skip conditions:
  *   - `TypeEntity::$aliases === []` (no aliases.yml on disk) — skip the type.
  *   - An alias body without a top-level `method:` key — skip the alias.
- *     The vendored 10.0 schema has none of these, but the spec reserves the
+ *     The vendored schema has none of these, but the spec reserves the
  *     `condition:`/`ternary:` shapes for future filter-style aliases that
  *     don't lower to a TelegramMethod call; this stage ignores them rather
  *     than throwing so the schema can evolve forward without a breaking
@@ -108,7 +108,7 @@ final class ShortcutDetector
     // renderer side-steps the assertion by null-guarding `self.<x>` fills
     // with a `?? throw new LogicException(...)` when the property is
     // optional (see TypeRenderer::fillExpressionIsNullable). That works
-    // for every assert the vendored 10.0 schema ships, but a future
+    // for every assert the vendored schema ships, but a future
     // schema patch could add `code:` blocks the heuristic doesn't cover
     // (compound conditions, multi-property guards). When that lands,
     // wire a real `code:` lowering pass through here rather than

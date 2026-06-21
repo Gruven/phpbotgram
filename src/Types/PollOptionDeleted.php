@@ -16,7 +16,7 @@ use Gruven\PhpBotGram\Bot;
 final class PollOptionDeleted extends TelegramObject
 {
   /**
-   * @param list<MessageEntity> $optionTextEntities
+   * @param null|list<MessageEntity> $optionTextEntities
    */
   public function __construct(
     public readonly string $optionPersistentId,

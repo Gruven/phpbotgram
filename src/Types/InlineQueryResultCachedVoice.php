@@ -17,7 +17,7 @@ use Gruven\PhpBotGram\Client\BotDefault;
 final class InlineQueryResultCachedVoice extends InlineQueryResult
 {
   /**
-   * @param list<MessageEntity> $captionEntities
+   * @param null|list<MessageEntity> $captionEntities
    */
   public function __construct(
     public readonly string $id,

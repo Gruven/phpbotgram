@@ -16,12 +16,13 @@ use Gruven\PhpBotGram\Bot;
 final class PollMedia extends TelegramObject
 {
   /**
-   * @param list<PhotoSize> $photo
+   * @param null|list<PhotoSize> $photo
    */
   public function __construct(
     public readonly ?Animation $animation = null,
     public readonly ?Audio $audio = null,
     public readonly ?Document $document = null,
+    public readonly ?Link $link = null,
     public readonly ?LivePhoto $livePhoto = null,
     public readonly ?Location $location = null,
     public readonly ?array $photo = null,

@@ -14,6 +14,7 @@ enum ContentType: string
   case Unknown = 'unknown';
   case Any = 'any';
   case Text = 'text';
+  case RichMessage = 'rich_message';
   case Animation = 'animation';
   case Audio = 'audio';
   case Document = 'document';

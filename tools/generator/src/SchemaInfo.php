@@ -25,32 +25,32 @@ namespace Gruven\PhpBotGram\Generator;
 final class SchemaInfo
 {
   /** Telegram Bot API version that the vendored `.butcher` schema targets. */
-  public const string API_VERSION = '10.0';
+  public const string API_VERSION = '10.1';
 
   /** Release date of the targeted API version (`api.release_date` in `schema.json`). */
-  public const string API_RELEASE_DATE = '2026-05-08';
+  public const string API_RELEASE_DATE = '2026-06-11';
 
   /**
    * Number of `category=types` children declared in `.butcher/schema/schema.json`.
    *
-   * Note: `.butcher/types/` has 305 directories on disk, but two
+   * Note: `.butcher/types/` has 361 directories on disk, but two
    * (`KeyboardButtonRequestUser`, `UserShared`) are legacy/deprecated and
-   * no longer listed in `schema.json#items[].children[]`. The 303 count
+   * no longer listed in `schema.json#items[].children[]`. The 359 count
    * sourced from the JSON is the authoritative number consumed by every
    * downstream pipeline stage.
    */
-  public const int TYPE_ENTITIES = 303;
+  public const int TYPE_ENTITIES = 359;
 
   /** Number of `category=methods` children declared in `schema.json`. */
-  public const int METHOD_ENTITIES = 176;
+  public const int METHOD_ENTITIES = 180;
 
   /** Number of enum YAML files under `.butcher/enums/`. */
-  public const int ENUM_ENTITIES = 34;
+  public const int ENUM_ENTITIES = 36;
 
   /**
    * Files emitted by `Pipeline::run()` under `$outDir/Types/`.
    *
-   * Composition: 303 schema types + 20 `<Parent>Union.php` resolvers +
+   * Composition: 359 schema types + 23 `<Parent>Union.php` resolvers +
    * 2 `<Parent>Interface.php` marker interfaces (only the two unions with
    * shadow members — `InputPollMedia` and `InputPollOptionMedia` — get an
    * interface; single-parent unions are satisfied by the abstract class
@@ -60,11 +60,11 @@ final class SchemaInfo
    * the test we count emissions into a clean `$outDir`, where the
    * protected path is skipped and so does NOT contribute to this number.
    */
-  public const int EMITTED_TYPE_FILES = 325;
+  public const int EMITTED_TYPE_FILES = 383;
 
   /** Files emitted under `$outDir/Methods/` — one PHP class per `MethodEntity`. */
-  public const int EMITTED_METHOD_FILES = 176;
+  public const int EMITTED_METHOD_FILES = 180;
 
   /** Files emitted under `$outDir/Enums/` — one PHP class per `EnumEntity`. */
-  public const int EMITTED_ENUM_FILES = 34;
+  public const int EMITTED_ENUM_FILES = 36;
 }

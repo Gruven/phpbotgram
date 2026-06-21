@@ -19,7 +19,7 @@ use LogicException;
  * Wire-value extraction reads each child's annotation for the parent's
  * discriminator field and pulls the hard-coded literal out of the
  * human-readable description. Telegram's schema uses two stable phrasings in
- * the vendored 10.0 release:
+ * the vendored schema:
  *
  *   1. `… always 'xxx'`                  — single-quoted literal
  *   2. `… must be xxx`                    — bare token at end of clause
@@ -130,7 +130,7 @@ final class UnionDetector
 
   /**
    * Return true when two or more members carry the same wire discriminator
-   * value. The vendored 10.0 schema's `InlineQueryResult` family triggers
+   * value. The vendored schema's `InlineQueryResult` family triggers
    * this (e.g. both `InlineQueryResultCachedAudio` and `InlineQueryResultAudio`
    * declare `type = 'audio'`); the renderer drops `resolve()` for such
    * unions because a `match($payload['type'])` would silently dispatch

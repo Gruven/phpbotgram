@@ -10,6 +10,16 @@ use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\Serializer;
 use Gruven\PhpBotGram\Exceptions\ClientDecodeException;
 use Gruven\PhpBotGram\Tests\Support\MockedSession;
+use Gruven\PhpBotGram\Types\Chat;
+use Gruven\PhpBotGram\Types\Custom\DateTime;
+use Gruven\PhpBotGram\Types\Message;
+use Gruven\PhpBotGram\Types\RichBlockList;
+use Gruven\PhpBotGram\Types\RichBlockListItem;
+use Gruven\PhpBotGram\Types\RichBlockParagraph;
+use Gruven\PhpBotGram\Types\RichBlockTable;
+use Gruven\PhpBotGram\Types\RichBlockTableCell;
+use Gruven\PhpBotGram\Types\RichMessage;
+use Gruven\PhpBotGram\Types\RichTextBold;
 use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Unspecified;
 use Gruven\PhpBotGram\Types\User;
@@ -195,6 +205,114 @@ final class SerializerTest extends TestCase
     self::assertInstanceOf(User::class, $loaded->inner);
     self::assertSame(9, $loaded->inner->id);
     self::assertSame('NestedLoad', $loaded->inner->firstName);
+  }
+
+  public function testLoadRichTextAcceptsPlainString(): void
+  {
+    $loaded = Serializer::load(RichBlockParagraph::class, [
+      'type' => 'paragraph',
+      'text' => 'Hello',
+    ]);
+
+    self::assertSame('Hello', $loaded->text);
+  }
+
+  public function testLoadRichTextAcceptsNestedListAndDiscriminatedObjects(): void
+  {
+    $loaded = Serializer::load(RichBlockParagraph::class, [
+      'type' => 'paragraph',
+      'text' => [
+        'Hello ',
+        ['type' => 'bold', 'text' => 'world'],
+      ],
+    ]);
+
+    self::assertIsArray($loaded->text);
+    self::assertSame('Hello ', $loaded->text[0]);
+    self::assertInstanceOf(RichTextBold::class, $loaded->text[1]);
+    self::assertSame('world', $loaded->text[1]->text);
+  }
+
+  public function testDumpRichTextPreservesStringListAndObjectShapes(): void
+  {
+    $paragraph = new RichBlockParagraph(text: [
+      'Hello ',
+      new RichTextBold(text: 'world'),
+    ]);
+
+    $dumped = Serializer::dump($paragraph);
+
+    self::assertSame('paragraph', $dumped['type']);
+
+    $text = $dumped['text'];
+    self::assertIsArray($text);
+    self::assertSame('Hello ', $text[0]);
+
+    $bold = $text[1];
+    self::assertIsArray($bold);
+    self::assertSame('bold', $bold['type']);
+    self::assertSame('world', $bold['text']);
+  }
+
+  public function testLoadMessageRichMessageHydratesNestedBlockTree(): void
+  {
+    $loaded = Serializer::load(Message::class, [
+      'message_id' => 42,
+      'date' => 1_700_000_000,
+      'chat' => ['id' => 1, 'type' => 'private'],
+      'rich_message' => [
+        'blocks' => [
+          [
+            'type' => 'paragraph',
+            'text' => [
+              'Hello ',
+              ['type' => 'bold', 'text' => 'world'],
+            ],
+          ],
+          [
+            'type' => 'list',
+            'items' => [
+              [
+                'label' => '1',
+                'blocks' => [
+                  ['type' => 'paragraph', 'text' => 'Nested'],
+                ],
+              ],
+            ],
+          ],
+          [
+            'type' => 'table',
+            'cells' => [
+              [
+                [
+                  'align' => 'left',
+                  'valign' => 'top',
+                  'text' => 'Cell',
+                ],
+              ],
+            ],
+          ],
+        ],
+      ],
+    ]);
+
+    self::assertInstanceOf(Message::class, $loaded);
+    self::assertInstanceOf(DateTime::class, $loaded->date);
+    self::assertInstanceOf(Chat::class, $loaded->chat);
+    self::assertInstanceOf(RichMessage::class, $loaded->richMessage);
+
+    $blocks = $loaded->richMessage->blocks;
+    self::assertInstanceOf(RichBlockParagraph::class, $blocks[0]);
+    self::assertIsArray($blocks[0]->text);
+    self::assertInstanceOf(RichTextBold::class, $blocks[0]->text[1]);
+
+    self::assertInstanceOf(RichBlockList::class, $blocks[1]);
+    self::assertInstanceOf(RichBlockListItem::class, $blocks[1]->items[0]);
+    self::assertInstanceOf(RichBlockParagraph::class, $blocks[1]->items[0]->blocks[0]);
+
+    self::assertInstanceOf(RichBlockTable::class, $blocks[2]);
+    self::assertInstanceOf(RichBlockTableCell::class, $blocks[2]->cells[0][0]);
+    self::assertSame('Cell', $blocks[2]->cells[0][0]->text);
   }
 
   public function testLoadWrapsTypeErrorInClientDecodeException(): void

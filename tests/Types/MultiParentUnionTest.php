@@ -26,7 +26,7 @@ use ReflectionProperty;
  * every parent's marker interface so that PHP's single-inheritance
  * doesn't lose union-membership beyond the canonical `extends` parent.
  *
- * Concrete cases in the vendored 10.0 schema:
+ * Concrete cases in the vendored schema:
  *   - `InputMediaPhoto` belongs to `InputMedia` ∪ `InputPollMedia` ∪
  *     `InputPollOptionMedia`. PHP can only `extends InputMedia` (the
  *     canonical parent by name-prefix); the other two memberships are

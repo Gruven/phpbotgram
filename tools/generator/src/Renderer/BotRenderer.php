@@ -158,7 +158,7 @@ final class BotRenderer
     // The facade-side trailing `$timeout = null` parameter steers the session
     // dispatch timeout (default: bound to `BaseSession::$timeout`). If the
     // wrapped method already exposes a wire `timeout` parameter — the only
-    // such case in the vendored 10.0 schema is `getUpdates` — we rename to
+    // such case in the vendored schema is `getUpdates` — we rename to
     // `$apiTimeout` to keep both slots addressable from the same signature.
     $timeoutParamName = 'timeout';
 
@@ -656,10 +656,19 @@ final class BotRenderer
     }
 
     if ($type->kind === PhpTypeKind::Union) {
+      /** @var array<string, string> $members */
+      $members = [];
+      $hasList = false;
+
       foreach ($type->unionMembers as $m) {
-        if ($m->kind === PhpTypeKind::ListOf) {
-          return 'array';
-        }
+        $hasList = $hasList || $m->kind === PhpTypeKind::ListOf;
+        $members[$m->kind === PhpTypeKind::ListOf ? 'array' : $m->phpType] = $m->kind === PhpTypeKind::ListOf ? 'array' : $m->phpType;
+      }
+
+      if ($hasList) {
+        ksort($members);
+
+        return implode('|', array_values($members));
       }
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gruven\PhpBotGram\Tests\Types;
 
+use Gruven\PhpBotGram\Methods\EditMessageText;
 use Gruven\PhpBotGram\Types\Chat;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
 use Gruven\PhpBotGram\Types\Message;
@@ -101,5 +102,21 @@ final class MessageTypeTest extends TestCase
     self::assertNotNull($reply->replyToMessage);
     self::assertSame(1, $reply->replyToMessage->messageId);
     self::assertSame('Original', $reply->replyToMessage->text);
+  }
+
+  public function testEditTextShortcutKeepsTextAsFirstPositionalArgument(): void
+  {
+    $msg = new Message(
+      messageId: 4,
+      date: new DateTime('@0'),
+      chat: new Chat(id: 1, type: 'private'),
+      text: 'Original',
+    );
+
+    $method = $msg->editText('Order confirmed');
+
+    self::assertInstanceOf(EditMessageText::class, $method);
+    self::assertSame('Order confirmed', $method->text);
+    self::assertNull($method->inlineMessageId);
   }
 }

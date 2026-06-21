@@ -9,6 +9,8 @@ use Exception;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Exceptions\ClientDecodeException;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
+use Gruven\PhpBotGram\Types\RichText;
+use Gruven\PhpBotGram\Types\RichTextUnion;
 use Gruven\PhpBotGram\Types\TelegramObject;
 use Gruven\PhpBotGram\Types\Unspecified;
 use ReflectionClass;
@@ -190,6 +192,18 @@ final class Serializer
       }
     }
 
+    if ($type instanceof ReflectionNamedType && $type->isBuiltin() && $type->getName() === 'array' && is_array($value)) {
+      return self::loadArrayValue($param, $value, $bot);
+    }
+
+    // RichText is a recursive wire union: string | list<RichTextUnion> |
+    // discriminated RichText*. PHP has no recursive type aliases, so the
+    // generated constructor admits `RichText|array|string` and the serializer
+    // performs the recursive list/object dispatch here.
+    if ($type instanceof ReflectionUnionType && self::isRichTextUnion($type)) {
+      return self::loadRichTextValue($value, $bot);
+    }
+
     // Union types: discriminated unions emit a <Name>Union helper with resolve();
     // fallback to first TelegramObject member otherwise.
     if ($type instanceof ReflectionUnionType && is_array($value)) {
@@ -215,6 +229,249 @@ final class Serializer
     }
 
     return $value;
+  }
+
+  /**
+   * @param array<mixed, mixed> $value
+   *
+   * @return array<mixed, mixed>
+   */
+  private static function loadArrayValue(ReflectionParameter $param, array $value, ?Bot $bot): array
+  {
+    $phpdocType = self::phpdocTypeForParam($param);
+
+    if ($phpdocType === null) {
+      return $value;
+    }
+
+    $loaded = self::loadPhpdocValue($phpdocType, $value, $bot);
+
+    return is_array($loaded) ? $loaded : $value;
+  }
+
+  private static function phpdocTypeForParam(ReflectionParameter $param): ?string
+  {
+    $doc = $param->getDeclaringFunction()->getDocComment();
+
+    if ($doc === false) {
+      return null;
+    }
+
+    $pattern = '/@param\s+([^\s]+)\s+\$' . preg_quote($param->getName(), '/') . '\b/';
+
+    if (preg_match($pattern, $doc, $matches) !== 1) {
+      return null;
+    }
+
+    return $matches[1];
+  }
+
+  private static function loadPhpdocValue(string $phpdocType, mixed $value, ?Bot $bot): mixed
+  {
+    if ($value === null) {
+      return null;
+    }
+
+    $type = self::stripPhpdocNull($phpdocType);
+
+    if (preg_match('/^list<(.+)>$/', $type, $matches) === 1) {
+      if (!is_array($value) || !array_is_list($value)) {
+        return $value;
+      }
+
+      $innerType = $matches[1];
+      $result = [];
+
+      foreach ($value as $item) {
+        $result[] = self::loadPhpdocValue($innerType, $item, $bot);
+      }
+
+      return $result;
+    }
+
+    $unionMembers = self::splitPhpdocUnion($type);
+
+    if (\count($unionMembers) > 1) {
+      if (self::isPhpdocRichTextUnion($unionMembers)) {
+        return self::loadRichTextValue($value, $bot);
+      }
+
+      foreach ($unionMembers as $member) {
+        $loaded = self::loadPhpdocValue($member, $value, $bot);
+
+        if ($loaded !== $value || self::phpdocScalarMatches($member, $value)) {
+          return $loaded;
+        }
+      }
+
+      return $value;
+    }
+
+    $class = self::phpdocClassName($type);
+
+    if ($class !== null && is_array($value)) {
+      return self::loadTelegramObjectValue($class, $value, $bot);
+    }
+
+    return $value;
+  }
+
+  private static function stripPhpdocNull(string $phpdocType): string
+  {
+    $members = array_values(array_filter(
+      self::splitPhpdocUnion($phpdocType),
+      static fn(string $member): bool => $member !== 'null',
+    ));
+
+    return $members === [] ? $phpdocType : implode('|', $members);
+  }
+
+  /**
+   * @return list<string>
+   */
+  private static function splitPhpdocUnion(string $phpdocType): array
+  {
+    $members = [];
+    $current = '';
+    $depth = 0;
+    $length = \strlen($phpdocType);
+
+    for ($i = 0; $i < $length; ++$i) {
+      $char = $phpdocType[$i];
+
+      if ($char === '<') {
+        ++$depth;
+      } elseif ($char === '>' && $depth > 0) {
+        --$depth;
+      }
+
+      if ($char === '|' && $depth === 0) {
+        $members[] = $current;
+        $current = '';
+
+        continue;
+      }
+
+      $current .= $char;
+    }
+
+    $members[] = $current;
+
+    return array_values(array_filter(array_map('trim', $members), static fn(string $member): bool => $member !== ''));
+  }
+
+  /**
+   * @param list<string> $members
+   */
+  private static function isPhpdocRichTextUnion(array $members): bool
+  {
+    $hasArray = false;
+
+    foreach ($members as $member) {
+      $hasArray = $hasArray || $member === 'array' || str_starts_with($member, 'array<');
+    }
+
+    return \in_array('RichText', $members, true)
+      && \in_array('string', $members, true)
+      && $hasArray;
+  }
+
+  private static function phpdocScalarMatches(string $type, mixed $value): bool
+  {
+    if (str_starts_with($type, 'array<')) {
+      return is_array($value);
+    }
+
+    return match ($type) {
+      'array' => is_array($value),
+      'bool' => is_bool($value),
+      'float' => is_float($value),
+      'int' => is_int($value),
+      'string' => is_string($value),
+      'mixed' => true,
+      default => false,
+    };
+  }
+
+  /**
+   * @return null|class-string<TelegramObject>
+   */
+  private static function phpdocClassName(string $type): ?string
+  {
+    $class = str_contains($type, '\\') ? $type : 'Gruven\\PhpBotGram\\Types\\' . $type;
+
+    if (!class_exists($class) || !is_subclass_of($class, TelegramObject::class)) {
+      return null;
+    }
+
+    /** @var class-string<TelegramObject> $class */
+    return $class;
+  }
+
+  /**
+   * @param class-string<TelegramObject> $class
+   * @param array<mixed, mixed> $value
+   */
+  private static function loadTelegramObjectValue(string $class, array $value, ?Bot $bot): TelegramObject
+  {
+    $payload = self::toStringKeyedArray($value);
+    $unionClass = $class . 'Union';
+
+    if (class_exists($unionClass) && method_exists($unionClass, 'resolve')) {
+      /** @var callable(array<string, mixed>, ?Bot): TelegramObject $resolver */
+      $resolver = [$unionClass, 'resolve'];
+
+      return $resolver($payload, $bot);
+    }
+
+    return self::load($class, $payload, $bot);
+  }
+
+  private static function isRichTextUnion(ReflectionUnionType $type): bool
+  {
+    $hasRichText = false;
+    $hasArray = false;
+    $hasString = false;
+
+    foreach ($type->getTypes() as $member) {
+      if (!$member instanceof ReflectionNamedType) {
+        continue;
+      }
+
+      if ($member->isBuiltin()) {
+        $hasArray = $hasArray || $member->getName() === 'array';
+        $hasString = $hasString || $member->getName() === 'string';
+
+        continue;
+      }
+
+      $hasRichText = $hasRichText || $member->getName() === RichText::class;
+    }
+
+    return $hasRichText && $hasArray && $hasString;
+  }
+
+  private static function loadRichTextValue(mixed $value, ?Bot $bot): mixed
+  {
+    if (is_string($value)) {
+      return $value;
+    }
+
+    if (!is_array($value)) {
+      return $value;
+    }
+
+    if (array_is_list($value)) {
+      $result = [];
+
+      foreach ($value as $item) {
+        $result[] = self::loadRichTextValue($item, $bot);
+      }
+
+      return $result;
+    }
+
+    return RichTextUnion::resolve(self::toStringKeyedArray($value), $bot);
   }
 
   /**

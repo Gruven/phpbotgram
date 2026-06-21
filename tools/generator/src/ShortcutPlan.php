@@ -25,10 +25,9 @@ namespace Gruven\PhpBotGram\Generator;
  * `Message.reply` shortcut hides `reply_to_message_id` because the alias
  * auto-supplies `reply_parameters` instead).
  *
- * `$argOverrides` is currently unused by any vendored fixture (Telegram 10.0
- * never overrides an alias param's type) — it ships as a forward-compat slot
- * matching the documented grammar, kept as a typed empty list to avoid a
- * later signature change.
+ * `$argOverrides` is currently unused by the vendored schema — it ships as a
+ * forward-compat slot matching the documented grammar, kept as a typed empty
+ * list to avoid a later signature change.
  */
 final readonly class ShortcutPlan
 {

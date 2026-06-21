@@ -20,6 +20,7 @@ use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Methods\SendPaidMedia;
 use Gruven\PhpBotGram\Methods\SendPhoto;
 use Gruven\PhpBotGram\Methods\SendPoll;
+use Gruven\PhpBotGram\Methods\SendRichMessage;
 use Gruven\PhpBotGram\Methods\SendSticker;
 use Gruven\PhpBotGram\Methods\SendVenue;
 use Gruven\PhpBotGram\Methods\SendVideo;
@@ -114,6 +115,65 @@ final class InaccessibleMessage extends MaybeInaccessibleMessage
       parseMode: $parseMode,
       entities: $entities,
       linkPreviewOptions: $linkPreviewOptions,
+      disableNotification: $disableNotification,
+      protectContent: $protectContent,
+      allowPaidBroadcast: $allowPaidBroadcast,
+      messageEffectId: $messageEffectId,
+      suggestedPostParameters: $suggestedPostParameters,
+      replyParameters: $this->asReplyParameters(),
+      replyMarkup: $replyMarkup,
+      bot: $this->bot,
+    );
+  }
+
+  public function answerRich(
+    InputRichMessage $richMessage,
+    ?string $businessConnectionId = null,
+    ?int $messageThreadId = null,
+    ?int $directMessagesTopicId = null,
+    ?bool $disableNotification = null,
+    ?bool $protectContent = null,
+    ?bool $allowPaidBroadcast = null,
+    ?string $messageEffectId = null,
+    ?SuggestedPostParameters $suggestedPostParameters = null,
+    ?ReplyParameters $replyParameters = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
+  ): SendRichMessage {
+    return new SendRichMessage(
+      businessConnectionId: $businessConnectionId,
+      chatId: $this->chat->id,
+      messageThreadId: $messageThreadId,
+      directMessagesTopicId: $directMessagesTopicId,
+      richMessage: $richMessage,
+      disableNotification: $disableNotification,
+      protectContent: $protectContent,
+      allowPaidBroadcast: $allowPaidBroadcast,
+      messageEffectId: $messageEffectId,
+      suggestedPostParameters: $suggestedPostParameters,
+      replyParameters: $replyParameters,
+      replyMarkup: $replyMarkup,
+      bot: $this->bot,
+    );
+  }
+
+  public function replyRich(
+    InputRichMessage $richMessage,
+    ?string $businessConnectionId = null,
+    ?int $messageThreadId = null,
+    ?int $directMessagesTopicId = null,
+    ?bool $disableNotification = null,
+    ?bool $protectContent = null,
+    ?bool $allowPaidBroadcast = null,
+    ?string $messageEffectId = null,
+    ?SuggestedPostParameters $suggestedPostParameters = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
+  ): SendRichMessage {
+    return new SendRichMessage(
+      businessConnectionId: $businessConnectionId,
+      chatId: $this->chat->id,
+      messageThreadId: $messageThreadId,
+      directMessagesTopicId: $directMessagesTopicId,
+      richMessage: $richMessage,
       disableNotification: $disableNotification,
       protectContent: $protectContent,
       allowPaidBroadcast: $allowPaidBroadcast,

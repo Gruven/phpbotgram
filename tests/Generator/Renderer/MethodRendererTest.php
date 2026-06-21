@@ -140,6 +140,16 @@ final class MethodRendererTest extends TestCase
     self::assertStringContainsString('parent::__construct($bot);', $out);
   }
 
+  public function testEditMessageTextKeepsTextFirstAmongOptionalParams(): void
+  {
+    $out = $this->render('editMessageText');
+
+    self::assertMatchesRegularExpression(
+      '/public function __construct\\(\\s*public readonly \\?string \\$text = null,\\s*public readonly \\?string \\$businessConnectionId = null,/s',
+      $out,
+    );
+  }
+
   public function testGetUpdatesReturnsListSentinel(): void
   {
     $out = $this->render('getUpdates');

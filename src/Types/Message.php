@@ -30,6 +30,7 @@ use Gruven\PhpBotGram\Methods\SendMessage;
 use Gruven\PhpBotGram\Methods\SendPaidMedia;
 use Gruven\PhpBotGram\Methods\SendPhoto;
 use Gruven\PhpBotGram\Methods\SendPoll;
+use Gruven\PhpBotGram\Methods\SendRichMessage;
 use Gruven\PhpBotGram\Methods\SendSticker;
 use Gruven\PhpBotGram\Methods\SendVenue;
 use Gruven\PhpBotGram\Methods\SendVideo;
@@ -59,11 +60,11 @@ final class Message extends MaybeInaccessibleMessage
   ];
 
   /**
-   * @param list<MessageEntity> $entities
-   * @param list<PhotoSize> $photo
-   * @param list<MessageEntity> $captionEntities
-   * @param list<User> $newChatMembers
-   * @param list<PhotoSize> $newChatPhoto
+   * @param null|list<MessageEntity> $entities
+   * @param null|list<PhotoSize> $photo
+   * @param null|list<MessageEntity> $captionEntities
+   * @param null|list<User> $newChatMembers
+   * @param null|list<PhotoSize> $newChatPhoto
    */
   public function __construct(
     public readonly int $messageId,
@@ -102,6 +103,7 @@ final class Message extends MaybeInaccessibleMessage
     public readonly ?LinkPreviewOptions $linkPreviewOptions = null,
     public readonly ?SuggestedPostInfo $suggestedPostInfo = null,
     public readonly ?string $effectId = null,
+    public readonly ?RichMessage $richMessage = null,
     public readonly ?Animation $animation = null,
     public readonly ?Audio $audio = null,
     public readonly ?Document $document = null,
@@ -247,6 +249,61 @@ final class Message extends MaybeInaccessibleMessage
       parseMode: $parseMode,
       entities: $entities,
       linkPreviewOptions: $linkPreviewOptions,
+      disableNotification: $disableNotification,
+      protectContent: $protectContent,
+      allowPaidBroadcast: $allowPaidBroadcast,
+      messageEffectId: $messageEffectId,
+      suggestedPostParameters: $suggestedPostParameters,
+      replyParameters: $this->asReplyParameters(),
+      replyMarkup: $replyMarkup,
+      bot: $this->bot,
+    );
+  }
+
+  public function answerRich(
+    InputRichMessage $richMessage,
+    ?int $directMessagesTopicId = null,
+    ?bool $disableNotification = null,
+    ?bool $protectContent = null,
+    ?bool $allowPaidBroadcast = null,
+    ?string $messageEffectId = null,
+    ?SuggestedPostParameters $suggestedPostParameters = null,
+    ?ReplyParameters $replyParameters = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
+  ): SendRichMessage {
+    return new SendRichMessage(
+      businessConnectionId: $this->businessConnectionId,
+      chatId: $this->chat->id,
+      messageThreadId: $this->isTopicMessage ? $this->messageThreadId : null,
+      directMessagesTopicId: $directMessagesTopicId,
+      richMessage: $richMessage,
+      disableNotification: $disableNotification,
+      protectContent: $protectContent,
+      allowPaidBroadcast: $allowPaidBroadcast,
+      messageEffectId: $messageEffectId,
+      suggestedPostParameters: $suggestedPostParameters,
+      replyParameters: $replyParameters,
+      replyMarkup: $replyMarkup,
+      bot: $this->bot,
+    );
+  }
+
+  public function replyRich(
+    InputRichMessage $richMessage,
+    ?int $directMessagesTopicId = null,
+    ?bool $disableNotification = null,
+    ?bool $protectContent = null,
+    ?bool $allowPaidBroadcast = null,
+    ?string $messageEffectId = null,
+    ?SuggestedPostParameters $suggestedPostParameters = null,
+    ForceReply|InlineKeyboardMarkup|ReplyKeyboardMarkup|ReplyKeyboardRemove|null $replyMarkup = null,
+  ): SendRichMessage {
+    return new SendRichMessage(
+      businessConnectionId: $this->businessConnectionId,
+      chatId: $this->chat->id,
+      messageThreadId: $this->isTopicMessage ? $this->messageThreadId : null,
+      directMessagesTopicId: $directMessagesTopicId,
+      richMessage: $richMessage,
       disableNotification: $disableNotification,
       protectContent: $protectContent,
       allowPaidBroadcast: $allowPaidBroadcast,
@@ -1752,23 +1809,25 @@ final class Message extends MaybeInaccessibleMessage
    * @param null|list<MessageEntity> $entities
    */
   public function editText(
-    string $text,
+    ?string $text = null,
     ?string $inlineMessageId = null,
     BotDefault|string $parseMode = new BotDefault('parse_mode'),
     ?array $entities = null,
     BotDefault|LinkPreviewOptions $linkPreviewOptions = new BotDefault('link_preview'),
     ?InlineKeyboardMarkup $replyMarkup = null,
+    ?InputRichMessage $richMessage = null,
   ): EditMessageText {
     return new EditMessageText(
+      text: $text,
       businessConnectionId: $this->businessConnectionId,
       chatId: $this->chat->id,
       messageId: $this->messageId,
       inlineMessageId: $inlineMessageId,
-      text: $text,
       parseMode: $parseMode,
       entities: $entities,
       linkPreviewOptions: $linkPreviewOptions,
       replyMarkup: $replyMarkup,
+      richMessage: $richMessage,
       bot: $this->bot,
     );
   }

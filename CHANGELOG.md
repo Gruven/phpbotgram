@@ -4,9 +4,22 @@ All notable changes to phpbotgram are documented in this file. The format follow
 
 ## [0.1.0] — Initial release
 
-First public release. Ports aiogram 3.28 to PHP 8.5 with full feature parity for the core framework. Behaviour divergences from upstream are documented inline at the call site (`# Divergence:` comments) and in `docs/superpowers/specs/`.
+First public release. Ports aiogram 3.29.0 / Telegram Bot API 10.1 to PHP 8.5 with full feature parity for the core framework. Behaviour divergences from upstream are documented inline at the call site (`# Divergence:` comments) and in `docs/superpowers/specs/`.
 
 ### Added
+
+#### Bot API 10.1 schema sync
+
+- Generated Telegram Bot API surface synced from aiogram 3.29.0 / Bot API 10.1.
+- Rich-message support:
+  - `InputRichMessage`, `RichMessage`, `RichBlock*`, `RichText*`, `Link`, `InputMediaLink`, and the generated `RichBlockUnion` / `RichTextUnion` helpers.
+  - `Bot::sendRichMessage`, `Bot::sendRichMessageDraft`, `Message::answerRich`, and `Message::replyRich`.
+  - `EditMessageText::$richMessage` for editing rich messages without breaking the existing positional `$text` shortcut.
+- Chat-join request query methods: `Bot::answerChatJoinRequestQuery` and `Bot::sendChatJoinRequestWebApp`.
+- Serializer support for PHPDoc-backed generated list parameters such as `list<RichBlock>` and nested rich-block table structures.
+- Serializer support for the recursive rich text wire union: a plain string, a rich-text object, or a list mixing strings and rich-text segments.
+- README badges now track aiogram 3.29.0, Bot API 10.1, and the current passing test count.
+- Narrative docs for sending, replying with, streaming, and reading rich messages.
 
 #### Bot client and HTTP transport
 
@@ -94,7 +107,7 @@ First public release. Ports aiogram 3.28 to PHP 8.5 with full feature parity for
 
 ### Added — narrative documentation
 
-- Diataxis-structured narrative site under `docs/guide/en/` (46 committed pages: 1 top-level landing + 6 tutorial + 21 how-to + 17 concept + 1 reference stub) plus 2 build-time copies of CHANGELOG.md and CONTRIBUTING.md → 48 rendered pages.
+- Diataxis-structured narrative site under `docs/guide/en/` (47 committed pages: 1 top-level landing + 6 tutorial + 22 how-to + 17 concept + 1 reference stub) plus 2 build-time copies of CHANGELOG.md and CONTRIBUTING.md → 49 rendered pages.
 - `phpdoc.dist.xml.tpl` template (envsubst → `phpdoc.dist.xml`) rendering narrative + API into a single phpDocumentor v3 site under `build/docs/api/`.
 - `.phpdoc/template/components/header.html.twig` override injecting a navbar language+version switcher driven by `versions.json` and `languages.json` served from the gh-pages branch root.
 - Seven post-build CI gates in `scripts/build-docs.sh`:
@@ -116,12 +129,12 @@ First public release. Ports aiogram 3.28 to PHP 8.5 with full feature parity for
 
 ### Quality bars
 
-- 2109 PHPUnit tests with 6599 assertions (9 env-gated skips). Real Redis / MongoDB integration tests gated on `PHPBOTGRAM_TEST_REDIS_DSN` / `PHPBOTGRAM_TEST_MONGO_DSN` env vars.
+- 2168 PHPUnit tests with 6929 assertions (9 env-gated skips). Real Redis / MongoDB integration tests gated on `PHPBOTGRAM_TEST_REDIS_DSN` / `PHPBOTGRAM_TEST_MONGO_DSN` env vars.
 - PHPStan level 9, clean.
 - `php-cs-fixer` enforced.
 - Coverage gate passes at the documented per-module floors.
 
-### Known divergences from aiogram 3.28
+### Known divergences from aiogram 3.29.0
 
 - No async/await keywords — fiber-based runtime via amphp v3 / Revolt makes the dispatch path synchronous from the caller's perspective.
 - Scenes are explicit (no metaclass auto-discovery) — register via `SceneRegistry::add([Scene::class])` because PHP has no metaclasses.

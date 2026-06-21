@@ -16,7 +16,7 @@ use Gruven\PhpBotGram\Bot;
 final class OwnedGiftRegular extends OwnedGift
 {
   /**
-   * @param list<MessageEntity> $entities
+   * @param null|list<MessageEntity> $entities
    */
   public function __construct(
     public readonly Gift $gift,

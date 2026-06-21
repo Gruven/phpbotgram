@@ -25,6 +25,7 @@ final class InputPollOptionMediaUnion
   {
     return [
       InputMediaAnimation::class,
+      InputMediaLink::class,
       InputMediaLivePhoto::class,
       InputMediaLocation::class,
       InputMediaPhoto::class,
@@ -42,6 +43,7 @@ final class InputPollOptionMediaUnion
     $discriminator = $payload['type'] ?? null;
     $resolved = match (is_string($discriminator) ? $discriminator : null) {
       'animation' => Serializer::load(InputMediaAnimation::class, $payload, $bot),
+      'link' => Serializer::load(InputMediaLink::class, $payload, $bot),
       'live_photo' => Serializer::load(InputMediaLivePhoto::class, $payload, $bot),
       'location' => Serializer::load(InputMediaLocation::class, $payload, $bot),
       'photo' => Serializer::load(InputMediaPhoto::class, $payload, $bot),

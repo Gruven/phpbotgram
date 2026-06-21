@@ -116,6 +116,16 @@ final class BotRendererTest extends TestCase
     self::assertStringContainsString('parseMode: $parseMode,', $out);
   }
 
+  public function testEditMessageTextWrapperKeepsTextFirstAmongOptionalParams(): void
+  {
+    $out = $this->rendered();
+
+    self::assertMatchesRegularExpression(
+      '/public function editMessageText\\(\\s*\\?string \\$text = null,\\s*\\?string \\$businessConnectionId = null,/s',
+      $out,
+    );
+  }
+
   public function testGetUpdatesWrapperReturnsListUpdate(): void
   {
     $out = $this->rendered();
@@ -137,7 +147,7 @@ final class BotRendererTest extends TestCase
 
   /**
    * Cycle 3 review fix: `getUpdates` is the only method in the vendored
-   * 10.0 schema whose wire signature already includes a `timeout` parameter,
+   * schema whose wire signature already includes a `timeout` parameter,
    * which the wrapper collision-renames to `$apiTimeout` to keep both the
    * long-poll timeout (the wire field) and the HTTP transport timeout (the
    * facade-side trailing slot) addressable. The wrapper docblock must spell

@@ -117,7 +117,7 @@ final class SchemaLoader
    * Builds the union parent/child index in a single pass.
    *
    * Returns:
-   *   - `$unionParents`: parent name → {subtypes, discriminator}
+   *   - `$unionParents`: parent name → {subtypes, discriminator, extraItems}
    *   - `$childToParents`: child name → ordered list of every union parent
    *     that lists this child. Order is `subtypes.yml`-encounter order; the
    *     loader's caller (`buildType`) picks the canonical PHP-level
@@ -132,13 +132,13 @@ final class SchemaLoader
    * @param list<SchemaChild> $typeChildren
    *
    * @return array{
-   *   array<string, array{subtypes: list<string>, discriminator: ?string}>,
+   *   array<string, array{subtypes: list<string>, discriminator: ?string, extraItems: list<string>}>,
    *   array<string, list<string>>
    * }
    */
   private function buildUnionIndex(array $typeChildren): array
   {
-    /** @var array<string, array{subtypes: list<string>, discriminator: ?string}> $unionParents */
+    /** @var array<string, array{subtypes: list<string>, discriminator: ?string, extraItems: list<string>}> $unionParents */
     $unionParents = [];
 
     /** @var array<string, list<string>> $childToParents */
@@ -160,11 +160,25 @@ final class SchemaLoader
         $discriminator = $subtypesYaml['discriminator'];
       }
 
+      /** @var list<string> $extraItems */
+      $extraItems = [];
+
+      if (is_array($subtypesYaml) && isset($subtypesYaml['extra_items']) && is_array($subtypesYaml['extra_items'])) {
+        foreach ($subtypesYaml['extra_items'] as $item) {
+          if (!is_string($item)) {
+            throw new RuntimeException("{$name} extra_items must contain only strings");
+          }
+
+          $extraItems[] = $item;
+        }
+      }
+
       $subtypeNames = $this->extractSubtypeNames($child['description'] ?? '');
 
       $unionParents[$name] = [
         'subtypes' => $subtypeNames,
         'discriminator' => $discriminator,
+        'extraItems' => $extraItems,
       ];
 
       foreach ($subtypeNames as $sub) {
@@ -235,7 +249,7 @@ final class SchemaLoader
 
   /**
    * @param SchemaChild $child
-   * @param array<string, array{subtypes: list<string>, discriminator: ?string}> $unionParents
+   * @param array<string, array{subtypes: list<string>, discriminator: ?string, extraItems: list<string>}> $unionParents
    * @param array<string, list<string>> $childToParents
    */
   private function buildType(array $child, array $unionParents, array $childToParents): TypeEntity
@@ -264,9 +278,13 @@ final class SchemaLoader
     $subtypes = null;
     $discriminator = null;
 
+    /** @var list<string> $extraUnionItems */
+    $extraUnionItems = [];
+
     if (isset($unionParents[$name])) {
       $subtypes = $unionParents[$name]['subtypes'];
       $discriminator = $unionParents[$name]['discriminator'];
+      $extraUnionItems = $unionParents[$name]['extraItems'];
     }
 
     $allParents = $childToParents[$name] ?? [];
@@ -306,6 +324,7 @@ final class SchemaLoader
       bases: $bases,
       aliases: $aliases,
       subtypes: $subtypes,
+      extraUnionItems: $extraUnionItems,
       subtypeOf: $subtypeOf,
       discriminator: $discriminator,
       defaults: $defaults,
@@ -322,6 +341,7 @@ final class SchemaLoader
     $methodDir = $this->methodDir($name);
     $replace = $this->loadPatch($methodDir . '/replace.yml');
     $annotations = $this->buildAnnotations($child['annotations'] ?? [], $replace);
+    $annotations = $this->applyAnnotationOrder($annotations, $replace, $name);
 
     /** @var array<string, string> $defaults */
     $defaults = [];
@@ -499,6 +519,76 @@ final class SchemaLoader
         htmlDescription: $a['html_description'] ?? '',
         rstDescription: $a['rst_description'] ?? '',
       );
+    }
+
+    return $out;
+  }
+
+  /**
+   * Applies a method-level `replace.yml` annotation order override while
+   * keeping any unlisted fields in their original relative order.
+   *
+   * @param list<AnnotationEntity> $annotations
+   * @param array<string, mixed> $replace
+   *
+   * @return list<AnnotationEntity>
+   */
+  private function applyAnnotationOrder(array $annotations, array $replace, string $entityName): array
+  {
+    if (!isset($replace['annotations_order'])) {
+      return $annotations;
+    }
+
+    if (!is_array($replace['annotations_order'])) {
+      throw new RuntimeException("{$entityName} annotations_order must be a list of wire field names");
+    }
+
+    /** @var list<string> $order */
+    $order = [];
+
+    /** @var array<string, true> $seen */
+    $seen = [];
+
+    foreach ($replace['annotations_order'] as $field) {
+      if (!is_string($field)) {
+        throw new RuntimeException("{$entityName} annotations_order must contain only strings");
+      }
+
+      if (isset($seen[$field])) {
+        throw new RuntimeException("{$entityName} annotations_order lists '{$field}' more than once");
+      }
+
+      $seen[$field] = true;
+      $order[] = $field;
+    }
+
+    if ($order === []) {
+      return $annotations;
+    }
+
+    /** @var array<string, AnnotationEntity> $byName */
+    $byName = [];
+
+    foreach ($annotations as $annotation) {
+      $byName[$annotation->name] = $annotation;
+    }
+
+    /** @var list<AnnotationEntity> $out */
+    $out = [];
+
+    foreach ($order as $field) {
+      if (!isset($byName[$field])) {
+        throw new RuntimeException("{$entityName} annotations_order references unknown field '{$field}'");
+      }
+
+      $out[] = $byName[$field];
+      unset($byName[$field]);
+    }
+
+    foreach ($annotations as $annotation) {
+      if (isset($byName[$annotation->name])) {
+        $out[] = $annotation;
+      }
     }
 
     return $out;

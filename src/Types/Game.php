@@ -17,7 +17,7 @@ final class Game extends TelegramObject
 {
   /**
    * @param list<PhotoSize> $photo
-   * @param list<MessageEntity> $textEntities
+   * @param null|list<MessageEntity> $textEntities
    */
   public function __construct(
     public readonly string $title,

@@ -7,10 +7,12 @@ namespace Gruven\PhpBotGram\Types;
 use DateInterval;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\BotDefault;
+use Gruven\PhpBotGram\Methods\AnswerChatJoinRequestQuery;
 use Gruven\PhpBotGram\Methods\ApproveChatJoinRequest;
 use Gruven\PhpBotGram\Methods\DeclineChatJoinRequest;
 use Gruven\PhpBotGram\Methods\SendAnimation;
 use Gruven\PhpBotGram\Methods\SendAudio;
+use Gruven\PhpBotGram\Methods\SendChatJoinRequestWebApp;
 use Gruven\PhpBotGram\Methods\SendContact;
 use Gruven\PhpBotGram\Methods\SendDice;
 use Gruven\PhpBotGram\Methods\SendDocument;
@@ -27,6 +29,7 @@ use Gruven\PhpBotGram\Methods\SendVideo;
 use Gruven\PhpBotGram\Methods\SendVideoNote;
 use Gruven\PhpBotGram\Methods\SendVoice;
 use Gruven\PhpBotGram\Types\Custom\DateTime;
+use LogicException;
 
 /**
  * Represents a join request sent to a chat.
@@ -49,6 +52,7 @@ final class ChatJoinRequest extends TelegramObject
     public readonly DateTime $date,
     public readonly ?string $bio = null,
     public readonly ?ChatInviteLink $inviteLink = null,
+    public readonly ?string $queryId = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);
@@ -1564,6 +1568,26 @@ final class ChatJoinRequest extends TelegramObject
       suggestedPostParameters: $suggestedPostParameters,
       replyParameters: $replyParameters,
       replyMarkup: $replyMarkup,
+      bot: $this->bot,
+    );
+  }
+
+  public function answerQuery(
+    string $result,
+  ): AnswerChatJoinRequestQuery {
+    return new AnswerChatJoinRequestQuery(
+      chatJoinRequestQueryId: $this->queryId ?? throw new LogicException('Shortcut ChatJoinRequest::answerQuery requires \'chat_join_request_query_id\' to be set on this ChatJoinRequest.'),
+      result: $result,
+      bot: $this->bot,
+    );
+  }
+
+  public function sendWebapp(
+    string $webAppUrl,
+  ): SendChatJoinRequestWebApp {
+    return new SendChatJoinRequestWebApp(
+      chatJoinRequestQueryId: $this->queryId ?? throw new LogicException('Shortcut ChatJoinRequest::sendWebapp requires \'chat_join_request_query_id\' to be set on this ChatJoinRequest.'),
+      webAppUrl: $webAppUrl,
       bot: $this->bot,
     );
   }

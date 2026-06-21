@@ -7,12 +7,13 @@ namespace Gruven\PhpBotGram\Methods;
 use Gruven\PhpBotGram\Bot;
 use Gruven\PhpBotGram\Client\BotDefault;
 use Gruven\PhpBotGram\Types\InlineKeyboardMarkup;
+use Gruven\PhpBotGram\Types\InputRichMessage;
 use Gruven\PhpBotGram\Types\LinkPreviewOptions;
 use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Types\MessageEntity;
 
 /**
- * Use this method to edit text and game messages. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
+ * Use this method to edit text, rich and game messages. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned. Note that business messages that were not sent by the bot and do not contain an inline keyboard can only be edited within 48 hours from the time they were sent.
  *
  * Source: https://core.telegram.org/bots/api#editmessagetext
  *
@@ -26,7 +27,7 @@ final class EditMessageText extends TelegramMethod
   public const string ReturnsType = 'union:Message|bool';
 
   public function __construct(
-    public readonly string $text,
+    public readonly ?string $text = null,
     public readonly ?string $businessConnectionId = null,
     public readonly int|string|null $chatId = null,
     public readonly ?int $messageId = null,
@@ -36,6 +37,7 @@ final class EditMessageText extends TelegramMethod
     public readonly ?array $entities = null,
     public readonly BotDefault|LinkPreviewOptions|null $linkPreviewOptions = new BotDefault('link_preview'),
     public readonly ?InlineKeyboardMarkup $replyMarkup = null,
+    public readonly ?InputRichMessage $richMessage = null,
     ?Bot $bot = null,
   ) {
     parent::__construct($bot);

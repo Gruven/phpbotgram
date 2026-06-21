@@ -17,7 +17,7 @@ final class InputInvoiceMessageContent extends InputMessageContent
 {
   /**
    * @param list<LabeledPrice> $prices
-   * @param list<int> $suggestedTipAmounts
+   * @param null|list<int> $suggestedTipAmounts
    */
   public function __construct(
     public readonly string $title,
