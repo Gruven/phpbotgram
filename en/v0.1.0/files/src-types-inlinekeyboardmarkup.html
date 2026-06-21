@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png"/>
+    <link rel="icon" href="images/favicon.ico"/>
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button" />
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"/>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"/>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled />
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button" />
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show &quot;typing…&quot; while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                <section>
+                                        <ul class="phpdocumentor-breadcrumbs">
+    </ul>
+
+    <article class="phpdocumentor-element -file">
+        <h2 class="phpdocumentor-content__title">InlineKeyboardMarkup.php</h2>
+
+        
+        
+        
+        
+
+
+        
+<h3 id="toc">
+    Table of Contents
+    <a href="files/src-types-inlinekeyboardmarkup.html#toc" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h3>
+
+
+
+
+    <h4 id="toc-classes">
+        Classes
+        <a href="files/src-types-inlinekeyboardmarkup.html#toc-classes" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <dl class="phpdocumentor-table-of-contents">
+                    <dt class="phpdocumentor-table-of-contents__entry -class"><a href="classes/Gruven-PhpBotGram-Types-InlineKeyboardMarkup.html"><abbr title="\Gruven\PhpBotGram\Types\InlineKeyboardMarkup">InlineKeyboardMarkup</abbr></a></dt><dd>This object represents an inline keyboard that appears right next to the message it belongs to.</dd>    </dl>
+
+
+
+
+
+
+
+
+
+        
+
+        
+        
+    </article>
+                                </section>
+                <section class="phpdocumentor-on-this-page__sidebar">
+                            
+    <section class="phpdocumentor-on-this-page__content">
+        <strong class="phpdocumentor-on-this-page__title">On this page</strong>
+
+        <ul class="phpdocumentor-list -clean">
+            <li class="phpdocumentor-on-this-page-section__title">Table Of Contents</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                                                                                        <li><a href="files/src-types-inlinekeyboardmarkup.html#toc-classes">Classes</a></li>
+                                                                                                                    </ul>
+            </li>
+
+            
+                    </ul>
+    </section>
+
+                </section>
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="files/src-types-inlinekeyboardmarkup.html#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>

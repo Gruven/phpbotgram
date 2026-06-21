@@ -1,0 +1,3367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png"/>
+    <link rel="icon" href="images/favicon.ico"/>
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button" />
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"/>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"/>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled />
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button" />
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show &quot;typing…&quot; while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                <section>
+                                        <ul class="phpdocumentor-breadcrumbs">
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven.html">Gruven</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram.html">PhpBotGram</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram-enums.html">Enums</a></li>
+    </ul>
+
+    <article class="phpdocumentor-element -class">
+        <h2 class="phpdocumentor-content__title">
+    Currency
+
+            <span class="phpdocumentor-element__extends">
+        : string
+    </span>
+    
+            <div class="phpdocumentor-element__package">
+            in package
+            <ul class="phpdocumentor-breadcrumbs">
+                                    <li class="phpdocumentor-breadcrumb"><a href="packages/Application.html">Application</a></li>
+                            </ul>
+        </div>
+    
+    
+    </h2>
+
+        <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">14</span>
+
+    </aside>
+
+            <p class="phpdocumentor-summary">Currencies supported by Telegram Bot API</p>
+
+        
+            <section class="phpdocumentor-description"><p>Source: https://core.telegram.org/bots/payments#supported-currencies</p>
+</section>
+
+        
+
+
+        
+<h3 id="toc">
+    Table of Contents
+    <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#toc" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h3>
+
+
+
+
+
+
+
+
+<h4 id="toc-cases">
+    Cases
+    <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#toc-cases" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Aed">Aed</a>
+    <span>
+                &nbsp;= &#039;AED&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Afn">Afn</a>
+    <span>
+                &nbsp;= &#039;AFN&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_All">All</a>
+    <span>
+                &nbsp;= &#039;ALL&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Amd">Amd</a>
+    <span>
+                &nbsp;= &#039;AMD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ars">Ars</a>
+    <span>
+                &nbsp;= &#039;ARS&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Aud">Aud</a>
+    <span>
+                &nbsp;= &#039;AUD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Azn">Azn</a>
+    <span>
+                &nbsp;= &#039;AZN&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bam">Bam</a>
+    <span>
+                &nbsp;= &#039;BAM&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bdt">Bdt</a>
+    <span>
+                &nbsp;= &#039;BDT&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bgn">Bgn</a>
+    <span>
+                &nbsp;= &#039;BGN&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bnd">Bnd</a>
+    <span>
+                &nbsp;= &#039;BND&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bob">Bob</a>
+    <span>
+                &nbsp;= &#039;BOB&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Brl">Brl</a>
+    <span>
+                &nbsp;= &#039;BRL&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Byn">Byn</a>
+    <span>
+                &nbsp;= &#039;BYN&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Cad">Cad</a>
+    <span>
+                &nbsp;= &#039;CAD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Chf">Chf</a>
+    <span>
+                &nbsp;= &#039;CHF&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Clp">Clp</a>
+    <span>
+                &nbsp;= &#039;CLP&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Cny">Cny</a>
+    <span>
+                &nbsp;= &#039;CNY&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Cop">Cop</a>
+    <span>
+                &nbsp;= &#039;COP&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Crc">Crc</a>
+    <span>
+                &nbsp;= &#039;CRC&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Czk">Czk</a>
+    <span>
+                &nbsp;= &#039;CZK&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Dkk">Dkk</a>
+    <span>
+                &nbsp;= &#039;DKK&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Dop">Dop</a>
+    <span>
+                &nbsp;= &#039;DOP&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Dzd">Dzd</a>
+    <span>
+                &nbsp;= &#039;DZD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Egp">Egp</a>
+    <span>
+                &nbsp;= &#039;EGP&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Etb">Etb</a>
+    <span>
+                &nbsp;= &#039;ETB&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Eur">Eur</a>
+    <span>
+                &nbsp;= &#039;EUR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Gbp">Gbp</a>
+    <span>
+                &nbsp;= &#039;GBP&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Gel">Gel</a>
+    <span>
+                &nbsp;= &#039;GEL&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Gtq">Gtq</a>
+    <span>
+                &nbsp;= &#039;GTQ&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Hkd">Hkd</a>
+    <span>
+                &nbsp;= &#039;HKD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Hnl">Hnl</a>
+    <span>
+                &nbsp;= &#039;HNL&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Hrk">Hrk</a>
+    <span>
+                &nbsp;= &#039;HRK&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Huf">Huf</a>
+    <span>
+                &nbsp;= &#039;HUF&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Idr">Idr</a>
+    <span>
+                &nbsp;= &#039;IDR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ils">Ils</a>
+    <span>
+                &nbsp;= &#039;ILS&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Inr">Inr</a>
+    <span>
+                &nbsp;= &#039;INR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Isk">Isk</a>
+    <span>
+                &nbsp;= &#039;ISK&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Jmd">Jmd</a>
+    <span>
+                &nbsp;= &#039;JMD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Jpy">Jpy</a>
+    <span>
+                &nbsp;= &#039;JPY&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Kes">Kes</a>
+    <span>
+                &nbsp;= &#039;KES&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Kgs">Kgs</a>
+    <span>
+                &nbsp;= &#039;KGS&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Krw">Krw</a>
+    <span>
+                &nbsp;= &#039;KRW&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Kzt">Kzt</a>
+    <span>
+                &nbsp;= &#039;KZT&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Lbp">Lbp</a>
+    <span>
+                &nbsp;= &#039;LBP&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Lkr">Lkr</a>
+    <span>
+                &nbsp;= &#039;LKR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mad">Mad</a>
+    <span>
+                &nbsp;= &#039;MAD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mdl">Mdl</a>
+    <span>
+                &nbsp;= &#039;MDL&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mnt">Mnt</a>
+    <span>
+                &nbsp;= &#039;MNT&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mur">Mur</a>
+    <span>
+                &nbsp;= &#039;MUR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mvr">Mvr</a>
+    <span>
+                &nbsp;= &#039;MVR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mxn">Mxn</a>
+    <span>
+                &nbsp;= &#039;MXN&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Myr">Myr</a>
+    <span>
+                &nbsp;= &#039;MYR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mzn">Mzn</a>
+    <span>
+                &nbsp;= &#039;MZN&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ngn">Ngn</a>
+    <span>
+                &nbsp;= &#039;NGN&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Nio">Nio</a>
+    <span>
+                &nbsp;= &#039;NIO&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Nok">Nok</a>
+    <span>
+                &nbsp;= &#039;NOK&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Npr">Npr</a>
+    <span>
+                &nbsp;= &#039;NPR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Nzd">Nzd</a>
+    <span>
+                &nbsp;= &#039;NZD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pab">Pab</a>
+    <span>
+                &nbsp;= &#039;PAB&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pen">Pen</a>
+    <span>
+                &nbsp;= &#039;PEN&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Php">Php</a>
+    <span>
+                &nbsp;= &#039;PHP&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pkr">Pkr</a>
+    <span>
+                &nbsp;= &#039;PKR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pln">Pln</a>
+    <span>
+                &nbsp;= &#039;PLN&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pyg">Pyg</a>
+    <span>
+                &nbsp;= &#039;PYG&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Qar">Qar</a>
+    <span>
+                &nbsp;= &#039;QAR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ron">Ron</a>
+    <span>
+                &nbsp;= &#039;RON&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Rsd">Rsd</a>
+    <span>
+                &nbsp;= &#039;RSD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Rub">Rub</a>
+    <span>
+                &nbsp;= &#039;RUB&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Sar">Sar</a>
+    <span>
+                &nbsp;= &#039;SAR&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Sek">Sek</a>
+    <span>
+                &nbsp;= &#039;SEK&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Sgd">Sgd</a>
+    <span>
+                &nbsp;= &#039;SGD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Thb">Thb</a>
+    <span>
+                &nbsp;= &#039;THB&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Tjs">Tjs</a>
+    <span>
+                &nbsp;= &#039;TJS&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Try">Try</a>
+    <span>
+                &nbsp;= &#039;TRY&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ttd">Ttd</a>
+    <span>
+                &nbsp;= &#039;TTD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Twd">Twd</a>
+    <span>
+                &nbsp;= &#039;TWD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Tzs">Tzs</a>
+    <span>
+                &nbsp;= &#039;TZS&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Uah">Uah</a>
+    <span>
+                &nbsp;= &#039;UAH&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ugx">Ugx</a>
+    <span>
+                &nbsp;= &#039;UGX&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Usd">Usd</a>
+    <span>
+                &nbsp;= &#039;USD&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Uyu">Uyu</a>
+    <span>
+                &nbsp;= &#039;UYU&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Uzs">Uzs</a>
+    <span>
+                &nbsp;= &#039;UZS&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Vnd">Vnd</a>
+    <span>
+                &nbsp;= &#039;VND&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Yer">Yer</a>
+    <span>
+                &nbsp;= &#039;YER&#039;                    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -case -">
+    <a class="" href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Zar">Zar</a>
+    <span>
+                &nbsp;= &#039;ZAR&#039;                    </span>
+</dt>
+
+    </dl>
+
+
+
+
+
+            <section class="phpdocumentor-cases">
+        <h3 class="phpdocumentor-elements__header" id="cases">
+            Cases
+            <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#cases" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Aed">
+        Aed
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Aed" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">16</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Afn">
+        Afn
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Afn" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">17</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_All">
+        All
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_All" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">18</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Amd">
+        Amd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Amd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">19</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Ars">
+        Ars
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ars" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">20</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Aud">
+        Aud
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Aud" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">21</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Azn">
+        Azn
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Azn" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">22</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Bam">
+        Bam
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bam" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">23</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Bdt">
+        Bdt
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bdt" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">24</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Bgn">
+        Bgn
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bgn" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">25</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Bnd">
+        Bnd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bnd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">26</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Bob">
+        Bob
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bob" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">27</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Brl">
+        Brl
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Brl" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">28</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Byn">
+        Byn
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Byn" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">29</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Cad">
+        Cad
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Cad" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">30</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Chf">
+        Chf
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Chf" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">31</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Clp">
+        Clp
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Clp" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">32</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Cny">
+        Cny
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Cny" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">33</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Cop">
+        Cop
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Cop" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">34</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Crc">
+        Crc
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Crc" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">35</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Czk">
+        Czk
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Czk" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">36</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Dkk">
+        Dkk
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Dkk" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">37</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Dop">
+        Dop
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Dop" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">38</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Dzd">
+        Dzd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Dzd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">39</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Egp">
+        Egp
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Egp" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">40</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Etb">
+        Etb
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Etb" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">41</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Eur">
+        Eur
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Eur" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">42</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Gbp">
+        Gbp
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Gbp" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">43</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Gel">
+        Gel
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Gel" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">44</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Gtq">
+        Gtq
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Gtq" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">45</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Hkd">
+        Hkd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Hkd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">46</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Hnl">
+        Hnl
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Hnl" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">47</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Hrk">
+        Hrk
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Hrk" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">48</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Huf">
+        Huf
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Huf" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">49</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Idr">
+        Idr
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Idr" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">50</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Ils">
+        Ils
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ils" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">51</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Inr">
+        Inr
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Inr" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">52</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Isk">
+        Isk
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Isk" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">53</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Jmd">
+        Jmd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Jmd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">54</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Jpy">
+        Jpy
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Jpy" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">55</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Kes">
+        Kes
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Kes" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">56</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Kgs">
+        Kgs
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Kgs" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">57</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Krw">
+        Krw
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Krw" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">58</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Kzt">
+        Kzt
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Kzt" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">59</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Lbp">
+        Lbp
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Lbp" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">60</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Lkr">
+        Lkr
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Lkr" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">61</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Mad">
+        Mad
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mad" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">62</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Mdl">
+        Mdl
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mdl" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">63</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Mnt">
+        Mnt
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mnt" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">64</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Mur">
+        Mur
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mur" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">65</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Mvr">
+        Mvr
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mvr" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">66</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Mxn">
+        Mxn
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mxn" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">67</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Myr">
+        Myr
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Myr" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">68</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Mzn">
+        Mzn
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mzn" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">69</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Ngn">
+        Ngn
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ngn" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">70</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Nio">
+        Nio
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Nio" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">71</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Nok">
+        Nok
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Nok" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">72</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Npr">
+        Npr
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Npr" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">73</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Nzd">
+        Nzd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Nzd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">74</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Pab">
+        Pab
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pab" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">75</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Pen">
+        Pen
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pen" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">76</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Php">
+        Php
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Php" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">77</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Pkr">
+        Pkr
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pkr" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">78</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Pln">
+        Pln
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pln" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">79</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Pyg">
+        Pyg
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pyg" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">80</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Qar">
+        Qar
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Qar" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">81</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Ron">
+        Ron
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ron" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">82</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Rsd">
+        Rsd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Rsd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">83</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Rub">
+        Rub
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Rub" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">84</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Sar">
+        Sar
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Sar" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">85</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Sek">
+        Sek
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Sek" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">86</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Sgd">
+        Sgd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Sgd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">87</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Thb">
+        Thb
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Thb" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">88</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Tjs">
+        Tjs
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Tjs" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">89</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Try">
+        Try
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Try" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">90</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Ttd">
+        Ttd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ttd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">91</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Twd">
+        Twd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Twd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">92</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Tzs">
+        Tzs
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Tzs" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">93</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Uah">
+        Uah
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Uah" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">94</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Ugx">
+        Ugx
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ugx" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">95</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Usd">
+        Usd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Usd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">96</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Uyu">
+        Uyu
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Uyu" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">97</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Uzs">
+        Uzs
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Uzs" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">98</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Vnd">
+        Vnd
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Vnd" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">99</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Yer">
+        Yer
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Yer" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">100</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+                    <article
+        class="
+            phpdocumentor-element
+            -enum-case
+        "
+>
+    <h4 class="phpdocumentor-element__name" id="enumcase_Zar">
+        Zar
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Zar" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Enums/Currency.php"><a href="files/src-enums-currency.html"><abbr title="src/Enums/Currency.php">Currency.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">101</span>
+
+    </aside>
+
+    
+    
+    
+    
+    
+
+        
+    </article>
+            </section>
+
+        
+        
+    </article>
+                                </section>
+                <section class="phpdocumentor-on-this-page__sidebar">
+                            
+    <section class="phpdocumentor-on-this-page__content">
+        <strong class="phpdocumentor-on-this-page__title">On this page</strong>
+
+        <ul class="phpdocumentor-list -clean">
+            <li class="phpdocumentor-on-this-page-section__title">Table Of Contents</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                            <li><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#toc-cases">Cases</a></li>
+                                                        </ul>
+            </li>
+                            <li class="phpdocumentor-on-this-page-section__title">Cases</li>
+                <li>
+                    <ul class="phpdocumentor-list -clean">
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Aed">Aed</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Afn">Afn</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_All">All</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Amd">Amd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ars">Ars</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Aud">Aud</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Azn">Azn</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bam">Bam</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bdt">Bdt</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bgn">Bgn</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bnd">Bnd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Bob">Bob</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Brl">Brl</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Byn">Byn</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Cad">Cad</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Chf">Chf</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Clp">Clp</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Cny">Cny</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Cop">Cop</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Crc">Crc</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Czk">Czk</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Dkk">Dkk</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Dop">Dop</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Dzd">Dzd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Egp">Egp</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Etb">Etb</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Eur">Eur</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Gbp">Gbp</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Gel">Gel</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Gtq">Gtq</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Hkd">Hkd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Hnl">Hnl</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Hrk">Hrk</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Huf">Huf</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Idr">Idr</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ils">Ils</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Inr">Inr</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Isk">Isk</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Jmd">Jmd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Jpy">Jpy</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Kes">Kes</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Kgs">Kgs</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Krw">Krw</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Kzt">Kzt</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Lbp">Lbp</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Lkr">Lkr</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mad">Mad</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mdl">Mdl</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mnt">Mnt</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mur">Mur</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mvr">Mvr</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mxn">Mxn</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Myr">Myr</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Mzn">Mzn</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ngn">Ngn</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Nio">Nio</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Nok">Nok</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Npr">Npr</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Nzd">Nzd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pab">Pab</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pen">Pen</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Php">Php</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pkr">Pkr</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pln">Pln</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Pyg">Pyg</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Qar">Qar</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ron">Ron</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Rsd">Rsd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Rub">Rub</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Sar">Sar</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Sek">Sek</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Sgd">Sgd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Thb">Thb</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Tjs">Tjs</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Try">Try</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ttd">Ttd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Twd">Twd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Tzs">Tzs</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Uah">Uah</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Ugx">Ugx</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Usd">Usd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Uyu">Uyu</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Uzs">Uzs</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Vnd">Vnd</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Yer">Yer</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Enums-Currency.html#enumcase_Zar">Zar</a></li>
+                                            </ul>
+                </li>
+            
+                    </ul>
+    </section>
+
+                </section>
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="classes/Gruven-PhpBotGram-Enums-Currency.html#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>

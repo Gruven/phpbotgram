@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&amp;display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&amp;display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button">
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewbox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"></circle>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"></line>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled>
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button">
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                        
+<section class="section " id="routers">
+            <h1>Routers</h1>
+
+            
+    <p>A router is a node in the dispatch tree &mdash; it owns one observer per Telegram update type, plus startup/shutdown hooks, and composes into parent/child trees that the dispatcher walks depth-first.</p>
+
+            <section class="section " id="how-it-works">
+            <h2>How it works</h2>
+
+            <section class="section " id="observers-and-property-access">
+            <h3>Observers and property access</h3>
+
+            
+    <p><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><code>Router</code></a> owns a <code>array&lt;string, TelegramEventObserver&gt;</code>
+ keyed by wire-name (<code>message</code>
+, <code>callback_query</code>
+, <code>chat_member</code>
+, &hellip;) plus a separate <code>errors</code>
+ observer for the synthetic error-event channel. Each entry in <code>UPDATE_TYPES</code>
+ corresponds to a property on <code>Update.php</code>
+ generated by Phase 2; a regen that adds a new update kind surfaces here as a test failure in <code>RouterTest::testUpdateTypesConstantMatchesUpdateSchema</code>
+.</p>
+
+            
+    <p>The router exposes both wire-name access (<code>$router-&gt;observers['callback_query']</code>
+) and camelCase property access (<code>$router-&gt;callbackQuery</code>
+) &mdash; they point at the same instance, by design. The camelCase form is documented as the ergonomic public API; the wire-keyed map exists for iteration (e.g. attaching a middleware to <em>every</em>
+ observer in a loop).</p>
+
+    </section>
+
+            <section class="section " id="registering-handlers">
+            <h3>Registering handlers</h3>
+
+            
+    <p>Create a <code>Router</code>
+, register handlers on its observers, then attach it to the dispatcher using <code>includeRouter()</code>
+:</p>
+
+            <pre><code class="language-php">use Gruven\PhpBotGram\Bot;
+use Gruven\PhpBotGram\Dispatcher\Dispatcher;
+use Gruven\PhpBotGram\Dispatcher\PollingOptions;
+use Gruven\PhpBotGram\Dispatcher\Router;
+use Gruven\PhpBotGram\Types\Message;
+
+$dispatcher = new Dispatcher();
+
+$shopRouter = new Router('shop');
+$shopRouter-&gt;message-&gt;register(static function (Message $event): void {
+    $event-&gt;answer('Shop handler')-&gt;emit();
+});
+
+$dispatcher-&gt;includeRouter($shopRouter);
+$dispatcher-&gt;runPolling(new PollingOptions(), new Bot(getenv('BOT_TOKEN') ?: '123:abc'));
+</code></pre>
+
+            
+    <p><code>includeRouter()</code>
+ returns the included router so handler registration can be chained fluently: <code>$dispatcher-&gt;includeRouter($shopRouter)-&gt;message-&gt;register(...)</code>
+.</p>
+
+    </section>
+
+            <section class="section " id="router-composition">
+            <h3>Router composition</h3>
+
+            
+    <p>Routers compose via <code>includeRouter()</code>
+. The parent stores the child in <code>$subRouters</code>
+ and the child stores its parent in <code>$parentRouter</code>
+. Cycle detection, self-attachment, and re-parenting are rejected at attach time with <code>LogicException</code>
+ &mdash; once attached, a router cannot move. This matches aiogram's invariant that a router belongs to exactly one tree. The asymmetry of "child holds parent reference" makes <code>TelegramEventObserver::resolveMiddlewares()</code>
+ straightforward: each observer walks <code>$this-&gt;router-&gt;parentRouter</code>
+ chains to compose its inner-middleware stack without the framework having to maintain a secondary index.</p>
+
+    </section>
+
+            <section class="section " id="depth-first-dispatch">
+            <h3>Depth-first dispatch</h3>
+
+            
+    <p>Dispatch is a depth-first walk. <code>Router::propagateEvent</code>
+ first tries its own observer's handlers. If every handler returns the <code>UnhandledSentinel</code>
+ (or no handler is registered), it recurses into each child router in registration order. The first router whose tree claims the event short-circuits the walk.</p>
+
+            
+    <p>The walk gives parents a chance to filter, transform, or short-circuit before children see the event &mdash; useful for cross-cutting concerns like auth gates or per-tenant scoping. The <code>Router::propagateEvent</code>
+ method also owns the wrap-once invariant: the observer's outer middleware chain composes around the recursive walk exactly once, not once per child, so a deep router tree doesn't re-apply the same middleware at every level.</p>
+
+            
+    <p><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><code>TelegramEventObserver</code></a> is where the per-update-type contract lives: handlers, global filters, outer/inner middleware managers. <code>resolveMiddlewares()</code>
+ walks the parent chain to compose the full inner-middleware stack &mdash; root router's middleware ends up outermost, leaf router's innermost, matching aiogram's <code>chain_head</code>
+ walk. The composition is rebuilt per dispatch; there is no cached chain, so attaching a middleware mid-flight on a sub-router takes effect on the very next event without ceremony.</p>
+
+    </section>
+
+            <section class="section " id="lifecycle-hooks">
+            <h3>Lifecycle hooks</h3>
+
+            
+    <p>Lifecycle hooks live on the router via <code>startup</code>
+ and <code>shutdown</code>
+ &mdash; typed as <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-EventObserver.html"><code>EventObserver</code></a> instances. Handlers registered there fire in registration order when the dispatcher boots or drains. Each hook receives the merged <code>workflow_data</code>
+ plus the router itself, so a startup handler can read the router-tree shape it was attached to.</p>
+
+    </section>
+
+    </section>
+
+            <section class="section " id="trade-offs">
+            <h2>Trade-offs</h2>
+
+            
+    <p>Routers are not lazy. Every router constructs all 26 observers (25 update types + <code>errors</code>
+) at instantiation, even if you only register a <code>message</code>
+ handler. The cost is a few dozen object allocations per router, paid once at boot &mdash; negligible against the dispatch hot path but worth knowing if you build many short-lived routers (e.g. one router per request in some unusual testing pattern). For production shapes, where you boot a handful of routers once at startup, the overhead is invisible.</p>
+
+            
+    <p>The depth-first walk runs in registration order. Re-ordering child routers changes which one claims an event when multiple could. There is no priority field; the first matching handler in the first matching router wins. If you find yourself wanting priority, you probably want to merge those routers into one with explicit filters. Aiogram has the same limitation and the same workaround &mdash; the upstream community discussed adding priority and decided against it because it makes the dispatch behaviour harder to reason about.</p>
+
+            
+    <p><code>Router</code>
+ is not <code>final</code>
+. <code>Dispatcher</code>
+ extends it to add polling entry points, and tests subclass it to add instrumentation. User code generally should not &mdash; composition via <code>includeRouter</code>
+ is the expected extension point. We do not enforce final-ness because the test base subclass is the canonical seam; users who reach for inheritance instead of composition are choosing the harder path deliberately.</p>
+
+            
+    <p>The 25-observer-per-router shape is the binding constraint on the framework's surface area. A bot that uses one update type still pays for 24 unused observers per router &mdash; but the alternative (lazy observer construction) would complicate <code>resolveMiddlewares()</code>
+ and <code>propagateEvent()</code>
+ for no real performance benefit. Object allocation is cheap; correctness trumps micro-optimisation.</p>
+
+    </section>
+
+            <section class="section " id="see-also">
+            <h2>See also</h2>
+
+            
+
+<ul>
+    <li class="dash"><a href="guide/concepts/dispatcher.html#dispatcher">Dispatcher</a></li>
+
+    <li class="dash"><a href="guide/concepts/middlewares.html#middlewares">Middlewares</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html">API reference: Router</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html">API reference: TelegramEventObserver</a></li>
+
+    <li class="dash"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-EventObserver.html">API reference: EventObserver</a></li>
+
+</ul>
+
+    </section>
+
+    </section>
+
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>

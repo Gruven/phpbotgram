@@ -1,0 +1,2650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+            <title>phpbotgram</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png"/>
+    <link rel="icon" href="images/favicon.ico"/>
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png"/>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/base.css">
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@100;200;300;400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/template.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0/css/all.min.css" integrity="sha256-ybRkN9dBjhcS2qrW1z+hfCxq+1aBdwyQM5wlQoQVt/0=" crossorigin="anonymous" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.css">
+                <script src="https://cdn.jsdelivr.net/npm/fuse.js@3.4.6"></script>
+        <script src="https://cdn.jsdelivr.net/npm/css-vars-ponyfill@2"></script>
+        <script src="js/template.js"></script>
+        <script src="js/search.js"></script>
+        <script defer src="js/searchIndex.js"></script>
+    </head>
+<body id="top">
+    <header class="phpdocumentor-header phpdocumentor-section">
+    <h1 class="phpdocumentor-title"><a href="" class="phpdocumentor-title__link">phpbotgram</a></h1>
+    <input class="phpdocumentor-header__menu-button" type="checkbox" id="menu-button" name="menu-button" />
+    <label class="phpdocumentor-header__menu-icon" for="menu-button">
+        <i class="fas fa-bars"></i>
+    </label>
+    <section data-search-form class="phpdocumentor-search">
+    <label>
+        <span class="visually-hidden">Search for</span>
+        <svg class="phpdocumentor-search__icon" width="21" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="2"/>
+            <line x1="12.4892" y1="12.2727" x2="19.1559" y2="18.9393" stroke="currentColor" stroke-width="3"/>
+        </svg>
+        <input type="search" class="phpdocumentor-field phpdocumentor-search__field" placeholder="Loading .." disabled />
+    </label>
+</section>
+
+    <script>
+(function () {
+  const storageKey = 'phpbotgram-theme';
+  const allowedThemes = ['light', 'dark'];
+
+  function readStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      return allowedThemes.includes(stored) ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  const theme = readStoredTheme();
+  if (theme) {
+    document.documentElement.dataset.phpbotgramTheme = theme;
+  }
+})();
+</script>
+
+<div class="phpbotgram-switcher">
+  <select id="phpbotgram-theme-select" aria-label="Theme">
+    <option value="">Auto</option>
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+  <select id="phpbotgram-lang-select" aria-label="Language" disabled></select>
+  <select id="phpbotgram-version-select" aria-label="Version" disabled></select>
+</div>
+<script>
+(function () {
+  const themeStorageKey = 'phpbotgram-theme';
+  const base = new URL(document.baseURI);
+  const langRoot = base.pathname.replace(/\/[^/]+\/$/, '/');
+  const repoRoot = langRoot.replace(/\/[^/]+\/$/, '/');
+  const repoRootUrl = base.origin + repoRoot;
+
+  const themeSelect = document.getElementById('phpbotgram-theme-select');
+  const versionSelect = document.getElementById('phpbotgram-version-select');
+  const langSelect = document.getElementById('phpbotgram-lang-select');
+
+  function getStoredTheme() {
+    try {
+      const stored = window.localStorage.getItem(themeStorageKey);
+      return stored === 'light' || stored === 'dark' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function setTheme(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      document.documentElement.dataset.phpbotgramTheme = theme;
+      try {
+        window.localStorage.setItem(themeStorageKey, theme);
+      } catch (err) {}
+      return;
+    }
+
+    delete document.documentElement.dataset.phpbotgramTheme;
+    try {
+      window.localStorage.removeItem(themeStorageKey);
+    } catch (err) {}
+  }
+
+  themeSelect.value = getStoredTheme();
+  themeSelect.addEventListener('change', function () {
+    setTheme(themeSelect.value);
+  });
+
+  function populate(el, items, currentId, formatter) {
+    el.innerHTML = '';
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.path;
+      opt.textContent = formatter(it);
+      if (it.id === currentId) opt.selected = true;
+      el.appendChild(opt);
+    }
+    el.disabled = false;
+    el.addEventListener('change', function () {
+      window.location.href = base.origin + repoRoot + el.value;
+    });
+  }
+
+  const pathParts = base.pathname.split('/').filter(Boolean);
+  const currentLang = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+  const currentVersion = pathParts.length >= 1 ? pathParts[pathParts.length - 1] : null;
+
+  Promise.all([
+    fetch(repoRootUrl + 'versions.json').then(r => r.json()),
+    fetch(repoRootUrl + 'languages.json').then(r => r.json()),
+  ]).then(function ([versions, languages]) {
+    populate(versionSelect, versions.versions || [], currentVersion,
+      v => v.label + (v.stable ? ' (latest)' : ''));
+    populate(langSelect, (languages.languages || []).map(l => ({
+      id: l.id,
+      label: l.label,
+      path: l.id + '/' + currentVersion + '/',
+    })), currentLang, l => l.label);
+  }).catch(function (err) {
+    console.warn('phpbotgram switcher: failed to load inventory', err);
+  });
+})();
+</script>
+
+    <nav class="phpdocumentor-topnav">
+    <ul class="phpdocumentor-topnav__menu">
+        </ul>
+</nav>
+</header>
+
+    <main class="phpdocumentor">
+        <div class="phpdocumentor-section">
+            <input class="phpdocumentor-sidebar__menu-button" type="checkbox" id="sidebar-button" name="sidebar-button" />
+<label class="phpdocumentor-sidebar__menu-icon" for="sidebar-button">
+    Menu
+</label>
+<aside class="phpdocumentor-column -three phpdocumentor-sidebar">
+                            <section class="phpdocumentor-sidebar__category -phpbotgram-documentation">
+            <h2 class="phpdocumentor-sidebar__category-header">Phpbotgram-Documentation</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/tutorial/index.html" class="">Getting started</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/tutorial/01-installation.html" class="">Installation</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/02-first-bot.html" class="">Your first bot</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/03-handlers-and-filters.html" class="">Handlers and filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/04-state.html" class="">Adding state</a>
+                
+            </li>
+                                <li>
+                <a href="guide/tutorial/05-deployment.html" class="">Deployment</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/how-to/index.html" class="">How-to recipes</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/how-to/custom-filter.html" class="">Add a custom filter</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/dependency-injection.html" class="">Pass kwargs from a filter to the handler</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/scenes-wizard.html" class="">Build a wizard with scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/deep-linking.html" class="">Handle deep-link /start payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-member-updated.html" class="">Track chat-member transitions</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/redis-mongo-fsm.html" class="">Use Redis or MongoDB for FSM storage</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/custom-storage.html" class="">Plug in a custom storage backend</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/file-upload-download.html" class="">Upload and download files</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/media-group.html" class="">Send a media group (album)</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show &quot;typing…&quot; while a slow handler runs</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/telegram-stars-payment.html" class="">Sell something via Telegram Stars</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/web-app-data.html" class="">Validate Web App initData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/webhook-without-amphp-server.html" class="">Serve webhooks without amphp/http-server</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/multi-bot.html" class="">Run multiple bots from one process</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rate-limiting.html" class="">Rate-limit outgoing API calls</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/callback-answer.html" class="">Acknowledge callback queries cleanly</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/background-tasks.html" class="">Run code outside the dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/error-handling.html" class="">Handle errors globally</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/testing-bots.html" class="">Test bots with the MockedSession</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/i18n-payloads.html" class="">Internationalise message payloads</a>
+                
+            </li>
+                                <li>
+                <a href="guide/how-to/rich-messages.html" class="">Send rich messages</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/concepts/index.html" class="">Concepts</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="guide/concepts/bot-and-session.html" class="">Bot and Session</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/dispatcher.html" class="">Dispatcher</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/routers.html" class="">Routers</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/middlewares.html" class="">Middlewares</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/flags.html" class="">Flags</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/filters.html" class="">Filters</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/f-dsl.html" class="">F-DSL</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/callback-data.html" class="">CallbackData</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/fsm.html" class="">FSM</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/scenes.html" class="">Scenes</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/webhook.html" class="">Webhook</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/keyboards.html" class="">Keyboards</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/text-decoration.html" class="">Text decoration</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/error-model.html" class="">Error model</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/serialization.html" class="">Serialization</a>
+                
+            </li>
+                                <li>
+                <a href="guide/concepts/architecture-decisions.html" class="">Architecture decisions</a>
+                
+            </li>
+            </ul>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/reference/index.html" class="">API reference</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/changelog.html" class="">Changelog</a>
+</h4>
+
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="guide/contributing.html" class="">Contributing to phpbotgram</a>
+</h4>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -namespaces">
+            <h2 class="phpdocumentor-sidebar__category-header">Namespaces</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="namespaces/gruven.html" class="">Gruven</a>
+</h4>
+            <ul class="phpdocumentor-list">
+                                <li>
+                <a href="namespaces/gruven-phpbotgram.html" class="">PhpBotGram</a>
+                
+            </li>
+            </ul>
+
+                        </section>
+                <section class="phpdocumentor-sidebar__category -packages">
+            <h2 class="phpdocumentor-sidebar__category-header">Packages</h2>
+                                    <h4 class="phpdocumentor-sidebar__root-namespace">
+        <a href="packages/Application.html" class="">Application</a>
+</h4>
+
+                        </section>
+            
+    <section class="phpdocumentor-sidebar__category -reports">
+        <h2 class="phpdocumentor-sidebar__category-header">Reports</h2>
+                <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/deprecated.html">Deprecated</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/errors.html">Errors</a></h3>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="reports/markers.html">Markers</a></h3>
+    </section>
+
+    <section class="phpdocumentor-sidebar__category -indices">
+        <h2 class="phpdocumentor-sidebar__category-header">Indices</h2>
+        <h3 class="phpdocumentor-sidebar__root-package"><a href="indices/files.html">Files</a></h3>
+    </section>
+</aside>
+
+            <div class="phpdocumentor-column -nine phpdocumentor-content">
+                                <section>
+                                        <ul class="phpdocumentor-breadcrumbs">
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven.html">Gruven</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram.html">PhpBotGram</a></li>
+            <li class="phpdocumentor-breadcrumb"><a href="namespaces/gruven-phpbotgram-dispatcher.html">Dispatcher</a></li>
+    </ul>
+
+    <article class="phpdocumentor-element -class">
+        <h2 class="phpdocumentor-content__title">
+    Router
+
+    
+            <div class="phpdocumentor-element__package">
+            in package
+            <ul class="phpdocumentor-breadcrumbs">
+                                    <li class="phpdocumentor-breadcrumb"><a href="packages/Application.html">Application</a></li>
+                            </ul>
+        </div>
+    
+    
+    </h2>
+
+<div class="phpdocumentor-label-line">
+
+
+</div>
+
+        <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">44</span>
+
+    </aside>
+
+            <p class="phpdocumentor-summary">Per-update-type router — port of `aiogram.dispatcher.router.Router`.</p>
+
+
+    <section class="phpdocumentor-description"><p>A <code class="prettyprint">Router</code> owns one <code class="prettyprint">TelegramEventObserver</code> for <strong>every</strong> Telegram
+update type (25 today: <code class="prettyprint">message</code>, <code class="prettyprint">edited_message</code>, …, <code class="prettyprint">managed_bot</code>)
+plus a separate <code class="prettyprint">errors</code> observer for the error-propagation channel,
+and two <code class="prettyprint">EventObserver</code> instances (<code class="prettyprint">startup</code> / <code class="prettyprint">shutdown</code>) for
+lifecycle hooks.</p>
+<p>Routers compose into a tree via <code class="prettyprint">includeRouter()</code>; <code class="prettyprint">propagateEvent()</code>
+dispatches an update to the local observer, and on <code class="prettyprint">UnhandledSentinel</code>
+fall-through, walks <code class="prettyprint">subRouters</code> depth-first. Cycles, self-attachment,
+and re-parenting are rejected at attach time with <code class="prettyprint">LogicException</code>.</p>
+<p><strong>Why <code class="prettyprint">UPDATE_TYPES</code> is a hand-maintained constant, not generated</strong>:
+the list is derived from <code class="prettyprint">Types/Update.php</code> (Phase 2 codegen output)
+but Router does not import Update — that would force Router to know
+the full type graph just to dispatch by string key. The constant is
+tested against the schema-driven list in <code class="prettyprint">RouterTest</code>, so a Phase 2
+regeneration that adds/removes an update field surfaces here as a
+test failure.</p>
+<p><strong>camelCase property aliases</strong> (<code class="prettyprint">$router-&gt;editedMessage</code> etc.) are
+initialized as direct references to the same <code class="prettyprint">TelegramEventObserver</code>
+instances stored in <code class="prettyprint">$observers['edited_message']</code>. Spec § &quot;Event
+name conventions&quot; mandates this dual API: snake_case wire names for
+iteration, camelCase for ergonomic registration call sites.</p>
+<p><code class="prettyprint">Router</code> is <strong>not</strong> declared <code class="prettyprint">final</code> — <code class="prettyprint">Dispatcher</code> (Task 3.10)
+extends it to add polling/webhook entry points.</p>
+</section>
+
+
+
+    
+    
+<h3 id="toc">
+    Table of Contents
+    <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#toc" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h3>
+
+
+
+
+
+
+
+<h4 id="toc-constants">
+    Constants
+    <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#toc-constants" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -constant -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#constant_UPDATE_TYPES">UPDATE_TYPES</a>
+    <span>
+        &nbsp;: array&lt;string|int, mixed&gt;&nbsp;= [&#039;message&#039;, &#039;edited_message&#039;, &#039;channel_post&#039;, &#039;...                            </span>
+</dt>
+<dd>Wire-level Bot API update keys this router routes for.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -constant -private">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#constant_INTERNAL_UPDATE_TYPES">INTERNAL_UPDATE_TYPES</a>
+    <span>
+        &nbsp;: array&lt;string|int, mixed&gt;&nbsp;= [&#039;update&#039;, &#039;error&#039;]                            </span>
+</dt>
+<dd>Update types upstream excludes from `resolve_used_update_types`
+regardless of registered handlers. Upstream uses a frozenset literal;
+the port keeps it as a `list&lt;string&gt;` for `in_array` lookups.</dd>
+
+    </dl>
+
+
+<h4 id="toc-properties">
+    Properties
+    <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#toc-properties" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_businessConnection">$businessConnection</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_businessMessage">$businessMessage</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_callbackQuery">$callbackQuery</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_channelPost">$channelPost</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chatBoost">$chatBoost</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chatJoinRequest">$chatJoinRequest</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chatMember">$chatMember</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chosenInlineResult">$chosenInlineResult</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_deletedBusinessMessages">$deletedBusinessMessages</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_editedBusinessMessage">$editedBusinessMessage</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_editedChannelPost">$editedChannelPost</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_editedMessage">$editedMessage</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_errors">$errors</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+<dd>Errors-channel observer — read via `$router-&gt;errors` (matches
+upstream&#039;s `self.errors = self.error = TelegramEventObserver(...)`).</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_guestMessage">$guestMessage</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_inlineQuery">$inlineQuery</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_managedBot">$managedBot</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_message">$message</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_messageReaction">$messageReaction</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_messageReactionCount">$messageReactionCount</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_myChatMember">$myChatMember</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_name">$name</a>
+    <span>
+                        &nbsp;: string            </span>
+</dt>
+<dd>Debug-only identifier. Defaults to `spl_object_hash($this)` (PHP
+equivalent of upstream&#039;s `hex(id(self))`) when no explicit name is
+given. The hash is stable for the object&#039;s lifetime but **not**
+guaranteed unique across two unrelated instances of the same process
+after one has been garbage-collected — that&#039;s a Python parity quirk,
+not a bug.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_observers">$observers</a>
+    <span>
+                        &nbsp;: array&lt;string, <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>&gt;            </span>
+</dt>
+<dd>Wire-name keyed map of every Telegram observer this router owns
+(one per `UPDATE_TYPES` entry plus `&#039;error&#039;`). External iteration
+goes through this map; per-type ergonomics use the camelCase
+properties below, which are direct references to the same instances.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_parentRouter">$parentRouter</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>|null            </span>
+</dt>
+<dd>Parent in the router composition tree, set by `includeRouter()`.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_poll">$poll</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_pollAnswer">$pollAnswer</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_preCheckoutQuery">$preCheckoutQuery</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_purchasedPaidMedia">$purchasedPaidMedia</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_removedChatBoost">$removedChatBoost</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_shippingQuery">$shippingQuery</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_shutdown">$shutdown</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-EventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\EventObserver">EventObserver</abbr></a>            </span>
+</dt>
+<dd>Mirror of `$startup` for graceful shutdown.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_startup">$startup</a>
+    <span>
+                        &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-EventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\EventObserver">EventObserver</abbr></a>            </span>
+</dt>
+<dd>Lifecycle hook fan-out for polling/webhook startup. Handlers are
+registered via `$router-&gt;startup-&gt;register($cb)` and fire in
+registration order on `emitStartup()`. Receives the workflow_data
+kwarg bag merged with `router: $this`.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_subRouters">$subRouters</a>
+    <span>
+                        &nbsp;: array&lt;int, <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>&gt;            </span>
+</dt>
+<dd>Children attached via `includeRouter()`, in registration order.</dd>
+
+    </dl>
+
+<h4 id="toc-methods">
+    Methods
+    <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#toc-methods" class="headerlink"><i class="fas fa-link"></i></a>
+
+</h4>
+<dl class="phpdocumentor-table-of-contents">
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method___construct">__construct()</a>
+    <span>
+                                &nbsp;: mixed    </span>
+</dt>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_emitShutdown">emitShutdown()</a>
+    <span>
+                                &nbsp;: void    </span>
+</dt>
+<dd>Symmetric counterpart of `emitStartup` for graceful teardown.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_emitStartup">emitStartup()</a>
+    <span>
+                                &nbsp;: void    </span>
+</dt>
+<dd>Fire the startup lifecycle hook depth-first across the tree.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_includeRouter">includeRouter()</a>
+    <span>
+                                &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>    </span>
+</dt>
+<dd>Attach a child router. Validates the operation against three
+mistakes that would corrupt the tree:</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_includeRouters">includeRouters()</a>
+    <span>
+                                &nbsp;: static    </span>
+</dt>
+<dd>Variadic convenience for attaching several children at once.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_propagateEvent">propagateEvent()</a>
+    <span>
+                                &nbsp;: mixed    </span>
+</dt>
+<dd>Route an event through the local observer; on UNHANDLED fall
+through to sub-routers in registration order.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_resolveUsedUpdateTypes">resolveUsedUpdateTypes()</a>
+    <span>
+                                &nbsp;: array&lt;int, string&gt;    </span>
+</dt>
+<dd>Collect the snake_case names of every update type with at least
+one registered handler anywhere in the tree rooted at `$this`.</dd>
+
+    </dl>
+
+
+
+        
+    <section class="phpdocumentor-constants">
+        <h3 class="phpdocumentor-elements__header" id="constants">
+            Constants
+            <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#constants" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article class="phpdocumentor-element -constant -public ">
+    <h4 class="phpdocumentor-element__name" id="constant_UPDATE_TYPES">
+        UPDATE_TYPES
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#constant_UPDATE_TYPES" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">67</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Wire-level Bot API update keys this router routes for.</p>
+
+    
+    <code class="phpdocumentor-signature phpdocumentor-code ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+        <span class="phpdocumentor-signature__type">array&lt;string|int, mixed&gt;</span>
+    <span class="phpdocumentor-signature__name">UPDATE_TYPES</span>
+    = <span class="phpdocumentor-signature__default-value">[&#039;message&#039;, &#039;edited_message&#039;, &#039;channel_post&#039;, &#039;edited_channel_post&#039;, &#039;business_connection&#039;, &#039;business_message&#039;, &#039;edited_business_message&#039;, &#039;deleted_business_messages&#039;, &#039;guest_message&#039;, &#039;message_reaction&#039;, &#039;message_reaction_count&#039;, &#039;inline_query&#039;, &#039;chosen_inline_result&#039;, &#039;callback_query&#039;, &#039;shipping_query&#039;, &#039;pre_checkout_query&#039;, &#039;purchased_paid_media&#039;, &#039;poll&#039;, &#039;poll_answer&#039;, &#039;my_chat_member&#039;, &#039;chat_member&#039;, &#039;chat_join_request&#039;, &#039;chat_boost&#039;, &#039;removed_chat_boost&#039;, &#039;managed_bot&#039;]</span>
+</code>
+
+
+        <section class="phpdocumentor-description"><p>Derived from regenerated <code class="prettyprint">src/Types/Update.php</code>: each non-<code class="prettyprint">updateId</code>,
+non-<code class="prettyprint">bot</code> constructor parameter on <code class="prettyprint">Update</code> becomes a key here, with
+camelCase converted to snake_case to match the wire payload. The
+order mirrors <code class="prettyprint">Update</code>'s parameter order so iterations are
+deterministic across PHP versions.</p>
+<p>Sync invariant: whenever Phase 2 regen changes <code class="prettyprint">Update.php</code>, this
+list must be updated. <code class="prettyprint">RouterTest::testUpdateTypesConstantMatchesUpdateSchema</code>
+is the canary.</p>
+<p><strong><code class="prettyprint">error</code> is NOT in this list</strong> — it's a separate channel for the
+<code class="prettyprint">ErrorsMiddleware</code> and lives in <code class="prettyprint">$observers['error']</code> /
+<code class="prettyprint">$this-&gt;errors</code>. Update propagation never targets it; the only way
+to reach it is via <code class="prettyprint">propagateEvent('error', ...)</code> from the error
+middleware.</p>
+</section>
+
+    
+    
+
+        
+    </article>
+                    <article class="phpdocumentor-element -constant -private ">
+    <h4 class="phpdocumentor-element__name" id="constant_INTERNAL_UPDATE_TYPES">
+        INTERNAL_UPDATE_TYPES
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#constant_INTERNAL_UPDATE_TYPES" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">104</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Update types upstream excludes from `resolve_used_update_types`
+regardless of registered handlers. Upstream uses a frozenset literal;
+the port keeps it as a `list&lt;string&gt;` for `in_array` lookups.</p>
+
+    
+    <code class="phpdocumentor-signature phpdocumentor-code ">
+    <span class="phpdocumentor-signature__visibility">private</span>
+        <span class="phpdocumentor-signature__type">array&lt;string|int, mixed&gt;</span>
+    <span class="phpdocumentor-signature__name">INTERNAL_UPDATE_TYPES</span>
+    = <span class="phpdocumentor-signature__default-value">[&#039;update&#039;, &#039;error&#039;]</span>
+</code>
+
+
+        <section class="phpdocumentor-description"><p><code class="prettyprint">'update'</code> mirrors upstream's INTERNAL_UPDATE_TYPES but is never an
+observer key on Router — included for forward-compat with upstream.</p>
+</section>
+
+    
+    
+
+        
+    </article>
+            </section>
+
+        
+    <section class="phpdocumentor-properties">
+        <h3 class="phpdocumentor-elements__header" id="properties">
+            Properties
+            <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#properties" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_businessConnection">
+        $businessConnection
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_businessConnection" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">166</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$businessConnection</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_businessMessage">
+        $businessMessage
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_businessMessage" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">167</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$businessMessage</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_callbackQuery">
+        $callbackQuery
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_callbackQuery" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">175</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$callbackQuery</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_channelPost">
+        $channelPost
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_channelPost" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">164</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$channelPost</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_chatBoost">
+        $chatBoost
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chatBoost" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">184</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$chatBoost</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_chatJoinRequest">
+        $chatJoinRequest
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chatJoinRequest" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">183</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$chatJoinRequest</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_chatMember">
+        $chatMember
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chatMember" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">182</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$chatMember</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_chosenInlineResult">
+        $chosenInlineResult
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chosenInlineResult" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">174</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$chosenInlineResult</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_deletedBusinessMessages">
+        $deletedBusinessMessages
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_deletedBusinessMessages" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">169</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$deletedBusinessMessages</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_editedBusinessMessage">
+        $editedBusinessMessage
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_editedBusinessMessage" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">168</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$editedBusinessMessage</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_editedChannelPost">
+        $editedChannelPost
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_editedChannelPost" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">165</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$editedChannelPost</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_editedMessage">
+        $editedMessage
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_editedMessage" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">163</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$editedMessage</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_errors">
+        $errors
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_errors" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">195</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Errors-channel observer — read via `$router-&gt;errors` (matches
+upstream&#039;s `self.errors = self.error = TelegramEventObserver(...)`).</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$errors</span>
+    </code>
+
+        <section class="phpdocumentor-description"><p>Not part of UPDATE_TYPES because there is no <code class="prettyprint">error</code> wire payload;
+<code class="prettyprint">ErrorsMiddleware</code> synthesizes the event and invokes
+<code class="prettyprint">propagateEvent('error', ...)</code>.</p>
+</section>
+
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_guestMessage">
+        $guestMessage
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_guestMessage" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">170</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$guestMessage</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_inlineQuery">
+        $inlineQuery
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_inlineQuery" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">173</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$inlineQuery</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_managedBot">
+        $managedBot
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_managedBot" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">186</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$managedBot</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_message">
+        $message
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_message" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">162</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$message</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_messageReaction">
+        $messageReaction
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_messageReaction" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">171</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$messageReaction</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_messageReactionCount">
+        $messageReactionCount
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_messageReactionCount" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">172</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$messageReactionCount</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_myChatMember">
+        $myChatMember
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_myChatMember" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">181</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$myChatMember</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_name">
+        $name
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_name" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">114</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Debug-only identifier. Defaults to `spl_object_hash($this)` (PHP
+equivalent of upstream&#039;s `hex(id(self))`) when no explicit name is
+given. The hash is stable for the object&#039;s lifetime but **not**
+guaranteed unique across two unrelated instances of the same process
+after one has been garbage-collected — that&#039;s a Python parity quirk,
+not a bug.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type">string</span>
+    <span class="phpdocumentor-signature__name">$name</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_observers">
+        $observers
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_observers" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                                            </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">137</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Wire-name keyed map of every Telegram observer this router owns
+(one per `UPDATE_TYPES` entry plus `&#039;error&#039;`). External iteration
+goes through this map; per-type ergonomics use the camelCase
+properties below, which are direct references to the same instances.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+            <span class="phpdocumentor-signature__visibility">public private(set)</span>
+            <span class="phpdocumentor-signature__type">array&lt;string, <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>&gt;</span>
+    <span class="phpdocumentor-signature__name">$observers</span>
+     = <span class="phpdocumentor-signature__default-value">[]</span></code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_parentRouter">
+        $parentRouter
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_parentRouter" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                                            </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">147</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Parent in the router composition tree, set by `includeRouter()`.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+            <span class="phpdocumentor-signature__visibility">public private(set)</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>|null</span>
+    <span class="phpdocumentor-signature__name">$parentRouter</span>
+     = <span class="phpdocumentor-signature__default-value">null</span></code>
+
+        <section class="phpdocumentor-description"><p><code class="prettyprint">null</code> until attached; immutable thereafter (re-parenting throws).</p>
+<p>The set is <strong>on the child</strong>, not the parent: <code class="prettyprint">$parent-&gt;includeRouter($child)</code>
+writes <code class="prettyprint">$child-&gt;parentRouter = $parent</code>. Mirrors upstream's
+<code class="prettyprint">parent_router</code> property setter semantics at <code class="prettyprint">router.py:217-246</code>.</p>
+</section>
+
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_poll">
+        $poll
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_poll" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">179</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$poll</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_pollAnswer">
+        $pollAnswer
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_pollAnswer" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">180</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$pollAnswer</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_preCheckoutQuery">
+        $preCheckoutQuery
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_preCheckoutQuery" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">177</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$preCheckoutQuery</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_purchasedPaidMedia">
+        $purchasedPaidMedia
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_purchasedPaidMedia" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">178</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$purchasedPaidMedia</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_removedChatBoost">
+        $removedChatBoost
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_removedChatBoost" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">185</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$removedChatBoost</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_shippingQuery">
+        $shippingQuery
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_shippingQuery" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">176</span>
+
+    </aside>
+
+    
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$shippingQuery</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_shutdown">
+        $shutdown
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_shutdown" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">127</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Mirror of `$startup` for graceful shutdown.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-EventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\EventObserver">EventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$shutdown</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                -read-only                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_startup">
+        $startup
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_startup" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                        <small class="phpdocumentor-element__modifier">read-only</small>                    </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">122</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Lifecycle hook fan-out for polling/webhook startup. Handlers are
+registered via `$router-&gt;startup-&gt;register($cb)` and fire in
+registration order on `emitStartup()`. Receives the workflow_data
+kwarg bag merged with `router: $this`.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+        <span class="phpdocumentor-signature__visibility">public</span>
+            <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-EventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\EventObserver">EventObserver</abbr></a></span>
+    <span class="phpdocumentor-signature__name">$startup</span>
+    </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_subRouters">
+        $subRouters
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_subRouters" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                                            </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">156</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Children attached via `includeRouter()`, in registration order.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+            <span class="phpdocumentor-signature__visibility">public private(set)</span>
+            <span class="phpdocumentor-signature__type">array&lt;int, <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>&gt;</span>
+    <span class="phpdocumentor-signature__name">$subRouters</span>
+     = <span class="phpdocumentor-signature__default-value">[]</span></code>
+
+        <section class="phpdocumentor-description"><p>Used by <code class="prettyprint">propagateEvent</code> for depth-first fall-through and by
+<code class="prettyprint">emitStartup</code>/<code class="prettyprint">emitShutdown</code> for tree traversal.</p>
+</section>
+
+    
+    
+
+        
+        
+
+</article>
+            </section>
+
+            <section class="phpdocumentor-methods">
+        <h3 class="phpdocumentor-elements__header" id="methods">
+            Methods
+            <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#methods" class="headerlink"><i class="fas fa-link"></i></a>
+
+        </h3>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method___construct">
+        __construct()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method___construct" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">197</span>
+
+    </aside>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">__construct</span><span>(</span><span class="phpdocumentor-signature__argument"><span>[</span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$name</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">mixed</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+    
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$name</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_emitShutdown">
+        emitShutdown()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_emitShutdown" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">517</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Symmetric counterpart of `emitStartup` for graceful teardown.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">emitShutdown</span><span>(</span><span class="phpdocumentor-signature__argument"><span>[</span><span class="phpdocumentor-signature__argument__type">array&lt;string, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$kwargs</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">[]</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">void</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Same traversal order (depth-first, registration order) and same
+<code class="prettyprint">router =&gt; $this</code> injection. Matches upstream <code class="prettyprint">emit_shutdown</code>
+(<code class="prettyprint">router.py:295</code>).</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$kwargs</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;string, mixed&gt;</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">[]</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_emitStartup">
+        emitStartup()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_emitStartup" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">496</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Fire the startup lifecycle hook depth-first across the tree.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">emitStartup</span><span>(</span><span class="phpdocumentor-signature__argument"><span>[</span><span class="phpdocumentor-signature__argument__type">array&lt;string, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$kwargs</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">[]</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">void</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Injects <code class="prettyprint">router =&gt; $this</code> into the kwargs bag so handlers can
+declare <code class="prettyprint">Router $router</code> and receive the <em>emitting</em> router at
+each level — not the root. Matches upstream <code class="prettyprint">emit_startup</code>
+(<code class="prettyprint">router.py:282</code>).</p>
+<p>Forwarded kwargs include the workflow_data and the
+<code class="prettyprint">bots[array_key_last]</code> injection from the polling driver (spec
+§ &quot;Polling loop&quot;). Lifecycle handlers are pub/sub: every handler
+runs; the first throw aborts the rest (matches <code class="prettyprint">EventObserver</code>).</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$kwargs</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;string, mixed&gt;</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">[]</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Workflow data + injected <code class="prettyprint">bot</code>.</p>
+</section>
+
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_includeRouter">
+        includeRouter()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_includeRouter" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">267</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Attach a child router. Validates the operation against three
+mistakes that would corrupt the tree:</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">includeRouter</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>&nbsp;</span><span class="phpdocumentor-signature__argument__name">$router</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a></span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><ol>
+<li><strong>Self-attachment</strong> — a router cannot include itself. Upstream
+raises RuntimeError; we use LogicException because PHP doesn't
+have a Runtime/Logic distinction this fine, and &quot;you wired
+your router tree wrong&quot; is unambiguously a programming bug.</li>
+<li><strong>Re-parenting</strong> — once a router has a parent it stays put.
+The alternative (detach + re-attach) would silently leave the
+old parent's <code class="prettyprint">subRouters</code> array holding a dangling reference.</li>
+<li><strong>Cycles</strong> — A→B→C→A would make <code class="prettyprint">propagateEvent</code> infinitely
+recurse. We walk our own ancestor chain (<code class="prettyprint">parentRouter</code>
+upward) and confirm the candidate isn't already in it.</li>
+</ol>
+<p>Returns the <strong>included</strong> router so callers can chain fluent
+registrations: <code class="prettyprint">$root-&gt;includeRouter($child)-&gt;message-&gt;register(...)</code>.
+Matches upstream <code class="prettyprint">include_router(...) -&gt; Router</code>.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$router</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a></span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_includeRouters">
+        includeRouters()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_includeRouters" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">311</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Variadic convenience for attaching several children at once.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">includeRouters</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a>&nbsp;</span><span class="phpdocumentor-signature__argument__variadic-operator">...</span><span class="phpdocumentor-signature__argument__name">$routers</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">static</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Each is validated independently; the first failure throws and
+already-attached siblings stay attached (matches upstream's
+<code class="prettyprint">for router in routers: self.include_router</code> semantics — no
+transaction).</p>
+<p>Returns <code class="prettyprint">$this</code> for fluent chaining at the parent (note: upstream's
+<code class="prettyprint">include_routers</code> returns <code class="prettyprint">None</code>; the port returns the parent so
+users can write <code class="prettyprint">(new Dispatcher())-&gt;includeRouters(...)-&gt;runPolling(...)</code>).</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$routers</span>
+                : <span class="phpdocumentor-argument-list__argument__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Router">Router</abbr></a></span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">static</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_propagateEvent">
+        propagateEvent()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_propagateEvent" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">411</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Route an event through the local observer; on UNHANDLED fall
+through to sub-routers in registration order.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">propagateEvent</span><span>(</span><span class="phpdocumentor-signature__argument"><span class="phpdocumentor-signature__argument__type">string&nbsp;</span><span class="phpdocumentor-signature__argument__name">$updateType</span></span><span class="phpdocumentor-signature__argument"><span>, </span><span class="phpdocumentor-signature__argument__type">object&nbsp;</span><span class="phpdocumentor-signature__argument__name">$event</span></span><span class="phpdocumentor-signature__argument"><span>[</span><span>, </span><span class="phpdocumentor-signature__argument__type">array&lt;string, mixed&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$kwargs</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">[]</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">mixed</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Contract:</p>
+<ol>
+<li>Inject <code class="prettyprint">event_router =&gt; $this</code> into the kwargs bag so handlers
+and middlewares can see <em>which router</em> is currently dispatching
+(<code class="prettyprint">router.py:153</code>). The inner-most claiming router is the value
+handlers see — each recursion overwrites the kwarg.</li>
+<li>Look up the observer; throw <code class="prettyprint">LogicException</code> on an unknown
+update type. Upstream silently returns <code class="prettyprint">UNHANDLED</code> for unknown
+keys; the port is strict because our observer map is
+schema-derived and a missing key is unambiguously a bug
+(typo'd literal, stale code after a Phase 2 regen, …).</li>
+<li>Compose the local observer's outer middleware ONCE around an
+inner closure that runs the local observer's raw <code class="prettyprint">trigger()</code>
+AND, on UNHANDLED, the depth-first sub-router walk. This is the
+Fix I2 shape — the parent observer's outer middleware covers
+sub-router handlers too. Mirrors upstream
+<code class="prettyprint">Router.propagate_event</code> (<code class="prettyprint">router.py:152-166</code>) which wraps
+<code class="prettyprint">_wrapped</code> (containing the sub-router walk inside
+<code class="prettyprint">_propagate_event</code>) with <code class="prettyprint">observer.wrap_outer_middleware(...)</code>.</li>
+<li>Non-UNHANDLED return short-circuits and is returned verbatim —
+including <code class="prettyprint">null</code>, <code class="prettyprint">false</code>, <code class="prettyprint">TelegramMethod</code> instances, etc.</li>
+</ol>
+<p><strong>Middleware integration</strong>: outer middleware on a router observer
+wraps the entire local dispatch <em>plus</em> the sub-router walk. The
+Dispatcher subclass wires <code class="prettyprint">UserContextMiddleware</code> /
+<code class="prettyprint">ErrorsMiddleware</code> at the <code class="prettyprint">feedUpdate</code> ingress layer (above
+<code class="prettyprint">propagateEvent</code>), so those middlewares run once per ingress
+regardless of where the claiming handler lives. Per-observer outer
+middleware registered via <code class="prettyprint">$observer-&gt;outerMiddleware(...)</code> runs
+once per <code class="prettyprint">propagateEvent</code> call on the owning router (so a parent's
+outer middleware wraps a child router's claiming handler too).</p>
+<p><code class="prettyprint">$event</code> is typed <code class="prettyprint">object</code> (not <code class="prettyprint">TelegramObject</code>) because the same
+propagation primitive carries synthetic dispatcher events such as
+<code class="prettyprint">ErrorEvent</code>, which deliberately do not extend <code class="prettyprint">TelegramObject</code>.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$updateType</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$event</span>
+                : <span class="phpdocumentor-argument-list__argument__type">object</span>
+                            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$kwargs</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;string, mixed&gt;</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">[]</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Dispatcher context bag (bot,
+event_context, …) merged into the handler invocation.</p>
+</section>
+
+            </dd>
+            </dl>
+
+    
+
+        
+    
+    
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
+    <h4 class="phpdocumentor-element__name" id="method_resolveUsedUpdateTypes">
+        resolveUsedUpdateTypes()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_resolveUsedUpdateTypes" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">344</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Collect the snake_case names of every update type with at least
+one registered handler anywhere in the tree rooted at `$this`.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">resolveUsedUpdateTypes</span><span>(</span><span class="phpdocumentor-signature__argument"><span>[</span><span class="phpdocumentor-signature__argument__type">array&lt;int, string&gt;&nbsp;</span><span class="phpdocumentor-signature__argument__name">$skipEvents</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">[]</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">array&lt;int, string&gt;</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Used by the polling driver to compute <code class="prettyprint">allowed_updates</code> for
+<code class="prettyprint">getUpdates</code> — Telegram only sends updates of types the bot
+cares about, so this minimizes bandwidth. Matches upstream
+<code class="prettyprint">resolve_used_update_types</code> exactly:</p>
+<ul>
+<li><strong>Excludes the <code class="prettyprint">error</code> channel</strong> (and the meta <code class="prettyprint">update</code> type)
+regardless of handlers — they're internal, not wire types.</li>
+<li><strong>Honors <code class="prettyprint">$skipEvents</code></strong> for caller-driven filtering on top of
+the internal exclusion.</li>
+<li><strong>Walks the full sub-router subtree</strong> (depth-first), de-duped
+via associative-array keys (PHP's set substitute).</li>
+</ul>
+<p>Upstream returns a sorted list; the port returns the keys in
+walk order so the result is deterministic per tree shape. Callers
+that need sorting can <code class="prettyprint">sort($result)</code> themselves.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$skipEvents</span>
+                : <span class="phpdocumentor-argument-list__argument__type">array&lt;int, string&gt;</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">[]</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                    <section class="phpdocumentor-description"><p>Additional update types to omit.</p>
+</section>
+
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">array&lt;int, string&gt;</span>
+            </section>
+
+</article>
+            </section>
+
+        
+    </article>
+                                </section>
+                <section class="phpdocumentor-on-this-page__sidebar">
+                                
+    <section class="phpdocumentor-on-this-page__content">
+        <strong class="phpdocumentor-on-this-page__title">On this page</strong>
+
+        <ul class="phpdocumentor-list -clean">
+            <li class="phpdocumentor-on-this-page-section__title">Table Of Contents</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                        <li><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#toc-constants">Constants</a></li>
+                                                            <li><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#toc-properties">Properties</a></li>
+                                                            <li><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#toc-methods">Methods</a></li>
+                                    </ul>
+            </li>
+                            <li class="phpdocumentor-on-this-page-section__title">Constants</li>
+                <li>
+                    <ul class="phpdocumentor-list -clean">
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#constant_UPDATE_TYPES">UPDATE_TYPES</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#constant_INTERNAL_UPDATE_TYPES">INTERNAL_UPDATE_TYPES</a></li>
+                                            </ul>
+                </li>
+            
+                            <li class="phpdocumentor-on-this-page-section__title">Properties</li>
+                <li>
+                    <ul class="phpdocumentor-list -clean">
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_businessConnection">$businessConnection</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_businessMessage">$businessMessage</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_callbackQuery">$callbackQuery</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_channelPost">$channelPost</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chatBoost">$chatBoost</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chatJoinRequest">$chatJoinRequest</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chatMember">$chatMember</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_chosenInlineResult">$chosenInlineResult</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_deletedBusinessMessages">$deletedBusinessMessages</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_editedBusinessMessage">$editedBusinessMessage</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_editedChannelPost">$editedChannelPost</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_editedMessage">$editedMessage</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_errors">$errors</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_guestMessage">$guestMessage</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_inlineQuery">$inlineQuery</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_managedBot">$managedBot</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_message">$message</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_messageReaction">$messageReaction</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_messageReactionCount">$messageReactionCount</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_myChatMember">$myChatMember</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_name">$name</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_observers">$observers</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_parentRouter">$parentRouter</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_poll">$poll</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_pollAnswer">$pollAnswer</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_preCheckoutQuery">$preCheckoutQuery</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_purchasedPaidMedia">$purchasedPaidMedia</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_removedChatBoost">$removedChatBoost</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_shippingQuery">$shippingQuery</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_shutdown">$shutdown</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_startup">$startup</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_subRouters">$subRouters</a></li>
+                                            </ul>
+                </li>
+            
+                        <li class="phpdocumentor-on-this-page-section__title">Methods</li>
+            <li>
+                <ul class="phpdocumentor-list -clean">
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method___construct">__construct()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_emitShutdown">emitShutdown()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_emitStartup">emitStartup()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_includeRouter">includeRouter()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_includeRouters">includeRouters()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_propagateEvent">propagateEvent()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_resolveUsedUpdateTypes">resolveUsedUpdateTypes()</a></li>
+                                    </ul>
+            </li>
+                    </ul>
+    </section>
+
+                </section>
+                            </div>
+            <section data-search-results class="phpdocumentor-search-results phpdocumentor-search-results--hidden">
+    <section class="phpdocumentor-search-results__dialog">
+        <header class="phpdocumentor-search-results__header">
+            <h2 class="phpdocumentor-search-results__title">Search results</h2>
+            <button class="phpdocumentor-search-results__close"><i class="fas fa-times"></i></button>
+        </header>
+        <section class="phpdocumentor-search-results__body">
+            <ul class="phpdocumentor-search-results__entries"></ul>
+        </section>
+    </section>
+</section>
+        </div>
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#top" class="phpdocumentor-back-to-top"><i class="fas fa-chevron-circle-up"></i></a>
+
+    </main>
+
+    <script>
+        cssVars({});
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.23.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+</body>
+</html>
