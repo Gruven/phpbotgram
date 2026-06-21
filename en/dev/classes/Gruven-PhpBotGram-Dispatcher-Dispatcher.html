@@ -744,6 +744,23 @@ properties below, which are direct references to the same instances.</dd>
 </dt>
 
             <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_scenePriority">$scenePriority</a>
+    <span>
+                        &nbsp;: bool            </span>
+</dt>
+<dd>Scene routers should get the first chance to handle updates while an FSM
+state is active, so broad parent catch-all handlers do not starve active
+scenes. Normal routers keep the local-observer-first traversal.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_scenePriorityState">$scenePriorityState</a>
+    <span>
+                        &nbsp;: string|null            </span>
+</dt>
+<dd>FSM state this scene-priority router owns. Null means the router is marked
+as priority but cannot be state-matched during the active-scene prepass.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -property -public">
     <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_shippingQuery">$shippingQuery</a>
     <span>
                         &nbsp;: <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a>            </span>
@@ -968,6 +985,13 @@ mistakes that would corrupt the tree:</dd>
 (`dispatcher.py:354-418`). Consumes `listenUpdates` and dispatches each
 Update via `feedUpdate`, honoring `handleAsTasks` for concurrent
 fan-out.</dd>
+
+            <dt class="phpdocumentor-table-of-contents__entry -method -public">
+    <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_preferWhenStateActive">preferWhenStateActive()</a>
+    <span>
+                                &nbsp;: static    </span>
+</dt>
+<dd>Mark this router as a scene router for active-state priority dispatch.</dd>
 
             <dt class="phpdocumentor-table-of-contents__entry -method -public">
     <a class="" href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_propagateEvent">propagateEvent()</a>
@@ -1208,7 +1232,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">166</span>
+    <span class="phpdocumentor-element-found-in__line">179</span>
 
     </aside>
 
@@ -1245,7 +1269,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">167</span>
+    <span class="phpdocumentor-element-found-in__line">180</span>
 
     </aside>
 
@@ -1282,7 +1306,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">175</span>
+    <span class="phpdocumentor-element-found-in__line">188</span>
 
     </aside>
 
@@ -1319,7 +1343,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">164</span>
+    <span class="phpdocumentor-element-found-in__line">177</span>
 
     </aside>
 
@@ -1356,7 +1380,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">184</span>
+    <span class="phpdocumentor-element-found-in__line">197</span>
 
     </aside>
 
@@ -1393,7 +1417,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">183</span>
+    <span class="phpdocumentor-element-found-in__line">196</span>
 
     </aside>
 
@@ -1430,7 +1454,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">182</span>
+    <span class="phpdocumentor-element-found-in__line">195</span>
 
     </aside>
 
@@ -1467,7 +1491,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">174</span>
+    <span class="phpdocumentor-element-found-in__line">187</span>
 
     </aside>
 
@@ -1504,7 +1528,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">169</span>
+    <span class="phpdocumentor-element-found-in__line">182</span>
 
     </aside>
 
@@ -1541,7 +1565,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">168</span>
+    <span class="phpdocumentor-element-found-in__line">181</span>
 
     </aside>
 
@@ -1578,7 +1602,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">165</span>
+    <span class="phpdocumentor-element-found-in__line">178</span>
 
     </aside>
 
@@ -1615,7 +1639,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">163</span>
+    <span class="phpdocumentor-element-found-in__line">176</span>
 
     </aside>
 
@@ -1652,7 +1676,7 @@ per dispatch — and any drift from the Update schema is caught by
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">195</span>
+    <span class="phpdocumentor-element-found-in__line">208</span>
 
     </aside>
 
@@ -1739,7 +1763,7 @@ directly (or read FSM options in tests). Mirrors upstream's
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">170</span>
+    <span class="phpdocumentor-element-found-in__line">183</span>
 
     </aside>
 
@@ -1776,7 +1800,7 @@ directly (or read FSM options in tests). Mirrors upstream's
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">173</span>
+    <span class="phpdocumentor-element-found-in__line">186</span>
 
     </aside>
 
@@ -1813,7 +1837,7 @@ directly (or read FSM options in tests). Mirrors upstream's
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">186</span>
+    <span class="phpdocumentor-element-found-in__line">199</span>
 
     </aside>
 
@@ -1850,7 +1874,7 @@ directly (or read FSM options in tests). Mirrors upstream's
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">162</span>
+    <span class="phpdocumentor-element-found-in__line">175</span>
 
     </aside>
 
@@ -1887,7 +1911,7 @@ directly (or read FSM options in tests). Mirrors upstream's
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">171</span>
+    <span class="phpdocumentor-element-found-in__line">184</span>
 
     </aside>
 
@@ -1924,7 +1948,7 @@ directly (or read FSM options in tests). Mirrors upstream's
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">172</span>
+    <span class="phpdocumentor-element-found-in__line">185</span>
 
     </aside>
 
@@ -1961,7 +1985,7 @@ directly (or read FSM options in tests). Mirrors upstream's
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">181</span>
+    <span class="phpdocumentor-element-found-in__line">194</span>
 
     </aside>
 
@@ -2125,7 +2149,7 @@ writes <code class="prettyprint">$child-&gt;parentRouter = $parent</code>. Mirro
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">179</span>
+    <span class="phpdocumentor-element-found-in__line">192</span>
 
     </aside>
 
@@ -2162,7 +2186,7 @@ writes <code class="prettyprint">$child-&gt;parentRouter = $parent</code>. Mirro
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">180</span>
+    <span class="phpdocumentor-element-found-in__line">193</span>
 
     </aside>
 
@@ -2199,7 +2223,7 @@ writes <code class="prettyprint">$child-&gt;parentRouter = $parent</code>. Mirro
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">177</span>
+    <span class="phpdocumentor-element-found-in__line">190</span>
 
     </aside>
 
@@ -2236,7 +2260,7 @@ writes <code class="prettyprint">$child-&gt;parentRouter = $parent</code>. Mirro
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">178</span>
+    <span class="phpdocumentor-element-found-in__line">191</span>
 
     </aside>
 
@@ -2273,7 +2297,7 @@ writes <code class="prettyprint">$child-&gt;parentRouter = $parent</code>. Mirro
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">185</span>
+    <span class="phpdocumentor-element-found-in__line">198</span>
 
     </aside>
 
@@ -2284,6 +2308,85 @@ writes <code class="prettyprint">$child-&gt;parentRouter = $parent</code>. Mirro
             <span class="phpdocumentor-signature__type"><a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html"><abbr title="\Gruven\PhpBotGram\Dispatcher\Event\TelegramEventObserver">TelegramEventObserver</abbr></a></span>
     <span class="phpdocumentor-signature__name">$removedChatBoost</span>
     </code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_scenePriority">
+        $scenePriority
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_scenePriority" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                                            </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">163</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Scene routers should get the first chance to handle updates while an FSM
+state is active, so broad parent catch-all handlers do not starve active
+scenes. Normal routers keep the local-observer-first traversal.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+            <span class="phpdocumentor-signature__visibility">public private(set)</span>
+            <span class="phpdocumentor-signature__type">bool</span>
+    <span class="phpdocumentor-signature__name">$scenePriority</span>
+     = <span class="phpdocumentor-signature__default-value">false</span></code>
+
+    
+    
+    
+
+        
+        
+
+</article>
+                    <article
+        class="
+            phpdocumentor-element
+            -property
+            -public
+                                                                    "
+>
+    <h4 class="phpdocumentor-element__name" id="property_scenePriorityState">
+        $scenePriorityState
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_scenePriorityState" class="headerlink"><i class="fas fa-link"></i></a>
+
+        <span class="phpdocumentor-element__modifiers">
+                                            </span>
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">169</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">FSM state this scene-priority router owns. Null means the router is marked
+as priority but cannot be state-matched during the active-scene prepass.</p>
+
+    
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+            <span class="phpdocumentor-signature__visibility">public private(set)</span>
+            <span class="phpdocumentor-signature__type">string|null</span>
+    <span class="phpdocumentor-signature__name">$scenePriorityState</span>
+     = <span class="phpdocumentor-signature__default-value">null</span></code>
 
     
     
@@ -2310,7 +2413,7 @@ writes <code class="prettyprint">$child-&gt;parentRouter = $parent</code>. Mirro
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">176</span>
+    <span class="phpdocumentor-element-found-in__line">189</span>
 
     </aside>
 
@@ -3027,7 +3130,7 @@ and enforces single-assignment in the ctor body.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">517</span>
+    <span class="phpdocumentor-element-found-in__line">636</span>
 
     </aside>
 
@@ -3076,7 +3179,7 @@ and enforces single-assignment in the ctor body.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">496</span>
+    <span class="phpdocumentor-element-found-in__line">615</span>
 
     </aside>
 
@@ -3417,7 +3520,7 @@ so no cross-thread synchronisation is needed.</li>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">267</span>
+    <span class="phpdocumentor-element-found-in__line">280</span>
 
     </aside>
 
@@ -3483,7 +3586,7 @@ Matches upstream <code class="prettyprint">include_router(...) -&gt; Router</cod
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">311</span>
+    <span class="phpdocumentor-element-found-in__line">324</span>
 
     </aside>
 
@@ -3690,6 +3793,58 @@ Exception logger swallows everything inside the inner try.</p>
             -public
                                                         "
 >
+    <h4 class="phpdocumentor-element__name" id="method_preferWhenStateActive">
+        preferWhenStateActive()
+        <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_preferWhenStateActive" class="headerlink"><i class="fas fa-link"></i></a>
+
+    </h4>
+    <aside class="phpdocumentor-element-found-in">
+    <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
+    :
+    <span class="phpdocumentor-element-found-in__line">339</span>
+
+    </aside>
+
+        <p class="phpdocumentor-summary">Mark this router as a scene router for active-state priority dispatch.</p>
+
+    <code class="phpdocumentor-code phpdocumentor-signature ">
+    <span class="phpdocumentor-signature__visibility">public</span>
+                    <span class="phpdocumentor-signature__name">preferWhenStateActive</span><span>(</span><span class="phpdocumentor-signature__argument"><span>[</span><span class="phpdocumentor-signature__argument__type">string|null&nbsp;</span><span class="phpdocumentor-signature__argument__name">$state</span><span> = </span><span class="phpdocumentor-signature__argument__default-value">null</span><span> ]</span></span><span>)</span><span> : </span><span class="phpdocumentor-signature__response_type">static</span></code>
+
+    <div class="phpdocumentor-label-line">
+        </div>
+    
+        <section class="phpdocumentor-description"><p>Intended for <code class="prettyprint">Scene::asRouter()</code>; exposed as a tiny fluent method so tests
+and custom scene wiring can opt into the same traversal rule.</p>
+</section>
+
+        <h5 class="phpdocumentor-argument-list__heading">Parameters</h5>
+    <dl class="phpdocumentor-argument-list">
+                    <dt class="phpdocumentor-argument-list__entry">
+                <span class="phpdocumentor-argument-list__argument__name">$state</span>
+                : <span class="phpdocumentor-argument-list__argument__type">string|null</span>
+                 = <span class="phpdocumentor-argument-list__argument__default-value">null</span>            </dt>
+            <dd class="phpdocumentor-argument-list__definition">
+                
+            </dd>
+            </dl>
+
+    
+
+        
+    
+            <section>
+        <h5 class="phpdocumentor-return-value__heading">Return values</h5>
+        <span class="phpdocumentor-signature__response_type">static</span>
+            </section>
+
+</article>
+                    <article
+        class="phpdocumentor-element
+            -method
+            -public
+                                                        "
+>
     <h4 class="phpdocumentor-element__name" id="method_propagateEvent">
         propagateEvent()
         <a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_propagateEvent" class="headerlink"><i class="fas fa-link"></i></a>
@@ -3698,7 +3853,7 @@ Exception logger swallows everything inside the inner try.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">411</span>
+    <span class="phpdocumentor-element-found-in__line">438</span>
 
     </aside>
 
@@ -3796,7 +3951,7 @@ event_context, …) merged into the handler invocation.</p>
     <aside class="phpdocumentor-element-found-in">
     <abbr class="phpdocumentor-element-found-in__file" title="src/Dispatcher/Router.php"><a href="files/src-dispatcher-router.html"><abbr title="src/Dispatcher/Router.php">Router.php</abbr></a></abbr>
     :
-    <span class="phpdocumentor-element-found-in__line">344</span>
+    <span class="phpdocumentor-element-found-in__line">371</span>
 
     </aside>
 
@@ -4346,6 +4501,8 @@ That's exactly upstream's NotImplementedError swallow case at
                                                     <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_preCheckoutQuery">$preCheckoutQuery</a></li>
                                                     <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_purchasedPaidMedia">$purchasedPaidMedia</a></li>
                                                     <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_removedChatBoost">$removedChatBoost</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_scenePriority">$scenePriority</a></li>
+                                                    <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_scenePriorityState">$scenePriorityState</a></li>
                                                     <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_shippingQuery">$shippingQuery</a></li>
                                                     <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_shutdown">$shutdown</a></li>
                                                     <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#property_startup">$startup</a></li>
@@ -4376,6 +4533,7 @@ That's exactly upstream's NotImplementedError swallow case at
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_includeRouters">includeRouters()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Dispatcher.html#method_listenUpdates">listenUpdates()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Dispatcher.html#method_pollingFor">pollingFor()</a></li>
+                                            <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_preferWhenStateActive">preferWhenStateActive()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_propagateEvent">propagateEvent()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Router.html#method_resolveUsedUpdateTypes">resolveUsedUpdateTypes()</a></li>
                                             <li class=""><a href="classes/Gruven-PhpBotGram-Dispatcher-Dispatcher.html#method_runPolling">runPolling()</a></li>

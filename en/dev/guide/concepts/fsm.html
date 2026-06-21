@@ -541,7 +541,8 @@ $dispatcher-&gt;message-&gt;register(
     <p>Storage backends are pluggable. Three ship in-tree: <a href="classes/Gruven-PhpBotGram-Fsm-Storage-MemoryStorage.html"><code>MemoryStorage</code></a> (the default; lost on process restart), <a href="classes/Gruven-PhpBotGram-Fsm-Storage-RedisStorage.html"><code>RedisStorage</code></a>, and <a href="classes/Gruven-PhpBotGram-Fsm-Storage-MongoStorage.html"><code>MongoStorage</code></a>. Each implements <code>BaseStorage</code>
  and serialises state as a string and data as a JSON-encodable dict. The MemoryStorage backend is fine for development and testing but not for production &mdash; a process restart wipes every user's state mid-conversation. The Redis and Mongo backends each ship with their own <a href="classes/Gruven-PhpBotGram-Fsm-Storage-KeyBuilder.html"><code>KeyBuilder</code></a> adapter so the <code>StorageKey</code>
  triple becomes a backend-appropriate identifier (a Redis key prefix vs. a Mongo document <code>_id</code>
-).</p>
+). Non-default destiny values, including the scene-history <code>scenes_history</code>
+ slot, are included in the default key builder output so scenes work with Redis and Mongo out of the box.</p>
 
             
     <p>Swap to Redis by passing <code>storage</code>
