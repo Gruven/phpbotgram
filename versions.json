@@ -1,16 +1,16 @@
 {
     "versions": [
         {
-            "id": "v0.2.0",
-            "path": "en/v0.2.0/",
-            "label": "v0.2.0",
-            "stable": true
-        },
-        {
             "id": "dev",
             "path": "en/dev/",
             "label": "dev (master)",
             "stable": false
+        },
+        {
+            "id": "v0.2.0",
+            "path": "en/v0.2.0/",
+            "label": "v0.2.0",
+            "stable": true
         },
         {
             "id": "v0.1.0",
