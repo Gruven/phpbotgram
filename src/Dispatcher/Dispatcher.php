@@ -546,7 +546,10 @@ class Dispatcher extends Router
     /** @var Update $update */
     $update = Serializer::load(Update::class, $rawUpdate, $bot);
 
-    return $this->feedUpdate($bot, $update, $kwargs);
+    return $this->feedUpdate($bot, $update, [
+      ...$kwargs,
+      'raw_update' => $rawUpdate,
+    ]);
   }
 
   /**
@@ -610,6 +613,11 @@ class Dispatcher extends Router
   public function feedWebhookUpdate(Bot $bot, array|Update $update, array $kwargs = []): mixed
   {
     if (is_array($update)) {
+      $kwargs = [
+        ...$kwargs,
+        'raw_update' => $update,
+      ];
+
       // Wire-shape: snake_case associative array. Hydrate via the
       // serializer with bot context so every nested TelegramObject
       // sees `$bot` (parity with upstream's `Update.model_validate(...,

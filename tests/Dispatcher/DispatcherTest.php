@@ -370,6 +370,33 @@ final class DispatcherTest extends TestCase
     self::assertSame('hi', $observed->message->text);
   }
 
+  public function testFeedRawUpdateInjectsWirePayloadAsRawUpdateKwarg(): void
+  {
+    $dispatcher = new Dispatcher();
+    $observed = null;
+    $dispatcher->message->register(static function (array $raw_update) use (&$observed): string {
+      $observed = $raw_update;
+
+      return 'handled';
+    });
+    $rawUpdate = [
+      'update_id' => 100,
+      'message' => [
+        'message_id' => 10,
+        'date' => 0,
+        'chat' => ['id' => 5, 'type' => 'private'],
+        'text' => 'raw payload',
+      ],
+    ];
+
+    self::assertSame('handled', $dispatcher->feedRawUpdate(
+      new MockedBot(),
+      $rawUpdate,
+      ['raw_update' => ['caller' => 'must-not-win']],
+    ));
+    self::assertSame($rawUpdate, $observed);
+  }
+
   // Note: feedWebhookUpdate contract coverage lives in WebhookContractTest.
   // The Task 3.10 baseline that treated it as a thin alias for feedUpdate
   // was retired in Task 3.13 — feedWebhookUpdate now collapses any
@@ -782,6 +809,35 @@ final class DispatcherTest extends TestCase
     self::assertInstanceOf(Update::class, $observed);
     self::assertSame(77, $observed->updateId);
     self::assertSame('hi raw', $observed->message?->text);
+  }
+
+  public function testFeedWebhookUpdateInjectsWirePayloadAsRawUpdateKwarg(): void
+  {
+    $dispatcher = new Dispatcher();
+    $observed = null;
+    $dispatcher->message->register(static function (array $raw_update) use (&$observed): string {
+      $observed = $raw_update;
+
+      return 'handled';
+    });
+    $rawUpdate = [
+      'update_id' => 78,
+      'message' => [
+        'message_id' => 2,
+        'date' => 0,
+        'chat' => ['id' => 11, 'type' => 'private'],
+        'text' => 'webhook raw',
+      ],
+    ];
+
+    $result = $this->runAsync(static fn() => $dispatcher->feedWebhookUpdate(
+      new MockedBot(),
+      $rawUpdate,
+      ['raw_update' => ['caller' => 'must-not-win']],
+    ));
+
+    self::assertNull($result);
+    self::assertSame($rawUpdate, $observed);
   }
 
   /**
