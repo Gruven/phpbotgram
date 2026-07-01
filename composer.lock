@@ -456,16 +456,16 @@
         },
         {
             "name": "amphp/http-client",
-            "version": "v5.3.4",
+            "version": "v5.3.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/amphp/http-client.git",
-                "reference": "75ad21574fd632594a2dd914496647816d5106bc"
+                "reference": "ca155026acafa74a612d776a97202d53077fee86"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/amphp/http-client/zipball/75ad21574fd632594a2dd914496647816d5106bc",
-                "reference": "75ad21574fd632594a2dd914496647816d5106bc",
+                "url": "https://api.github.com/repos/amphp/http-client/zipball/ca155026acafa74a612d776a97202d53077fee86",
+                "reference": "ca155026acafa74a612d776a97202d53077fee86",
                 "shasum": ""
             },
             "require": {
@@ -493,9 +493,8 @@
                 "amphp/phpunit-util": "^3",
                 "ext-json": "*",
                 "kelunik/link-header-rfc5988": "^1",
-                "laminas/laminas-diactoros": "^2.3",
                 "phpunit/phpunit": "^9",
-                "psalm/phar": "~5.23"
+                "psalm/phar": "6.16.1"
             },
             "suggest": {
                 "amphp/file": "Required for file request bodies and HTTP archive logging",
@@ -542,7 +541,7 @@
             ],
             "support": {
                 "issues": "https://github.com/amphp/http-client/issues",
-                "source": "https://github.com/amphp/http-client/tree/v5.3.4"
+                "source": "https://github.com/amphp/http-client/tree/v5.3.6"
             },
             "funding": [
                 {
@@ -550,7 +549,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-08-16T20:41:23+00:00"
+            "time": "2026-05-15T23:29:38+00:00"
         },
         {
             "name": "amphp/parser",
