@@ -46,12 +46,13 @@ final class BackoffTest extends TestCase
     // Deterministic sequence: 1, 2, 4, 5, 5, 5 (capped at maxDelay=5.0).
     $backoff = new Backoff(new BackoffConfig(minDelay: 1.0, maxDelay: 5.0, factor: 2.0, jitter: 0.0));
 
-    self::assertSame(1.0, $backoff->next());
-    self::assertSame(2.0, $backoff->next());
-    self::assertSame(4.0, $backoff->next());
-    self::assertSame(5.0, $backoff->next());
-    self::assertSame(5.0, $backoff->next());
-    self::assertSame(5.0, $backoff->next());
+    $delays = [];
+
+    for ($i = 0; $i < 6; ++$i) {
+      $delays[] = $backoff->next();
+    }
+
+    self::assertSame([1.0, 2.0, 4.0, 5.0, 5.0, 5.0], $delays);
     self::assertSame(6, $backoff->counter);
   }
 
@@ -61,9 +62,7 @@ final class BackoffTest extends TestCase
     // step, currentDelay must clamp at maxDelay forever.
     $backoff = new Backoff(new BackoffConfig(minDelay: 1.0, maxDelay: 3.0, factor: 10.0, jitter: 0.0));
 
-    self::assertSame(1.0, $backoff->next());
-    self::assertSame(3.0, $backoff->next());
-    self::assertSame(3.0, $backoff->next());
+    self::assertSame([1.0, 3.0, 3.0], [$backoff->next(), $backoff->next(), $backoff->next()]);
     self::assertSame(3.0, $backoff->nextDelay());
   }
 

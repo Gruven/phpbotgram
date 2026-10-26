@@ -1,0 +1,22 @@
+<?php
+
+namespace Amp;
+
+/**
+ * @template-covariant T
+ */
+final class Future {}
+
+/**
+ * Amp 3 uses Closure(...):T, which PHPStan 2.2.16 cannot parse. Spell out
+ * the variadic mixed parameter so async() retains the callback's return type.
+ * This is an analysis-only override; the runtime implementation is unchanged.
+ *
+ * @template T
+ *
+ * @param \Closure(mixed...): T $closure
+ * @param mixed ...$args
+ *
+ * @return Future<T>
+ */
+function async(\Closure $closure, mixed ...$args): Future {}
