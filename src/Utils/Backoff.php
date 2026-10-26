@@ -79,6 +79,8 @@ final class Backoff
    * Upstream calls this `__next__` because Python iterates the backoff
    * via `next(backoff)`. PHP has no equivalent magic; `next()` is the
    * plain name we expose.
+   *
+   * @phpstan-impure
    */
   public function next(): float
   {

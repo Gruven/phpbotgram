@@ -52,9 +52,8 @@ final class BotShortcutsTest extends TestCase
   public function testGetIdParsesTokenPrefix(): void
   {
     $bot = new Bot(token: '7890123:hash', session: new MockedSession());
-    self::assertSame(7890123, $bot->getId());
     // Cache hit on the second call — same int, no exception.
-    self::assertSame(7890123, $bot->getId());
+    self::assertSame([7890123, 7890123], [$bot->getId(), $bot->getId()]);
   }
 
   public function testGetDefaultPropertiesCachedAcrossCalls(): void
@@ -105,11 +104,9 @@ final class BotShortcutsTest extends TestCase
     $session->addResult(new Response(ok: true, result: $first));
     $bot = new Bot(token: '7890123:hash', session: $session);
 
-    self::assertSame($first, $bot->me());
-
     // Second call must hit the cache — the session has no queued response,
     // so a re-dispatch would throw. The fact that this assertion completes
     // proves the cache short-circuits before reaching the session.
-    self::assertSame($first, $bot->me());
+    self::assertSame([$first, $first], [$bot->me(), $bot->me()]);
   }
 }

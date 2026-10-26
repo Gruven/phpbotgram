@@ -1,5 +1,7 @@
 parameters:
     level: 9
+    stubFiles:
+        - stubs/amp.stub
     paths:
         - src
         - tests
