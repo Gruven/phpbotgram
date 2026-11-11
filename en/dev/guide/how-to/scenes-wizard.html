@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -409,7 +409,7 @@
             <h2>When to use this</h2>
 
             
-    <p>Multi-step flows &mdash; onboarding, quizzes, checkout &mdash; that need to remember where the user is and what they answered. Scenes encapsulate each step into a class and let you transition with one method call.</p>
+    <p>Multi-step flows — onboarding, quizzes, checkout — that need to remember where the user is and what they answered. Scenes encapsulate each step into a class and let you transition with one method call.</p>
 
     </section>
 
@@ -462,13 +462,13 @@ $registry-&gt;add([QuestionOneScene::class, QuestionTwoScene::class]);
 
 <ul>
     <li class="dash"><code>After::goto()</code>
- is NOT a valid attribute argument &mdash; PHP attributes accept only constant expressions. Use <code>new After(SceneAction::Enter, 'state')</code>
+ is NOT a valid attribute argument — PHP attributes accept only constant expressions. Use <code>new After(SceneAction::Enter, 'state')</code>
  instead.</li>
 
-    <li class="dash">Scenes must be passed to <a href="classes/Gruven-PhpBotGram-Fsm-Scene-SceneRegistry.html"><code>SceneRegistry::add()</code></a> explicitly &mdash; there is no auto-discovery. A class with <code>#[SceneState]</code>
+    <li class="dash">Scenes must be passed to <a href="classes/Gruven-PhpBotGram-Fsm-Scene-SceneRegistry.html"><code>SceneRegistry::add()</code></a> explicitly — there is no auto-discovery. A class with <code>#[SceneState]</code>
  that nobody registered will silently never fire.</li>
 
-    <li class="dash">State names are global strings &mdash; <code>WaitingForName</code>
+    <li class="dash">State names are global strings — <code>WaitingForName</code>
  in two scenes collides. Namespace manually (<code>'shop:WaitingForName'</code>
 ) for large bots. See <a href="guide/concepts/scenes.html">Scenes</a> for the lifecycle model.</li>
 

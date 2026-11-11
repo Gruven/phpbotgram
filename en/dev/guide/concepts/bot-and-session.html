@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -420,9 +420,9 @@
     <p><a href="classes/Gruven-PhpBotGram-Bot.html"><code>Bot</code></a> is a codegen-produced facade with one typed method per Telegram Bot API endpoint (<code>sendMessage</code>
 , <code>getChat</code>
 , <code>editMessageText</code>
-, &hellip; plus the managed-bot extensions). Each method allocates a small DTO from <code>Methods/</code>
+, … plus the managed-bot extensions). Each method allocates a small DTO from <code>Methods/</code>
  and forwards it to the session via <code>$bot($method)</code>
-. The DTO carries no I/O logic &mdash; it is a pure value object with a <code>::ApiMethod</code>
+. The DTO carries no I/O logic — it is a pure value object with a <code>::ApiMethod</code>
  class constant naming the wire endpoint and a <code>ReturnsType</code>
  PHPDoc anchor that types the response. The codegen runs during <code>make regenerate</code>
  and writes both the <code>Bot.php</code>
@@ -454,7 +454,7 @@ $dispatcher-&gt;runPolling(new PollingOptions(), $bot);
 </code></pre>
 
             
-    <p>When you need raw access without a dispatcher &mdash; for scripts, probes, or migrations &mdash; call <code>$bot(new MethodDTO(...))</code>
+    <p>When you need raw access without a dispatcher — for scripts, probes, or migrations — call <code>$bot(new MethodDTO(...))</code>
  directly:</p>
 
             <pre><code class="language-php">use Gruven\PhpBotGram\Bot;
@@ -492,7 +492,7 @@ while (true) {
 ), JSON encoder/decoder injection, the <code>TelegramApiServer</code>
  host configuration, and the <code>prepareValue</code>
  / <code>checkResponse</code>
- serialization seams. The concrete amphp implementation only contributes the actual HTTP call &mdash; <code>amphp/http-client</code>
+ serialization seams. The concrete amphp implementation only contributes the actual HTTP call — <code>amphp/http-client</code>
  v5 with form-urlencoded bodies. The bot constructor accepts a custom session by argument, so testing substitutes a recording session and production sites with a local Bot API server can point at a self-hosted host through <code>TelegramApiServer::fromBase('http://localhost:8081', isLocal: true)</code>
 .</p>
 
@@ -510,7 +510,7 @@ while (true) {
  entry and clears the slot in a <code>finally</code>
  block, so a handler exception never leaves a stale binding. Nested <code>TelegramObject</code>
 s also carry an explicit <code>?Bot $bot</code>
- constructor parameter &mdash; the serializer threads the bot when hydrating the <code>Update</code>
+ constructor parameter — the serializer threads the bot when hydrating the <code>Update</code>
 , so shortcuts on nested types (e.g. <code>CallbackQuery::message-&gt;answer(...)</code>
 ) work without a global lookup.</p>
 
@@ -525,7 +525,7 @@ s also carry an explicit <code>?Bot $bot</code>
             <h3>Sharing a session across multiple bots</h3>
 
             
-    <p>Sessions are designed to be reusable. Multiple bots can share the same session &mdash; for example, a multi-tenant deployment hands one <code>AmphpSession</code>
+    <p>Sessions are designed to be reusable. Multiple bots can share the same session — for example, a multi-tenant deployment hands one <code>AmphpSession</code>
  to every <code>Bot</code>
  so they pool the underlying <code>HttpClient</code>
 's connection pool:</p>
@@ -536,7 +536,7 @@ use Gruven\PhpBotGram\Dispatcher\Dispatcher;
 use Gruven\PhpBotGram\Dispatcher\PollingOptions;
 use Gruven\PhpBotGram\Types\Message;
 
-// Share one session &mdash; pools the HTTP connection across both tokens.
+// Share one session — pools the HTTP connection across both tokens.
 $session = new AmphpSession();
 $bot1 = new Bot(getenv('BOT_TOKEN') ?: '111:aaa', $session);
 $bot2 = new Bot(getenv('BOT_TOKEN_2') ?: '222:bbb', $session);
@@ -568,7 +568,7 @@ $dispatcher-&gt;runPolling(new PollingOptions(), $bot1, $bot2);
 , etc. The shortcut constructs the appropriate method DTO bound to the calling event's chat/message identifiers and returns it, so handlers write <code>$event-&gt;answer($text)-&gt;emit()</code>
  instead of building a <code>SendMessage</code>
  DTO explicitly. The <code>emit()</code>
- call routes back through the bot bound by the dispatcher's FiberLocal &mdash; the same path a manual <code>$bot(new SendMessage(...))</code>
+ call routes back through the bot bound by the dispatcher's FiberLocal — the same path a manual <code>$bot(new SendMessage(...))</code>
  would take.</p>
 
     </section>
@@ -581,24 +581,24 @@ $dispatcher-&gt;runPolling(new PollingOptions(), $bot1, $bot2);
             
     <p>The serializer is reflection-based, not codegen-output. Each request walks the DTO's public properties to build the snake_case wire payload; each response walks the typed <code>ReturnsType</code>
  to hydrate the result. This costs one <code>ReflectionClass</code>
- per shape per request but trades the runtime cost for codegen simplicity &mdash; Phase 2's generator produces the Methods/Types tree without also having to emit per-method serializers. The serializer reflects on every <code>dump</code>
+ per shape per request but trades the runtime cost for codegen simplicity — Phase 2's generator produces the Methods/Types tree without also having to emit per-method serializers. The serializer reflects on every <code>dump</code>
 /<code>load</code>
- rather than caching type metadata; only the camelCase&rarr;snake_case name conversion is memoised (<code>Serializer::$camelToSnakeCache</code>
+ rather than caching type metadata; only the camelCase→snake_case name conversion is memoised (<code>Serializer::$camelToSnakeCache</code>
 ).</p>
 
             
     <p><code>BaseSession::__invoke</code>
  always runs the request through the middleware manager, even when the chain is empty. That single closure compose is the price of letting users insert telemetry, retry, or rate-limit middleware without changing the call site. For the empty chain the middleware manager short-circuits to the bare <code>makeRequest</code>
- closure, so the overhead is one extra function call per request &mdash; negligible against the network round-trip but worth knowing if you wrap the bot in a tight loop.</p>
+ closure, so the overhead is one extra function call per request — negligible against the network round-trip but worth knowing if you wrap the bot in a tight loop.</p>
 
             
     <p>There is no built-in retry-on-network-error. <code>RestartingTelegram</code>
  and <code>TelegramNetworkException</code>
- propagate to the caller; the dispatcher's polling loop has its own backoff. Custom retry policies belong in a request middleware so the bot itself stays predictable. We chose not to ship a default retry middleware because policy varies wildly across deployments &mdash; exponential backoff with jitter is right for some bots, fail-fast with alerting is right for others.</p>
+ propagate to the caller; the dispatcher's polling loop has its own backoff. Custom retry policies belong in a request middleware so the bot itself stays predictable. We chose not to ship a default retry middleware because policy varies wildly across deployments — exponential backoff with jitter is right for some bots, fail-fast with alerting is right for others.</p>
 
             
     <p>The bot is <em>not</em>
- thread-safe in the traditional sense &mdash; PHP has no threads &mdash; but it is fiber-safe through the session's <code>__invoke</code>
+ thread-safe in the traditional sense — PHP has no threads — but it is fiber-safe through the session's <code>__invoke</code>
  contract. Two fibers calling the same bot concurrently each get their own <code>makeRequest</code>
  closure invocation; the underlying HTTP client handles connection-pool concurrency. The <code>Bot::setCurrent</code>
  slot is per-fiber via <code>FiberLocal</code>

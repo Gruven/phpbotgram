@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -413,7 +413,7 @@
 , <code>F</code>
 , <code>MagicData</code>
 , <code>StateFilter</code>
-) cover most routes, but a project-specific rule &mdash; "tag the message as VIP if the sender id is in our allow-list", "match only photos with a caption" &mdash; wants its own predicate. Subclass <code>Filter</code>
+) cover most routes, but a project-specific rule — "tag the message as VIP if the sender id is in our allow-list", "match only photos with a caption" — wants its own predicate. Subclass <code>Filter</code>
  and return a plain <code>bool</code>
 .</p>
 
@@ -464,12 +464,12 @@ $dispatcher-&gt;message-&gt;register(
 <ul>
     <li class="dash">The <code>$event</code>
  argument is <code>object</code>
- &mdash; narrow with <code>instanceof</code>
+ — narrow with <code>instanceof</code>
  before reading typed properties. A <code>message</code>
  filter wired onto a <code>callback_query</code>
  observer will see the wrong type otherwise.</li>
 
-    <li class="dash">Filters are pure predicates &mdash; no API calls, no state mutation. Side effects belong in middleware. See <a href="guide/concepts/filters.html">Filters</a> for the contract.</li>
+    <li class="dash">Filters are pure predicates — no API calls, no state mutation. Side effects belong in middleware. See <a href="guide/concepts/filters.html">Filters</a> for the contract.</li>
 
     <li class="dash">The variadic <code>$kwargs</code>
  is the running bag from upstream filters and middleware. Always declare it variadic; positional kwargs are not supported.</li>

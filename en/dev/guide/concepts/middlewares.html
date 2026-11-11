@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -406,7 +406,7 @@
             <h1>Middlewares</h1>
 
             
-    <p>A middleware wraps the dispatch of a handler. It receives the next link, the event, and the kwargs bag &mdash; invoking the next link delegates, skipping it short-circuits.</p>
+    <p>A middleware wraps the dispatch of a handler. It receives the next link, the event, and the kwargs bag — invoking the next link delegates, skipping it short-circuits.</p>
 
             <section class="section " id="how-it-works">
             <h2>How it works</h2>
@@ -418,7 +418,7 @@
     <p><a href="classes/Gruven-PhpBotGram-Dispatcher-Middlewares-BaseMiddleware.html"><code>BaseMiddleware</code></a> is an abstract one-method class: <code>__invoke(Closure $handler, object $event, array $data): mixed</code>
 . Concrete subclasses run code before delegating to <code>$handler($event, $data)</code>
 , after the delegate returns, or both. Returning without invoking <code>$handler</code>
- cancels the dispatch &mdash; useful for throttling, auth gates, or cache hits.</p>
+ cancels the dispatch — useful for throttling, auth gates, or cache hits.</p>
 
             
     <p>The <code>$event</code>
@@ -453,7 +453,7 @@ final class LoggingMiddleware extends BaseMiddleware
             
     <p>There are two attachment points per observer. <code>outerMiddleware</code>
  wraps the <em>whole</em>
- observer &mdash; global filter chain plus handler iteration plus sub-router recursion. <code>innerMiddleware</code>
+ observer — global filter chain plus handler iteration plus sub-router recursion. <code>innerMiddleware</code>
  wraps each <em>individual</em>
  handler invocation. The split matters: outer middlewares run once per event, inner middlewares run once per handler-call.</p>
 
@@ -471,10 +471,10 @@ use Gruven\PhpBotGram\Dispatcher\Router;
 
 $dispatcher = new Dispatcher();
 
-// Outer middleware &mdash; runs once per event, before global filters.
+// Outer middleware — runs once per event, before global filters.
 $dispatcher-&gt;message-&gt;outerMiddleware(new LoggingMiddleware());
 
-// Inner middleware &mdash; runs once per handler invocation.
+// Inner middleware — runs once per handler invocation.
 $dispatcher-&gt;message-&gt;innerMiddleware(new LoggingMiddleware());
 
 // Child-router inner middleware inherits into the composed chain.
@@ -512,7 +512,7 @@ $dispatcher-&gt;includeRouter($subRouter);
 
             
     <p>Inner middlewares compose along the router chain. When a leaf router's observer dispatches, its <code>resolveMiddlewares()</code>
- walks parent-to-root and collects every ancestor router's matching inner-middleware stack. The root's middlewares end up outermost in the composed chain &mdash; so a tenant-scope middleware attached to the dispatcher wraps a logging middleware attached to a sub-router, which wraps the leaf handler.</p>
+ walks parent-to-root and collects every ancestor router's matching inner-middleware stack. The root's middlewares end up outermost in the composed chain — so a tenant-scope middleware attached to the dispatcher wraps a logging middleware attached to a sub-router, which wraps the leaf handler.</p>
 
             
     <p>This is the same shape aiogram has via <code>chain_head</code>
@@ -529,7 +529,7 @@ $dispatcher-&gt;includeRouter($subRouter);
  + <code>Errors</code>
 ) is attached at the <em>ingress</em>
  in <code>Dispatcher::feedUpdate</code>
-, not on every observer at construction. Wrapping at ingress avoids the double-wrap regression a per-observer approach would cause on multi-router trees &mdash; see Fix C1 in the dispatcher source for the history. The composition runs exactly once per dispatch, around the terminal <code>propagateEvent</code>
+, not on every observer at construction. Wrapping at ingress avoids the double-wrap regression a per-observer approach would cause on multi-router trees — see Fix C1 in the dispatcher source for the history. The composition runs exactly once per dispatch, around the terminal <code>propagateEvent</code>
  call.</p>
 
     </section>
@@ -540,23 +540,23 @@ $dispatcher-&gt;includeRouter($subRouter);
             <h2>Trade-offs</h2>
 
             
-    <p>Two attachment points means two places to remember when something isn't firing. The naming is deliberate &mdash; outer wraps the observer, inner wraps the handler &mdash; but the conceptual model is a layered matryoshka, not a list. The pilot pass deliberately documented this split rather than collapsing it: aiogram's <code>outer_middlewares</code>
+    <p>Two attachment points means two places to remember when something isn't firing. The naming is deliberate — outer wraps the observer, inner wraps the handler — but the conceptual model is a layered matryoshka, not a list. The pilot pass deliberately documented this split rather than collapsing it: aiogram's <code>outer_middlewares</code>
  / <code>middlewares</code>
  split made the same trade-off and we kept it for parity. Collapsing them would have made one of the two use cases awkward, and neither subset of users would have been better off.</p>
 
             
     <p>Middlewares cannot replace the event mid-flight. The <code>$event</code>
- argument is positional and the next link sees whatever you forward &mdash; but the event observer map has already resolved the update type by the time the middleware runs. Transforming an <code>EditedMessage</code>
+ argument is positional and the next link sees whatever you forward — but the event observer map has already resolved the update type by the time the middleware runs. Transforming an <code>EditedMessage</code>
  into a <code>Message</code>
  mid-middleware is technically possible but defeats the dispatch contract and is not supported. Use distinct handlers per type instead. The framework does not type-guard against this kind of misuse; it would clutter the middleware API without preventing the underlying mistake.</p>
 
             
     <p>The middleware contract is sync-style. Implementations may suspend internally (an FSM lookup against Redis is one fiber suspend) but the public surface returns a concrete value, never a <code>Future</code>
-. This keeps handler signatures clean &mdash; a handler never has to <code>-&gt;await()</code>
- its middlewares &mdash; at the cost of one extra event-loop tick per suspending middleware. For non-suspending middlewares the cost is zero. The sync-style is the same trade the rest of the framework makes; see <a href="guide/concepts/architecture-decisions.html#architecture-decisions">Architecture decisions</a>.</p>
+. This keeps handler signatures clean — a handler never has to <code>-&gt;await()</code>
+ its middlewares — at the cost of one extra event-loop tick per suspending middleware. For non-suspending middlewares the cost is zero. The sync-style is the same trade the rest of the framework makes; see <a href="guide/concepts/architecture-decisions.html#architecture-decisions">Architecture decisions</a>.</p>
 
             
-    <p>Custom middlewares cannot bypass the dispatcher's wired chain. The three pre-wired middlewares always run; you can append above them but not before. This is intentional &mdash; <code>UserContextMiddleware</code>
+    <p>Custom middlewares cannot bypass the dispatcher's wired chain. The three pre-wired middlewares always run; you can append above them but not before. This is intentional — <code>UserContextMiddleware</code>
  is the source of <code>event_context</code>
 , and skipping it would break every other middleware. If you need to run code earlier than the wired chain, the session's request middleware is the right hook for outbound work; for inbound work, run from inside an outer middleware and accept that <code>event_context</code>
  is already populated.</p>

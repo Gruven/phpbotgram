@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -434,14 +434,14 @@
     <p>Limits are enforced at build time. <code>MAX_WIDTH</code>
 , <code>MIN_WIDTH</code>
 , and <code>MAX_BUTTONS</code>
- are class constants on each subclass &mdash; <code>InlineKeyboardBuilder::MAX_WIDTH</code>
+ are class constants on each subclass — <code>InlineKeyboardBuilder::MAX_WIDTH</code>
  is 8 (Telegram's documented per-row cap) and <code>MAX_BUTTONS</code>
  is 100. The builders throw <code>InvalidArgumentException</code>
  on overflow so a layout bug fails at registration time, not in the wild. <code>adjust()</code>
  validates against <code>MIN_WIDTH</code>
 /<code>MAX_WIDTH</code>
  before re-flowing so a programmatic mistake (<code>adjust(0)</code>
-) surfaces immediately rather than producing a malformed markup that Telegram rejects later. The reply-keyboard limits are different from inline &mdash; reply keyboards permit more buttons per row (10) and more total buttons (300); the per-subclass constants encode each variant's actual limit.</p>
+) surfaces immediately rather than producing a malformed markup that Telegram rejects later. The reply-keyboard limits are different from inline — reply keyboards permit more buttons per row (10) and more total buttons (300); the per-subclass constants encode each variant's actual limit.</p>
 
     </section>
 
@@ -485,7 +485,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
  works the same way; <code>asMarkup()</code>
  accepts display options (<code>resizeKeyboard</code>
 , <code>oneTimeKeyboard</code>
-, &hellip;) and returns a <a href="classes/Gruven-PhpBotGram-Types-ReplyKeyboardMarkup.html"><code>ReplyKeyboardMarkup</code></a>:</p>
+, …) and returns a <a href="classes/Gruven-PhpBotGram-Types-ReplyKeyboardMarkup.html"><code>ReplyKeyboardMarkup</code></a>:</p>
 
             <pre><code class="language-php">use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Utils\Keyboard\ReplyKeyboardBuilder;
@@ -510,12 +510,12 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
 , <code>requestChat</code>
 ) are typed parameters on the <code>button()</code>
  factory, so the construction site reads <code>$kb-&gt;button(text: 'Share', requestContact: true)</code>
- &mdash; no separate builder method needed. The same typed-parameter pattern applies to <code>InlineKeyboardButton</code>
+ — no separate builder method needed. The same typed-parameter pattern applies to <code>InlineKeyboardButton</code>
  fields (<code>url</code>
 , <code>callbackData</code>
 , <code>webApp</code>
 , <code>loginUrl</code>
-, &hellip;).</p>
+, …).</p>
 
     </section>
 
@@ -524,7 +524,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
 
             
     <p><code>asMarkup()</code>
- is the terminal call. The builders are throwaway &mdash; call <code>asMarkup()</code>
+ is the terminal call. The builders are throwaway — call <code>asMarkup()</code>
  once when you're done and the resulting markup is immutable. The markup's button-grid property (<code>inlineKeyboard</code>
  for inline keyboards, <code>keyboard</code>
  for reply) is a fresh deep copy of the builder's grid, so further mutation on the builder doesn't leak into the produced markup.</p>
@@ -548,19 +548,19 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
 /<code>row</code>
 /<code>adjust</code>
  call mutates <code>$this-&gt;markup</code>
- in place &mdash; chaining is by return-this convention. This is unusual for a project that leans heavily on <code>readonly</code>
+ in place — chaining is by return-this convention. This is unusual for a project that leans heavily on <code>readonly</code>
 , but keyboards are a one-shot ephemeral build artefact, not a long-lived value. Once <code>asMarkup()</code>
- runs, the builder is discarded. The mutable-builder + immutable-markup split mirrors the StringBuilder pattern from other languages &mdash; a fluent build phase followed by a crystalline output.</p>
+ runs, the builder is discarded. The mutable-builder + immutable-markup split mirrors the StringBuilder pattern from other languages — a fluent build phase followed by a crystalline output.</p>
 
             
     <p>There is one <code>KeyboardBuilder</code>
- per builder-target. We didn't try to share a single builder with a runtime mode flag &mdash; the type-parameter ergonomics matter (an inline builder should not accept a reply button), and the duplicated <code>asMarkup()</code>
+ per builder-target. We didn't try to share a single builder with a runtime mode flag — the type-parameter ergonomics matter (an inline builder should not accept a reply button), and the duplicated <code>asMarkup()</code>
  body is small. Both subclasses share the grid-management logic in the abstract base. A single shared builder would also force the user to remember which mode it was in, and a typed pair is just clearer.</p>
 
             
     <p>There is no auto-pagination. A keyboard that overflows <code>MAX_BUTTONS</code>
  throws; there is no built-in "spill onto a <code>next page</code>
- button". This is deliberate &mdash; pagination semantics are application-specific (do you want page numbers, prev/next, page-of-N?) and a generic implementation would be either too rigid or so configurable it adds complexity for the simple case. Users compose their own pagination keyboards from the builder primitives. Several examples in the test suite and <code>examples/</code>
+ button". This is deliberate — pagination semantics are application-specific (do you want page numbers, prev/next, page-of-N?) and a generic implementation would be either too rigid or so configurable it adds complexity for the simple case. Users compose their own pagination keyboards from the builder primitives. Several examples in the test suite and <code>examples/</code>
  directory show common patterns.</p>
 
             

@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -409,7 +409,7 @@
             <h2>When to use this</h2>
 
             
-    <p>You already run nginx + php-fpm, RoadRunner, FrankenPHP, or any single-request PHP runtime &mdash; you don't want a second event-loop server next to it. <code>feedWebhookUpdate</code>
+    <p>You already run nginx + php-fpm, RoadRunner, FrankenPHP, or any single-request PHP runtime — you don't want a second event-loop server next to it. <code>feedWebhookUpdate</code>
  accepts an <code>Update</code>
  directly, so any HTTP entry point can dispatch to the same handlers.</p>
 
@@ -464,9 +464,9 @@ http_response_code(200);
  for header checks.</li>
 
     <li class="dash">Single-request runtimes (php-fpm, mod_php) tear down the dispatcher per request, so <code>MemoryStorage</code>
- is useless &mdash; bind a persistent storage (Redis/Mongo/SQL) or FSM state vanishes between updates.</li>
+ is useless — bind a persistent storage (Redis/Mongo/SQL) or FSM state vanishes between updates.</li>
 
-    <li class="dash">Telegram retries a 5xx response. If your handler may exceed 60 seconds, return 200 immediately and process in a queue &mdash; see <a href="guide/concepts/webhook.html">Webhook</a> for the fall-through model.</li>
+    <li class="dash">Telegram retries a 5xx response. If your handler may exceed 60 seconds, return 200 immediately and process in a queue — see <a href="guide/concepts/webhook.html">Webhook</a> for the fall-through model.</li>
 
 </ul>
 

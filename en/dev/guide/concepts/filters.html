@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -427,7 +427,7 @@
  dispatcher kwargs bag (<code>bot</code>
 , <code>state</code>
 , <code>event_context</code>
-, &hellip;), not just the keys it literally declares. Without the variadic the prepare step intersects the bag against the parameter names and drops everything else &mdash; which would silently break filters that need contextual data the dispatcher injected.</p>
+, …), not just the keys it literally declares. Without the variadic the prepare step intersects the bag against the parameter names and drops everything else — which would silently break filters that need contextual data the dispatcher injected.</p>
 
             
     <p>The following filter accepts messages containing the word "hello" and injects a <code>greeting</code>
@@ -498,7 +498,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
 
             
     <p><code>Filter::all($f1, $f2)</code>
- builds an <a href="classes/Gruven-PhpBotGram-Filters-Logic-AndFilter.html"><code>AndFilter</code></a> that cascades kwargs forward &mdash; if the first filter returns <code>['command' =&gt; $cmd]</code>
+ builds an <a href="classes/Gruven-PhpBotGram-Filters-Logic-AndFilter.html"><code>AndFilter</code></a> that cascades kwargs forward — if the first filter returns <code>['command' =&gt; $cmd]</code>
 , the second filter sees it in <code>$kwargs</code>
 . <code>Filter::any($f1, $f2)</code>
  builds an <a href="classes/Gruven-PhpBotGram-Filters-Logic-OrFilter.html"><code>OrFilter</code></a> where the first accepting child wins, no cascade. <code>Filter::invertOf($f)</code>
@@ -508,7 +508,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
 use Gruven\PhpBotGram\Filters\Filter;
 
 // ContainsHelloFilter is the custom filter from above; combine it with
-// any other Filter &mdash; here an inline F-DSL filter that matches "bye".
+// any other Filter — here an inline F-DSL filter that matches "bye".
 $saysBye = F-&gt;text-&gt;contains('bye')-&gt;asFilter();
 
 $andFilter = Filter::all(new ContainsHelloFilter(), $saysBye);
@@ -520,7 +520,7 @@ $notFilter = Filter::invertOf(new ContainsHelloFilter());
     <p>PHP cannot overload <code>&amp;</code>
 /<code>|</code>
 /<code>~</code>
-, so we ship method forms &mdash; the result composes identically to aiogram's <code>f1 &amp; f2 | ~f3</code>
+, so we ship method forms — the result composes identically to aiogram's <code>f1 &amp; f2 | ~f3</code>
  syntax. The static-helper form is more verbose than operator overloading but reads identically once you're used to it.</p>
 
     </section>
@@ -547,9 +547,9 @@ $notFilter = Filter::invertOf(new ContainsHelloFilter());
             
     <p>Filters run in two places. <strong>Global filters</strong>
  registered on the observer apply <em>before</em>
- any handler is considered &mdash; one rejection short-circuits the entire chain. <strong>Per-handler filters</strong>
+ any handler is considered — one rejection short-circuits the entire chain. <strong>Per-handler filters</strong>
  passed to <code>register($cb, filters: [...])</code>
- apply for that handler only. Scenes use global filters to scope every handler on a scene's observer to the current FSM state; user code typically uses per-handler filters for command matching, callback prefix routing, etc. Global filters are appended via <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_filter"><code>$observer-&gt;filter(...)</code></a> &mdash; e.g. <code>$dispatcher-&gt;message-&gt;filter(...)</code>
+ apply for that handler only. Scenes use global filters to scope every handler on a scene's observer to the current FSM state; user code typically uses per-handler filters for command matching, callback prefix routing, etc. Global filters are appended via <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-TelegramEventObserver.html#method_filter"><code>$observer-&gt;filter(...)</code></a> — e.g. <code>$dispatcher-&gt;message-&gt;filter(...)</code>
 .</p>
 
     </section>
@@ -573,7 +573,7 @@ $notFilter = Filter::invertOf(new ContainsHelloFilter());
             <h2>Trade-offs</h2>
 
             
-    <p>Filter results are not cached. A filter that hits Redis or runs a DB query runs on every event, every handler. For expensive checks, either attach the policy as a middleware (which runs once per observer) or move the heavy work behind an in-memory cache. The framework does not try to be clever &mdash; it would have to invalidate the cache on too many events. Caching the <em>output</em>
+    <p>Filter results are not cached. A filter that hits Redis or runs a DB query runs on every event, every handler. For expensive checks, either attach the policy as a middleware (which runs once per observer) or move the heavy work behind an in-memory cache. The framework does not try to be clever — it would have to invalidate the cache on too many events. Caching the <em>output</em>
  of a filter against the input event would require the filter to be a pure function of the event alone, which is not the contract (filters often read dispatcher kwargs too).</p>
 
             
@@ -605,8 +605,8 @@ final class SafeDbFilter extends Filter
 
             
     <p>Filters are stateless by design. Aiogram's <code>magic_filter</code>
- is expression-tree, not callback-graph, and we keep that model &mdash; the F-DSL chain you build with <code>F-&gt;message-&gt;text-&gt;equals('hi')</code>
- resolves fresh against each event. Sharing state across calls (e.g. caching the last seen value) is intentionally hard. If you need that, you want a middleware, not a filter &mdash; middlewares get one instance per registration and can hold state on <code>$this</code>
+ is expression-tree, not callback-graph, and we keep that model — the F-DSL chain you build with <code>F-&gt;message-&gt;text-&gt;equals('hi')</code>
+ resolves fresh against each event. Sharing state across calls (e.g. caching the last seen value) is intentionally hard. If you need that, you want a middleware, not a filter — middlewares get one instance per registration and can hold state on <code>$this</code>
 .</p>
 
             

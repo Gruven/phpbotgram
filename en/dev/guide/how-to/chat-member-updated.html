@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -409,7 +409,7 @@
             <h2>When to use this</h2>
 
             
-    <p>Welcome new joiners, archive leavers, audit promotions &mdash; anything that fires when someone's chat membership status changes. The framework exposes <code>my_chat_member</code>
+    <p>Welcome new joiners, archive leavers, audit promotions — anything that fires when someone's chat membership status changes. The framework exposes <code>my_chat_member</code>
  and <code>chat_member</code>
  updates with a filter that matches by old/new status pairs.</p>
 
@@ -448,7 +448,7 @@ use Gruven\PhpBotGram\Types\ChatMemberUpdated;
 // Custom transition: any member becoming an administrator.
 $dispatcher-&gt;chatMember-&gt;register(
     static function (ChatMemberUpdated $event): void {
-        // Audit log&hellip;
+        // Audit log…
     },
     filters: [ChatMemberUpdatedFilter::transition(
         from: ChatMemberUpdatedFilter::MEMBER,
@@ -482,7 +482,7 @@ $dispatcher-&gt;chatMember-&gt;register(
 
 <ul>
     <li class="dash">Subscribe to <code>chat_member</code>
- updates explicitly via <a href="classes/Gruven-PhpBotGram-Dispatcher-PollingOptions.html"><code>PollingOptions::$allowedUpdates</code></a> &mdash; Telegram strips them by default. <code>my_chat_member</code>
+ updates explicitly via <a href="classes/Gruven-PhpBotGram-Dispatcher-PollingOptions.html"><code>PollingOptions::$allowedUpdates</code></a> — Telegram strips them by default. <code>my_chat_member</code>
  arrives unconditionally.</li>
 
     <li class="dash">The <code>restricted</code>
@@ -493,7 +493,7 @@ $dispatcher-&gt;chatMember-&gt;register(
 .</li>
 
     <li class="dash">The bot must be an admin in the chat to receive <code>chat_member</code>
- events for OTHER users &mdash; Telegram restriction, not framework. See <a href="guide/concepts/filters.html">Filters</a> for the predicate model.</li>
+ events for OTHER users — Telegram restriction, not framework. See <a href="guide/concepts/filters.html">Filters</a> for the predicate model.</li>
 
 </ul>
 

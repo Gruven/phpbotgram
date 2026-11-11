@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -456,7 +456,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event, Bot $bot):
 </code></pre>
 
             
-    <p><a href="classes/Gruven-PhpBotGram-Client-BotShortcuts.html"><code>Bot::downloadFile</code></a> streams the response body &mdash; pass a path string to write to disk, a writable resource to fork the stream, or <code>null</code>
+    <p><a href="classes/Gruven-PhpBotGram-Client-BotShortcuts.html"><code>Bot::downloadFile</code></a> streams the response body — pass a path string to write to disk, a writable resource to fork the stream, or <code>null</code>
  to receive the full content as a string. <code>Bot::download</code>
  accepts a raw <code>file_id</code>
  and resolves it via <code>getFile</code>
@@ -476,7 +476,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event, Bot $bot):
 
 <ul>
     <li class="dash"><code>BufferedInputFile</code>
- holds the bytes in memory &mdash; fine for KB-scale reports, expensive for video. Prefer <code>FsInputFile</code>
+ holds the bytes in memory — fine for KB-scale reports, expensive for video. Prefer <code>FsInputFile</code>
  for anything over a few MB.</li>
 
     <li class="dash"><code>URLInputFile</code>
@@ -484,7 +484,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event, Bot $bot):
 
     <li class="dash">Local file paths passed as a string to <code>downloadFile</code>
  go through <code>fopen('wb')</code>
- &mdash; the directory must exist and be writable, or the call throws <code>RuntimeException</code>
+ — the directory must exist and be writable, or the call throws <code>RuntimeException</code>
 .</li>
 
     <li class="dash">See <a href="guide/concepts/serialization.html">Serialization</a> for how <code>InputFile</code>

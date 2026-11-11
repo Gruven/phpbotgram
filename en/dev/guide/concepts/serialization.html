@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -421,7 +421,7 @@
 ), converts each camelCase property name to snake_case, and emits a flat <code>array&lt;string, mixed&gt;</code>
  ready to JSON-encode or form-urlencode. Nested <code>BotContextController</code>
  instances recurse; lists and maps walk element-by-element. An <code>Unspecified::instance()</code>
- value signals "this field was never set" and is skipped &mdash; distinct from <code>null</code>
+ value signals "this field was never set" and is skipped — distinct from <code>null</code>
 , which is preserved so the wire can carry an explicit null.</p>
 
             
@@ -432,7 +432,7 @@
  argument is threaded into every nested constructor's optional <code>?Bot $bot</code>
  parameter so handler shortcuts (<code>$message-&gt;answer(...)</code>
 ) work on hydrated trees. The recursion walks union types correctly via PHP's <code>ReflectionUnionType</code>
- &mdash; a parameter typed <code>Message|null</code>
+ — a parameter typed <code>Message|null</code>
  decodes the wire payload's expected shape and accepts the <code>null</code>
  case if the wire delivers a <code>null</code>
 .</p>
@@ -496,7 +496,7 @@ final class SendMessage extends TelegramMethod
 
             
     <p>Per-class wire-name overrides live in a class-level <code>WireNames</code>
- constant. Phase 2 codegen produces them when a Telegram field name doesn't camelCase cleanly to a valid PHP identifier &mdash; the upstream <code>from</code>
+ constant. Phase 2 codegen produces them when a Telegram field name doesn't camelCase cleanly to a valid PHP identifier — the upstream <code>from</code>
  reserved-word collision becomes <code>$fromUser</code>
  in PHP with <code>const WireNames = ['fromUser' =&gt; 'from']</code>
  driving the serializer mapping.</p>
@@ -540,7 +540,7 @@ final class CallbackQuery extends TelegramObject
  field, throws the matching <code>TelegramApiException</code>
  subclass on <code>ok: false</code>
 , and routes the success payload through <code>Serializer::load</code>
- for the typed return. The two hooks bracket the network round-trip: dump &rarr; prepareValue &rarr; HTTP &rarr; checkResponse &rarr; load.</p>
+ for the typed return. The two hooks bracket the network round-trip: dump → prepareValue → HTTP → checkResponse → load.</p>
 
     </section>
 
@@ -573,8 +573,8 @@ $bot = new Bot(getenv('BOT_TOKEN'), session: $session);
 
             
     <p>DateTime fields use a dedicated wrapper. The framework's <a href="classes/Gruven-PhpBotGram-Types-Custom-DateTime.html"><code>Types\Custom\DateTime</code></a> type carries a <code>DateTimeImmutable</code>
- plus its original Unix-timestamp representation; the serializer routes <code>int &rarr; DateTime</code>
- on load and <code>DateTime &rarr; int</code>
+ plus its original Unix-timestamp representation; the serializer routes <code>int → DateTime</code>
+ on load and <code>DateTime → int</code>
  on dump. This preserves precision (<code>DateTimeImmutable</code>
  keeps seconds + microseconds) while staying faithful to Telegram's wire format (Unix timestamp as integer). Handlers can use the <code>DateTimeImmutable</code>
  API without re-parsing the timestamp on every read.</p>
@@ -584,7 +584,7 @@ $bot = new Bot(getenv('BOT_TOKEN'), session: $session);
  mechanism lets a <code>Bot</code>
  carry default values that populate <code>Unspecified</code>
  fields on outbound methods. The serializer checks for default presence after <code>Unspecified</code>
- skip but before the wire emit &mdash; so a <code>SendMessage</code>
+ skip but before the wire emit — so a <code>SendMessage</code>
  left with <code>parseMode: Unspecified::instance()</code>
  picks up the bot's default parse mode if one was configured. The hook is in <a href="classes/Gruven-PhpBotGram-Client-BotDefault.html"><code>BotDefault</code></a>; defaults are scoped per bot so multi-tenant deployments can configure each bot independently.</p>
 
@@ -597,10 +597,10 @@ $bot = new Bot(getenv('BOT_TOKEN'), session: $session);
 
             
     <p>Reflection-based serialization costs one <code>ReflectionClass</code>
- per shape per request &mdash; the serializer reflects on every <code>dump</code>
+ per shape per request — the serializer reflects on every <code>dump</code>
 /<code>load</code>
- rather than caching type metadata. The only memoised path is the camelCase&rarr;snake_case property-name conversion (<code>Serializer::$camelToSnakeCache</code>
-), bounded by the number of distinct property names, not by request volume. We considered caching reflected shape metadata and decided the complexity wasn't worth it &mdash; the per-call reflection is cheap next to the network round-trip, and a stateless serializer is simpler to reason about.</p>
+ rather than caching type metadata. The only memoised path is the camelCase→snake_case property-name conversion (<code>Serializer::$camelToSnakeCache</code>
+), bounded by the number of distinct property names, not by request volume. We considered caching reflected shape metadata and decided the complexity wasn't worth it — the per-call reflection is cheap next to the network round-trip, and a stateless serializer is simpler to reason about.</p>
 
             
     <p>Codegen-output serializers would be faster. Aiogram uses Pydantic, which builds a fast-path validator at class definition time. The PHP port deliberately chose reflection: emitting per-class serializers during Phase 2 would have doubled the codegen surface and required a second template engine. The reflection cost is real but small, and hot paths can always cache the meta themselves. The 10x or so speedup codegen serializers could deliver is dwarfed by the network round-trip on every Bot API call, so the trade pays itself in code clarity.</p>
@@ -610,7 +610,7 @@ $bot = new Bot(getenv('BOT_TOKEN'), session: $session);
  is a sentinel, not <code>null</code>
 . The distinction matters because Telegram fields are tri-state: present-with-value, present-and-null (explicit nullability), absent. A naive <code>if ($value !== null)</code>
  would conflate the last two; the <code>Unspecified</code>
- sentinel preserves the difference. The cost is one extra concept to learn &mdash; handlers that build method DTOs almost always want to leave a field at <code>Unspecified::instance()</code>
+ sentinel preserves the difference. The cost is one extra concept to learn — handlers that build method DTOs almost always want to leave a field at <code>Unspecified::instance()</code>
  to mean "don't send". The default value for every method parameter is <code>Unspecified::instance()</code>
 , so the surprise is contained to "what is this sentinel doing here".</p>
 
@@ -618,11 +618,11 @@ $bot = new Bot(getenv('BOT_TOKEN'), session: $session);
     <p>The <code>InputFile</code>
  detachment in <code>prepareValue</code>
  is form-only. JSON encoding (the default for Bot API methods that don't carry files) serialises <code>InputFile</code>
- references inline; the detachment kicks in only when the session falls back to multipart form-data because of an attached file. The branching lives in the session, not the serializer &mdash; keeping the serializer ignorant of transport details.</p>
+ references inline; the detachment kicks in only when the session falls back to multipart form-data because of an attached file. The branching lives in the session, not the serializer — keeping the serializer ignorant of transport details.</p>
 
             
     <p>Wire-name overrides are a per-class constant rather than property attributes. We considered <code>#[WireName('from')]</code>
- on each property and chose the constant for codegen simplicity: emitting one constant per class is cheaper than emitting one attribute per property. The cost is the override table is class-level, not property-level &mdash; a class with multiple wire-name overrides has them all in one constant, which is fine for the small number of overrides Bot API actually requires.</p>
+ on each property and chose the constant for codegen simplicity: emitting one constant per class is cheaper than emitting one attribute per property. The cost is the override table is class-level, not property-level — a class with multiple wire-name overrides has them all in one constant, which is fine for the small number of overrides Bot API actually requires.</p>
 
     </section>
 

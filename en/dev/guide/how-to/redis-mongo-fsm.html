@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -410,7 +410,7 @@
 
             
     <p>The default <code>MemoryStorage</code>
- is process-local &mdash; it vanishes on restart, and parallel workers can't see each other's state. Promote to Redis or MongoDB the moment your bot scales past one fiber on one host.</p>
+ is process-local — it vanishes on restart, and parallel workers can't see each other's state. Promote to Redis or MongoDB the moment your bot scales past one fiber on one host.</p>
 
     </section>
 
@@ -474,7 +474,7 @@ $dispatcher = new Dispatcher(storage: $storage);
             
 
 <ul>
-    <li class="dash">Redis empty data &rarr; key deletion; MongoDB empty data &rarr; field <code>$unset</code>
+    <li class="dash">Redis empty data → key deletion; MongoDB empty data → field <code>$unset</code>
 . Reading after a clear returns the empty array, not <code>null</code>
 .</li>
 

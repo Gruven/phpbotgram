@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -406,7 +406,7 @@
             <h1>Webhook</h1>
 
             
-    <p>Webhook mode receives Telegram updates as inbound HTTP POSTs instead of polling for them. The dispatch path is the same as polling &mdash; the only difference is where the <code>Update</code>
+    <p>Webhook mode receives Telegram updates as inbound HTTP POSTs instead of polling for them. The dispatch path is the same as polling — the only difference is where the <code>Update</code>
  comes from.</p>
 
             <section class="section " id="how-it-works">
@@ -422,12 +422,12 @@
  through the dispatcher inside a 55-second deadline, and responds with <code>200 OK</code>
  + empty JSON. If <code>handleInBackground</code>
  is <code>true</code>
-, the dispatch is detached into an Amp fiber and the 200 ships immediately &mdash; useful when handlers take longer than Telegram's webhook timeout. The 5 MiB cap is generous against typical Telegram updates (a few KiB at most) and prevents an unbounded-buffer DoS from a malicious client.</p>
+, the dispatch is detached into an Amp fiber and the 200 ships immediately — useful when handlers take longer than Telegram's webhook timeout. The 5 MiB cap is generous against typical Telegram updates (a few KiB at most) and prevents an unbounded-buffer DoS from a malicious client.</p>
 
             
     <p>Two concrete handlers ship. <a href="classes/Gruven-PhpBotGram-Webhook-SimpleRequestHandler.html"><code>SimpleRequestHandler</code></a> binds a single <code>Bot</code>
  to the path; every incoming update is dispatched on that bot. <a href="classes/Gruven-PhpBotGram-Webhook-TokenBasedRequestHandler.html"><code>TokenBasedRequestHandler</code></a> embeds the bot token in the URL path (<code>/webhook/{token}</code>
-), looks up the matching bot from a registry, and dispatches accordingly &mdash; the multi-tenant story. Both override the abstract <code>resolveBot()</code>
+), looks up the matching bot from a registry, and dispatches accordingly — the multi-tenant story. Both override the abstract <code>resolveBot()</code>
  hook on <code>BaseRequestHandler</code>
 ; the rest of the request handling (body buffering, JSON decode, deadline race, response shape) lives in the base class.</p>
 
@@ -486,7 +486,7 @@ AmphpServer::run(
 . Telegram closes the webhook connection at 60s; the 5s headroom lets the HTTP write-back land. When the dispatch finishes before the deadline, an in-flight <code>TelegramMethod</code>
  returned by a handler can be serialised as the inline response body, saving a round-trip. When the deadline expires, the dispatch keeps running in the background and any eventual <code>TelegramMethod</code>
  is routed through <code>silentCallRequest</code>
- &mdash; so the side effect still reaches Telegram even if the response window has closed. The race is implemented via <code>Amp\Future\awaitFirst</code>
+ — so the side effect still reaches Telegram even if the response window has closed. The race is implemented via <code>Amp\Future\awaitFirst</code>
  against the dispatch task and a delay timer; the timer task is <code>ignore()</code>
 'd so a never-awaited timeout (happy path where the dispatch wins immediately) doesn't surface an "unhandled future" warning at GC time.</p>
 
@@ -500,7 +500,7 @@ AmphpServer::run(
 , <code>91.108.4.0/22</code>
 ); the filter rejects everything else with <code>403 Forbidden</code>
 . The implementation is bitwise-mask on <code>(networkLong, prefix)</code>
- tuples &mdash; O(n) over the typically-tiny allowlist, n=2 in the default config. For a deployment behind a reverse proxy (the recommended shape), the filter is unnecessary because the proxy already enforces network-level access control.</p>
+ tuples — O(n) over the typically-tiny allowlist, n=2 in the default config. For a deployment behind a reverse proxy (the recommended shape), the filter is unnecessary because the proxy already enforces network-level access control.</p>
 
             
     <p>Pass <code>IpFilter::default()</code>
@@ -528,7 +528,7 @@ $filter = IpFilter::default();
     <p><a href="classes/Gruven-PhpBotGram-Webhook-Setup.html"><code>Setup</code></a> wires the handler into an existing <code>amphp/http-server</code>
  (or any caller-owned server) and attaches the dispatcher's startup/shutdown hooks to the server lifecycle. <code>Setup::register()</code>
  accepts a <code>callable(string, RequestHandler): void</code>
- instead of a concrete router type &mdash; <code>amphp/http-server-router</code>
+ instead of a concrete router type — <code>amphp/http-server-router</code>
  is not a project dependency, so we take any caller's route registration shape and forward through it.</p>
 
             <pre><code class="language-php">use Amp\Http\Server\RequestHandler;
@@ -553,7 +553,7 @@ Setup::register(
  does <strong>not</strong>
  call <code>expose()</code>
  or <code>start()</code>
- &mdash; the caller retains full control of the server lifecycle. The <a href="classes/Gruven-PhpBotGram-Webhook-Server-AmphpServer.html"><code>AmphpServer</code></a> wrapper is the one-line "I just want a webhook server running" helper that constructs the server, binds the path, and joins on shutdown.</p>
+ — the caller retains full control of the server lifecycle. The <a href="classes/Gruven-PhpBotGram-Webhook-Server-AmphpServer.html"><code>AmphpServer</code></a> wrapper is the one-line "I just want a webhook server running" helper that constructs the server, binds the path, and joins on shutdown.</p>
 
     </section>
 
@@ -566,22 +566,22 @@ Setup::register(
     <p><code>amphp/http-server</code>
  is a <em>suggested</em>
  dependency, not required. Composer does not pull it for users on polling-only deployments, keeping the install footprint small. Webhook users add <code>composer require amphp/http-server</code>
- themselves &mdash; flagged explicitly in the README quickstart. The cost is one extra <code>composer require</code>
- for webhook deployments; the benefit is no surprise transitive deps for everyone else. We considered making it a hard dependency and rejected it &mdash; many production phpbotgram bots run on long-polling and shouldn't ship an HTTP server they don't use.</p>
+ themselves — flagged explicitly in the README quickstart. The cost is one extra <code>composer require</code>
+ for webhook deployments; the benefit is no surprise transitive deps for everyone else. We considered making it a hard dependency and rejected it — many production phpbotgram bots run on long-polling and shouldn't ship an HTTP server they don't use.</p>
 
             
     <p>The v0 response shape always writes empty JSON <code>{}</code>
 . The webhook-reply optimisation (returning a <code>TelegramMethod</code>
- as the multipart body to save a round-trip) is deferred &mdash; porting the multipart writer in aiogram's <code>aiohttp_server</code>
+ as the multipart body to save a round-trip) is deferred — porting the multipart writer in aiogram's <code>aiohttp_server</code>
  is non-trivial. The current behaviour is correct but slightly slower; the optimisation is on the roadmap. When the dispatch returns a <code>TelegramMethod</code>
 , the dispatcher's <code>silentCallRequest</code>
- issues the API call as a second request &mdash; so the <em>effect</em>
+ issues the API call as a second request — so the <em>effect</em>
  is right, just with one extra round-trip.</p>
 
             
     <p>The 55-second deadline is <em>per dispatch</em>
 , not per handler. A scene that fans out to multiple sub-handlers shares the budget. If your handlers do heavy work, set <code>handleInBackground: true</code>
- to disconnect the dispatch from the HTTP response and let the 200 fly immediately. The framework will not silently wait beyond 55s on the response path &mdash; the dispatch continues in the background, but the HTTP socket has already been released by then. For workflows where the response content matters, design handlers to finish under 55s.</p>
+ to disconnect the dispatch from the HTTP response and let the 200 fly immediately. The framework will not silently wait beyond 55s on the response path — the dispatch continues in the background, but the HTTP socket has already been released by then. For workflows where the response content matters, design handlers to finish under 55s.</p>
 
             
     <p>Background mode tracks in-flight fibers in <code>$backgroundTasks</code>

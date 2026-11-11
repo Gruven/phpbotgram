@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -406,7 +406,7 @@
             <h1>FSM</h1>
 
             
-    <p>The Finite State Machine subsystem keeps per-user state across multiple updates &mdash; so a multi-step form can ask "what's your name?" in one update and remember the answer when the next update arrives.</p>
+    <p>The Finite State Machine subsystem keeps per-user state across multiple updates — so a multi-step form can ask "what's your name?" in one update and remember the answer when the next update arrives.</p>
 
             <section class="section " id="how-it-works">
             <h2>How it works</h2>
@@ -437,7 +437,7 @@ Form::bootstrap();
  resolves to <code>'Form:name'</code>
  and <code>Form::$age-&gt;state()</code>
  to <code>'Form:age'</code>
-. A typo in a property name surfaces as a class-resolution or reflection error &mdash; not a silent string mismatch at runtime.</p>
+. A typo in a property name surfaces as a class-resolution or reflection error — not a silent string mismatch at runtime.</p>
 
             
     <p>Nested groups are declared via the <code>CHILDREN</code>
@@ -458,7 +458,7 @@ Form::bootstrap();
 , <code>updateData</code>
 , <code>getValue</code>
 , <code>clear</code>
- &mdash; sync-style methods that delegate to the storage. Storage backends may suspend internally on Redis or Mongo I/O, but the public surface returns concrete values, never <code>Future</code>
+ — sync-style methods that delegate to the storage. Storage backends may suspend internally on Redis or Mongo I/O, but the public surface returns concrete values, never <code>Future</code>
 s. The handle is short-lived: it's constructed by <code>FsmContextMiddleware</code>
  from the resolved address and the dispatcher's storage reference at the start of each dispatch, and discarded when the handler returns.</p>
 
@@ -480,7 +480,7 @@ class Form extends StatesGroup
 }
 Form::bootstrap();
 
-// /start &mdash; enter the form by setting the initial state.
+// /start — enter the form by setting the initial state.
 $dispatcher-&gt;message-&gt;register(
     static function (Message $event, FsmContext $state): void {
         $state-&gt;setState(Form::$name);
@@ -489,7 +489,7 @@ $dispatcher-&gt;message-&gt;register(
     filters: [new Command('start')],
 );
 
-// Collect name &mdash; only fires when state === Form:name.
+// Collect name — only fires when state === Form:name.
 $dispatcher-&gt;message-&gt;register(
     static function (Message $event, FsmContext $state): void {
         $state-&gt;updateData(['name' =&gt; $event-&gt;text ?? '']);
@@ -525,21 +525,21 @@ $dispatcher-&gt;message-&gt;register(
             <h3>Choosing a storage backend and strategy</h3>
 
             
-    <p>The address shape is driven by <a href="classes/Gruven-PhpBotGram-Fsm-FsmStrategy.html"><code>FsmStrategy</code></a>. Five cases &mdash; <code>UserInChat</code>
+    <p>The address shape is driven by <a href="classes/Gruven-PhpBotGram-Fsm-FsmStrategy.html"><code>FsmStrategy</code></a>. Five cases — <code>UserInChat</code>
  (the default), <code>Chat</code>
 , <code>GlobalUser</code>
 , <code>UserInTopic</code>
 , <code>ChatTopic</code>
- &mdash; each map <code>(chatId, userId, threadId)</code>
+ — each map <code>(chatId, userId, threadId)</code>
  into the canonical <code>StorageKey</code>
  triple. Choose <code>UserInChat</code>
  for per-conversation state, <code>GlobalUser</code>
  for cross-chat user preferences, <code>ChatTopic</code>
- for forum-topic-scoped state, and so on. Strategy lives on the dispatcher (constructor argument), so it applies uniformly to every handler &mdash; there is no per-handler override. Mixing strategies in one bot is unsupported by design; if you genuinely need it, run two dispatchers.</p>
+ for forum-topic-scoped state, and so on. Strategy lives on the dispatcher (constructor argument), so it applies uniformly to every handler — there is no per-handler override. Mixing strategies in one bot is unsupported by design; if you genuinely need it, run two dispatchers.</p>
 
             
     <p>Storage backends are pluggable. Three ship in-tree: <a href="classes/Gruven-PhpBotGram-Fsm-Storage-MemoryStorage.html"><code>MemoryStorage</code></a> (the default; lost on process restart), <a href="classes/Gruven-PhpBotGram-Fsm-Storage-RedisStorage.html"><code>RedisStorage</code></a>, and <a href="classes/Gruven-PhpBotGram-Fsm-Storage-MongoStorage.html"><code>MongoStorage</code></a>. Each implements <code>BaseStorage</code>
- and serialises state as a string and data as a JSON-encodable dict. The MemoryStorage backend is fine for development and testing but not for production &mdash; a process restart wipes every user's state mid-conversation. The Redis and Mongo backends each ship with their own <a href="classes/Gruven-PhpBotGram-Fsm-Storage-KeyBuilder.html"><code>KeyBuilder</code></a> adapter so the <code>StorageKey</code>
+ and serialises state as a string and data as a JSON-encodable dict. The MemoryStorage backend is fine for development and testing but not for production — a process restart wipes every user's state mid-conversation. The Redis and Mongo backends each ship with their own <a href="classes/Gruven-PhpBotGram-Fsm-Storage-KeyBuilder.html"><code>KeyBuilder</code></a> adapter so the <code>StorageKey</code>
  triple becomes a backend-appropriate identifier (a Redis key prefix vs. a Mongo document <code>_id</code>
 ). Non-default destiny values, including the scene-history <code>scenes_history</code>
  slot, are included in the default key builder output so scenes work with Redis and Mongo out of the box.</p>
@@ -592,13 +592,13 @@ $dispatcher-&gt;runPolling(new PollingOptions(), $bot);
     <p>The MemoryStorage default is a foot-gun. It makes the quickstart work without configuring Redis, but a developer who ships to production without swapping storage will find every user's FSM state evaporate on every deploy. The README and tutorials flag this; the framework itself does not refuse to boot, because testing legitimately uses memory storage. We considered a "you should explicitly choose storage" startup check and rejected it as too noisy.</p>
 
             
-    <p>State is a single string, data is a JSON-serialisable dict. There is no per-field schema, no migration system. If you add a field to your state payload and a user has stale data from before, your handler must tolerate the absence. This is intentional &mdash; a typed state machine on top of an FSM is a different abstraction (try Scenes), and bolting one onto the storage layer would couple the storage to a specific application's lifecycle. Aiogram makes the same choice.</p>
+    <p>State is a single string, data is a JSON-serialisable dict. There is no per-field schema, no migration system. If you add a field to your state payload and a user has stale data from before, your handler must tolerate the absence. This is intentional — a typed state machine on top of an FSM is a different abstraction (try Scenes), and bolting one onto the storage layer would couple the storage to a specific application's lifecycle. Aiogram makes the same choice.</p>
 
             
     <p>Storage operations are not transactional across keys. <code>setState</code>
  and <code>setData</code>
  are separate calls; an unlucky crash between them leaves a state without its data, or vice versa. For most flows this is acceptable (the handler re-asks the question and recovers); for strict transactional needs, store the lot under one key with <code>setData</code>
- only. The framework does not try to expose a transactional primitive because backends differ &mdash; Redis MULTI vs. Mongo transactions vs. in-memory locks don't compose into one cross-backend API without leaking implementation details.</p>
+ only. The framework does not try to expose a transactional primitive because backends differ — Redis MULTI vs. Mongo transactions vs. in-memory locks don't compose into one cross-backend API without leaking implementation details.</p>
 
             
     <p>The event isolation lock is held for the duration of the dispatch. A slow handler blocks subsequent events for the same key until it returns. This is usually what you want (it prevents lost updates) but means a handler that calls an external API for 30 seconds backs up the user's other events for 30 seconds. Set <code>DisabledEventIsolation</code>

@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -412,7 +412,7 @@
     <p>Periodic jobs (refresh a cache, scrape an RSS feed, post a daily digest) and one-shot background work (send a delayed reminder) need to live outside the dispatcher fiber so they don't block update processing. <code>amphp</code>
  exposes <code>async()</code>
  and <code>delay()</code>
- &mdash; combine them for fire-and-forget tasks.</p>
+ — combine them for fire-and-forget tasks.</p>
 
     </section>
 
@@ -444,7 +444,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event, Bot $bot):
  suspends the background fiber without blocking other fibers.</p>
 
             
-    <p>The same pattern powers <a href="classes/Gruven-PhpBotGram-Utils-ChatAction-ChatActionSender.html"><code>ChatActionSender::raceDelay()</code></a> &mdash; a private helper that races a <code>delay</code>
+    <p>The same pattern powers <a href="classes/Gruven-PhpBotGram-Utils-ChatAction-ChatActionSender.html"><code>ChatActionSender::raceDelay()</code></a> — a private helper that races a <code>delay</code>
  against a cancellation future so the loop can stop cleanly.</p>
 
     </section>
@@ -467,7 +467,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event, Bot $bot):
 
     <li class="dash">Don't call blocking PHP (<code>sleep</code>
 , <code>curl_exec</code>
-, blocking I/O) inside a fiber &mdash; it stalls every other fiber. Use <code>amphp/http-client</code>
+, blocking I/O) inside a fiber — it stalls every other fiber. Use <code>amphp/http-client</code>
  or wrap blocking libs in <code>async()</code>
  just to schedule them off the main loop.</li>
 

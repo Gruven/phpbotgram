@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -410,7 +410,7 @@
 
             
     <p>Telegram Stars (<code>XTR</code>
-) let you charge in-platform without a payment processor &mdash; useful for premium features, content unlocks, or small-amount digital goods. The flow is invoice &rarr; pre-checkout confirm &rarr; successful payment notification.</p>
+) let you charge in-platform without a payment processor — useful for premium features, content unlocks, or small-amount digital goods. The flow is invoice → pre-checkout confirm → successful payment notification.</p>
 
     </section>
 
@@ -424,7 +424,7 @@ use Gruven\PhpBotGram\Types\LabeledPrice;
 use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Types\PreCheckoutQuery;
 
-// 1. /buy &rarr; send the invoice.
+// 1. /buy → send the invoice.
 $dispatcher-&gt;message-&gt;register(
     static function (Message $event, Bot $bot): void {
         $bot(new SendInvoice(
@@ -455,7 +455,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
             
     <p><a href="classes/Gruven-PhpBotGram-Methods-SendInvoice.html"><code>SendInvoice</code></a> with <code>currency: 'XTR'</code>
  opens the Stars purchase flow. The <code>preCheckoutQuery</code>
- observer MUST answer within 10 seconds or Telegram cancels the transaction &mdash; keep that handler synchronous. After the user pays, a <code>Message</code>
+ observer MUST answer within 10 seconds or Telegram cancels the transaction — keep that handler synchronous. After the user pays, a <code>Message</code>
  arrives with a non-null <code>successfulPayment</code>
 .</p>
 
@@ -468,12 +468,12 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
 
 <ul>
     <li class="dash">For Stars, <code>amount</code>
- is the literal Star count &mdash; 1 = 1 Star. Other currencies use the smallest unit (cents, kopecks), so don't hard-code 100x multipliers.</li>
+ is the literal Star count — 1 = 1 Star. Other currencies use the smallest unit (cents, kopecks), so don't hard-code 100x multipliers.</li>
 
-    <li class="dash">The bot owner must enable payments via @BotFather before any of this works &mdash; the framework gives no clearer error than the API's "PAYMENT_PROVIDER_INVALID".</li>
+    <li class="dash">The bot owner must enable payments via @BotFather before any of this works — the framework gives no clearer error than the API's "PAYMENT_PROVIDER_INVALID".</li>
 
     <li class="dash">The <code>payload</code>
- round-trips through Telegram unchanged &mdash; sign or encrypt it if you'd be unhappy with the user editing it. See <a href="guide/concepts/dispatcher.html">Dispatcher</a> for observer routing of the three event types.</li>
+ round-trips through Telegram unchanged — sign or encrypt it if you'd be unhappy with the user editing it. See <a href="guide/concepts/dispatcher.html">Dispatcher</a> for observer routing of the three event types.</li>
 
 </ul>
 

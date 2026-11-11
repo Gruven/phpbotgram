@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -403,15 +403,15 @@
             <div class="phpdocumentor-column -nine phpdocumentor-content">
                                         
 <section class="section " id="show-typing-while-a-slow-handler-runs">
-            <h1>Show "typing&hellip;" while a slow handler runs</h1>
+            <h1>Show "typing…" while a slow handler runs</h1>
 
             <section class="section " id="when-to-use-this">
             <h2>When to use this</h2>
 
             
     <p>A handler that calls a slow external API leaves the user staring at a silent chat. Telegram's <code>sendChatAction</code>
- shows a <code>typing&hellip;</code>
- indicator for ~5 seconds &mdash; refresh it in a background loop and the user sees activity until your reply lands.</p>
+ shows a <code>typing…</code>
+ indicator for ~5 seconds — refresh it in a background loop and the user sees activity until your reply lands.</p>
 
     </section>
 
@@ -426,7 +426,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event, Bot $bot):
         bot: $bot,
         chatId: $event-&gt;chat-&gt;id,
     )-&gt;scope(function () {
-        // Slow work &mdash; API call, image render, OCR.
+        // Slow work — API call, image render, OCR.
         return slowWork();
     });
 
@@ -440,7 +440,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event, Bot $bot):
 's closure returns or throws.</p>
 
             
-    <p>Eleven factory methods cover every Telegram action &mdash; <code>typing</code>
+    <p>Eleven factory methods cover every Telegram action — <code>typing</code>
 , <code>uploadPhoto</code>
 , <code>recordVoice</code>
 , <code>uploadDocument</code>
@@ -458,10 +458,10 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event, Bot $bot):
 
 <ul>
     <li class="dash"><code>scope()</code>
- swallows the closure's value and returns it through to the caller &mdash; exceptions still propagate. Don't wrap-then-rethrow.</li>
+ swallows the closure's value and returns it through to the caller — exceptions still propagate. Don't wrap-then-rethrow.</li>
 
     <li class="dash"><code>sendChatAction</code>
- failures inside the loop are silenced &mdash; a flaky network shouldn't kill background indicators. Real errors come from your work, not the indicator.</li>
+ failures inside the loop are silenced — a flaky network shouldn't kill background indicators. Real errors come from your work, not the indicator.</li>
 
     <li class="dash">Forgetting to call <code>stop()</code>
  on a manual <code>start()</code>

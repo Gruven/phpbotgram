@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -421,7 +421,7 @@
     <p>Where the port departs, the reason is either a PHP-language constraint, an idiomatic-PHP rewrite, or a bug fix the port took the opportunity to apply. These departures are documented inline in the class docblocks. The <a href="classes/Gruven-PhpBotGram-Dispatcher-Dispatcher.html"><code>Dispatcher</code></a> docblock, for instance, lays out its three responsibilities and a "Spec deviations from upstream" list, each with its reasoning.</p>
 
             <section class="section " id="no-async-await-sync-style-public-surface">
-            <h3>No async/await &mdash; sync-style public surface</h3>
+            <h3>No async/await — sync-style public surface</h3>
 
             
     <p>The largest structural divergence is <strong>no async/await</strong>
@@ -434,7 +434,7 @@
 
             
     <p>The port adopts a sync-style public surface: every public method returns a concrete value, never a <code>Future</code>
-. Implementations may suspend internally &mdash; a session HTTP call, a Redis storage lookup &mdash; but the suspension is invisible to handlers. The cost is one extra event-loop tick per call site that <em>would</em>
+. Implementations may suspend internally — a session HTTP call, a Redis storage lookup — but the suspension is invisible to handlers. The cost is one extra event-loop tick per call site that <em>would</em>
  have been awaited; the benefit is handler signatures that read like ordinary PHP and don't infect callers with <code>Future</code>
  boilerplate. The choice is sticky: every subsystem in the framework follows the sync-style contract, so a single async-leaking method would be visibly out of place.</p>
 
@@ -452,7 +452,7 @@
 
             
     <p>The port requires explicit <code>SceneRegistry::add([MyScene::class, ...])</code>
- calls. A class that looks like a scene but isn't registered does nothing &mdash; the failure mode is "you forgot to register me" rather than "the framework silently never knew about you". See the <a href="guide/concepts/scenes.html#scenes">Scenes</a> concept page for the consequences.</p>
+ calls. A class that looks like a scene but isn't registered does nothing — the failure mode is "you forgot to register me" rather than "the framework silently never knew about you". See the <a href="guide/concepts/scenes.html#scenes">Scenes</a> concept page for the consequences.</p>
 
     </section>
 
@@ -465,7 +465,7 @@
 . Aiogram leans on Pydantic, which generates a fast-path validator/serializer per class at definition time. The port uses reflection-based serialization through <a href="classes/Gruven-PhpBotGram-Client-Serializer.html"><code>Serializer</code></a>.</p>
 
             
-    <p>The trade is performance vs. codegen complexity &mdash; Phase 2's generator already produces 700+ classes; doubling the surface to include per-class serializers would have multiplied the template count and the regen time. The reflection path is fast enough for production loads &mdash; it reflects per call rather than caching type metadata; see the <a href="guide/concepts/serialization.html#serialization">Serialization</a> page.</p>
+    <p>The trade is performance vs. codegen complexity — Phase 2's generator already produces 700+ classes; doubling the surface to include per-class serializers would have multiplied the template count and the regen time. The reflection path is fast enough for production loads — it reflects per call rather than caching type metadata; see the <a href="guide/concepts/serialization.html#serialization">Serialization</a> page.</p>
 
     </section>
 
@@ -539,7 +539,7 @@
 
             
     <p>These divergences are not just renamings. Each represents a place where the port could have closer-to-upstream parity at the cost of unidiomatic PHP, and chose idiomatic PHP instead. Code that pastes aiogram patterns verbatim will <em>work</em>
- &mdash; the API surface tracks upstream &mdash; but will look slightly off-kilter against PHP norms. The README's quickstart and the tutorial pages emphasise the PHP-idiomatic form. We did not chase verbatim parity for its own sake; readability matters more.</p>
+ — the API surface tracks upstream — but will look slightly off-kilter against PHP norms. The README's quickstart and the tutorial pages emphasise the PHP-idiomatic form. We did not chase verbatim parity for its own sake; readability matters more.</p>
 
             
     <p>The flip side: developers coming from aiogram will recognise the shape of every subsystem. The dispatcher walks updates, filters vote, middlewares wrap, FSM stores state. We did not redesign anything for its own sake; every divergence has a one-paragraph reason. The <code>docs/superpowers/specs/</code>
@@ -548,7 +548,7 @@
             
     <p>There are intentional non-divergences too. The 25-slot Update observer map, the <code>outer</code>
 /<code>inner</code>
- middleware split, the F-DSL operator-tree form, the scene-history rollback model &mdash; all kept as in upstream. Those patterns <em>do</em>
+ middleware split, the F-DSL operator-tree form, the scene-history rollback model — all kept as in upstream. Those patterns <em>do</em>
  translate cleanly to PHP, and changing them would have fragmented the cross-language audience for no gain. The non-divergences are by far the larger set; the divergences listed here are the exceptions, not the rule.</p>
 
     </section>

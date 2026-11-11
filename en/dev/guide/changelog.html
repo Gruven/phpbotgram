@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -410,7 +410,7 @@
     <p>All notable changes to phpbotgram are documented in this file. The format follows <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a> and the project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 
             <section class="section " id="0-2-0-2026-06-21">
-            <h2>[0.2.0] &mdash; 2026-06-21</h2>
+            <h2>[0.2.0] — 2026-06-21</h2>
 
             <section class="section " id="fixed">
             <h3>Fixed</h3>
@@ -461,7 +461,7 @@
     </section>
 
             <section class="section " id="0-1-0">
-            <h2><a href="https://github.com/Gruven/phpbotgram/releases/tag/v0.1.0">0.1.0</a> &mdash; Initial release</h2>
+            <h2><a href="https://github.com/Gruven/phpbotgram/releases/tag/v0.1.0">0.1.0</a> — Initial release</h2>
 
             
     <p>First public release. Ports aiogram 3.29.0 / Telegram Bot API 10.1 to PHP 8.5 with full feature parity for the core framework. Behaviour divergences from upstream are documented inline at the call site (<code># Divergence:</code>
@@ -607,7 +607,7 @@
 
 
 <ul>
-    <li class="dash">registration via Closure or any callable (Filter subclass, MagicFilterAsFilter, anonymous invokables &mdash; all wrapped via <code>Closure::fromCallable</code>
+    <li class="dash">registration via Closure or any callable (Filter subclass, MagicFilterAsFilter, anonymous invokables — all wrapped via <code>Closure::fromCallable</code>
 ).</li>
 
     <li class="dash">dual decorator surface (<code>$observer($cb, filters:)</code>
@@ -783,7 +783,7 @@
 , <code>#[OnMessage]</code>
 , <code>#[OnCallbackQuery]</code>
 , <code>#[OnChatJoinRequest]</code>
-, &hellip; attribute markers.</li>
+, … attribute markers.</li>
 
     <li class="dash"><code>After</code>
  lifecycle directives (Enter, Exit, Back, etc.).</li>
@@ -831,7 +831,7 @@
     <li class="dash"><code>TextDecoration</code>
  with <code>HtmlDecoration</code>
  and <code>MarkdownDecoration</code>
- (Markdown V2) strategies &mdash; entity-aware escaping, full V2 special-char coverage, expandable-blockquote support.</li>
+ (Markdown V2) strategies — entity-aware escaping, full V2 special-char coverage, expandable-blockquote support.</li>
 
     <li class="dash"><code>DeepLinking</code>
  for <code>/start</code>
@@ -898,7 +898,7 @@
  facade from the upstream Telegram API spec.</li>
 
     <li class="dash"><code>scripts/coverage-gate.php</code>
- enforces per-module coverage floors (Bot &ge;80%, Session &ge;75%, Dispatcher/Router/Filters/FSM &ge;90%).</li>
+ enforces per-module coverage floors (Bot ≥80%, Session ≥75%, Dispatcher/Router/Filters/FSM ≥90%).</li>
 
     <li class="dash">Make targets and composer scripts: <code>test</code>
 , <code>stan</code>
@@ -933,16 +933,16 @@
     </section>
 
             <section class="section " id="added-narrative-documentation">
-            <h3>Added &mdash; narrative documentation</h3>
+            <h3>Added — narrative documentation</h3>
 
             
 
 <ul>
     <li class="dash">Diataxis-structured narrative site under <code>docs/guide/en/</code>
- (47 committed pages: 1 top-level landing + 6 tutorial + 22 how-to + 17 concept + 1 reference stub) plus 2 build-time copies of CHANGELOG.md and CONTRIBUTING.md &rarr; 49 rendered pages.</li>
+ (47 committed pages: 1 top-level landing + 6 tutorial + 22 how-to + 17 concept + 1 reference stub) plus 2 build-time copies of CHANGELOG.md and CONTRIBUTING.md → 49 rendered pages.</li>
 
     <li class="dash"><code>phpdoc.dist.xml.tpl</code>
- template (envsubst &rarr; <code>phpdoc.dist.xml</code>
+ template (envsubst → <code>phpdoc.dist.xml</code>
 ) rendering narrative + API into a single phpDocumentor v3 site under <code>build/docs/api/</code>
 .</li>
 
@@ -1060,14 +1060,14 @@
             
 
 <ul>
-    <li class="dash">No async/await keywords &mdash; fiber-based runtime via amphp v3 / Revolt makes the dispatch path synchronous from the caller's perspective.</li>
+    <li class="dash">No async/await keywords — fiber-based runtime via amphp v3 / Revolt makes the dispatch path synchronous from the caller's perspective.</li>
 
-    <li class="dash">Scenes are explicit (no metaclass auto-discovery) &mdash; register via <code>SceneRegistry::add([Scene::class])</code>
+    <li class="dash">Scenes are explicit (no metaclass auto-discovery) — register via <code>SceneRegistry::add([Scene::class])</code>
  because PHP has no metaclasses.</li>
 
     <li class="dash">No <code>model_dump</code>
  / <code>model_validate</code>
- &mdash; <code>Serializer::dump</code>
+ — <code>Serializer::dump</code>
  / <code>Serializer::load</code>
  cover the same surface with PHP reflection.</li>
 
@@ -1075,7 +1075,7 @@
  signature is <code>(object $event, mixed ...$kwargs)</code>
  (variadic) to round-trip dispatcher kwargs without case translation.</li>
 
-    <li class="dash">Handler kwargs use literal name matching (no snake_case &harr; camelCase conversion); filter return keys, <code>workflowData</code>
+    <li class="dash">Handler kwargs use literal name matching (no snake_case ↔ camelCase conversion); filter return keys, <code>workflowData</code>
  keys, and handler parameter names must agree.</li>
 
 </ul>

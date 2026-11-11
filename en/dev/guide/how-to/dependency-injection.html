@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -409,7 +409,7 @@
             <h2>When to use this</h2>
 
             
-    <p>Resolve per-request data &mdash; current user, db handle, parsed payload &mdash; once in a filter and let downstream filters and the handler receive it as named parameters. This avoids global state and keeps the handler signature self-documenting.</p>
+    <p>Resolve per-request data — current user, db handle, parsed payload — once in a filter and let downstream filters and the handler receive it as named parameters. This avoids global state and keeps the handler signature self-documenting.</p>
 
     </section>
 
@@ -453,7 +453,7 @@ $dispatcher-&gt;message-&gt;register(
             
     <p>A filter that returns an array merges its keys into the dispatcher kwargs bag. <code>Dispatcher::workflowData</code>
  seeds bot-wide defaults. The <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-CallableObject.html"><code>CallableObject</code></a> binder calls <code>array_intersect_key</code>
- against the closure's parameter names &mdash; no snake_case &harr; camelCase translation, names must match literally.</p>
+ against the closure's parameter names — no snake_case ↔ camelCase translation, names must match literally.</p>
 
     </section>
 
@@ -468,7 +468,7 @@ $dispatcher-&gt;message-&gt;register(
  silently drops the value to <code>null</code>
  and PHP will fatal on a non-nullable parameter. See <a href="guide/concepts/dispatcher.html">Dispatcher</a> for the resolution order.</li>
 
-    <li class="dash">Workflow data and filter returns share the same bag &mdash; a filter key overrides the workflow default for the rest of the dispatch.</li>
+    <li class="dash">Workflow data and filter returns share the same bag — a filter key overrides the workflow default for the rest of the dispatch.</li>
 
     <li class="dash">Variadic <code>mixed ...$kwargs</code>
  in the filter is required: it captures the upstream bag so injected keys propagate forward.</li>

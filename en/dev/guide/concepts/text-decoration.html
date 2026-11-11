@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -408,7 +408,7 @@
             
     <p><code>TextDecoration</code>
  turns plain text plus a list of <code>MessageEntity</code>
- entries into a Telegram-flavoured Markdown V2 or HTML string. It is the inverse of Telegram's "parse_mode" &mdash; given the structured form, produce the wire string.</p>
+ entries into a Telegram-flavoured Markdown V2 or HTML string. It is the inverse of Telegram's "parse_mode" — given the structured form, produce the wire string.</p>
 
             <section class="section " id="how-it-works">
             <h2>How it works</h2>
@@ -423,17 +423,17 @@
 , <code>preLanguage</code>
 , <code>link</code>
 , <code>customEmoji</code>
-, &hellip;) plus the escape-for-quoting function (<code>quote</code>
+, …) plus the escape-for-quoting function (<code>quote</code>
 ). The recursive emitter <code>applyEntity</code>
  dispatches on <code>MessageEntityType</code>
  via a <code>match (true)</code>
- expression &mdash; bold goes to <code>bold()</code>
+ expression — bold goes to <code>bold()</code>
 , code goes to <code>code()</code>
 , and so on. Pass-through types (<code>Url</code>
 , <code>Mention</code>
 , <code>Hashtag</code>
 , <code>Email</code>
-, &hellip;) return the inner text unchanged because escaping would corrupt them.</p>
+, …) return the inner text unchanged because escaping would corrupt them.</p>
 
             
     <p>Both subclasses expose a singleton via <code>instance()</code>
@@ -478,26 +478,26 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
             
     <p><code>unparse(string $text, ?list&lt;MessageEntity&gt; $entities)</code>
  is the top-level entry. It sorts the entities by offset, then walks them. Telegram's entity offsets are in <strong>UTF-16 code units</strong>
-, not bytes or PHP characters &mdash; a surrogate-pair emoji is two units. The implementation converts the input to UTF-16LE via <code>mb_convert_encoding</code>
+, not bytes or PHP characters — a surrogate-pair emoji is two units. The implementation converts the input to UTF-16LE via <code>mb_convert_encoding</code>
 , indexes by 2-byte units, and converts back to UTF-8 at each yield. This is the only correct way to handle the offset semantics; substring-by-byte would corrupt any text past the first non-ASCII code point. The PHP port matches aiogram's same UTF-16 handling at the implementation level.</p>
 
             
     <p>The walk handles nested entities. An entity fully inside another (<code>&lt;b&gt;hello &lt;i&gt;world&lt;/i&gt;&lt;/b&gt;</code>
 ) is collected as a nested batch and recursively decorated before the outer entity wraps the result. This matches Telegram's documented "entities can nest" rule and matches upstream <code>text_decorations.py</code>
-'s implementation. Overlapping (but not nested) entities are not supported &mdash; the API rejects them anyway on the inbound side, so an outbound rendering pipeline never has to handle them. The recursive walk is a <code>Generator</code>
+'s implementation. Overlapping (but not nested) entities are not supported — the API rejects them anyway on the inbound side, so an outbound rendering pipeline never has to handle them. The recursive walk is a <code>Generator</code>
  that yields decorated segments in order; <code>unparse</code>
  joins them once at the top level.</p>
 
     </section>
 
             <section class="section " id="quote-escaping-plain-text">
-            <h3>quote &mdash; escaping plain text</h3>
+            <h3>quote — escaping plain text</h3>
 
             
     <p>The <code>quote</code>
  method on each subclass is the escape function for the target dialect. <code>MarkdownDecoration::quote</code>
  escapes the Markdown V2 special-character set defined by the Telegram Bot API (underscore, asterisk, tilde, backslash, square brackets, parentheses, backtick, greater-than, hash, plus, minus, equals, pipe, curly braces, period, exclamation mark). <code>HtmlDecoration::quote</code>
- escapes the three XML-sensitive characters (less-than, greater-than, ampersand). Apply it to any text segment that is not already inside an entity emitter &mdash; <code>unparse</code>
+ escapes the three XML-sensitive characters (less-than, greater-than, ampersand). Apply it to any text segment that is not already inside an entity emitter — <code>unparse</code>
  does this automatically for untagged gaps between entities, so user code rarely calls <code>quote</code>
  directly.</p>
 
@@ -528,14 +528,14 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
 
             
     <p>The <code>MessageEntityType</code>
- enum drives the dispatch. Each Telegram entity type maps to a method on the decoration subclass. Adding a new entity type (which Telegram does occasionally) is a Phase 2 codegen update plus two method overrides on each decoration subclass &mdash; small, mechanical work.</p>
+ enum drives the dispatch. Each Telegram entity type maps to a method on the decoration subclass. Adding a new entity type (which Telegram does occasionally) is a Phase 2 codegen update plus two method overrides on each decoration subclass — small, mechanical work.</p>
 
             
     <p>The public surface is <code>unparse()</code>
  plus <code>quote()</code>
 ; the per-entity emitters (<code>bold</code>
 , <code>italic</code>
-, &hellip;) stay <code>protected</code>
+, …) stay <code>protected</code>
 . A handler that wants to compose a Markdown V2 message manually can escape user input with <a href="classes/Gruven-PhpBotGram-Utils-Text-MarkdownDecoration.html"><code>MarkdownDecoration::quote</code></a> and concatenate it with its own markup. The framework's preferred path is to assemble the structured form (text + entities) and let <code>unparse</code>
  produce the wire string.</p>
 
@@ -548,7 +548,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
 
             
     <p>UTF-16 conversion runs on every <code>unparse</code>
- call. For long messages the cost is non-trivial &mdash; proportional to the text length, not the entity count. We do not cache because messages are typically built once and sent once; if you find yourself rendering the same <code>Message</code>
+ call. For long messages the cost is non-trivial — proportional to the text length, not the entity count. We do not cache because messages are typically built once and sent once; if you find yourself rendering the same <code>Message</code>
  repeatedly (unusual), cache the result yourself. The conversion is necessary <em>because</em>
  of Telegram's wire-protocol contract, not a choice. The two <code>mb_convert_encoding</code>
  calls per unparse are the unavoidable cost of supporting non-BMP characters correctly.</p>
@@ -557,7 +557,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
     <p>Pass-through types are an asymmetry. A URL entity returns its inner text unchanged, including any reserved-character collisions with the target dialect. The HTML decoration escapes <code>&lt;</code>
  and <code>&gt;</code>
  everywhere, even inside a <code>Url</code>
- entity &mdash; but Markdown V2 does not, because the URL syntax already handles escaping internally. The trade is "match Telegram's accepted formatting" vs. "make every output universally safe"; the framework chooses the former, matching aiogram. A URL that genuinely contains an angle bracket has to be encoded upstream of the message build.</p>
+ entity — but Markdown V2 does not, because the URL syntax already handles escaping internally. The trade is "match Telegram's accepted formatting" vs. "make every output universally safe"; the framework chooses the former, matching aiogram. A URL that genuinely contains an angle bracket has to be encoded upstream of the message build.</p>
 
             
     <p>Date-time entities require a <code>unixTime</code>
@@ -568,7 +568,7 @@ $dispatcher-&gt;message-&gt;register(static function (Message $event): void {
 
             
     <p>Custom emoji entities embed the emoji ID. The decoration emits a <code>tg://emoji?id=...</code>
- URL for both HTML and Markdown V2 forms. Telegram clients render this as the actual custom emoji, but clients that don't support custom emoji (or for media that doesn't support them at all) see the underlying ID &mdash; there's no automatic fallback to a generic emoji.</p>
+ URL for both HTML and Markdown V2 forms. Telegram clients render this as the actual custom emoji, but clients that don't support custom emoji (or for media that doesn't support them at all) see the underlying ID — there's no automatic fallback to a generic emoji.</p>
 
     </section>
 

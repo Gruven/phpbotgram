@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -411,7 +411,7 @@
             
     <p>Unit tests should not call the real Telegram API. <code>MockedSession</code>
  captures every outgoing <code>TelegramMethod</code>
-, plays back canned responses, and lets you assert on call order, payload, and timeout &mdash; all without a network. Pair it with <code>RecordingDispatcher</code>
+, plays back canned responses, and lets you assert on call order, payload, and timeout — all without a network. Pair it with <code>RecordingDispatcher</code>
  to verify dispatcher fall-through paths.</p>
 
     </section>
@@ -456,7 +456,7 @@ assert($request-&gt;chatId === 100);
             
 
 <ul>
-    <li class="dash">Responses are FIFO. Queueing two responses then calling once leaves one unconsumed for the next test &mdash; reset the session between tests.</li>
+    <li class="dash">Responses are FIFO. Queueing two responses then calling once leaves one unconsumed for the next test — reset the session between tests.</li>
 
     <li class="dash"><code>Response::result</code>
  is typed <code>mixed</code>

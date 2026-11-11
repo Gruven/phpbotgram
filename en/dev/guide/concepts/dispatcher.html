@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -415,7 +415,7 @@
     <p><a href="classes/Gruven-PhpBotGram-Dispatcher-Dispatcher.html"><code>Dispatcher</code></a> extends <code>Router</code>
 , so the same registration API (<code>-&gt;message-&gt;register</code>
 , <code>-&gt;callbackQuery-&gt;register</code>
-, &hellip;) is available at the top level. When you call <code>runPolling</code>
+, …) is available at the top level. When you call <code>runPolling</code>
 , the dispatcher opens an <a href="classes/Gruven-PhpBotGram-Client-Session-AmphpSession.html"><code>AmphpSession</code></a> on the bot, then enters a fiber that calls <code>getUpdates</code>
  in a loop. Each returned update is fed through <code>feedUpdate</code>
 , which walks the 25-observer map and resolves the correct observer (<code>message</code>
@@ -426,7 +426,7 @@
 
             
     <p>For each observer the dispatcher applies the global filter chain, then per-handler filters, then enters the middleware stack (<code>outerMiddleware</code>
- &rarr; handler &rarr; <code>innerMiddleware</code>
+ → handler → <code>innerMiddleware</code>
 ). The handler's return value is ignored; side effects (<a href="classes/Gruven-PhpBotGram-Types-Message.html#method_answer"><code>$event-&gt;answer(...)</code></a>) are the contract.</p>
 
             
@@ -457,7 +457,7 @@
 , plus the synthetic <code>errors</code>
  and <code>update</code>
  observers. Resolving by attribute presence means a single <code>getUpdates</code>
- poll can fan out into multiple handlers on the same update &mdash; for instance, the <code>update</code>
+ poll can fan out into multiple handlers on the same update — for instance, the <code>update</code>
  observer always fires alongside the type-specific one.</p>
 
             
@@ -473,20 +473,20 @@ use Gruven\PhpBotGram\Dispatcher\PollingOptions;
 
 $bot = new Bot(getenv('BOT_TOKEN'));
 $dispatcher = new Dispatcher();
-// register handlers on $dispatcher-&gt;message, $dispatcher-&gt;callbackQuery, &hellip;
+// register handlers on $dispatcher-&gt;message, $dispatcher-&gt;callbackQuery, …
 $dispatcher-&gt;runPolling(new PollingOptions(), $bot);
 </code></pre>
 
             
     <p>The variadic <code>Bot ...$bots</code>
- parameter lets a single dispatcher drive several bot tokens from one process &mdash; handy for shared admin UIs or for fanning out an alerting service across customer-specific tokens.</p>
+ parameter lets a single dispatcher drive several bot tokens from one process — handy for shared admin UIs or for fanning out an alerting service across customer-specific tokens.</p>
 
             
     <p>Graceful shutdown: the dispatcher registers <code>SIGINT</code>
 /<code>SIGTERM</code>
  handlers on <code>runPolling</code>
 . On signal it stops fetching new updates, lets in-flight handlers finish, and exits with code 0. This means production bots running under systemd can be restarted without losing updates already delivered to the loop. <code>pcntl</code>
- is required &mdash; on builds without it the dispatcher swallows the unsupported-feature exception and falls back to "exit immediately on Ctrl-C" semantics.</p>
+ is required — on builds without it the dispatcher swallows the unsupported-feature exception and falls back to "exit immediately on Ctrl-C" semantics.</p>
 
     </section>
 

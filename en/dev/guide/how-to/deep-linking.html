@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -426,7 +426,7 @@ use Gruven\PhpBotGram\Utils\DeepLinking;
 
 // Building the link.
 $link = DeepLinking::createStartLink($bot, payload: 'ref_abc', encode: false);
-// &rarr; https://t.me/yourbot?start=ref_abc
+// → https://t.me/yourbot?start=ref_abc
 
 // Handling the incoming /start with payload.
 $dispatcher-&gt;message-&gt;register(
@@ -442,7 +442,7 @@ $dispatcher-&gt;message-&gt;register(
     <p><a href="classes/Gruven-PhpBotGram-Utils-DeepLinking.html"><code>DeepLinking::createStartLink</code></a> caches the bot's username via a <code>WeakMap</code>
  so subsequent calls don't re-hit <code>getMe</code>
 . Pass <code>encode: true</code>
- (or a custom encoder) to base64 arbitrary payloads &mdash; raw payloads are limited to <code>[A-Za-z0-9_-]</code>
+ (or a custom encoder) to base64 arbitrary payloads — raw payloads are limited to <code>[A-Za-z0-9_-]</code>
  and 64 characters. On receipt, the <code>CommandObject</code>
  injected by <code>CommandStart</code>
  carries the raw payload in <code>$command-&gt;args</code>
@@ -466,7 +466,7 @@ $dispatcher-&gt;message-&gt;register(
  for arbitrary strings.</li>
 
     <li class="dash"><code>createStartLink</code>
- requires the bot to have a username &mdash; bots without one (rare) throw <code>LogicException</code>
+ requires the bot to have a username — bots without one (rare) throw <code>LogicException</code>
  from the first call.</li>
 
     <li class="dash">The payload arrives <strong>after</strong>

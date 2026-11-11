@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -421,7 +421,7 @@
             
     <p><a href="classes/Gruven-PhpBotGram-Filters-CallbackData.html"><code>CallbackData</code></a> is an abstract base. A subclass tags itself with <a href="classes/Gruven-PhpBotGram-Filters-CallbackPrefix.html"><code>#[CallbackPrefix('order')]</code></a> and exposes constructor-promoted readonly properties. <code>pack()</code>
  walks the constructor's parameter list (not the property set) to build the wire string <code>prefix:val1:val2:...</code>
-. Iterating parameters guarantees field order matches across encode and decode, and excludes derived properties assigned in the constructor body &mdash; matching Pydantic's <code>model_dump()</code>
+. Iterating parameters guarantees field order matches across encode and decode, and excludes derived properties assigned in the constructor body — matching Pydantic's <code>model_dump()</code>
  semantic of "fields, not attributes".</p>
 
             <pre><code class="language-php">use Gruven\PhpBotGram\Filters\CallbackData;
@@ -439,25 +439,25 @@ final class OrderCallback extends CallbackData
 </code></pre>
 
             
-    <p>The type-encoding table is fixed: <code>null &rarr; ''</code>
-, <code>bool &rarr; '1'/'0'</code>
-, <code>int|float &rarr; (string)$value</code>
-, <code>string &rarr; as-is</code>
-, <code>\Stringable &rarr; (string)$value</code>
-, <code>\UnitEnum &rarr; $value-&gt;value</code>
+    <p>The type-encoding table is fixed: <code>null → ''</code>
+, <code>bool → '1'/'0'</code>
+, <code>int|float → (string)$value</code>
+, <code>string → as-is</code>
+, <code>\Stringable → (string)$value</code>
+, <code>\UnitEnum → $value-&gt;value</code>
 , anything else throws <code>LogicException</code>
 . Decoding does the inverse: a typed property constructor parameter drives the reverse coercion (<code>?int</code>
  parses back from the integer string, nullable types parse <code>''</code>
  back to <code>null</code>
 , backed enums route through <code>::from</code>
-). The fixed table avoids the "what does this type encode to" question on a per-call basis &mdash; the choices are pinned to upstream <code>aiogram/filters/callback_data.py</code>
+). The fixed table avoids the "what does this type encode to" question on a per-call basis — the choices are pinned to upstream <code>aiogram/filters/callback_data.py</code>
  verbatim.</p>
 
             
     <p><code>MAX_CALLBACK_LENGTH = 64</code>
  enforces Telegram's wire-length cap. <code>pack()</code>
  measures with <code>strlen</code>
- &mdash; PHP strings are byte sequences and the protocol expects UTF-8, so byte-count equals UTF-8-byte-count when the input is valid UTF-8. Overflow throws <code>LogicException</code>
+ — PHP strings are byte sequences and the protocol expects UTF-8, so byte-count equals UTF-8-byte-count when the input is valid UTF-8. Overflow throws <code>LogicException</code>
 , not <code>InvalidArgumentException</code>
 : a too-long callback payload is a programming error (you chose the field shape), not user input. The limit is hard-coded on Telegram's side; the framework cannot soften it without breaking the wire contract.</p>
 
@@ -491,7 +491,7 @@ $keyboard = (new InlineKeyboardBuilder())
 
             
     <p>The matching filter is <code>OrderCallback::filter()</code>
- &mdash; a static factory that returns a <a href="classes/Gruven-PhpBotGram-Filters-CallbackQueryFilter.html"><code>CallbackQueryFilter</code></a> configured to match the subclass's prefix. Handlers receive the unpacked object via the <code>callback_data</code>
+ — a static factory that returns a <a href="classes/Gruven-PhpBotGram-Filters-CallbackQueryFilter.html"><code>CallbackQueryFilter</code></a> configured to match the subclass's prefix. Handlers receive the unpacked object via the <code>callback_data</code>
  kwarg:</p>
 
             <pre><code class="language-php">use Gruven\PhpBotGram\Dispatcher\Dispatcher;
@@ -502,7 +502,7 @@ $dispatcher = new Dispatcher();
 // Register a handler that fires only for OrderCallback payloads.
 $dispatcher-&gt;callbackQuery-&gt;register(
     static function (CallbackQuery $event, OrderCallback $callback_data): void {
-        $event-&gt;answer("Order #{$callback_data-&gt;id} &mdash; {$callback_data-&gt;action}")-&gt;emit();
+        $event-&gt;answer("Order #{$callback_data-&gt;id} — {$callback_data-&gt;action}")-&gt;emit();
     },
     filters: [OrderCallback::filter()],
 );
@@ -510,7 +510,7 @@ $dispatcher-&gt;callbackQuery-&gt;register(
 
             
     <p><code>$callback_data</code>
- is already unpacked &mdash; no manual <code>CallbackData::unpack()</code>
+ is already unpacked — no manual <code>CallbackData::unpack()</code>
  call needed. The filter rejects any <code>CallbackQuery</code>
  whose <code>data</code>
  string does not begin with the <code>order:</code>
@@ -519,7 +519,7 @@ $dispatcher-&gt;callbackQuery-&gt;register(
             
     <p>The separator defaults to <code>:</code>
  but can be overridden via the attribute: <code>#[CallbackPrefix('order', sep: '|')]</code>
-. Choose the separator carefully &mdash; it cannot appear in any field's encoded value. For most bots the default colon is safe; bots that encode UUIDs or other string values that might contain colons should pick a separator unlikely to collide.</p>
+. Choose the separator carefully — it cannot appear in any field's encoded value. For most bots the default colon is safe; bots that encode UUIDs or other string values that might contain colons should pick a separator unlikely to collide.</p>
 
     </section>
 
@@ -529,16 +529,16 @@ $dispatcher-&gt;callbackQuery-&gt;register(
             <h2>Trade-offs</h2>
 
             
-    <p>64 bytes is small. After the prefix and separators, you have ~50 bytes for actual data &mdash; a few small ints, no UUIDs, no free-form text. The encoding deliberately favours compactness over human-readability: a <code>bool</code>
+    <p>64 bytes is small. After the prefix and separators, you have ~50 bytes for actual data — a few small ints, no UUIDs, no free-form text. The encoding deliberately favours compactness over human-readability: a <code>bool</code>
  is <code>'1'</code>
 , not <code>'true'</code>
-, because the wire cap is the binding constraint. If your payload doesn't fit, store it server-side and put a short ID in the callback data. The pattern is "callback ID is a key into a server-side store, not a self-contained payload" &mdash; and aiogram makes the same recommendation.</p>
+, because the wire cap is the binding constraint. If your payload doesn't fit, store it server-side and put a short ID in the callback data. The pattern is "callback ID is a key into a server-side store, not a self-contained payload" — and aiogram makes the same recommendation.</p>
 
             
     <p>Reflection runs once per <code>pack</code>
 /<code>unpack</code>
- call, against the subclass metadata. The cost is real but small (&asymp; tens of microseconds on a modern PHP); for hot paths the caller can cache the meta object themselves. We deliberately do not cache it inside <code>CallbackData</code>
- &mdash; the per-subclass meta is reflected on demand to avoid leaking a static map that would interfere with hot-reload during development. The reflection is bounded by the number of distinct <code>CallbackData</code>
+ call, against the subclass metadata. The cost is real but small (≈ tens of microseconds on a modern PHP); for hot paths the caller can cache the meta object themselves. We deliberately do not cache it inside <code>CallbackData</code>
+ — the per-subclass meta is reflected on demand to avoid leaking a static map that would interfere with hot-reload during development. The reflection is bounded by the number of distinct <code>CallbackData</code>
  subclasses in your bot, not by request volume.</p>
 
             
@@ -548,7 +548,7 @@ $dispatcher-&gt;callbackQuery-&gt;register(
     <p>The framework supports backed enums in callback fields, but the enum must be <code>BackedEnum</code>
 -typed (not just <code>UnitEnum</code>
 ). Encoding uses <code>$value-&gt;value</code>
- &mdash; a non-backed enum has no value to encode. The decoder uses <code>::from</code>
+ — a non-backed enum has no value to encode. The decoder uses <code>::from</code>
 , so an invalid enum string surfaces as the underlying <code>\ValueError</code>
 . We treat this as user-data error (the wire payload was corrupted or out of date) rather than a programming error, so the typed exception propagates to the dispatcher's error channel.</p>
 

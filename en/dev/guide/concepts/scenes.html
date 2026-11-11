@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -465,7 +465,7 @@ final class GreetingScene extends Scene
  reflects each class, wires its handlers onto the appropriate dispatcher observers behind a <code>StateFilter</code>
  keyed to the scene's <code>SceneState</code>
 , and registers the scene-manager middleware. The <code>add()</code>
- call is explicit, not auto-discovered &mdash; aiogram's <code>SceneRegistry.add(*scenes)</code>
+ call is explicit, not auto-discovered — aiogram's <code>SceneRegistry.add(*scenes)</code>
  also requires explicit registration, and the port keeps that contract because metaclass-style auto-import is unidiomatic in PHP. The registry composes with the dispatcher's router model: each scene's handler attaches as a regular per-handler registration on the matching observer, just with a <code>StateFilter</code>
  pre-baked so the dispatch only fires when the FSM state matches.</p>
 
@@ -500,7 +500,7 @@ $dispatcher = new Dispatcher();
 $registry = new SceneRegistry($dispatcher);
 $registry-&gt;add([GreetingScene::class]);
 
-// /start &mdash; enter the scene from a plain message handler.
+// /start — enter the scene from a plain message handler.
 $dispatcher-&gt;message-&gt;register(
     static function (Message $event, ScenesManager $scenes): void {
         $event-&gt;answer("Welcome! Entering the greeting scene.")-&gt;emit();
@@ -626,18 +626,18 @@ $dispatcher-&gt;message-&gt;register(
 
             
     <p>Scenes are explicit. The PHP port deliberately rejects aiogram's metaclass <code>__init_subclass__</code>
- magic &mdash; every scene must be passed to <code>SceneRegistry::add</code>
+ magic — every scene must be passed to <code>SceneRegistry::add</code>
 . The trade is more boilerplate vs. predictability: a class that looks like a scene but isn't registered silently does nothing in aiogram, while in phpbotgram it's a clear "you forgot to register me". This was a deliberate choice during the port (see <a href="guide/concepts/architecture-decisions.html#architecture-decisions">Architecture decisions</a>) and we believe the explicit form is the right default for PHP.</p>
 
             
     <p>State is stored as a string by the underlying FSM, so two scenes named <code>WaitingForName</code>
  collide if both declare <code>#[SceneState('WaitingForName')]</code>
-. There is no auto-namespacing &mdash; the state name you declare is the state name written to storage. Use namespacing manually if you have a large bot (<code>'shop:WaitingForName'</code>
+. There is no auto-namespacing — the state name you declare is the state name written to storage. Use namespacing manually if you have a large bot (<code>'shop:WaitingForName'</code>
 , etc.) or rely on the convention that the scene class name maps 1:1 to a unique state name. Aiogram has the same collision risk; the port doesn't try to invent a different convention.</p>
 
             
     <p>The history manager stores a deep-copy of FSM data per push, in memory inside the scene's own storage entry. For deep flows with heavy data this can grow the storage payload. If your bot has long multi-screen flows, audit <code>HistoryManager::push</code>
- overhead &mdash; or set <code>HistoryManager</code>
+ overhead — or set <code>HistoryManager</code>
  to a no-op for that scene if you don't need <code>back()</code>
 . The deep-copy semantics are necessary: if <code>back()</code>
  restored a reference to the <em>same</em>
@@ -654,7 +654,7 @@ $dispatcher-&gt;message-&gt;register(
 , <code>Leave</code>
 , <code>Exit</code>
 , and <code>Back</code>
- cases &mdash; there is no <code>Retake</code>
+ cases — there is no <code>Retake</code>
 . <code>Enter</code>
  and <code>Leave</code>
  are the lifecycle points you bind to with the <code>#[On*](action:)</code>

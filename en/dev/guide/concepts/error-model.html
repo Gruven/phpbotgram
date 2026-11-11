@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -452,7 +452,7 @@ $handler = static function (Message $event): void {
     <p>Unlike Telegram update events, <code>ErrorEvent</code>
  does <strong>not</strong>
  extend <code>TelegramObject</code>
- &mdash; it lives in <code>Types/</code>
+ — it lives in <code>Types/</code>
  only because aiogram puts it there, but it's a standalone readonly value object with no serializer / bot plumbing. Error handlers register on <code>$dispatcher-&gt;errors</code>
  (or <code>$router-&gt;errors</code>
 ) and follow the same filter/middleware contract as any other observer.</p>
@@ -460,7 +460,7 @@ $handler = static function (Message $event): void {
             
     <p><a href="classes/Gruven-PhpBotGram-Filters-ExceptionTypeFilter.html"><code>ExceptionTypeFilter</code></a> matches by <code>instanceof</code>
 ; <a href="classes/Gruven-PhpBotGram-Filters-ExceptionMessageFilter.html"><code>ExceptionMessageFilter</code></a> matches by regex against <code>getMessage()</code>
-. Together they let an error observer chain handlers selectively &mdash; the example below fires only on <code>TelegramRetryAfter</code>
+. Together they let an error observer chain handlers selectively — the example below fires only on <code>TelegramRetryAfter</code>
 , not on every error:</p>
 
             <pre><code class="language-php">use Gruven\PhpBotGram\Bot;
@@ -496,7 +496,7 @@ $dispatcher-&gt;runPolling(new PollingOptions(), $bot);
             <h3>Control-flow exceptions</h3>
 
             
-    <p>Two control-flow exceptions are internal signalling primitives, not errors. <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-SkipHandlerException.html"><code>SkipHandlerException</code></a> tells the dispatcher to skip the current handler and try the next one; <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-CancelHandlerException.html"><code>CancelHandlerException</code></a> tells it to abandon the dispatch entirely. Throwing either from a handler is the supported way to fall through or abort &mdash; <code>ErrorsMiddleware</code>
+    <p>Two control-flow exceptions are internal signalling primitives, not errors. <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-SkipHandlerException.html"><code>SkipHandlerException</code></a> tells the dispatcher to skip the current handler and try the next one; <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-CancelHandlerException.html"><code>CancelHandlerException</code></a> tells it to abandon the dispatch entirely. Throwing either from a handler is the supported way to fall through or abort — <code>ErrorsMiddleware</code>
  recognises these by type and re-raises them without converting to an <code>ErrorEvent</code>
 . The naming follows aiogram's <code>SkipHandler</code>
  / <code>CancelHandler</code>
@@ -531,7 +531,7 @@ $cancelHandler = static function (Message $event): void {
             
     <p>Polling-loop failures have their own contract. A <a href="classes/Gruven-PhpBotGram-Exceptions-RestartingTelegram.html"><code>RestartingTelegram</code></a> or <code>TelegramNetworkException</code>
  in <code>getUpdates</code>
- routes through <a href="classes/Gruven-PhpBotGram-Utils-Backoff.html"><code>Backoff</code></a> &mdash; exponential delay with jitter, configured per dispatcher via <code>PollingOptions::$backoffConfig</code>
+ routes through <a href="classes/Gruven-PhpBotGram-Utils-Backoff.html"><code>Backoff</code></a> — exponential delay with jitter, configured per dispatcher via <code>PollingOptions::$backoffConfig</code>
  (note the field is <code>$backoffConfig</code>
 , not <code>$backoff</code>
 ).</p>
@@ -561,13 +561,13 @@ $cancelHandler = static function (Message $event): void {
             
     <p><code>ErrorEvent</code>
  deliberately does not extend <code>TelegramObject</code>
-. This saves the dispatcher from running the serializer on an error event (which would be meaningless &mdash; it has no wire form) and clarifies the type's role. The cost is that error handlers cannot use <code>TelegramObject</code>
+. This saves the dispatcher from running the serializer on an error event (which would be meaningless — it has no wire form) and clarifies the type's role. The cost is that error handlers cannot use <code>TelegramObject</code>
 -typed methods on the value; the benefit is that the framework cannot accidentally try to send an error event back to Telegram.</p>
 
             
     <p><code>SkipHandler</code>
  and <code>CancelHandler</code>
- are exceptions, not return-values. PHP's typed return values would have made this awkward &mdash; <code>mixed</code>
+ are exceptions, not return-values. PHP's typed return values would have made this awkward — <code>mixed</code>
  is the contract, and a sentinel <code>RejectedSentinel</code>
  already exists for "this handler didn't match". Using exceptions for the <em>intended</em>
  control flow is unusual but readable: <code>throw new SkipHandler;</code>
@@ -581,7 +581,7 @@ $cancelHandler = static function (Message $event): void {
     <p>The <code>silentCallRequest</code>
  mechanism on the dispatcher swallows <code>TelegramApiException</code>
  from the late webhook-fallthrough path and emits a <code>RuntimeWarning</code>
-. The reasoning is that the request lifecycle is already over by the time the late call surfaces, and there's nowhere to surface the failure &mdash; except as a warning to logs. Bots that need to alert on this specific case should attach a logging handler that watches for <code>E_USER_WARNING</code>
+. The reasoning is that the request lifecycle is already over by the time the late call surfaces, and there's nowhere to surface the failure — except as a warning to logs. Bots that need to alert on this specific case should attach a logging handler that watches for <code>E_USER_WARNING</code>
  from the framework.</p>
 
     </section>

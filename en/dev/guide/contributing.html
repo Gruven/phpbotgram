@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -474,7 +474,7 @@ composer docs-api           # narrative + API build + gates
  features encouraged: readonly classes, asymmetric visibility, property hooks, enums, attributes.</li>
 
     <li class="dash"><strong>PHPStan level 9</strong>
- &mdash; no <code>@phpstan-ignore</code>
+ — no <code>@phpstan-ignore</code>
 , no <code>assert()</code>
 , no inline <code>@var</code>
  to silence type errors. Fix the underlying issue.</li>
@@ -516,7 +516,7 @@ composer docs-api           # narrative + API build + gates
  fenced blocks (auto-prepends <code>&lt;?php\n</code>
 ) and forbids inline raw HTML in narrative pages.</li>
 
-    <li class="dash">Guide &rarr; API cross-links use the sentinel host <code>https://api.phpbotgram.local/&lt;Namespace-with-dashes&gt;-&lt;Class&gt;.html</code>
+    <li class="dash">Guide → API cross-links use the sentinel host <code>https://api.phpbotgram.local/&lt;Namespace-with-dashes&gt;-&lt;Class&gt;.html</code>
 , rewritten post-build to <code>classes/...</code>
 .</li>
 
@@ -533,14 +533,14 @@ composer docs-api           # narrative + API build + gates
 <ul>
     <li class="dash"><strong><code>```php</code>
 </strong>
- &mdash; a complete, parseable PHP snippet. <code>scripts/lint-docs.php</code>
+ — a complete, parseable PHP snippet. <code>scripts/lint-docs.php</code>
  auto-prepends <code>&lt;?php\n</code>
  and runs <code>php -l</code>
 . Parse errors fail the build. Use this fence for full files, top-level scripts, and any snippet that forms a syntactically valid program on its own.</li>
 
     <li class="dash"><strong><code>```php-fragment</code>
 </strong>
- &mdash; a class-body or method-body fragment that cannot be parsed standalone (e.g. <code>public function send(): void { ... }</code>
+ — a class-body or method-body fragment that cannot be parsed standalone (e.g. <code>public function send(): void { ... }</code>
  without a class wrapper). <code>scripts/lint-docs.php</code>
  skips these blocks; authors are responsible for keeping the code correct.</li>
 
@@ -549,7 +549,7 @@ composer docs-api           # narrative + API build + gates
             
     <p>The Phase 10 pilot pass (Task 1 Step 4b, notes at <code>docs/superpowers/notes/2026-05-15-phase-10-pilot.md</code>
 ) recorded how phpDocumentor's renderer treats each fence. If the pilot notes say the two render identically (no syntax-highlight distinction), prefer <code>php</code>
- and wrap fragments in a synthetic class &mdash; that keeps the lint gate active even for snippet authors.</p>
+ and wrap fragments in a synthetic class — that keeps the lint gate active even for snippet authors.</p>
 
             
     <p>Other languages (<code>yaml</code>
@@ -557,7 +557,7 @@ composer docs-api           # narrative + API build + gates
 , <code>json</code>
 , <code>dot</code>
 , <code>text</code>
-, &hellip;) are allowed and pass through the linter unchanged.</p>
+, …) are allowed and pass through the linter unchanged.</p>
 
     </section>
 

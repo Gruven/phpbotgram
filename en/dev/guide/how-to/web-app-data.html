@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -410,7 +410,7 @@
 
             
     <p>A Telegram Mini App posts <code>initData</code>
- to your backend so you can identify the user. The string is signed; you MUST verify the signature before trusting any field. The framework ships two validators &mdash; HMAC (bot-token-based) and Ed25519 (third-party, public-key-based).</p>
+ to your backend so you can identify the user. The string is signed; you MUST verify the signature before trusting any field. The framework ships two validators — HMAC (bot-token-based) and Ed25519 (third-party, public-key-based).</p>
 
     </section>
 
@@ -424,7 +424,7 @@ $initData = $_POST['init_data'];        // raw query-string from the Mini App
 $botToken = getenv('BOT_TOKEN');
 $botId    = (int)explode(':', $botToken)[0];
 
-// Option A &mdash; HMAC via the bot token (server-side, single-bot).
+// Option A — HMAC via the bot token (server-side, single-bot).
 try {
     $parsed = WebApp::safeParseInitData($botToken, $initData);
 } catch (InvalidArgumentException) {
@@ -432,7 +432,7 @@ try {
     exit('Invalid signature');
 }
 
-// Option B &mdash; Ed25519 via the Telegram public key (multi-bot, microservices).
+// Option B — Ed25519 via the Telegram public key (multi-bot, microservices).
 if (!WebAppSignature::check($botId, $initData)) {
     http_response_code(403);
     exit('Invalid signature');
@@ -446,7 +446,7 @@ echo "Hello, {$parsed-&gt;user-&gt;firstName}";
 
             
     <p><a href="classes/Gruven-PhpBotGram-Utils-WebApp-WebAppSignature.html"><code>WebAppSignature::check</code></a> verifies the <code>signature</code>
- field against the Telegram Ed25519 public key &mdash; pick this when the validating service doesn't have the bot token.</p>
+ field against the Telegram Ed25519 public key — pick this when the validating service doesn't have the bot token.</p>
 
     </section>
 
@@ -463,7 +463,7 @@ echo "Hello, {$parsed-&gt;user-&gt;firstName}";
 /exception as 403.</li>
 
     <li class="dash">Don't reuse <code>initData</code>
- &mdash; Telegram allows up to 24 hours but the <code>auth_date</code>
+ — Telegram allows up to 24 hours but the <code>auth_date</code>
  field is yours to enforce. Reject older payloads. See <a href="guide/concepts/webhook.html">Webhook</a> for the broader Mini App entry flow.</li>
 
 </ul>

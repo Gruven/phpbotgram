@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -410,7 +410,7 @@
 
             
     <p>Running two related bots (production + staging, EN bot + RU bot, support + sales) in the same process keeps memory low and lets them share handler code. <code>runPolling</code>
- is variadic &mdash; pass every <code>Bot</code>
+ is variadic — pass every <code>Bot</code>
  instance and the dispatcher fans out one fiber per bot.</p>
 
     </section>
@@ -439,7 +439,7 @@ $dispatcher-&gt;runPolling(new PollingOptions(), $bot1, $bot2);
 
             
     <p><a href="classes/Gruven-PhpBotGram-Dispatcher-Dispatcher.html"><code>Dispatcher::runPolling</code></a> spawns one polling fiber per bot and merges every incoming update through the same handler tree. The <code>Bot $bot</code>
- kwarg in any handler identifies which bot the current update came from &mdash; handy for per-tenant logic.</p>
+ kwarg in any handler identifies which bot the current update came from — handy for per-tenant logic.</p>
 
     </section>
 
@@ -454,7 +454,7 @@ $dispatcher-&gt;runPolling(new PollingOptions(), $bot1, $bot2);
 ) when isolation matters.</li>
 
     <li class="dash">The <code>MemoryStorage</code>
- is single-key-spaced &mdash; both bots' FSM contexts collide unless you key by <code>bot_id</code>
+ is single-key-spaced — both bots' FSM contexts collide unless you key by <code>bot_id</code>
 . Promote to Redis/Mongo and rely on the <code>StorageKey</code>
  <code>botId</code>
  field for natural separation.</li>

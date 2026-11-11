@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -426,7 +426,7 @@
  list; the original chain is immutable. The <code>F</code>
  constant at the top of <code>Gruven\PhpBotGram\F</code>
  is a fresh, empty <code>MagicFilter</code>
- &mdash; PHP 8.5 allows <code>new</code>
+ — PHP 8.5 allows <code>new</code>
  in <code>const</code>
  expressions, so the import <code>use const Gruven\PhpBotGram\F;</code>
  gives every caller the same seed without runtime allocation. Composer's <code>autoload.files</code>
@@ -437,7 +437,7 @@
  builds two operations: <a href="classes/Gruven-PhpBotGram-Utils-MagicFilter-Operation-GetAttributeOperation.html"><code>GetAttributeOperation('text')</code></a>, <a href="classes/Gruven-PhpBotGram-Utils-MagicFilter-Operation-ComparatorOperation.html"><code>ComparatorOperation::equals('hello')</code></a>. To turn it into a <code>Filter</code>
  the caller invokes <code>-&gt;asFilter()</code>
 , which wraps the chain in <a href="classes/Gruven-PhpBotGram-Utils-MagicFilter-MagicFilterAsFilter.html"><code>MagicFilterAsFilter</code></a>. That bridge resolves the chain against the <em>event</em>
- &mdash; so the example above succeeds when <code>$event-&gt;text === 'hello'</code>
+ — so the example above succeeds when <code>$event-&gt;text === 'hello'</code>
 . Operations implement a uniform <code>BaseOperation::resolve(mixed $value, mixed $initialValue): mixed</code>
  contract; the resolver walks the list applying each operation in turn.</p>
 
@@ -452,7 +452,7 @@ $filter2 = $chain-&gt;asFilter();
 </code></pre>
 
             
-    <p>The chain is immutable &mdash; <code>$chain</code>
+    <p>The chain is immutable — <code>$chain</code>
  is unchanged after <code>-&gt;equals(...)</code>
  is appended; each operation returns a fresh <code>MagicFilter</code>
  instance.</p>
@@ -515,9 +515,9 @@ $dispatcher-&gt;message-&gt;register(
             <h3>Resolution and the "skip" state</h3>
 
             
-    <p>Resolution distinguishes important operations from rest. When an attribute lookup or cast fails, the chain enters a "skip" state &mdash; the running value collapses to <code>null</code>
+    <p>Resolution distinguishes important operations from rest. When an attribute lookup or cast fails, the chain enters a "skip" state — the running value collapses to <code>null</code>
  and only <code>important</code>
- operations continue (NOT, OR, &hellip;). This is how <code>F-&gt;message-&gt;text-&gt;equals('hi')</code>
+ operations continue (NOT, OR, …). This is how <code>F-&gt;message-&gt;text-&gt;equals('hi')</code>
  gracefully returns <code>false</code>
  for an <code>EditedMessage</code>
  event with no <code>text</code>
@@ -527,11 +527,11 @@ $dispatcher-&gt;message-&gt;register(
     </section>
 
             <section class="section " id="magicdata-resolving-against-the-kwargs-bag">
-            <h3>MagicData &mdash; resolving against the kwargs bag</h3>
+            <h3>MagicData — resolving against the kwargs bag</h3>
 
             
     <p><a href="classes/Gruven-PhpBotGram-Filters-MagicData.html"><code>MagicData</code></a> is the variant that resolves against the <em>kwargs</em>
- bag rather than the event &mdash; useful when a rule depends on FSM state or another middleware-injected value. The bag is wrapped in <a href="classes/Gruven-PhpBotGram-Utils-MagicFilter-AttrDict.html"><code>AttrDict</code></a> so the chain's <code>__get</code>
+ bag rather than the event — useful when a rule depends on FSM state or another middleware-injected value. The bag is wrapped in <a href="classes/Gruven-PhpBotGram-Utils-MagicFilter-AttrDict.html"><code>AttrDict</code></a> so the chain's <code>__get</code>
  semantics work transparently over an associative array. The event itself is keyed under <code>'event'</code>
  in the bag, so you can reach into both the event payload and contextual kwargs from a single chain:</p>
 
@@ -558,20 +558,20 @@ $stateFilter = new MagicData(F-&gt;state-&gt;equals('active'));
 
             
     <p>The DSL trades static type-checking for ergonomics. PHPStan cannot see through <code>F-&gt;message-&gt;text</code>
- &mdash; it sees a <code>MagicFilter</code>
+ — it sees a <code>MagicFilter</code>
 , period. The chain becomes type-erased at the point of construction. We mitigate by producing readable runtime errors (the resolver reports the failing operation by index), but if you want fully-typed predicates, a hand- written <code>Filter</code>
  subclass is the right tool. Aiogram has the same limitation; mypy/pyright don't see through <code>F.message.text</code>
  either.</p>
 
             
     <p>Each chain operation allocates a fresh <code>MagicFilter</code>
- and copies the operations array. For typical chains (3&ndash;5 operations) the cost is trivial; for chains built in a loop, prefer composing once outside the loop and resolving inside. The chain is immutable, so caching the built <code>Filter</code>
- across dispatches is safe &mdash; in fact, the dispatcher caches the filter list per handler so the chain is built only on registration, not on dispatch.</p>
+ and copies the operations array. For typical chains (3–5 operations) the cost is trivial; for chains built in a loop, prefer composing once outside the loop and resolving inside. The chain is immutable, so caching the built <code>Filter</code>
+ across dispatches is safe — in fact, the dispatcher caches the filter list per handler so the chain is built only on registration, not on dispatch.</p>
 
             
     <p><code>asFilter()</code>
  is the only bridge to the dispatch contract. A bare <code>MagicFilter</code>
- cannot be registered &mdash; it has no <code>__invoke(object, ...$kwargs): array|bool</code>
+ cannot be registered — it has no <code>__invoke(object, ...$kwargs): array|bool</code>
  signature. The asymmetry is deliberate: chains are values, filters are dispatch-time predicates. The distinction lets the resolver run repeatedly against different events without the chain itself having to know about the dispatch protocol.</p>
 
             

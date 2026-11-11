@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -411,7 +411,7 @@
             
     <p>Every inline-button tap fires a <code>callback_query</code>
  that you MUST answer within ~15 seconds or the button spins forever. Installing the <code>CallbackAnswerMiddleware</code>
- once answers every query automatically &mdash; post-handler by default, pre-handler when you want instant feedback.</p>
+ once answers every query automatically — post-handler by default, pre-handler when you want instant feedback.</p>
 
     </section>
 
@@ -428,7 +428,7 @@ use Gruven\PhpBotGram\Utils\CallbackAnswer\CallbackAnswerMiddleware;
 // Install once on the dispatcher (or any router).
 $dispatcher-&gt;callbackQuery-&gt;innerMiddleware(new CallbackAnswerMiddleware());
 
-// Normal handler &mdash; no manual answer call needed.
+// Normal handler — no manual answer call needed.
 $dispatcher-&gt;callbackQuery-&gt;register(static function (CallbackQuery $event): void {
     if (!$event-&gt;message instanceof Message) {
         return;
@@ -453,14 +453,14 @@ $dispatcher-&gt;callbackQuery-&gt;innerMiddleware(new CallbackAnswerMiddleware()
 
 $dispatcher-&gt;callbackQuery-&gt;register(
     static function (CallbackQuery $event): void {
-        // Run slow work; the user already saw "Processing&hellip;".
+        // Run slow work; the user already saw "Processing…".
     },
-    flags: ['callback_answer' =&gt; ['pre' =&gt; true, 'text' =&gt; 'Processing&hellip;']],
+    flags: ['callback_answer' =&gt; ['pre' =&gt; true, 'text' =&gt; 'Processing…']],
 );
 </code></pre>
 
             
-    <p><a href="classes/Gruven-PhpBotGram-Utils-CallbackAnswer-CallbackAnswerMiddleware.html"><code>CallbackAnswerMiddleware</code></a> injects a <a href="classes/Gruven-PhpBotGram-Utils-CallbackAnswer-CallbackAnswer.html"><code>CallbackAnswer</code></a> DTO into every handler. Post-mode (default) answers after the handler returns or throws; pre-mode answers first and treats the handler as "in flight". Per-handler <code>flags: ['callback_answer' =&gt; [&hellip;]]</code>
+    <p><a href="classes/Gruven-PhpBotGram-Utils-CallbackAnswer-CallbackAnswerMiddleware.html"><code>CallbackAnswerMiddleware</code></a> injects a <a href="classes/Gruven-PhpBotGram-Utils-CallbackAnswer-CallbackAnswer.html"><code>CallbackAnswer</code></a> DTO into every handler. Post-mode (default) answers after the handler returns or throws; pre-mode answers first and treats the handler as "in flight". Per-handler <code>flags: ['callback_answer' =&gt; […]]</code>
  override the defaults.</p>
 
             
@@ -482,7 +482,7 @@ $dispatcher-&gt;callbackQuery-&gt;register(
 
     <li class="dash">Pre-mode answers before the handler runs, so answer fields are frozen by the time handler code sees the injected DTO. Configure pre-mode text/alert/cache via flags.</li>
 
-    <li class="dash">Pre-mode and post-mode are mutually exclusive per handler &mdash; the middleware never double-answers.</li>
+    <li class="dash">Pre-mode and post-mode are mutually exclusive per handler — the middleware never double-answers.</li>
 
     <li class="dash">Errors in the handler still trigger the post-mode answer (the middleware uses a <code>finally</code>
  block). The <code>errors</code>

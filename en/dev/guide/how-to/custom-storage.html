@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -409,7 +409,7 @@
             <h2>When to use this</h2>
 
             
-    <p>You already run a database that isn't Redis or MongoDB &mdash; DynamoDB, PostgreSQL, your own KV &mdash; and you want FSM state stored there. Extend <code>BaseStorage</code>
+    <p>You already run a database that isn't Redis or MongoDB — DynamoDB, PostgreSQL, your own KV — and you want FSM state stored there. Extend <code>BaseStorage</code>
  and provide the five abstract methods.</p>
 
     </section>
@@ -449,7 +449,7 @@ $dispatcher = new Dispatcher(storage: new PdoStorage($pdo));
 , <code>close</code>
 . <code>getValue</code>
  and <code>updateData</code>
- come for free from the base &mdash; they read-merge-write. Override <code>updateData</code>
+ come for free from the base — they read-merge-write. Override <code>updateData</code>
  if your store supports atomic field updates.</p>
 
     </section>
@@ -463,11 +463,11 @@ $dispatcher = new Dispatcher(storage: new PdoStorage($pdo));
     <li class="dash">The <code>getData</code>
  contract is "empty array when nothing stored", not <code>null</code>
 . Callers <code>array_key_exists</code>
- against the return &mdash; <code>null</code>
+ against the return — <code>null</code>
  breaks the FSM.</li>
 
     <li class="dash"><code>setState(null)</code>
- clears &mdash; implementations must delete or null the row, not store the literal string <code>"null"</code>
+ clears — implementations must delete or null the row, not store the literal string <code>"null"</code>
 .</li>
 
     <li class="dash">The default <code>updateData</code>

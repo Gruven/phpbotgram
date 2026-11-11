@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -453,8 +453,8 @@ $dispatcher-&gt;message-&gt;register(
 </code></pre>
 
             
-    <p>A locale filter that returns <code>['locale' =&gt; &hellip;, 'strings' =&gt; &hellip;]</code>
- injects both keys into every handler &mdash; see <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-CallableObject.html"><code>CallableObject</code></a> for the binding rules.</p>
+    <p>A locale filter that returns <code>['locale' =&gt; …, 'strings' =&gt; …]</code>
+ injects both keys into every handler — see <a href="classes/Gruven-PhpBotGram-Dispatcher-Event-CallableObject.html"><code>CallableObject</code></a> for the binding rules.</p>
 
             
     <p>Use <code>ext-intl</code>
@@ -481,11 +481,11 @@ $dispatcher-&gt;message-&gt;register(
 ) before catalog lookup if your translations are language-only.</li>
 
     <li class="dash"><code>mbstring</code>
- defaults to internal encoding &mdash; set it explicitly with <code>mb_internal_encoding('UTF-8')</code>
+ defaults to internal encoding — set it explicitly with <code>mb_internal_encoding('UTF-8')</code>
  in your bootstrap to avoid surprises on hosts where <code>ini</code>
  defaults differ.</li>
 
-    <li class="dash">Reply markup buttons aren't translated automatically &mdash; pass the localised label when building the <code>InlineKeyboardButton</code>
+    <li class="dash">Reply markup buttons aren't translated automatically — pass the localised label when building the <code>InlineKeyboardButton</code>
 . See <a href="guide/concepts/keyboards.html">Keyboards</a> for the builder pattern.</li>
 
 </ul>

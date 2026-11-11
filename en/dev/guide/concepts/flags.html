@@ -234,7 +234,7 @@
                 
             </li>
                                 <li>
-                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing&hellip;" while a slow handler runs</a>
+                <a href="guide/how-to/chat-action-typing.html" class="">Show "typing…" while a slow handler runs</a>
                 
             </li>
                                 <li>
@@ -406,7 +406,7 @@
             <h1>Flags</h1>
 
             
-    <p>A flag is a per-handler metadata tag &mdash; a name plus an optional value &mdash; that middlewares and filters read at dispatch time to decide whether to apply per-handler behaviour (auth, throttling, chat actions, &hellip;).</p>
+    <p>A flag is a per-handler metadata tag — a name plus an optional value — that middlewares and filters read at dispatch time to decide whether to apply per-handler behaviour (auth, throttling, chat actions, …).</p>
 
             <section class="section " id="how-it-works">
             <h2>How it works</h2>
@@ -466,14 +466,14 @@ $dispatcher-&gt;message-&gt;register(
             
     <p>Attribute-driven flags are read via PHP reflection. Imperative flags are stored in a process-wide <a href="classes/Gruven-PhpBotGram-Dispatcher-Flags-FlagDecorator.html"><code>FlagDecorator</code></a> <code>WeakMap</code>
  keyed by the target closure or object. The weak-map trick exists because PHP cannot mutate arbitrary properties on a <code>Closure</code>
- &mdash; Python's <code>cb.aiogram_flag = {...}</code>
- translates to a side-table here. The weak-map evicts entries automatically when the closure is garbage-collected, so the storage is bounded by live handlers &mdash; there is no manual cleanup or registry maintenance needed even when the dispatcher rebuilds its handler graph (e.g. when a scene re-registers its method handlers).</p>
+ — Python's <code>cb.aiogram_flag = {...}</code>
+ translates to a side-table here. The weak-map evicts entries automatically when the closure is garbage-collected, so the storage is bounded by live handlers — there is no manual cleanup or registry maintenance needed even when the dispatcher rebuilds its handler graph (e.g. when a scene re-registers its method handlers).</p>
 
             
     <p><a href="classes/Gruven-PhpBotGram-Dispatcher-Flags-Flags.html"><code>Flags</code></a> is the read API. <code>Flags::extractFlags($target)</code>
  returns both attachment styles concatenated (imperative first, then attribute-driven). <code>Flags::getFlag($target, 'admin_only')</code>
  returns the first match or <code>null</code>
-. Middlewares that read flags use these helpers &mdash; they never touch the WeakMap directly. The <code>extractFlagsFromObject</code>
+. Middlewares that read flags use these helpers — they never touch the WeakMap directly. The <code>extractFlagsFromObject</code>
  helper on the <code>HandlerObject</code>
  itself bakes the read into the dispatch hot path so a per-event lookup costs one <code>getFlag</code>
  call against a typically-small list.</p>
@@ -503,7 +503,7 @@ final class AdminGateMiddleware extends BaseMiddleware
         }
         $flag = $handlerObj-&gt;flags['admin_only'] ?? null;
         if ($flag === true &amp;&amp; !$this-&gt;isAdmin($event)) {
-            return null; // short-circuit &mdash; do not invoke the handler
+            return null; // short-circuit — do not invoke the handler
         }
         return $handler($event, $data);
     }
@@ -532,7 +532,7 @@ $dispatcher-&gt;message-&gt;innerMiddleware(new AdminGateMiddleware());
  (in <code>Utils/ChatAction/</code>
 ) reads the <code>chat_action</code>
  flag and sends a <code>chat_action</code>
- API call that loops in the background until the handler returns &mdash; visible to the user as the "typing..." indicator during long-running operations. Both follow the same pattern: read the flag, optionally do prep work, delegate to the handler, then run cleanup.</p>
+ API call that loops in the background until the handler returns — visible to the user as the "typing..." indicator during long-running operations. Both follow the same pattern: read the flag, optionally do prep work, delegate to the handler, then run cleanup.</p>
 
             
     <p>The <code>chat_action</code>
@@ -545,7 +545,7 @@ use Gruven\PhpBotGram\Types\Message;
 use Gruven\PhpBotGram\Utils\ChatAction\ChatActionMiddleware;
 
 $dispatcher = new Dispatcher();
-// Flag-aware middleware must be INNER &mdash; per-handler flags live on the
+// Flag-aware middleware must be INNER — per-handler flags live on the
 // HandlerObject ($data['handler']), which only inner middleware can see.
 $dispatcher-&gt;message-&gt;innerMiddleware(new ChatActionMiddleware());
 
@@ -562,7 +562,7 @@ $dispatcher-&gt;message-&gt;register(
     flags: ['chat_action' =&gt; 'upload_photo'],
 );
 
-// Opt out entirely &mdash; no indicator for this handler.
+// Opt out entirely — no indicator for this handler.
 $dispatcher-&gt;message-&gt;register(
     static function (Message $event): void {
         $event-&gt;answer('instant')-&gt;emit();
@@ -572,7 +572,7 @@ $dispatcher-&gt;message-&gt;register(
 </code></pre>
 
             
-    <p><a href="classes/Gruven-PhpBotGram-Dispatcher-Flags-FlagGenerator.html"><code>FlagGenerator</code></a> is the helper that converts a flag list into a normalised form for inspection. The dispatcher does not use it on the hot path &mdash; it's exposed for tooling and tests that want to assert "this handler has exactly these flags". Production middlewares should use the <code>Flags::getFlag</code>
+    <p><a href="classes/Gruven-PhpBotGram-Dispatcher-Flags-FlagGenerator.html"><code>FlagGenerator</code></a> is the helper that converts a flag list into a normalised form for inspection. The dispatcher does not use it on the hot path — it's exposed for tooling and tests that want to assert "this handler has exactly these flags". Production middlewares should use the <code>Flags::getFlag</code>
  shortcut instead.</p>
 
     </section>
@@ -585,24 +585,24 @@ $dispatcher-&gt;message-&gt;register(
             
     <p>Flags are unstructured by design. A flag's <code>value</code>
  is <code>mixed</code>
- &mdash; any type, any shape &mdash; because middlewares own the interpretation. This is flexible but means a typo in a flag name (<code>'admin_onyl'</code>
+ — any type, any shape — because middlewares own the interpretation. This is flexible but means a typo in a flag name (<code>'admin_onyl'</code>
 ) fails silently. There is no central registry of legal flag names; the contract is <code>(middleware, flag-name)</code>
  pairs documented at the middleware's call site. We considered an enum-typed flag-name surface and rejected it: middlewares ship in user code as often as in the framework, and forcing every user middleware to extend a framework enum would not scale.</p>
 
             
     <p>The WeakMap trick depends on the target being an object. String callables or <code>[$obj, 'method']</code>
- arrays cannot carry flags this way &mdash; the registration adapter lifts them via <code>Closure::fromCallable(...)</code>
+ arrays cannot carry flags this way — the registration adapter lifts them via <code>Closure::fromCallable(...)</code>
  first. For attribute-driven flags this matters only when the attribute is on the method itself; the attribute path is independent of WeakMap storage. The lift to a closure is automatic and idempotent; users do not normally see it. PHP's closure equality is identity-based, so the WeakMap correctly distinguishes two closures over the same function.</p>
 
             
     <p>Flag values are read at dispatch time, every dispatch. There is no cache. A flag-aware middleware running on a hot observer pays a reflection-and-WeakMap lookup per event. The cost is small (one <code>getFlag</code>
- against a typically-empty list) but real &mdash; if you find yourself adding flags to every handler, consider moving the policy into the middleware itself, where it can short-circuit faster. The profile-driven choice is to keep the lookup hot-path simple and let heavy middlewares opt out by checking a per-instance toggle rather than caching the flag read.</p>
+ against a typically-empty list) but real — if you find yourself adding flags to every handler, consider moving the policy into the middleware itself, where it can short-circuit faster. The profile-driven choice is to keep the lookup hot-path simple and let heavy middlewares opt out by checking a per-instance toggle rather than caching the flag read.</p>
 
             
     <p>Two attachment styles also mean two read paths. <code>Flags::extractFlags</code>
  concatenates them in a deterministic order (imperative first), so imperative flags override attribute-driven ones on <code>getFlag</code>
  lookups. This matters when a middleware-level imperative flag should <em>win</em>
- against a class-level attribute default &mdash; a common pattern for per-route overrides.</p>
+ against a class-level attribute default — a common pattern for per-route overrides.</p>
 
     </section>
 
