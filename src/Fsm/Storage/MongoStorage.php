@@ -6,6 +6,7 @@ namespace Gruven\PhpBotGram\Fsm\Storage;
 
 use Gruven\PhpBotGram\Fsm\State;
 use MongoDB\Client;
+use MongoDB\Codec\Encoder;
 
 use function Amp\async;
 
@@ -54,6 +55,9 @@ use function Amp\async;
  *
  * @see MongoCollectionInterface
  * @see MongoCollectionAdapter
+ *
+ * @phpstan-import-type UriOptionsShape from Client
+ * @phpstan-import-type DriverOptionsShape from Client
  */
 final class MongoStorage extends BaseStorage
 {
@@ -90,6 +94,9 @@ final class MongoStorage extends BaseStorage
     string $collectionName = 'states_and_data',
     ?KeyBuilder $keyBuilder = null,
   ): self {
+    // Client validates these pass-through options; keep the factory's public array contract.
+    /** @var UriOptionsShape $clientOptions */
+    /** @var array{builderEncoder?: Encoder<mixed, mixed>}&DriverOptionsShape $driverOptions */
     $client = new Client($url, $clientOptions, $driverOptions);
 
     return self::create($client, $database, $collectionName, $keyBuilder);
