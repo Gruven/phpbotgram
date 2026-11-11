@@ -7,7 +7,8 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Pin the OS release; GitHub still updates the runner's kernel.
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -18,7 +19,9 @@ jobs:
         ports: ['6379:6379']
         options: --health-cmd "redis-cli ping" --health-interval 10s
       mongo:
-        image: mongo:8
+        # Track 8.0 patch releases; 8.0.37+ fixes Ubuntu kernel detection.
+        # https://jira.mongodb.org/browse/SERVER-131779
+        image: mongodb/mongodb-community-server:8.0-ubi9-slim
         ports: ['27017:27017']
         options: --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping').ok\"" --health-interval 10s
     steps:
